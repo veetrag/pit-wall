@@ -1,0 +1,5 @@
+{
+  "S": { "name": "Soft",   "offset": -0.6, "lin": 0.040, "cliff": 12, "pen": 0.030, "colorToken": "--tyre-soft" },
+  "M": { "name": "Medium", "offset":  0.0, "lin": 0.025, "cliff": 22, "pen": 0.020, "colorToken": "--tyre-medium" },
+  "H": { "name": "Hard",   "offset":  0.5, "lin": 0.015, "cliff": 35, "pen": 0.012, "colorToken": "--tyre-hard" }
+}

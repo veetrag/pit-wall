@@ -1,0 +1,13 @@
+{
+  "silverpark": {
+    "name": "Silverpark",
+    "laps": 30,
+    "sectorBase": [28.0, 34.0, 28.0],
+    "carSensitivity": [0.30, 0.45, 0.25],
+    "driverSensitivity": [0.30, 0.40, 0.30],
+    "overtakingFactor": [1.0, 0.25, 0.55],
+    "pitLaneTimeLoss": 22.0,
+    "trackPath": "paths/silverpark.json",
+    "characterNote": "Balanced reference circuit. S1 power, S2 aero, S3 mixed/traffic."
+  }
+}

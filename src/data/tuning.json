@@ -1,0 +1,47 @@
+{
+  "carPerformance": {
+    "deltaPerRating": 0.22,
+    "sectorSplit": [0.30, 0.45, 0.25]
+  },
+  "driverPerformance": {
+    "deltaPerSkill": 0.10,
+    "sectorSplit": [0.30, 0.40, 0.30]
+  },
+  "fuel": {
+    "effectPerLap": 0.035
+  },
+  "noise": {
+    "sigmaPerSector": 0.08
+  },
+  "trackEvolution": {
+    "startDelta": 0.30,
+    "decayLaps": 20
+  },
+  "traffic": {
+    "gapThreshold": 2.2,
+    "penalty": 0.30
+  },
+  "overtaking": {
+    "base": 0.22,
+    "paceMultiplier": 3.0,
+    "sectorFactor": [1.0, 0.25, 0.55]
+  },
+  "pit": {
+    "laneTimeLoss": 22.0,
+    "stopMean": 2.4,
+    "stopSigma": 0.3
+  },
+  "paceModes": {
+    "push":     { "paceDelta": -0.15, "degMultiplier": 1.30 },
+    "neutral":  { "paceDelta":  0.00, "degMultiplier": 1.00 },
+    "conserve": { "paceDelta":  0.20, "degMultiplier": 0.75 }
+  },
+  "projection": {
+    "horizonLaps": 4,
+    "useOvertakeRolls": false
+  },
+  "incidents": {
+    "dnfPerLap": 0.0,
+    "driverErrorPerLap": 0.0
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "defaults": [
+    { "teamId": "apex",     "startCompound": "M", "plannedStops": [{ "lap": 16, "compound": "H" }] },
+    { "teamId": "meridian", "startCompound": "M", "plannedStops": [{ "lap": 15, "compound": "H" }] },
+    { "teamId": "vortex",   "startCompound": "S", "plannedStops": [{ "lap": 11, "compound": "H" }] },
+    { "teamId": "zenith",   "startCompound": "M", "plannedStops": [{ "lap": 17, "compound": "H" }] },
+    { "teamId": "torque",   "startCompound": "S", "plannedStops": [{ "lap": 10, "compound": "M" }] }
+  ]
+}

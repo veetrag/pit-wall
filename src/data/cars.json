@@ -1,0 +1,9 @@
+{
+  "teams": [
+    { "id": "apex",     "name": "Apex Racing",    "rating": 0, "reliability": 0.99, "colorPrimary": "#00E5D0", "colorSecondary": "#0A0E1A" },
+    { "id": "meridian", "name": "Meridian GP",    "rating": 1, "reliability": 0.98, "colorPrimary": "#E8344E", "colorSecondary": "#FFFFFF" },
+    { "id": "vortex",   "name": "Vortex Motors",  "rating": 2, "reliability": 0.97, "colorPrimary": "#F2C94C", "colorSecondary": "#0A0E1A" },
+    { "id": "zenith",   "name": "Zenith F1",      "rating": 3, "reliability": 0.97, "colorPrimary": "#7B5EA7", "colorSecondary": "#FFFFFF" },
+    { "id": "torque",   "name": "Torque Works",   "rating": 4, "reliability": 0.96, "colorPrimary": "#FF7A00", "colorSecondary": "#0A0E1A" }
+  ]
+}

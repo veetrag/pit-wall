@@ -1,0 +1,14 @@
+{
+  "drivers": [
+    { "id": "d_ver", "name": "Verstael",   "code": "VRS", "teamId": "apex",     "skill": 1,  "racecraft": 0.95, "consistency": 0.95 },
+    { "id": "d_nor", "name": "Nordvik",    "code": "NRD", "teamId": "apex",     "skill": 2,  "racecraft": 0.88, "consistency": 0.92 },
+    { "id": "d_ham", "name": "Hamilcar",   "code": "HMC", "teamId": "meridian", "skill": 1,  "racecraft": 0.92, "consistency": 0.93 },
+    { "id": "d_lec", "name": "Leclair",    "code": "LCR", "teamId": "meridian", "skill": 3,  "racecraft": 0.85, "consistency": 0.88 },
+    { "id": "d_rus", "name": "Ruskov",     "code": "RSK", "teamId": "vortex",   "skill": 3,  "racecraft": 0.82, "consistency": 0.90 },
+    { "id": "d_alo", "name": "Alontez",    "code": "ALZ", "teamId": "vortex",   "skill": 4,  "racecraft": 0.90, "consistency": 0.85 },
+    { "id": "d_sai", "name": "Sairal",     "code": "SRL", "teamId": "zenith",   "skill": 4,  "racecraft": 0.83, "consistency": 0.88 },
+    { "id": "d_pia", "name": "Piaster",    "code": "PST", "teamId": "zenith",   "skill": 5,  "racecraft": 0.80, "consistency": 0.87 },
+    { "id": "d_oco", "name": "Oconnel",    "code": "OCN", "teamId": "torque",   "skill": 6,  "racecraft": 0.75, "consistency": 0.82 },
+    { "id": "d_gas", "name": "Gascoigne",  "code": "GSC", "teamId": "torque",   "skill": 7,  "racecraft": 0.72, "consistency": 0.80 }
+  ]
+}
