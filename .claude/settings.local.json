@@ -10,7 +10,13 @@
       "Bash(git commit *)",
       "Bash(npx vitest *)",
       "Bash(node -e \"const z = require\\('zod'\\); console.log\\(z.version ?? require\\('./node_modules/zod/package.json'\\).version\\)\")",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d['exports'].keys\\(\\)\\)[:10]\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); pts=d['points']; print\\('points count:', len\\(pts\\)\\); print\\('first:', pts[0]\\); print\\('last:', pts[-1]\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(t['id'], t['colorPrimary']\\) for t in d['teams']]\")",
+      "Bash(mkdir -p \"/Users/veetrag/Documents/Claude Expeiments/f1-manager/.claude\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(kill 50572)"
     ]
   }
 }
