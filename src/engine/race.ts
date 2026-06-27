@@ -116,6 +116,12 @@ function resolveOvertakes(
 ): CarState[] {
   const sorted = [...cars].sort((a, b) => a.raceTime - b.raceTime)
   const result = [...sorted]
+  const sectorEase = config.tuning.overtaking.sectorFactor[sector]!
+
+  // Find the single most eligible pair (smallest gap within threshold, pace advantage > 0)
+  // One overtake per sector boundary — the overtaking discipline rule.
+  let bestIdx = -1
+  let bestProb = 0
 
   for (let i = 1; i < result.length; i++) {
     const behind = result[i]!
@@ -124,19 +130,23 @@ function resolveOvertakes(
     if (gap > config.tuning.traffic.gapThreshold) continue
 
     const paceAdv = calculatePaceAdvantage(config, behind, ahead)
-    const sectorEase = config.tuning.overtaking.sectorFactor[sector]!
     const prob = Math.min(
       0.85,
       config.tuning.overtaking.base * sectorEase +
       paceAdv * config.tuning.overtaking.paceMultiplier * sectorEase,
     )
-
-    const uniform = rng()
-    if (uniform < prob) {
-      result[i - 1] = behind
-      result[i] = ahead
-      events.push({ lap, sector, overtakerId: behind.driverId, overtakenId: ahead.driverId })
+    if (prob > bestProb) {
+      bestProb = prob
+      bestIdx = i
     }
+  }
+
+  if (bestIdx > 0 && rng() < bestProb) {
+    const behind = result[bestIdx]!
+    const ahead = result[bestIdx - 1]!
+    result[bestIdx - 1] = behind
+    result[bestIdx] = ahead
+    events.push({ lap, sector, overtakerId: behind.driverId, overtakenId: ahead.driverId })
   }
 
   return result
