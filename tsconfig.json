@@ -18,7 +18,9 @@
       "@data/*": ["./src/data/*"],
       "@state/*": ["./src/state/*"],
       "@canvas/*": ["./src/canvas/*"],
-      "@ui/*": ["./src/ui/*"]
+      "@ui/*": ["./src/ui/*"],
+      "@audio/*": ["./src/audio/*"],
+      "@hooks/*": ["./src/hooks/*"]
     }
   },
   "include": ["src", "tests"],

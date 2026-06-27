@@ -11,6 +11,8 @@ export default defineConfig({
       '@state': resolve(__dirname, './src/state'),
       '@canvas': resolve(__dirname, './src/canvas'),
       '@ui': resolve(__dirname, './src/ui'),
+      '@audio': resolve(__dirname, './src/audio'),
+      '@hooks': resolve(__dirname, './src/hooks'),
     },
   },
   test: {
