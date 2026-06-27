@@ -27,6 +27,7 @@
     "@capacitor/android": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/haptics": "^8.0.2",
+    "@capacitor/preferences": "^8.0.1",
     "framer-motion": "^12.42.0",
     "howler": "^2.2.4",
     "pixi.js": "^8.19.0",
