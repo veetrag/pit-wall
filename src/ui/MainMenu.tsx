@@ -3,6 +3,7 @@ import { useSeasonStore } from '@state/seasonStore'
 
 export function MainMenu() {
   const startNewSeason = useSeasonStore(s => s.startNewSeason)
+  const viewGrid = useSeasonStore(s => s.viewGrid)
 
   return (
     <motion.div
@@ -55,6 +56,20 @@ export function MainMenu() {
           }}
         >
           NEW SEASON
+        </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={viewGrid}
+          style={{
+            background: 'transparent', color: 'var(--text-mid)',
+            border: '1px solid var(--line-hair)', borderRadius: 10, padding: '14px 0',
+            fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600,
+            letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+            width: '100%',
+          }}
+        >
+          GRID &amp; STATS
         </motion.button>
 
         <div style={{

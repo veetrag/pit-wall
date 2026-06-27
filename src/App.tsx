@@ -2,6 +2,7 @@ import './styles/tokens.css'
 import { AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from './state/seasonStore'
 import { MainMenu } from './ui/MainMenu'
+import { GridStats } from './ui/GridStats'
 import { DriverSelect } from './ui/DriverSelect'
 import { RaceHUD } from './ui/RaceHUD'
 import { RaceResult } from './ui/RaceResult'
@@ -16,6 +17,7 @@ export default function App() {
       <RaceWatcher />
       <AnimatePresence mode="wait">
         {phase === 'menu' && <MainMenu key="menu" />}
+        {phase === 'grid' && <GridStats key="grid" />}
         {phase === 'driver_select' && <DriverSelect key="driver_select" />}
         {phase === 'racing' && <RaceHUD key="race" />}
         {phase === 'result' && <RaceResult key="result" />}

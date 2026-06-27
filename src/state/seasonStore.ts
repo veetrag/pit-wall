@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SeasonPhase = 'menu' | 'driver_select' | 'racing' | 'result' | 'championship'
+export type SeasonPhase = 'menu' | 'grid' | 'driver_select' | 'racing' | 'result' | 'championship'
 
 export interface SeasonResult {
   driverId: string
@@ -28,6 +28,8 @@ interface SeasonStore {
   lastRaceResults: SeasonResult[] | null
 
   currentSeed: () => number
+  viewGrid: () => void
+  exitGrid: () => void
   startNewSeason: () => void
   selectDriver: (id: string) => void
   confirmDriver: () => void
@@ -46,6 +48,9 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   currentSeed() {
     return get().raceIndex * 1000 + 42
   },
+
+  viewGrid() { set({ phase: 'grid' }) },
+  exitGrid() { set({ phase: 'menu' }) },
 
   startNewSeason() {
     set({ phase: 'driver_select', playerDriverId: null, raceIndex: 0, standings: [], lastRaceResults: null })
