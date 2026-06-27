@@ -1,0 +1,141 @@
+import { describe, it, expect } from 'vitest'
+import { initRace, stepSector } from '@engine/race'
+import { createRng } from '@engine/rng'
+import type { RaceConfig, TuningConstants, CircuitSpec, CompoundSpec } from '@engine/types'
+
+const TUNING: TuningConstants = {
+  carPerformance: { deltaPerRating: 0.22, sectorSplit: [0.30, 0.45, 0.25] },
+  driverPerformance: { deltaPerSkill: 0.10, sectorSplit: [0.30, 0.40, 0.30] },
+  fuel: { effectPerLap: 0.035 },
+  noise: { sigmaPerSector: 0.08 },
+  trackEvolution: { startDelta: 0.30, decayLaps: 20 },
+  traffic: { gapThreshold: 2.2, penalty: 0.30 },
+  overtaking: { base: 0.22, paceMultiplier: 3.0, sectorFactor: [1.0, 0.25, 0.55] },
+  pit: { laneTimeLoss: 22.0, stopMean: 2.4, stopSigma: 0.3 },
+  paceModes: {
+    push:     { paceDelta: -0.15, degMultiplier: 1.30 },
+    neutral:  { paceDelta:  0.00, degMultiplier: 1.00 },
+    conserve: { paceDelta:  0.20, degMultiplier: 0.75 },
+  },
+  projection: { horizonLaps: 4, useOvertakeRolls: false },
+  incidents: { dnfPerLap: 0.0, driverErrorPerLap: 0.0 },
+}
+
+const CIRCUIT: CircuitSpec = {
+  name: 'Test', laps: 10,
+  sectorBase: [28.0, 34.0, 28.0],
+  carSensitivity: [0.30, 0.45, 0.25],
+  driverSensitivity: [0.30, 0.40, 0.30],
+  overtakingFactor: [1.0, 0.25, 0.55],
+  pitLaneTimeLoss: 22.0,
+}
+
+const COMPOUNDS: Record<'S' | 'M' | 'H', CompoundSpec> = {
+  S: { name: 'Soft',   offset: -0.6, lin: 0.040, cliff: 12, pen: 0.030, colorToken: '--tyre-soft' },
+  M: { name: 'Medium', offset:  0.0, lin: 0.025, cliff: 22, pen: 0.020, colorToken: '--tyre-medium' },
+  H: { name: 'Hard',   offset:  0.5, lin: 0.015, cliff: 35, pen: 0.012, colorToken: '--tyre-hard' },
+}
+
+function makeConfig(): RaceConfig {
+  return {
+    circuit: CIRCUIT, tuning: TUNING, compounds: COMPOUNDS,
+    drivers: [
+      { id: 'd1', name: 'Fast', code: 'FST', teamId: 'apex',  skill: 1, racecraft: 0.95, consistency: 0.95 },
+      { id: 'd2', name: 'Mid',  code: 'MID', teamId: 'mid',   skill: 5, racecraft: 0.80, consistency: 0.88 },
+      { id: 'd3', name: 'Slow', code: 'SLW', teamId: 'back',  skill: 9, racecraft: 0.70, consistency: 0.80 },
+    ],
+    teams: [
+      { id: 'apex', name: 'Apex', rating: 0, reliability: 0.99, colorPrimary: '#0ef', colorSecondary: '#000' },
+      { id: 'mid',  name: 'Mid',  rating: 4, reliability: 0.98, colorPrimary: '#f00', colorSecondary: '#fff' },
+      { id: 'back', name: 'Back', rating: 8, reliability: 0.97, colorPrimary: '#ff0', colorSecondary: '#000' },
+    ],
+    strategies: [
+      { teamId: 'apex', startCompound: 'M', plannedStops: [{ lap: 5, compound: 'H' }] },
+      { teamId: 'mid',  startCompound: 'M', plannedStops: [{ lap: 5, compound: 'H' }] },
+      { teamId: 'back', startCompound: 'S', plannedStops: [{ lap: 4, compound: 'H' }] },
+    ],
+    playerDriverId: 'd1',
+    seed: 42,
+  }
+}
+
+describe('initRace', () => {
+  it('creates one CarState per driver', () => {
+    const state = initRace(makeConfig())
+    expect(state.cars).toHaveLength(3)
+  })
+
+  it('starts at lap 0, sector 0', () => {
+    const state = initRace(makeConfig())
+    expect(state.lap).toBe(0)
+    expect(state.sector).toBe(0)
+  })
+
+  it('assigns starting compounds from strategy', () => {
+    const state = initRace(makeConfig())
+    const d3Car = state.cars.find(c => c.driverId === 'd3')!
+    expect(d3Car.compound).toBe('S')
+  })
+})
+
+describe('stepSector', () => {
+  it('advances sector by 1', () => {
+    const config = makeConfig()
+    const s0 = initRace(config)
+    const s1 = stepSector(config, s0, createRng(1))
+    expect(s1.sector).toBe(1)
+  })
+
+  it('advances lap after 3 sectors', () => {
+    const config = makeConfig()
+    let state = initRace(config)
+    const rng = createRng(1)
+    state = stepSector(config, state, rng)
+    state = stepSector(config, state, rng)
+    state = stepSector(config, state, rng)
+    expect(state.lap).toBe(1)
+    expect(state.sector).toBe(0)
+  })
+
+  it('does not mutate the previous state (pure function)', () => {
+    const config = makeConfig()
+    const s0 = initRace(config)
+    const s0Lap = s0.lap
+    stepSector(config, s0, createRng(1))
+    expect(s0.lap).toBe(s0Lap)
+  })
+
+  it('is deterministic: same seed same result', () => {
+    const config = makeConfig()
+    const s0 = initRace(config)
+    const a = stepSector(config, s0, createRng(77))
+    const b = stepSector(config, s0, createRng(77))
+    expect(a.cars[0]!.raceTime).toBe(b.cars[0]!.raceTime)
+  })
+
+  it('best car is leading after 10 laps', () => {
+    const config = makeConfig()
+    let state = initRace(config)
+    const rng = createRng(42)
+    for (let i = 0; i < 30; i++) state = stepSector(config, state, rng)
+    const leader = state.cars[0]!
+    expect(leader.driverId).toBe('d1')
+  })
+
+  it('tyreAge increments after each completed lap', () => {
+    const config = makeConfig()
+    let state = initRace(config)
+    const rng = createRng(1)
+    for (let i = 0; i < 3; i++) state = stepSector(config, state, rng)
+    expect(state.cars[0]!.tyreAge).toBe(1)
+  })
+
+  it('triggers AI pit stop on planned lap', () => {
+    const config = makeConfig()
+    let state = initRace(config)
+    const rng = createRng(42)
+    for (let i = 0; i < 5 * 3; i++) state = stepSector(config, state, rng)
+    const d3Car = state.cars.find(c => c.driverId === 'd3')!
+    expect(d3Car.pitsDone).toBeGreaterThanOrEqual(1)
+  })
+})
