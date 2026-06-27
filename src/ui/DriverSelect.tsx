@@ -25,8 +25,9 @@ const DRIVER_HELMET: Record<string, { from: string; to: string; visor: string; n
   d_gas: { from: '#1e1e2e', to: '#3a3a5c', visor: '#ff4d5e', number: 10 },
 }
 
-type DriverEntry = { id: string; name: string; teamId: string; skill: number }
-type TeamEntry = { id: string; name: string; rating: number }
+type DriverFacets = { pace: number; racecraft: number; tyreManagement: number; consistency: number; wetWeather: number; experience: number }
+type DriverEntry = { id: string; name: string; teamId: string; facets: DriverFacets }
+type TeamEntry = { id: string; name: string }
 
 const drivers = driversData.drivers as DriverEntry[]
 const teams = carsData.teams as TeamEntry[]
@@ -35,15 +36,15 @@ function teamName(teamId: string): string {
   return teams.find(t => t.id === teamId)?.name ?? teamId
 }
 
-function skillLabel(skill: number): string {
-  if (skill <= 2) return 'ELITE'
-  if (skill <= 4) return 'PRO'
+function skillLabel(pace: number): string {
+  if (pace >= 88) return 'ELITE'
+  if (pace >= 78) return 'PRO'
   return 'RESERVE'
 }
 
-function skillColor(skill: number): string {
-  if (skill <= 2) return 'var(--accent)'
-  if (skill <= 4) return 'var(--tyre-medium)'
+function skillColor(pace: number): string {
+  if (pace >= 88) return 'var(--accent)'
+  if (pace >= 78) return 'var(--tyre-medium)'
   return 'var(--text-dim)'
 }
 
@@ -196,12 +197,12 @@ export function DriverSelect() {
               <div style={{
                 fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em',
                 padding: '4px 8px', borderRadius: 6,
-                color: selected ? color : skillColor(driver.skill),
-                border: `1px solid ${selected ? color : skillColor(driver.skill)}`,
+                color: selected ? color : skillColor(driver.facets.pace),
+                border: `1px solid ${selected ? color : skillColor(driver.facets.pace)}`,
                 background: selected ? `${color}18` : 'transparent',
                 flexShrink: 0,
               }}>
-                {skillLabel(driver.skill)}
+                {skillLabel(driver.facets.pace)}
               </div>
 
               {/* Selected chevron */}

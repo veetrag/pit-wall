@@ -35,8 +35,8 @@ const CIRCUIT: CircuitSpec = {
 function makeConfig(): RaceConfig {
   return {
     circuit: CIRCUIT, tuning: TUNING, compounds: COMPOUNDS,
-    drivers: [{ id: 'd1', name: 'D1', code: 'DRV', teamId: 't1', skill: 3, racecraft: 0.85, consistency: 0.9 }],
-    teams: [{ id: 't1', name: 'Team', rating: 2, reliability: 0.99, colorPrimary: '#fff', colorSecondary: '#000' }],
+    drivers: [{ id: 'd1', name: 'D1', code: 'DRV', teamId: 't1', facets: { pace: 70, racecraft: 85, tyreManagement: 80, consistency: 90, wetWeather: 80, experience: 80 } }],
+    teams: [{ id: 't1', name: 'Team', colorPrimary: '#fff', colorSecondary: '#000', facets: { power: 77.8, aero: 77.8, handling: 77.8, reliability: 99, pitCrew: 80 } }],
     strategies: [{ teamId: 't1', startCompound: 'S', plannedStops: [{ lap: 12, compound: 'H' }] }],
     playerDriverId: 'other',
     seed: 1,

@@ -76,9 +76,13 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       const plannedStop = car.strategy.plannedStops.find(s => s.lap === updated.lap)
       if (plannedStop && !car.isPlayer) {
         const [stopNoise] = gaussianPair(rng)
+        const team = config.teams.find(t => t.id === car.teamId)!
+        const crewFactor = team.facets.pitCrew / 100
+        const effectiveStopMean = config.tuning.pit.stopMean - crewFactor * 0.6
+        const effectiveStopSigma = config.tuning.pit.stopSigma * (1 - crewFactor * 0.5)
         const stopTime = config.tuning.pit.laneTimeLoss +
-          config.tuning.pit.stopMean +
-          stopNoise * config.tuning.pit.stopSigma
+          effectiveStopMean +
+          stopNoise * effectiveStopSigma
         updated = {
           ...updated,
           raceTime: updated.raceTime + stopTime,
@@ -130,10 +134,15 @@ function resolveOvertakes(
     if (gap > config.tuning.traffic.gapThreshold) continue
 
     const paceAdv = calculatePaceAdvantage(config, behind, ahead)
+    const attackerDriver = config.drivers.find(d => d.id === behind.driverId)!
+    const defenderDriver = config.drivers.find(d => d.id === ahead.driverId)!
+    const attackMult = 0.5 + (attackerDriver.facets.racecraft / 100)
+    const defendMult = 1 - (defenderDriver.facets.racecraft / 100) * 0.4
     const prob = Math.min(
       0.85,
-      config.tuning.overtaking.base * sectorEase +
-      paceAdv * config.tuning.overtaking.paceMultiplier * sectorEase,
+      (config.tuning.overtaking.base * sectorEase +
+        paceAdv * config.tuning.overtaking.paceMultiplier * sectorEase) *
+        attackMult * defendMult,
     )
     if (prob > bestProb) {
       bestProb = prob
@@ -155,9 +164,16 @@ function resolveOvertakes(
 function calculatePaceAdvantage(config: RaceConfig, faster: CarState, slower: CarState): number {
   const fasterTeam = config.teams.find(t => t.id === faster.teamId)!
   const slowerTeam = config.teams.find(t => t.id === slower.teamId)!
-  const carAdv = (slowerTeam.rating - fasterTeam.rating) * config.tuning.carPerformance.deltaPerRating
+  // Use average car performance for pace advantage estimate
+  const avgFaster = (fasterTeam.facets.power + fasterTeam.facets.aero + fasterTeam.facets.handling) / 3
+  const avgSlower = (slowerTeam.facets.power + slowerTeam.facets.aero + slowerTeam.facets.handling) / 3
+  const fasterCarRating = (1 - avgFaster / 100) * 9
+  const slowerCarRating = (1 - avgSlower / 100) * 9
+  const carAdv = (slowerCarRating - fasterCarRating) * config.tuning.carPerformance.deltaPerRating
   const fasterDriver = config.drivers.find(d => d.id === faster.driverId)!
   const slowerDriver = config.drivers.find(d => d.id === slower.driverId)!
-  const driverAdv = (slowerDriver.skill - fasterDriver.skill) * config.tuning.driverPerformance.deltaPerSkill
+  const fasterDriverSkill = (1 - fasterDriver.facets.pace / 100) * 10
+  const slowerDriverSkill = (1 - slowerDriver.facets.pace / 100) * 10
+  const driverAdv = (slowerDriverSkill - fasterDriverSkill) * config.tuning.driverPerformance.deltaPerSkill
   return Math.max(0, carAdv + driverAdv)
 }

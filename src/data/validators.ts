@@ -42,16 +42,35 @@ const CircuitSchema = z.object({
 })
 const CircuitsSchema = z.record(z.string(), CircuitSchema)
 
+const TeamFacetsSchema = z.object({
+  power:       z.number().min(0).max(100),
+  aero:        z.number().min(0).max(100),
+  handling:    z.number().min(0).max(100),
+  reliability: z.number().min(0).max(100),
+  pitCrew:     z.number().min(0).max(100),
+})
 const TeamSchema = z.object({
-  id: z.string(), name: z.string(), rating: z.number().int().min(0).max(9),
-  reliability: z.number().min(0).max(1), colorPrimary: z.string(), colorSecondary: z.string(),
+  id: z.string(), name: z.string(),
+  colorPrimary: z.string(), colorSecondary: z.string(),
+  facets: TeamFacetsSchema,
+  developmentRate: z.number().optional(),
 })
 const CarsSchema = z.object({ teams: z.array(TeamSchema) })
 
+const DriverFacetsSchema = z.object({
+  pace:           z.number().min(0).max(100),
+  racecraft:      z.number().min(0).max(100),
+  tyreManagement: z.number().min(0).max(100),
+  consistency:    z.number().min(0).max(100),
+  wetWeather:     z.number().min(0).max(100),
+  experience:     z.number().min(0).max(100),
+})
 const DriverSchema = z.object({
   id: z.string(), name: z.string(), code: z.string().length(3),
-  teamId: z.string(), skill: z.number().int().min(0).max(10),
-  racecraft: z.number().min(0).max(1), consistency: z.number().min(0).max(1),
+  teamId: z.string(),
+  facets: DriverFacetsSchema,
+  potential: z.number().optional(),
+  age: z.number().optional(),
 })
 const DriversSchema = z.object({ drivers: z.array(DriverSchema) })
 

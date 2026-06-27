@@ -35,23 +35,40 @@ export interface CircuitSpec {
   pitLaneTimeLoss: number
 }
 
+export interface DriverFacets {
+  pace: number           // 0–100, feeds Layer 1 sector time
+  racecraft: number      // 0–100, attack & defence in Layer 2 overtaking
+  tyreManagement: number // 0–100, scales effective tyre age (deg rate)
+  consistency: number    // 0–100, reduces per-sector noise sigma
+  wetWeather: number     // 0–100, dormant in v1
+  experience: number     // 0–100, light effect in v1
+}
+
+export interface TeamFacets {
+  power: number      // 0–100, governs S1 delta
+  aero: number       // 0–100, governs S2 delta (biggest differentiator)
+  handling: number   // 0–100, governs S3 delta
+  reliability: number // 0–100, dormant in v1
+  pitCrew: number    // 0–100, lowers stop mean + sigma
+}
+
 export interface DriverSpec {
   id: string
   name: string
   code: string
   teamId: string
-  skill: number
-  racecraft: number
-  consistency: number
+  facets: DriverFacets
+  potential?: number
+  age?: number
 }
 
 export interface TeamSpec {
   id: string
   name: string
-  rating: number
-  reliability: number
   colorPrimary: string
   colorSecondary: string
+  facets: TeamFacets
+  developmentRate?: number
 }
 
 export interface PitStop {

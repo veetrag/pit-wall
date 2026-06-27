@@ -40,14 +40,14 @@ function makeConfig(): RaceConfig {
   return {
     circuit: CIRCUIT, tuning: TUNING, compounds: COMPOUNDS,
     drivers: [
-      { id: 'd1', name: 'Fast', code: 'FST', teamId: 'apex',  skill: 1, racecraft: 0.95, consistency: 0.95 },
-      { id: 'd2', name: 'Mid',  code: 'MID', teamId: 'mid',   skill: 5, racecraft: 0.80, consistency: 0.88 },
-      { id: 'd3', name: 'Slow', code: 'SLW', teamId: 'back',  skill: 9, racecraft: 0.70, consistency: 0.80 },
+      { id: 'd1', name: 'Fast', code: 'FST', teamId: 'apex', facets: { pace: 90, racecraft: 95, tyreManagement: 80, consistency: 95, wetWeather: 80, experience: 80 } },
+      { id: 'd2', name: 'Mid',  code: 'MID', teamId: 'mid',  facets: { pace: 50, racecraft: 80, tyreManagement: 80, consistency: 88, wetWeather: 80, experience: 80 } },
+      { id: 'd3', name: 'Slow', code: 'SLW', teamId: 'back', facets: { pace: 10, racecraft: 70, tyreManagement: 80, consistency: 80, wetWeather: 80, experience: 80 } },
     ],
     teams: [
-      { id: 'apex', name: 'Apex', rating: 0, reliability: 0.99, colorPrimary: '#0ef', colorSecondary: '#000' },
-      { id: 'mid',  name: 'Mid',  rating: 4, reliability: 0.98, colorPrimary: '#f00', colorSecondary: '#fff' },
-      { id: 'back', name: 'Back', rating: 8, reliability: 0.97, colorPrimary: '#ff0', colorSecondary: '#000' },
+      { id: 'apex', name: 'Apex', colorPrimary: '#0ef', colorSecondary: '#000', facets: { power: 100,  aero: 100,  handling: 100,  reliability: 99, pitCrew: 80 } },
+      { id: 'mid',  name: 'Mid',  colorPrimary: '#f00', colorSecondary: '#fff', facets: { power: 55.6, aero: 55.6, handling: 55.6, reliability: 98, pitCrew: 80 } },
+      { id: 'back', name: 'Back', colorPrimary: '#ff0', colorSecondary: '#000', facets: { power: 11.1, aero: 11.1, handling: 11.1, reliability: 97, pitCrew: 80 } },
     ],
     strategies: [
       { teamId: 'apex', startCompound: 'M', plannedStops: [{ lap: 5, compound: 'H' }] },

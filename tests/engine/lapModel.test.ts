@@ -39,8 +39,8 @@ const COMPOUNDS: Record<'S' | 'M' | 'H', CompoundSpec> = {
 function makeConfig(overrides: Partial<RaceConfig> = {}): RaceConfig {
   return {
     circuit: CIRCUIT, tuning: TUNING, compounds: COMPOUNDS,
-    drivers: [{ id: 'd1', name: 'Test', code: 'TST', teamId: 't1', skill: 5, racecraft: 0.8, consistency: 0.9 }],
-    teams: [{ id: 't1', name: 'Team', rating: 4, reliability: 0.99, colorPrimary: '#fff', colorSecondary: '#000' }],
+    drivers: [{ id: 'd1', name: 'Test', code: 'TST', teamId: 't1', facets: { pace: 50, racecraft: 80, tyreManagement: 80, consistency: 90, wetWeather: 80, experience: 80 } }],
+    teams: [{ id: 't1', name: 'Team', colorPrimary: '#fff', colorSecondary: '#000', facets: { power: 55.6, aero: 55.6, handling: 55.6, reliability: 99, pitCrew: 80 } }],
     strategies: [{ teamId: 't1', startCompound: 'M', plannedStops: [] }],
     playerDriverId: 'd1',
     seed: 42,
@@ -70,12 +70,12 @@ describe('computeSectorTime', () => {
   it('better car (lower rating) is faster', () => {
     const config = makeConfig({
       teams: [
-        { id: 't1', name: 'Fast', rating: 0, reliability: 0.99, colorPrimary: '#fff', colorSecondary: '#000' },
-        { id: 't2', name: 'Slow', rating: 9, reliability: 0.99, colorPrimary: '#fff', colorSecondary: '#000' },
+        { id: 't1', name: 'Fast', colorPrimary: '#fff', colorSecondary: '#000', facets: { power: 100, aero: 100, handling: 100, reliability: 99, pitCrew: 80 } },
+        { id: 't2', name: 'Slow', colorPrimary: '#fff', colorSecondary: '#000', facets: { power: 0,   aero: 0,   handling: 0,   reliability: 99, pitCrew: 80 } },
       ],
       drivers: [
-        { id: 'd1', name: 'D1', code: 'D1X', teamId: 't1', skill: 5, racecraft: 0.8, consistency: 0.9 },
-        { id: 'd2', name: 'D2', code: 'D2X', teamId: 't2', skill: 5, racecraft: 0.8, consistency: 0.9 },
+        { id: 'd1', name: 'D1', code: 'D1X', teamId: 't1', facets: { pace: 50, racecraft: 80, tyreManagement: 80, consistency: 90, wetWeather: 80, experience: 80 } },
+        { id: 'd2', name: 'D2', code: 'D2X', teamId: 't2', facets: { pace: 50, racecraft: 80, tyreManagement: 80, consistency: 90, wetWeather: 80, experience: 80 } },
       ],
     })
     const rng1 = createRng(42)

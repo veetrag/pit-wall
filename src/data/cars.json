@@ -1,9 +1,34 @@
 {
   "teams": [
-    { "id": "apex",     "name": "Apex Racing",    "rating": 0, "reliability": 0.99, "colorPrimary": "#00E5D0", "colorSecondary": "#0A0E1A" },
-    { "id": "meridian", "name": "Meridian GP",    "rating": 1, "reliability": 0.98, "colorPrimary": "#E8344E", "colorSecondary": "#FFFFFF" },
-    { "id": "vortex",   "name": "Vortex Motors",  "rating": 2, "reliability": 0.97, "colorPrimary": "#F2C94C", "colorSecondary": "#0A0E1A" },
-    { "id": "zenith",   "name": "Zenith F1",      "rating": 3, "reliability": 0.97, "colorPrimary": "#7B5EA7", "colorSecondary": "#FFFFFF" },
-    { "id": "torque",   "name": "Torque Works",   "rating": 4, "reliability": 0.96, "colorPrimary": "#FF7A00", "colorSecondary": "#0A0E1A" }
+    {
+      "id": "apex", "name": "Apex Racing",
+      "colorPrimary": "#00E5D0", "colorSecondary": "#0A0E1A",
+      "facets": { "power": 96, "aero": 94, "handling": 90, "reliability": 92, "pitCrew": 90 },
+      "developmentRate": 0.8
+    },
+    {
+      "id": "meridian", "name": "Meridian GP",
+      "colorPrimary": "#E8344E", "colorSecondary": "#FFFFFF",
+      "facets": { "power": 86, "aero": 94, "handling": 84, "reliability": 90, "pitCrew": 84 },
+      "developmentRate": 1.0
+    },
+    {
+      "id": "vortex", "name": "Vortex Motors",
+      "colorPrimary": "#F2C94C", "colorSecondary": "#0A0E1A",
+      "facets": { "power": 82, "aero": 80, "handling": 90, "reliability": 88, "pitCrew": 78 },
+      "developmentRate": 1.1
+    },
+    {
+      "id": "zenith", "name": "Zenith F1",
+      "colorPrimary": "#7B5EA7", "colorSecondary": "#FFFFFF",
+      "facets": { "power": 88, "aero": 74, "handling": 78, "reliability": 86, "pitCrew": 74 },
+      "developmentRate": 0.9
+    },
+    {
+      "id": "torque", "name": "Torque Works",
+      "colorPrimary": "#FF7A00", "colorSecondary": "#0A0E1A",
+      "facets": { "power": 72, "aero": 70, "handling": 72, "reliability": 82, "pitCrew": 92 },
+      "developmentRate": 1.3
+    }
   ]
 }

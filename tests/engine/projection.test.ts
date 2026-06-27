@@ -38,12 +38,12 @@ function makeConfig(): RaceConfig {
   return {
     circuit: CIRCUIT, tuning: TUNING, compounds: COMPOUNDS,
     drivers: [
-      { id: 'player', name: 'Player', code: 'PLR', teamId: 'apex', skill: 2, racecraft: 0.9, consistency: 0.95 },
-      { id: 'rival1', name: 'Rival1', code: 'RV1', teamId: 'mid',  skill: 4, racecraft: 0.8, consistency: 0.88 },
+      { id: 'player', name: 'Player', code: 'PLR', teamId: 'apex', facets: { pace: 80, racecraft: 90, tyreManagement: 80, consistency: 95, wetWeather: 80, experience: 80 } },
+      { id: 'rival1', name: 'Rival1', code: 'RV1', teamId: 'mid',  facets: { pace: 60, racecraft: 80, tyreManagement: 80, consistency: 88, wetWeather: 80, experience: 80 } },
     ],
     teams: [
-      { id: 'apex', name: 'Apex', rating: 0, reliability: 0.99, colorPrimary: '#0ef', colorSecondary: '#000' },
-      { id: 'mid',  name: 'Mid',  rating: 3, reliability: 0.98, colorPrimary: '#f00', colorSecondary: '#fff' },
+      { id: 'apex', name: 'Apex', colorPrimary: '#0ef', colorSecondary: '#000', facets: { power: 100,  aero: 100,  handling: 100,  reliability: 99, pitCrew: 80 } },
+      { id: 'mid',  name: 'Mid',  colorPrimary: '#f00', colorSecondary: '#fff', facets: { power: 66.7, aero: 66.7, handling: 66.7, reliability: 98, pitCrew: 80 } },
     ],
     strategies: [
       { teamId: 'apex', startCompound: 'M', plannedStops: [{ lap: 10, compound: 'H' }] },
