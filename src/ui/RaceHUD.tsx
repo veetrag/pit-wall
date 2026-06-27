@@ -10,6 +10,7 @@ import { PitPanel, PitButton } from './PitPanel'
 import { TrackCanvas } from '@canvas/TrackCanvas'
 import { StartLights } from './StartLights'
 import { SettingsPanel } from './SettingsPanel'
+import { PitTimer } from './PitTimer'
 import { Component, type ReactNode } from 'react'
 
 class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -114,7 +115,8 @@ export function RaceHUD() {
             {phase === 'starting' && <StartLights />}
 
             {/* Main area: canvas + tower */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden', padding: '8px 8px 0', minHeight: 0 }}>
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden', padding: '8px 8px 0', minHeight: 0, position: 'relative' }}>
+              <PitTimer />
               <div style={{ flex: 1, overflow: 'hidden', borderRadius: 8, background: 'var(--bg-deep)' }}>
                 <CanvasBoundary>
                   <TrackCanvas />
