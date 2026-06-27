@@ -17,7 +17,22 @@
       "Bash(mkdir -p \"/Users/veetrag/Documents/Claude Expeiments/f1-manager/.claude\")",
       "mcp__Claude_Preview__preview_start",
       "Bash(kill 50572)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('main',''\\), d.get\\('module',''\\), list\\(d.get\\('exports',{}\\).keys\\(\\)\\)[:5]\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('main',''\\), d.get\\('module',''\\), list\\(d.get\\('exports',{}\\).keys\\(\\)\\)[:5]\\)\")",
+      "Bash(cat capacitor.config.ts)",
+      "Bash(cat capacitor.config.json)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('scripts:', list\\(d.get\\('scripts',{}\\).keys\\(\\)\\)\\); print\\('deps:', list\\(d.get\\('dependencies',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d['circuits'].keys\\(\\)\\)\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(dr['id'], dr['name']\\) for dr in d['drivers'][:6]]\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('src/data/circuits.json'\\)\\); print\\(list\\(d.keys\\(\\)\\)[:3]\\); print\\(list\\(d.items\\(\\)\\)[:1]\\)\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('src/data/cars.json'\\)\\); print\\(list\\(d.keys\\(\\)\\)\\); print\\([t['id'] for t in d['teams'][:4]]\\)\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('src/data/drivers.json'\\)\\); [print\\(dr['id'], dr['name'], dr.get\\('teamId','?'\\), dr.get\\('skill','?'\\)\\) for dr in d['drivers']]\")",
+      "Bash(npx cap *)",
+      "Bash(./node_modules/.bin/cap --version)",
+      "Bash(npm ls *)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(which java *)",
+      "Bash(java -version)",
+      "Bash(ls /usr/local/opt/ 2>/dev/null | grep -i java || ls /opt/homebrew/opt/ 2>/dev/null | grep -i java || echo \"no java via homebrew\")"
     ]
   }
 }
