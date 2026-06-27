@@ -8,6 +8,21 @@ import { TyreGauge } from './TyreGauge'
 import { PaceModeToggle } from './PaceModeToggle'
 import { PitPanel, PitButton } from './PitPanel'
 import { TrackCanvas } from '@canvas/TrackCanvas'
+import { Component, type ReactNode } from 'react'
+
+class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+  constructor(props: { children: ReactNode }) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(e: unknown) { return { error: String(e) } }
+  componentDidCatch(e: unknown) { console.error('[CanvasBoundary]', e) }
+  render() {
+    if (this.state.error) return (
+      <div style={{ padding: 16, color: 'var(--accent-warm)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+        Canvas error: {this.state.error}
+      </div>
+    )
+    return this.props.children
+  }
+}
 
 function SpeedControl() {
   const speed = useClockStore(s => s.speed)
@@ -98,7 +113,9 @@ export function RaceHUD() {
             {/* Main area: canvas + tower */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden', padding: '8px 8px 0', minHeight: 0 }}>
               <div style={{ flex: 1, overflow: 'hidden', borderRadius: 8, background: 'var(--bg-deep)' }}>
-                <TrackCanvas />
+                <CanvasBoundary>
+                  <TrackCanvas />
+                </CanvasBoundary>
               </div>
               <div style={{ width: 252, marginLeft: 8, overflowY: 'auto', flexShrink: 0 }}>
                 <TimingTower />
