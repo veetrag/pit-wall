@@ -9,9 +9,12 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:android": "npm run build && npx cap sync && npx cap open android"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^26.0.1",
     "@types/react": "^19.2.17",
