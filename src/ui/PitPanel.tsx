@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import type { Compound } from '@engine/types'
+import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
+import { soundService } from '@audio/soundService'
 
 const COMPOUNDS: { id: Compound; label: string; colorVar: string }[] = [
   { id: 'S', label: 'SOFT',   colorVar: 'var(--tyre-soft)' },
@@ -12,6 +14,7 @@ const COMPOUNDS: { id: Compound; label: string; colorVar: string }[] = [
 function PitPanelDrawer() {
   const [selected, setSelected] = useState<Compound>('M')
   const { pitNow, closePitPanel, projectionResult, updateProjection } = useRaceStore()
+  const { impact } = useHaptics()
 
   function handleSelect(c: Compound) {
     setSelected(c)
@@ -19,6 +22,8 @@ function PitPanelDrawer() {
   }
 
   function handleConfirm() {
+    impact(ImpactStyle.Heavy)
+    soundService.play('pitConfirm')
     pitNow(selected)
   }
 

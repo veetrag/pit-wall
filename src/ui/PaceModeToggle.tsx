@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import type { PaceMode } from '@engine/types'
+import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 
 const MODES: { mode: PaceMode; label: string; sublabel: string; color: string }[] = [
   { mode: 'conserve', label: 'SAVE',  sublabel: '+0.20s  −25% wear', color: 'var(--positive)' },
@@ -11,6 +12,7 @@ const MODES: { mode: PaceMode; label: string; sublabel: string; color: string }[
 export function PaceModeToggle() {
   const raceState = useRaceStore(s => s.raceState)
   const setPaceMode = useRaceStore(s => s.setPaceMode)
+  const { impact } = useHaptics()
 
   const player = raceState?.cars.find(c => c.isPlayer)
   const current = player?.paceMode ?? 'neutral'
@@ -27,7 +29,7 @@ export function PaceModeToggle() {
           <motion.button
             key={mode}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setPaceMode(mode)}
+            onClick={() => { impact(ImpactStyle.Light); setPaceMode(mode) }}
             style={{
               flex: 1, border: 'none', borderRadius: 6, padding: '8px 6px',
               cursor: 'pointer',
