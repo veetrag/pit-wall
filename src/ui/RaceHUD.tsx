@@ -9,6 +9,7 @@ import { PaceModeToggle } from './PaceModeToggle'
 import { PitPanel, PitButton } from './PitPanel'
 import { TrackCanvas } from '@canvas/TrackCanvas'
 import { StartLights } from './StartLights'
+import { SettingsPanel } from './SettingsPanel'
 import { Component, type ReactNode } from 'react'
 
 class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -139,8 +140,9 @@ export function RaceHUD() {
                 <TyreGauge />
                 <PitButton />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 12, alignItems: 'center' }}>
                 <SpeedControl />
+                <SettingsPanel />
               </div>
             </div>
           </motion.div>
