@@ -5,8 +5,8 @@ describe('loadGameData', () => {
   it('loads and validates all data files without throwing', () => {
     const data = loadGameData()
     expect(data.tuning.carPerformance.deltaPerRating).toBe(0.22)
-    expect(data.compounds['S'].cliff).toBe(12)
-    expect(data.circuits['silverpark'].laps).toBe(30)
+    expect(data.compounds.S.cliff).toBe(12)
+    expect(data.circuits['silverpark']!.laps).toBe(30)
     expect(data.cars.teams).toHaveLength(5)
     expect(data.drivers.drivers).toHaveLength(10)
   })
@@ -29,7 +29,7 @@ describe('loadGameData', () => {
 
   it('sectorBase arrays all have length 3', () => {
     const data = loadGameData()
-    for (const [id, circuit] of Object.entries(data.circuits)) {
+    for (const [id, circuit] of Object.entries(data.circuits) as [string, { sectorBase: number[] }][]) {
       expect(circuit.sectorBase, `${id} sectorBase`).toHaveLength(3)
     }
   })

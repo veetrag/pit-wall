@@ -40,7 +40,7 @@ const CircuitSchema = z.object({
   trackPath: z.string(),
   characterNote: z.string().optional(),
 })
-const CircuitsSchema = z.record(CircuitSchema)
+const CircuitsSchema = z.record(z.string(), CircuitSchema)
 
 const TeamSchema = z.object({
   id: z.string(), name: z.string(), rating: z.number().int().min(0).max(9),
