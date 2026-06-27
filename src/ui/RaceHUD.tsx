@@ -8,6 +8,7 @@ import { TyreGauge } from './TyreGauge'
 import { PaceModeToggle } from './PaceModeToggle'
 import { PitPanel, PitButton } from './PitPanel'
 import { TrackCanvas } from '@canvas/TrackCanvas'
+import { StartLights } from './StartLights'
 import { Component, type ReactNode } from 'react'
 
 class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -109,6 +110,7 @@ export function RaceHUD() {
             style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}
           >
             {phase === 'finished' && <FinishBanner />}
+            {phase === 'starting' && <StartLights />}
 
             {/* Main area: canvas + tower */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden', padding: '8px 8px 0', minHeight: 0 }}>

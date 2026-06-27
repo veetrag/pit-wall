@@ -6,7 +6,7 @@ import {
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
 
-export type RacePhase = 'idle' | 'racing' | 'finished'
+export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 
 interface RaceStore {
   phase: RacePhase
@@ -14,9 +14,13 @@ interface RaceStore {
   raceState: RaceState | null
   projectionResult: ProjectionResult | null
   pitPanelOpen: boolean
+  playerInPit: boolean
+  pitEndTime: number
   rng: Rng | null
 
   startRace: () => void
+  initForStartSequence: () => void
+  confirmRaceStart: () => void
   step: () => void
   pitNow: (compound: Compound) => void
   setPaceMode: (mode: PaceMode) => void
@@ -46,6 +50,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   raceState: null,
   projectionResult: null,
   pitPanelOpen: false,
+  playerInPit: false,
+  pitEndTime: 0,
   rng: null,
 
   startRace() {
@@ -53,17 +59,32 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildConfig(seed)
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false })
+    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
+  },
+
+  initForStartSequence() {
+    const seed = 42
+    const config = buildConfig(seed)
+    const raceState = initRace(config)
+    const rng = createRng(seed)
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
+  },
+
+  confirmRaceStart() {
+    set({ phase: 'racing' })
   },
 
   step() {
-    const { phase, config, raceState, rng } = get()
+    const { phase, config, raceState, rng, playerInPit, pitEndTime } = get()
     if (phase !== 'racing' || !config || !raceState || !rng) return
 
     const nextState = stepSector(config, raceState, rng)
     const finished = nextState.lap >= nextState.totalLaps && nextState.sector === 0
 
-    set({ raceState: nextState, phase: finished ? 'finished' : 'racing' })
+    const playerNow = nextState.cars.find(c => c.isPlayer)?.raceTime ?? 0
+    const stillInPit = playerInPit && playerNow < pitEndTime + config.tuning.pit.laneTimeLoss
+
+    set({ raceState: nextState, phase: finished ? 'finished' : 'racing', playerInPit: stillInPit })
   },
 
   pitNow(compound: Compound) {
@@ -76,7 +97,13 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       if (!car.isPlayer) return car
       return { ...car, raceTime: car.raceTime + stopTime, compound, tyreAge: 0, pitsDone: car.pitsDone + 1 }
     })
-    set({ raceState: { ...raceState, cars: updatedCars }, pitPanelOpen: false })
+    const playerTime = updatedCars.find(c => c.isPlayer)?.raceTime ?? 0
+    set({
+      raceState: { ...raceState, cars: updatedCars },
+      pitPanelOpen: false,
+      playerInPit: true,
+      pitEndTime: playerTime,
+    })
   },
 
   setPaceMode(mode: PaceMode) {

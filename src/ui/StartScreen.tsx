@@ -1,15 +1,8 @@
 import { motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
-import { useClockStore } from '@state/clockStore'
 
 export function StartScreen() {
-  const startRace = useRaceStore(s => s.startRace)
-  const setSpeed = useClockStore(s => s.setSpeed)
-
-  function handleStart() {
-    startRace()
-    setSpeed(1)
-  }
+  const initForStartSequence = useRaceStore(s => s.initForStartSequence)
 
   return (
     <motion.div
@@ -33,7 +26,7 @@ export function StartScreen() {
       </p>
       <motion.button
         whileTap={{ scale: 0.96 }}
-        onClick={handleStart}
+        onClick={initForStartSequence}
         style={{
           background: 'var(--accent)', color: 'var(--bg-deep)',
           border: 'none', borderRadius: 8, padding: '16px 48px',

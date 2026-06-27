@@ -56,4 +56,22 @@ describe('raceStore', () => {
     for (let i = 0; i < total; i++) getStore().step()
     expect(getStore().phase).toBe('finished')
   })
+
+  it('initForStartSequence sets phase to starting with raceState', () => {
+    getStore().initForStartSequence()
+    expect(getStore().phase).toBe('starting')
+    expect(getStore().raceState).not.toBeNull()
+  })
+
+  it('confirmRaceStart transitions starting -> racing', () => {
+    getStore().initForStartSequence()
+    getStore().confirmRaceStart()
+    expect(getStore().phase).toBe('racing')
+  })
+
+  it('pitNow sets playerInPit flag', () => {
+    getStore().startRace()
+    getStore().pitNow('H')
+    expect(getStore().playerInPit).toBe(true)
+  })
 })
