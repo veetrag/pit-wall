@@ -1,3 +1,4 @@
+import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import type { CarState, Compound, CompoundSpec } from '@engine/types'
@@ -42,6 +43,29 @@ function TowerRow({ car, leaderTime, compounds }: {
 
   const driverCode = car.driverId.replace('d_', '').toUpperCase().slice(0, 3)
 
+  const prevPosRef = useRef(car.position)
+  const [flash, setFlash] = useState<'gain' | 'loss' | null>(null)
+
+  useEffect(() => {
+    if (car.position < prevPosRef.current) {
+      setFlash('gain')
+      const t = setTimeout(() => setFlash(null), 600)
+      prevPosRef.current = car.position
+      return () => clearTimeout(t)
+    } else if (car.position > prevPosRef.current) {
+      setFlash('loss')
+      const t = setTimeout(() => setFlash(null), 600)
+      prevPosRef.current = car.position
+      return () => clearTimeout(t)
+    }
+  }, [car.position])
+
+  const flashBg = flash === 'gain'
+    ? 'rgba(61,220,132,0.15)'
+    : flash === 'loss'
+    ? 'rgba(255,107,107,0.15)'
+    : car.isPlayer ? 'rgba(0,229,208,0.08)' : 'transparent'
+
   return (
     <motion.div
       layout
@@ -54,11 +78,12 @@ function TowerRow({ car, leaderTime, compounds }: {
         gap: 5,
         padding: '5px 10px',
         borderRadius: 4,
-        background: car.isPlayer ? 'rgba(0,229,208,0.08)' : 'transparent',
+        background: flashBg,
         borderLeft: car.isPlayer ? '2px solid var(--accent)' : '2px solid transparent',
+        transition: 'background 0.3s ease',
       }}
     >
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: flash === 'gain' ? 'var(--positive)' : flash === 'loss' ? 'var(--negative)' : 'var(--text-dim)', fontVariantNumeric: 'tabular-nums', transition: 'color 0.3s' }}>
         {car.position}
       </span>
       <span style={{
