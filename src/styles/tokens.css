@@ -1,0 +1,19 @@
+:root {
+  --bg-deep:      #0A0E1A;
+  --bg-panel:     #121829;
+  --bg-elevated:  #1B2238;
+  --line-hair:    #2A3350;
+  --text-hi:      #F2F5FF;
+  --text-mid:     #9AA7C7;
+  --text-dim:     #5C6788;
+  --accent:       #00E5D0;
+  --accent-warm:  #FF4D5E;
+  --tyre-soft:    #E8344E;
+  --tyre-medium:  #F2C94C;
+  --tyre-hard:    #EAEAEA;
+  --positive:     #3DDC84;
+  --negative:     #FF6B6B;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg-deep); color: var(--text-hi); font-family: 'Inter', sans-serif; }
