@@ -19,8 +19,10 @@ interface RaceStore {
   rng: Rng | null
 
   startRace: () => void
+  startSeasonRace: (playerDriverId: string, seed: number) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
+  resetRace: () => void
   step: () => void
   pitNow: (compound: Compound) => void
   setPaceMode: (mode: PaceMode) => void
@@ -29,7 +31,7 @@ interface RaceStore {
   updateProjection: (compound: Compound) => void
 }
 
-function buildConfig(seed: number): RaceConfig {
+function buildConfig(seed: number, playerDriverId: string): RaceConfig {
   const data = loadGameData()
   const circuit = data.circuits['silverpark']!
   return {
@@ -39,7 +41,7 @@ function buildConfig(seed: number): RaceConfig {
     drivers: data.drivers.drivers,
     teams: data.cars.teams,
     strategies: data.strategies.defaults,
-    playerDriverId: 'd_ver',
+    playerDriverId,
     seed,
   }
 }
@@ -56,15 +58,22 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
   startRace() {
     const seed = 42
-    const config = buildConfig(seed)
+    const config = buildConfig(seed, 'd_ver')
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
   },
 
+  startSeasonRace(playerDriverId, seed) {
+    const config = buildConfig(seed, playerDriverId)
+    const raceState = initRace(config)
+    const rng = createRng(seed)
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
+  },
+
   initForStartSequence() {
     const seed = 42
-    const config = buildConfig(seed)
+    const config = buildConfig(seed, 'd_ver')
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
@@ -72,6 +81,10 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
   confirmRaceStart() {
     set({ phase: 'racing' })
+  },
+
+  resetRace() {
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
   },
 
   step() {

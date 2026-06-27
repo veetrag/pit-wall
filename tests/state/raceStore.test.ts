@@ -74,4 +74,19 @@ describe('raceStore', () => {
     getStore().pitNow('H')
     expect(getStore().playerInPit).toBe(true)
   })
+
+  it('startSeasonRace uses given playerDriverId and produces valid race', () => {
+    getStore().startSeasonRace('d_ham', 9042)
+    const s = getStore()
+    expect(s.phase).toBe('starting')
+    const player = s.raceState!.cars.find(c => c.isPlayer)
+    expect(player?.driverId).toBe('d_ham')
+  })
+
+  it('resetRace returns to idle with null state', () => {
+    getStore().startRace()
+    getStore().resetRace()
+    expect(getStore().phase).toBe('idle')
+    expect(getStore().raceState).toBeNull()
+  })
 })
