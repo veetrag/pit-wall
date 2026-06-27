@@ -1,6 +1,26 @@
 import './styles/tokens.css'
+import { AnimatePresence } from 'framer-motion'
+import { useSeasonStore } from './state/seasonStore'
+import { MainMenu } from './ui/MainMenu'
+import { DriverSelect } from './ui/DriverSelect'
 import { RaceHUD } from './ui/RaceHUD'
+import { RaceResult } from './ui/RaceResult'
+import { Championship } from './ui/Championship'
+import { RaceWatcher } from './ui/RaceWatcher'
 
 export default function App() {
-  return <RaceHUD />
+  const phase = useSeasonStore(s => s.phase)
+
+  return (
+    <div style={{ height: '100%', overflow: 'hidden', position: 'relative' }}>
+      <RaceWatcher />
+      <AnimatePresence mode="wait">
+        {phase === 'menu' && <MainMenu key="menu" />}
+        {phase === 'driver_select' && <DriverSelect key="driver_select" />}
+        {phase === 'racing' && <RaceHUD key="race" />}
+        {phase === 'result' && <RaceResult key="result" />}
+        {phase === 'championship' && <Championship key="championship" />}
+      </AnimatePresence>
+    </div>
+  )
 }
