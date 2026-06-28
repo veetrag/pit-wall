@@ -5,9 +5,9 @@ import { GameClock } from './GameClock'
 import { StartScreen } from './StartScreen'
 import { TimingTower } from './TimingTower'
 import { TyreGauge } from './TyreGauge'
-import { WeatherStrip } from './WeatherStrip'
 import { PaceModeToggle } from './PaceModeToggle'
 import { PitPanel, PitButton } from './PitPanel'
+import { WeatherStrip } from './WeatherStrip'
 import { TrackCanvas } from '@canvas/TrackCanvas'
 import { StartLights } from './StartLights'
 import { SettingsPanel } from './SettingsPanel'
@@ -50,16 +50,53 @@ function SpeedControl() {
           whileTap={{ scale: 0.9 }}
           onClick={() => setSpeed(v)}
           style={{
-            border: 'none', borderRadius: 6, padding: '6px 12px',
+            border: 'none', borderRadius: 6, padding: '5px 10px',
             background: speed === v ? 'var(--accent)' : 'var(--bg-elevated)',
             color: speed === v ? 'var(--bg-deep)' : 'var(--text-mid)',
             fontFamily: 'var(--font-mono)', fontSize: 12, cursor: 'pointer',
             outline: speed === v ? 'none' : '1px solid var(--line-hair)',
+            fontVariantNumeric: 'tabular-nums',
           }}
         >
           {label}
         </motion.button>
       ))}
+    </div>
+  )
+}
+
+function StatusBar() {
+  const raceState = useRaceStore(s => s.raceState)
+  const config = useRaceStore(s => s.config)
+  const phase = useRaceStore(s => s.phase)
+
+  if (!raceState || phase === 'idle') return null
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '5px 12px',
+      background: 'var(--bg-panel)',
+      borderBottom: '1px solid var(--line-hair)',
+      flexShrink: 0,
+    }}>
+      <span style={{
+        fontFamily: 'var(--font-mono)', fontSize: 10,
+        color: 'var(--text-dim)', letterSpacing: '0.1em', textTransform: 'uppercase',
+      }}>
+        {config?.circuit.name ?? ''}
+      </span>
+      <span style={{
+        fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700,
+        color: 'var(--accent)', fontVariantNumeric: 'tabular-nums',
+        letterSpacing: '0.06em',
+      }}>
+        L{raceState.lap + 1}<span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>/{raceState.totalLaps}</span>
+      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <SpeedControl />
+        <SettingsPanel />
+      </div>
     </div>
   )
 }
@@ -115,41 +152,46 @@ export function RaceHUD() {
             {phase === 'finished' && <FinishBanner />}
             {phase === 'starting' && <StartLights />}
 
+            {/* Status bar: circuit · lap · speed controls */}
+            <StatusBar />
+
             {/* Weather strip */}
             {(phase === 'racing' || phase === 'starting') && <WeatherStrip />}
 
-            {/* Main area: canvas + tower */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden', padding: '8px 8px 0', minHeight: 0, position: 'relative' }}>
+            {/* Track canvas — fixed height, portrait-first */}
+            <div style={{
+              height: 220, flexShrink: 0,
+              margin: '8px 8px 0',
+              borderRadius: 8, overflow: 'hidden',
+              background: 'var(--bg-deep)', position: 'relative',
+            }}>
               <PitTimer />
-              <div style={{ flex: 1, overflow: 'hidden', borderRadius: 8, background: 'var(--bg-deep)' }}>
-                <CanvasBoundary>
-                  <TrackCanvas />
-                </CanvasBoundary>
-              </div>
-              <div style={{ width: 252, marginLeft: 8, overflowY: 'auto', flexShrink: 0 }}>
-                <TimingTower />
-              </div>
+              <CanvasBoundary>
+                <TrackCanvas />
+              </CanvasBoundary>
             </div>
 
-            {/* Bottom control strip */}
+            {/* Timing tower — fills remaining space, scrollable */}
             <div style={{
-              padding: '10px 12px',
+              flex: 1, overflow: 'hidden',
+              margin: '6px 8px 0', minHeight: 0,
+            }}>
+              <TimingTower />
+            </div>
+
+            {/* Bottom control strip — thumb zone */}
+            <div style={{
+              padding: '8px 12px 10px',
               background: 'var(--bg-panel)',
               borderTop: '1px solid var(--line-hair)',
-              display: 'flex', flexDirection: 'column', gap: 10,
+              display: 'flex', gap: 8, alignItems: 'stretch',
               flexShrink: 0,
             }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-                <div style={{ flex: 1 }}>
-                  <PaceModeToggle />
-                </div>
-                <TyreGauge />
-                <PitButton />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <PaceModeToggle />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 12, alignItems: 'center' }}>
-                <SpeedControl />
-                <SettingsPanel />
-              </div>
+              <TyreGauge />
+              <PitButton />
             </div>
           </motion.div>
         )}
