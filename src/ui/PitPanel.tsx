@@ -6,16 +6,30 @@ import { tyreCliffFraction } from '@engine/index'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { soundService } from '@audio/soundService'
 
-const COMPOUNDS: { id: Compound; label: string; colorVar: string }[] = [
-  { id: 'S', label: 'SOFT',   colorVar: 'var(--tyre-soft)' },
-  { id: 'M', label: 'MEDIUM', colorVar: 'var(--tyre-medium)' },
-  { id: 'H', label: 'HARD',   colorVar: 'var(--tyre-hard)' },
+const ALL_COMPOUNDS: { id: Compound; label: string; colorVar: string; wet: boolean }[] = [
+  { id: 'S', label: 'SOFT',   colorVar: 'var(--tyre-soft)',              wet: false },
+  { id: 'M', label: 'MEDIUM', colorVar: 'var(--tyre-medium)',            wet: false },
+  { id: 'H', label: 'HARD',   colorVar: 'var(--tyre-hard)',              wet: false },
+  { id: 'I', label: 'INTER',  colorVar: 'var(--tyre-inter, #39B54A)',    wet: true  },
+  { id: 'W', label: 'WET',    colorVar: 'var(--tyre-wet, #4DA6FF)',      wet: true  },
 ]
 
 function PitPanelDrawer() {
-  const [selected, setSelected] = useState<Compound>('M')
   const { pitNow, closePitPanel, projectionResult, updateProjection } = useRaceStore()
+  const raceState = useRaceStore(s => s.raceState)
   const { impact } = useHaptics()
+
+  // Show wet compounds when conditions are damp/wet now or within next 2 laps
+  const lap = raceState?.lap ?? 0
+  const timeline = raceState?.weatherTimeline ?? []
+  const now = timeline[lap] ?? raceState?.weatherState ?? 'DRY'
+  const soon = timeline[lap + 1] ?? now
+  const later = timeline[lap + 2] ?? soon
+  const wetsRelevant = now !== 'DRY' || soon !== 'DRY' || later !== 'DRY'
+
+  const availableCompounds = ALL_COMPOUNDS.filter(c => !c.wet || wetsRelevant)
+
+  const [selected, setSelected] = useState<Compound>('M')
 
   function handleSelect(c: Compound) {
     setSelected(c)
@@ -84,8 +98,8 @@ function PitPanelDrawer() {
         </motion.div>
       )}
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-        {COMPOUNDS.map(({ id, label, colorVar }) => {
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+        {availableCompounds.map(({ id, label, colorVar, wet }) => {
           const active = selected === id
           return (
             <motion.button
@@ -93,10 +107,11 @@ function PitPanelDrawer() {
               whileTap={{ scale: 0.94 }}
               onClick={() => handleSelect(id)}
               style={{
-                flex: 1, border: 'none', borderRadius: 10, padding: '14px 8px',
+                flex: '1 1 calc(33% - 8px)', minWidth: 60,
+                border: 'none', borderRadius: 10, padding: '12px 6px',
                 cursor: 'pointer',
                 background: active ? colorVar : 'var(--bg-panel)',
-                outline: active ? 'none' : `1px solid var(--line-hair)`,
+                outline: active ? 'none' : wet ? `1px solid ${colorVar}66` : `1px solid var(--line-hair)`,
                 boxShadow: active ? `0 0 16px ${colorVar}66` : 'none',
                 transition: 'all 0.15s ease',
               }}
