@@ -92,8 +92,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         const [stopNoise] = gaussianPair(rng)
         const team = config.teams.find(t => t.id === car.teamId)!
         const crewFactor = team.facets.pitCrew / 100
-        const effectiveStopMean = config.tuning.pit.stopMean - crewFactor * 0.6
-        const effectiveStopSigma = config.tuning.pit.stopSigma * (1 - crewFactor * 0.5)
+        const effectiveStopMean = config.tuning.pit.stopMean - crewFactor * config.tuning.pit.pitCrewMeanRelief
+        const effectiveStopSigma = config.tuning.pit.stopSigma * (1 - crewFactor * config.tuning.pit.pitCrewSigmaRelief)
         const stopTime = config.tuning.pit.laneTimeLoss +
           effectiveStopMean +
           stopNoise * effectiveStopSigma
@@ -157,8 +157,8 @@ function resolveOvertakes(
     const paceAdv = calculatePaceAdvantage(config, behind, ahead)
     const attackerDriver = config.drivers.find(d => d.id === behind.driverId)!
     const defenderDriver = config.drivers.find(d => d.id === ahead.driverId)!
-    const attackMult = 0.5 + (attackerDriver.facets.racecraft / 100)
-    const defendMult = 1 - (defenderDriver.facets.racecraft / 100) * 0.4
+    const attackMult = config.tuning.overtaking.attackRacecraftBase + (attackerDriver.facets.racecraft / 100)
+    const defendMult = 1 - (defenderDriver.facets.racecraft / 100) * config.tuning.overtaking.defenceRacecraftFactor
     const prob = Math.min(
       0.85,
       (config.tuning.overtaking.base * sectorEase +

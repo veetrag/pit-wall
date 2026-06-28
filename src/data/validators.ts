@@ -10,54 +10,56 @@ const TuningSchema = z.object({
   carPerformance: z.object({ deltaPerRating: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
   driverPerformance: z.object({ deltaPerSkill: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
   fuel: z.object({ effectPerLap: z.number() }),
-  noise: z.object({ sigmaPerSector: z.number() }),
+  noise: z.object({ sigmaPerSector: z.number(), consistencyReliefFactor: z.number() }),
   trackEvolution: z.object({ startDelta: z.number(), decayLaps: z.number() }),
   traffic: z.object({ gapThreshold: z.number(), penalty: z.number() }),
-  overtaking: z.object({ base: z.number(), paceMultiplier: z.number(), sectorFactor: z.tuple([z.number(), z.number(), z.number()]) }),
-  pit: z.object({ laneTimeLoss: z.number(), stopMean: z.number(), stopSigma: z.number() }),
+  overtaking: z.object({
+    base: z.number(), paceMultiplier: z.number(),
+    sectorFactor: z.tuple([z.number(), z.number(), z.number()]),
+    attackRacecraftBase: z.number(),
+    defenceRacecraftFactor: z.number(),
+    tyreFreshnessBonusMax: z.number(),
+  }),
+  pit: z.object({
+    laneTimeLoss: z.number(), stopMean: z.number(), stopSigma: z.number(),
+    pitCrewMeanRelief: z.number(), pitCrewSigmaRelief: z.number(),
+  }),
   paceModes: z.object({
     push:     z.object({ paceDelta: z.number(), degMultiplier: z.number() }),
     neutral:  z.object({ paceDelta: z.number(), degMultiplier: z.number() }),
     conserve: z.object({ paceDelta: z.number(), degMultiplier: z.number() }),
   }),
-  projection: z.object({ horizonLaps: z.number(), useOvertakeRolls: z.boolean() }),
+  tyreManagement: z.object({ degReliefFactor: z.number() }),
+  projection: z.object({
+    horizonLaps: z.number(), useOvertakeRolls: z.boolean(),
+    netEstimateHorizonLaps: z.number(),
+  }),
   incidents: z.object({ dnfPerLap: z.number(), driverErrorPerLap: z.number() }),
   weather: z.object({
-    crossoverPenalty: z.object({
-      dryInWet: z.number(),
-      dryInDamp: z.number(),
-      wetInDry: z.number(),
-      dampInDry: z.number(),
-    }),
-    wetDegMultiplier: z.number(),
+    crossoverPenalty: z.record(z.string(), z.record(z.string(), z.number())),
+    wetDegMultiplier: z.record(z.string(), z.record(z.string(), z.number())),
     wetSkillReliefMax: z.number(),
+    wetNoiseReliefFactor: z.number(),
     forecastLap2Confidence: z.number(),
-    minDryLaps: z.number(),
-    minWetLaps: z.number(),
-    dampToWetProb: z.number(),
-    dampToDryProb: z.number(),
-    wetToDampProb: z.number(),
-    dryToDampProb: z.number(),
+    timeline: z.object({
+      onsetWindow: z.tuple([z.number(), z.number()]),
+      minDuration: z.number(),
+      maxDuration: z.number(),
+      intensityBias: z.record(z.string(), z.number()),
+    }),
   }),
-})
+  _regressionBands: z.record(z.string(), z.unknown()).optional(),
+}).passthrough()
 
 const CompoundEntrySchema = z.object({
   name: z.string(),
   type: z.enum(['dry', 'wet']),
-  offset: z.number(),
-  lin: z.number(),
-  cliff: z.number(),
-  pen: z.number(),
+  offset: z.number(), lin: z.number(),
+  cliff: z.number(), pen: z.number(),
   colorToken: z.string(),
   optimalState: z.enum(['DRY', 'DAMP', 'WET']).optional(),
 })
-const CompoundsSchema = z.object({
-  S: CompoundEntrySchema,
-  M: CompoundEntrySchema,
-  H: CompoundEntrySchema,
-  I: CompoundEntrySchema,
-  W: CompoundEntrySchema,
-})
+const CompoundsWrapperSchema = z.object({ compounds: z.record(z.string(), CompoundEntrySchema) })
 
 const CircuitSchema = z.object({
   name: z.string(), laps: z.number(),
@@ -66,12 +68,12 @@ const CircuitSchema = z.object({
   driverSensitivity: z.tuple([z.number(), z.number(), z.number()]),
   overtakingFactor: z.tuple([z.number(), z.number(), z.number()]),
   pitLaneTimeLoss: z.number(),
-  trackPath: z.string(),
-  characterNote: z.string().optional(),
   rainProbability: z.number().optional(),
   weatherBias: z.string().optional(),
+  trackPath: z.string().optional(),
+  characterNote: z.string().optional(),
 })
-const CircuitsSchema = z.record(z.string(), CircuitSchema)
+const CircuitsWrapperSchema = z.object({ circuits: z.record(z.string(), CircuitSchema) })
 
 const TeamFacetsSchema = z.object({
   power:       z.number().min(0).max(100),
@@ -84,6 +86,7 @@ const TeamSchema = z.object({
   id: z.string(), name: z.string(),
   colorPrimary: z.string(), colorSecondary: z.string(),
   facets: TeamFacetsSchema,
+  archetype: z.string().optional(),
   developmentRate: z.number().optional(),
 })
 const CarsSchema = z.object({ teams: z.array(TeamSchema) })
@@ -100,6 +103,7 @@ const DriverSchema = z.object({
   id: z.string(), name: z.string(), code: z.string().length(3),
   teamId: z.string(),
   facets: DriverFacetsSchema,
+  archetype: z.string().optional(),
   potential: z.number().optional(),
   age: z.number().optional(),
 })
@@ -112,16 +116,16 @@ const StrategyDefaultSchema = z.object({
 const StrategiesSchema = z.object({ defaults: z.array(StrategyDefaultSchema) })
 
 export type Tuning = z.infer<typeof TuningSchema>
-export type Compounds = z.infer<typeof CompoundsSchema>
-export type Circuits = z.infer<typeof CircuitsSchema>
+export type CompoundsWrapper = z.infer<typeof CompoundsWrapperSchema>
+export type CircuitsWrapper = z.infer<typeof CircuitsWrapperSchema>
 export type Cars = z.infer<typeof CarsSchema>
 export type Drivers = z.infer<typeof DriversSchema>
 export type Strategies = z.infer<typeof StrategiesSchema>
 
 export interface GameData {
   tuning: Tuning
-  compounds: Compounds
-  circuits: Circuits
+  compounds: CompoundsWrapper['compounds']
+  circuits: CircuitsWrapper['circuits']
   cars: Cars
   drivers: Drivers
   strategies: Strategies
@@ -129,8 +133,8 @@ export interface GameData {
 
 export function loadGameData(): GameData {
   const tuning = TuningSchema.parse(tuningJson)
-  const compounds = CompoundsSchema.parse(compoundsJson)
-  const circuits = CircuitsSchema.parse(circuitsJson)
+  const compoundsWrapper = CompoundsWrapperSchema.parse(compoundsJson)
+  const circuitsWrapper = CircuitsWrapperSchema.parse(circuitsJson)
   const cars = CarsSchema.parse(carsJson)
   const drivers = DriversSchema.parse(driversJson)
   const strategies = StrategiesSchema.parse(strategiesJson)
@@ -143,5 +147,12 @@ export function loadGameData(): GameData {
     if (!teamIds.has(s.teamId)) throw new Error(`Strategy references unknown teamId "${s.teamId}"`)
   }
 
-  return { tuning, compounds, circuits, cars, drivers, strategies }
+  return {
+    tuning,
+    compounds: compoundsWrapper.compounds,
+    circuits: circuitsWrapper.circuits,
+    cars,
+    drivers,
+    strategies,
+  }
 }

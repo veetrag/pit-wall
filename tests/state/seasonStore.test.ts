@@ -20,15 +20,23 @@ describe('seasonStore', () => {
 
   it('selectDriver sets playerDriverId', () => {
     useSeasonStore.getState().startNewSeason()
-    useSeasonStore.getState().selectDriver('d_ham')
-    expect(useSeasonStore.getState().playerDriverId).toBe('d_ham')
+    useSeasonStore.getState().selectDriver('d_voss')
+    expect(useSeasonStore.getState().playerDriverId).toBe('d_voss')
   })
 
-  it('confirmDriver transitions to racing', () => {
+  it('confirmDriver transitions to race_setup', () => {
     useSeasonStore.getState().startNewSeason()
-    useSeasonStore.getState().selectDriver('d_ham')
+    useSeasonStore.getState().selectDriver('d_voss')
     useSeasonStore.getState().confirmDriver()
     expect(useSeasonStore.getState().phase).toBe('race_setup')
+  })
+
+  it('confirmRaceSetup transitions to racing', () => {
+    useSeasonStore.getState().startNewSeason()
+    useSeasonStore.getState().selectDriver('d_voss')
+    useSeasonStore.getState().confirmDriver()
+    useSeasonStore.getState().confirmRaceSetup()
+    expect(useSeasonStore.getState().phase).toBe('racing')
   })
 
   it('currentSeed returns raceIndex * 1000 + 42', () => {

@@ -1,54 +1,104 @@
 {
   "drivers": [
     {
-      "id": "d_ver", "name": "Verstael", "code": "VRS", "teamId": "apex",
+      "id": "d_voss", "name": "Voss", "code": "VOS", "teamId": "apex",
       "facets": { "pace": 95, "racecraft": 93, "tyreManagement": 85, "consistency": 94, "wetWeather": 88, "experience": 90 },
-      "potential": 97, "age": 27
+      "archetype": "complete", "potential": 97, "age": 27
     },
     {
-      "id": "d_nor", "name": "Nordvik", "code": "NRD", "teamId": "apex",
+      "id": "d_chen", "name": "Chen", "code": "CHN", "teamId": "apex",
       "facets": { "pace": 90, "racecraft": 88, "tyreManagement": 78, "consistency": 87, "wetWeather": 82, "experience": 72 },
-      "potential": 94, "age": 25
+      "archetype": "raw_talent", "potential": 94, "age": 25
     },
     {
-      "id": "d_ham", "name": "Hamilcar", "code": "HMC", "teamId": "meridian",
+      "id": "d_rossi", "name": "Rossi", "code": "ROS", "teamId": "meridian",
       "facets": { "pace": 92, "racecraft": 91, "tyreManagement": 96, "consistency": 93, "wetWeather": 94, "experience": 96 },
-      "potential": 93, "age": 39
+      "archetype": "veteran", "potential": 93, "age": 39
     },
     {
-      "id": "d_lec", "name": "Leclair", "code": "LCR", "teamId": "meridian",
+      "id": "d_haas", "name": "Haas", "code": "HAS", "teamId": "meridian",
       "facets": { "pace": 91, "racecraft": 84, "tyreManagement": 70, "consistency": 76, "wetWeather": 85, "experience": 66 },
-      "potential": 95, "age": 27
+      "archetype": "qualifier", "potential": 95, "age": 27
     },
     {
-      "id": "d_rus", "name": "Ruskov", "code": "RSK", "teamId": "vortex",
+      "id": "d_silva", "name": "Silva", "code": "SLV", "teamId": "vortex",
       "facets": { "pace": 83, "racecraft": 79, "tyreManagement": 88, "consistency": 87, "wetWeather": 76, "experience": 80 },
-      "potential": 87, "age": 26
+      "archetype": "consistent", "potential": 87, "age": 26
     },
     {
-      "id": "d_alo", "name": "Alontez", "code": "ALZ", "teamId": "vortex",
+      "id": "d_park", "name": "Park", "code": "PRK", "teamId": "vortex",
       "facets": { "pace": 87, "racecraft": 90, "tyreManagement": 64, "consistency": 70, "wetWeather": 81, "experience": 86 },
-      "potential": 88, "age": 43
+      "archetype": "racecraft", "potential": 88, "age": 43
     },
     {
-      "id": "d_sai", "name": "Sairal", "code": "SRL", "teamId": "zenith",
+      "id": "d_berg", "name": "Berg", "code": "BRG", "teamId": "kestrel",
+      "facets": { "pace": 84, "racecraft": 80, "tyreManagement": 82, "consistency": 85, "wetWeather": 79, "experience": 78 },
+      "archetype": "balanced", "potential": 87, "age": 29
+    },
+    {
+      "id": "d_almeida", "name": "Almeida", "code": "ALM", "teamId": "kestrel",
+      "facets": { "pace": 81, "racecraft": 76, "tyreManagement": 80, "consistency": 82, "wetWeather": 74, "experience": 60 },
+      "archetype": "developing", "potential": 90, "age": 23
+    },
+    {
+      "id": "d_novak", "name": "Novak", "code": "NOV", "teamId": "solstice",
+      "facets": { "pace": 80, "racecraft": 83, "tyreManagement": 90, "consistency": 88, "wetWeather": 72, "experience": 84 },
+      "archetype": "tyre_whisperer", "potential": 83, "age": 32
+    },
+    {
+      "id": "d_ito", "name": "Ito", "code": "ITO", "teamId": "solstice",
+      "facets": { "pace": 78, "racecraft": 75, "tyreManagement": 85, "consistency": 80, "wetWeather": 68, "experience": 56 },
+      "archetype": "technical", "potential": 86, "age": 24
+    },
+    {
+      "id": "d_dubois", "name": "Dubois", "code": "DUB", "teamId": "delta",
+      "facets": { "pace": 76, "racecraft": 78, "tyreManagement": 72, "consistency": 74, "wetWeather": 80, "experience": 74 },
+      "archetype": "tactical", "potential": 82, "age": 31
+    },
+    {
+      "id": "d_mwangi", "name": "Mwangi", "code": "MWG", "teamId": "delta",
+      "facets": { "pace": 74, "racecraft": 72, "tyreManagement": 70, "consistency": 76, "wetWeather": 76, "experience": 48 },
+      "archetype": "rookie", "potential": 88, "age": 21
+    },
+    {
+      "id": "d_olsen", "name": "Olsen", "code": "OLS", "teamId": "halcyon",
+      "facets": { "pace": 73, "racecraft": 74, "tyreManagement": 76, "consistency": 78, "wetWeather": 70, "experience": 82 },
+      "archetype": "journeyman", "potential": 76, "age": 35
+    },
+    {
+      "id": "d_reyes", "name": "Reyes", "code": "REY", "teamId": "halcyon",
+      "facets": { "pace": 71, "racecraft": 70, "tyreManagement": 74, "consistency": 72, "wetWeather": 66, "experience": 62 },
+      "archetype": "steady", "potential": 78, "age": 28
+    },
+    {
+      "id": "d_fischer", "name": "Fischer", "code": "FSC", "teamId": "nimbus",
+      "facets": { "pace": 69, "racecraft": 68, "tyreManagement": 72, "consistency": 70, "wetWeather": 64, "experience": 50 },
+      "archetype": "developing", "potential": 82, "age": 22
+    },
+    {
+      "id": "d_kovac", "name": "Kovac", "code": "KOV", "teamId": "nimbus",
+      "facets": { "pace": 67, "racecraft": 65, "tyreManagement": 68, "consistency": 68, "wetWeather": 62, "experience": 44 },
+      "archetype": "rookie", "potential": 80, "age": 20
+    },
+    {
+      "id": "d_santos", "name": "Santos", "code": "SNT", "teamId": "terra",
+      "facets": { "pace": 66, "racecraft": 64, "tyreManagement": 70, "consistency": 66, "wetWeather": 60, "experience": 46 },
+      "archetype": "developing", "potential": 78, "age": 23
+    },
+    {
+      "id": "d_tan", "name": "Tan", "code": "TAN", "teamId": "terra",
+      "facets": { "pace": 64, "racecraft": 62, "tyreManagement": 66, "consistency": 64, "wetWeather": 58, "experience": 40 },
+      "archetype": "rookie", "potential": 76, "age": 21
+    },
+    {
+      "id": "d_petrov", "name": "Petrov", "code": "PTV", "teamId": "zenith",
       "facets": { "pace": 83, "racecraft": 81, "tyreManagement": 80, "consistency": 82, "wetWeather": 78, "experience": 76 },
-      "potential": 87, "age": 30
+      "archetype": "balanced", "potential": 86, "age": 30
     },
     {
-      "id": "d_pia", "name": "Piaster", "code": "PST", "teamId": "zenith",
+      "id": "d_kane", "name": "Kane", "code": "KAN", "teamId": "zenith",
       "facets": { "pace": 80, "racecraft": 83, "tyreManagement": 74, "consistency": 75, "wetWeather": 72, "experience": 54 },
-      "potential": 92, "age": 24
-    },
-    {
-      "id": "d_oco", "name": "Oconnel", "code": "OCN", "teamId": "torque",
-      "facets": { "pace": 75, "racecraft": 73, "tyreManagement": 84, "consistency": 80, "wetWeather": 70, "experience": 84 },
-      "potential": 78, "age": 34
-    },
-    {
-      "id": "d_gas", "name": "Gascoigne", "code": "GSC", "teamId": "torque",
-      "facets": { "pace": 70, "racecraft": 64, "tyreManagement": 68, "consistency": 65, "wetWeather": 62, "experience": 45 },
-      "potential": 84, "age": 22
+      "archetype": "racecraft", "potential": 91, "age": 24
     }
   ]
 }

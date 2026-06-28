@@ -1,15 +1,71 @@
 {
-  "silverpark": {
-    "name": "Silverpark",
-    "laps": 30,
-    "sectorBase": [28.0, 34.0, 28.0],
-    "carSensitivity": [0.30, 0.45, 0.25],
-    "driverSensitivity": [0.30, 0.40, 0.30],
-    "overtakingFactor": [1.0, 0.25, 0.55],
-    "pitLaneTimeLoss": 22.0,
-    "trackPath": "paths/silverpark.json",
-    "characterNote": "Balanced reference circuit. S1 power, S2 aero, S3 mixed/traffic.",
-    "rainProbability": 0.35,
-    "weatherBias": "showery"
+  "circuits": {
+    "silverpark": {
+      "name": "Silverpark", "laps": 30,
+      "sectorBase": [28.0, 34.0, 28.0],
+      "carSensitivity": [0.30, 0.45, 0.25],
+      "driverSensitivity": [0.30, 0.40, 0.30],
+      "overtakingFactor": [1.0, 0.25, 0.55],
+      "pitLaneTimeLoss": 22.0,
+      "rainProbability": 0.15,
+      "weatherBias": "variable",
+      "trackPath": "paths/silverpark.json",
+      "characterNote": "Balanced reference circuit. S1 power, S2 aero, S3 mixed/traffic."
+    },
+    "velocity_park": {
+      "name": "Velocity Park", "laps": 28,
+      "sectorBase": [25.0, 38.0, 27.0],
+      "carSensitivity": [0.45, 0.35, 0.20],
+      "driverSensitivity": [0.25, 0.45, 0.30],
+      "overtakingFactor": [1.2, 0.20, 0.60],
+      "pitLaneTimeLoss": 20.0,
+      "rainProbability": 0.10,
+      "weatherBias": "stable",
+      "characterNote": "High-speed power circuit. Long straights reward horsepower."
+    },
+    "aria_ring": {
+      "name": "Aria Ring", "laps": 32,
+      "sectorBase": [30.0, 32.0, 30.0],
+      "carSensitivity": [0.25, 0.50, 0.25],
+      "driverSensitivity": [0.25, 0.50, 0.25],
+      "overtakingFactor": [0.8, 0.40, 0.80],
+      "pitLaneTimeLoss": 24.0,
+      "rainProbability": 0.20,
+      "weatherBias": "mixed",
+      "characterNote": "Technical twisty layout. Aero-sensitive, hard to overtake."
+    },
+    "harbor_street": {
+      "name": "Harbor Street", "laps": 35,
+      "sectorBase": [26.0, 30.0, 29.0],
+      "carSensitivity": [0.30, 0.40, 0.30],
+      "driverSensitivity": [0.35, 0.35, 0.30],
+      "overtakingFactor": [0.9, 0.30, 0.70],
+      "pitLaneTimeLoss": 26.0,
+      "rainProbability": 0.25,
+      "weatherBias": "wet",
+      "characterNote": "Street circuit near the coast. Rain-prone, demands concentration."
+    },
+    "grand_mesa": {
+      "name": "Grand Mesa", "laps": 30,
+      "sectorBase": [29.0, 35.0, 26.0],
+      "carSensitivity": [0.35, 0.40, 0.25],
+      "driverSensitivity": [0.30, 0.40, 0.30],
+      "overtakingFactor": [1.1, 0.25, 0.65],
+      "pitLaneTimeLoss": 21.0,
+      "rainProbability": 0.08,
+      "weatherBias": "stable",
+      "characterNote": "Desert high-altitude track. Dry and fast, tyre thermal management key."
+    },
+    "tempest_bay": {
+      "name": "Tempest Bay", "laps": 33,
+      "sectorBase": [27.0, 36.0, 28.0],
+      "carSensitivity": [0.30, 0.40, 0.30],
+      "driverSensitivity": [0.30, 0.40, 0.30],
+      "overtakingFactor": [1.0, 0.30, 0.60],
+      "pitLaneTimeLoss": 23.0,
+      "rainProbability": 0.40,
+      "weatherBias": "wet",
+      "characterNote": "Coastal circuit notorious for unpredictable weather. Wet weather compound choice is decisive."
+    }
   }
 }

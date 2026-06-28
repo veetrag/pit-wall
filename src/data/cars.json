@@ -4,31 +4,61 @@
       "id": "apex", "name": "Apex Racing",
       "colorPrimary": "#00E5D0", "colorSecondary": "#0A0E1A",
       "facets": { "power": 96, "aero": 94, "handling": 90, "reliability": 92, "pitCrew": 90 },
-      "developmentRate": 0.8
+      "archetype": "all_rounder", "developmentRate": 0.8
     },
     {
       "id": "meridian", "name": "Meridian GP",
       "colorPrimary": "#E8344E", "colorSecondary": "#FFFFFF",
       "facets": { "power": 86, "aero": 94, "handling": 84, "reliability": 90, "pitCrew": 84 },
-      "developmentRate": 1.0
+      "archetype": "aero_specialist", "developmentRate": 1.0
     },
     {
       "id": "vortex", "name": "Vortex Motors",
       "colorPrimary": "#F2C94C", "colorSecondary": "#0A0E1A",
       "facets": { "power": 82, "aero": 80, "handling": 90, "reliability": 88, "pitCrew": 78 },
-      "developmentRate": 1.1
+      "archetype": "handling_specialist", "developmentRate": 1.1
+    },
+    {
+      "id": "kestrel", "name": "Kestrel F1",
+      "colorPrimary": "#3DA6FF", "colorSecondary": "#0A0E1A",
+      "facets": { "power": 90, "aero": 76, "handling": 80, "reliability": 85, "pitCrew": 82 },
+      "archetype": "power_specialist", "developmentRate": 0.9
+    },
+    {
+      "id": "solstice", "name": "Solstice Racing",
+      "colorPrimary": "#FF8C42", "colorSecondary": "#1A1A1A",
+      "facets": { "power": 78, "aero": 82, "handling": 78, "reliability": 94, "pitCrew": 88 },
+      "archetype": "reliable", "developmentRate": 0.7
+    },
+    {
+      "id": "delta", "name": "Delta Works",
+      "colorPrimary": "#A8E063", "colorSecondary": "#0A0E1A",
+      "facets": { "power": 74, "aero": 70, "handling": 84, "reliability": 86, "pitCrew": 76 },
+      "archetype": "tactical", "developmentRate": 1.2
+    },
+    {
+      "id": "halcyon", "name": "Halcyon GP",
+      "colorPrimary": "#C9A0DC", "colorSecondary": "#0A0E1A",
+      "facets": { "power": 70, "aero": 76, "handling": 72, "reliability": 90, "pitCrew": 94 },
+      "archetype": "pit_specialist", "developmentRate": 1.0
+    },
+    {
+      "id": "nimbus", "name": "Nimbus Motorsport",
+      "colorPrimary": "#7FFFD4", "colorSecondary": "#1A1A1A",
+      "facets": { "power": 68, "aero": 72, "handling": 68, "reliability": 82, "pitCrew": 72 },
+      "archetype": "underdog", "developmentRate": 1.4
+    },
+    {
+      "id": "terra", "name": "Terra Racing",
+      "colorPrimary": "#D2691E", "colorSecondary": "#FFFFFF",
+      "facets": { "power": 64, "aero": 68, "handling": 74, "reliability": 78, "pitCrew": 70 },
+      "archetype": "developing", "developmentRate": 1.5
     },
     {
       "id": "zenith", "name": "Zenith F1",
       "colorPrimary": "#7B5EA7", "colorSecondary": "#FFFFFF",
       "facets": { "power": 88, "aero": 74, "handling": 78, "reliability": 86, "pitCrew": 74 },
-      "developmentRate": 0.9
-    },
-    {
-      "id": "torque", "name": "Torque Works",
-      "colorPrimary": "#FF7A00", "colorSecondary": "#0A0E1A",
-      "facets": { "power": 72, "aero": 70, "handling": 72, "reliability": 82, "pitCrew": 92 },
-      "developmentRate": 1.3
+      "archetype": "balanced", "developmentRate": 0.9
     }
   ]
 }

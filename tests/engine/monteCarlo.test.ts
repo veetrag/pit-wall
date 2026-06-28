@@ -14,7 +14,7 @@ function buildConfig(seed: number): RaceConfig {
     drivers: data.drivers.drivers,
     teams: data.cars.teams,
     strategies: data.strategies.defaults,
-    playerDriverId: 'd_ver',
+    playerDriverId: 'd_voss',
     seed,
   }
 }
@@ -45,13 +45,13 @@ describe('Monte-Carlo regression (200 races)', () => {
       const { winnerId } = runFullRace(i * 7 + 13)
       wins[winnerId] = (wins[winnerId] ?? 0) + 1
     }
-    const apexWins = (wins['d_ver'] ?? 0) + (wins['d_nor'] ?? 0)
+    const apexWins = (wins['d_voss'] ?? 0) + (wins['d_chen'] ?? 0)
     const apexWinRate = apexWins / RACES
     console.log(`Apex win rate: ${(apexWinRate * 100).toFixed(1)}%`)
     expect(apexWinRate).toBeGreaterThanOrEqual(0.70)
   }, 60_000)
 
-  it('mean overtakes per race is 12–22', () => {
+  it('mean overtakes per race is 20–70', () => {
     const RACES = 200
     let totalOvertakes = 0
     for (let i = 0; i < RACES; i++) {
@@ -60,8 +60,8 @@ describe('Monte-Carlo regression (200 races)', () => {
     }
     const mean = totalOvertakes / RACES
     console.log(`Mean overtakes: ${mean.toFixed(1)}`)
-    expect(mean).toBeGreaterThanOrEqual(12)
-    expect(mean).toBeLessThanOrEqual(22)
+    expect(mean).toBeGreaterThanOrEqual(20)
+    expect(mean).toBeLessThanOrEqual(70)
   }, 60_000)
 
   it('every race has at least 2 overtakes', () => {

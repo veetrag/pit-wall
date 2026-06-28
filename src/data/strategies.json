@@ -3,7 +3,12 @@
     { "teamId": "apex",     "startCompound": "M", "plannedStops": [{ "lap": 16, "compound": "H" }] },
     { "teamId": "meridian", "startCompound": "M", "plannedStops": [{ "lap": 15, "compound": "H" }] },
     { "teamId": "vortex",   "startCompound": "S", "plannedStops": [{ "lap": 11, "compound": "H" }] },
-    { "teamId": "zenith",   "startCompound": "M", "plannedStops": [{ "lap": 17, "compound": "H" }] },
-    { "teamId": "torque",   "startCompound": "S", "plannedStops": [{ "lap": 10, "compound": "M" }] }
+    { "teamId": "kestrel",  "startCompound": "M", "plannedStops": [{ "lap": 14, "compound": "H" }] },
+    { "teamId": "solstice", "startCompound": "H", "plannedStops": [{ "lap": 18, "compound": "M" }] },
+    { "teamId": "delta",    "startCompound": "S", "plannedStops": [{ "lap": 12, "compound": "M" }] },
+    { "teamId": "halcyon",  "startCompound": "M", "plannedStops": [{ "lap": 17, "compound": "H" }] },
+    { "teamId": "nimbus",   "startCompound": "S", "plannedStops": [{ "lap": 10, "compound": "M" }] },
+    { "teamId": "terra",    "startCompound": "M", "plannedStops": [{ "lap": 16, "compound": "H" }] },
+    { "teamId": "zenith",   "startCompound": "M", "plannedStops": [{ "lap": 17, "compound": "H" }] }
   ]
 }

@@ -21,7 +21,7 @@ describe('engine public API', () => {
       drivers: data.drivers.drivers,
       teams: data.cars.teams,
       strategies: data.strategies.defaults,
-      playerDriverId: 'd_ver',
+      playerDriverId: 'd_voss',
       seed: 42,
     }
     const state = initRace(config)

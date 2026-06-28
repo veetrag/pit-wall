@@ -2,16 +2,22 @@ import type { WeatherState, WeatherForecast, TuningConstants, CircuitSpec } from
 
 type RNG = () => number
 
+function compoundKey(compound: string): string {
+  if (compound === 'I') return 'inter'
+  if (compound === 'W') return 'wet'
+  return 'dry'
+}
+
 export function generateWeatherTimeline(
   totalLaps: number,
   circuit: CircuitSpec,
   tuning: TuningConstants,
   rng: RNG,
 ): WeatherState[] {
-  const { rainProbability = 0.1 } = circuit
-  const w = tuning.weather
+  const { rainProbability = 0.1, weatherBias = 'stable' } = circuit
+  const tl = tuning.weather.timeline
+  const bias = tl.intensityBias[weatherBias] ?? 0.2
 
-  // Decide if race starts wet
   let state: WeatherState = rng() < rainProbability ? (rng() < 0.5 ? 'WET' : 'DAMP') : 'DRY'
   const timeline: WeatherState[] = [state]
   let lapsSinceChange = 0
@@ -20,13 +26,13 @@ export function generateWeatherTimeline(
     lapsSinceChange++
     let next: WeatherState = state
 
-    if (state === 'DRY' && lapsSinceChange >= w.minDryLaps) {
-      if (rng() < w.dryToDampProb / w.minDryLaps) next = 'DAMP'
+    if (state === 'DRY' && lapsSinceChange >= tl.minDuration) {
+      if (rng() < bias / tl.minDuration) next = 'DAMP'
     } else if (state === 'DAMP') {
-      if (rng() < w.dampToWetProb) next = 'WET'
-      else if (rng() < w.dampToDryProb) next = 'DRY'
-    } else if (state === 'WET' && lapsSinceChange >= w.minWetLaps) {
-      if (rng() < w.wetToDampProb / w.minWetLaps) next = 'DAMP'
+      if (rng() < bias * 0.5) next = 'WET'
+      else if (rng() < (1 - bias) * 0.4) next = 'DRY'
+    } else if (state === 'WET' && lapsSinceChange >= tl.minDuration) {
+      if (rng() < (1 - bias) * 0.3) next = 'DAMP'
     }
 
     if (next !== state) lapsSinceChange = 0
@@ -46,7 +52,6 @@ export function getWeatherForecast(
   const currentState = timeline[currentLap] ?? 'DRY'
   const lap1 = timeline[currentLap + 1] ?? currentState
   const actualLap2 = timeline[currentLap + 2] ?? lap1
-  // Fuzz lap2 at (1-confidence) rate
   const lap2 = rng() < confidence ? actualLap2 : currentState
 
   return { currentState, lap1, lap2, lap2Confidence: confidence }
@@ -58,14 +63,9 @@ export function optimalCompoundType(state: WeatherState): 'dry' | 'wet' {
 
 export function crossoverPenalty(
   compound: string,
-  compoundType: 'dry' | 'wet',
   weather: WeatherState,
   tuning: TuningConstants,
 ): number {
-  const w = tuning.weather.crossoverPenalty
-  if (compoundType === 'dry' && weather === 'WET') return w.dryInWet
-  if (compoundType === 'dry' && weather === 'DAMP') return w.dryInDamp
-  if (compoundType === 'wet' && weather === 'DRY') return w.wetInDry
-  if (compoundType === 'wet' && weather === 'DAMP') return w.dampInDry
-  return 0
+  const key = compoundKey(compound)
+  return tuning.weather.crossoverPenalty[key]?.[weather] ?? 0
 }

@@ -1,7 +1,7 @@
 export type Compound = 'S' | 'M' | 'H' | 'I' | 'W'
-export type WeatherState = 'DRY' | 'DAMP' | 'WET'
 export type PaceMode = 'push' | 'neutral' | 'conserve'
 export type SectorIndex = 0 | 1 | 2
+export type WeatherState = 'DRY' | 'DAMP' | 'WET'
 
 export interface CompoundSpec {
   name: string
@@ -18,31 +18,42 @@ export interface TuningConstants {
   carPerformance: { deltaPerRating: number; sectorSplit: [number, number, number] }
   driverPerformance: { deltaPerSkill: number; sectorSplit: [number, number, number] }
   fuel: { effectPerLap: number }
-  noise: { sigmaPerSector: number }
+  noise: { sigmaPerSector: number; consistencyReliefFactor: number }
   trackEvolution: { startDelta: number; decayLaps: number }
   traffic: { gapThreshold: number; penalty: number }
-  overtaking: { base: number; paceMultiplier: number; sectorFactor: [number, number, number] }
-  pit: { laneTimeLoss: number; stopMean: number; stopSigma: number }
+  overtaking: {
+    base: number
+    paceMultiplier: number
+    sectorFactor: [number, number, number]
+    attackRacecraftBase: number
+    defenceRacecraftFactor: number
+    tyreFreshnessBonusMax: number
+  }
+  pit: {
+    laneTimeLoss: number
+    stopMean: number
+    stopSigma: number
+    pitCrewMeanRelief: number
+    pitCrewSigmaRelief: number
+  }
   paceModes: Record<PaceMode, { paceDelta: number; degMultiplier: number }>
-  projection: { horizonLaps: number; useOvertakeRolls: boolean }
+  tyreManagement: { degReliefFactor: number }
+  projection: { horizonLaps: number; useOvertakeRolls: boolean; netEstimateHorizonLaps: number }
   incidents: { dnfPerLap: number; driverErrorPerLap: number }
   weather: {
-    crossoverPenalty: {
-      dryInWet: number
-      dryInDamp: number
-      wetInDry: number
-      dampInDry: number
-    }
-    wetDegMultiplier: number
+    crossoverPenalty: Record<string, Record<string, number>>
+    wetDegMultiplier: Record<string, Record<string, number>>
     wetSkillReliefMax: number
+    wetNoiseReliefFactor: number
     forecastLap2Confidence: number
-    minDryLaps: number
-    minWetLaps: number
-    dampToWetProb: number
-    dampToDryProb: number
-    wetToDampProb: number
-    dryToDampProb: number
+    timeline: {
+      onsetWindow: [number, number]
+      minDuration: number
+      maxDuration: number
+      intensityBias: Record<string, number>
+    }
   }
+  _regressionBands?: Record<string, unknown>
 }
 
 export interface CircuitSpec {
@@ -55,23 +66,24 @@ export interface CircuitSpec {
   pitLaneTimeLoss: number
   rainProbability?: number
   weatherBias?: string
+  characterNote?: string
 }
 
 export interface DriverFacets {
-  pace: number           // 0–100, feeds Layer 1 sector time
-  racecraft: number      // 0–100, attack & defence in Layer 2 overtaking
-  tyreManagement: number // 0–100, scales effective tyre age (deg rate)
-  consistency: number    // 0–100, reduces per-sector noise sigma
-  wetWeather: number     // 0–100, dormant in v1
-  experience: number     // 0–100, light effect in v1
+  pace: number
+  racecraft: number
+  tyreManagement: number
+  consistency: number
+  wetWeather: number
+  experience: number
 }
 
 export interface TeamFacets {
-  power: number      // 0–100, governs S1 delta
-  aero: number       // 0–100, governs S2 delta (biggest differentiator)
-  handling: number   // 0–100, governs S3 delta
-  reliability: number // 0–100, dormant in v1
-  pitCrew: number    // 0–100, lowers stop mean + sigma
+  power: number
+  aero: number
+  handling: number
+  reliability: number
+  pitCrew: number
 }
 
 export interface DriverSpec {
@@ -137,9 +149,9 @@ export interface OvertakeEvent {
 
 export interface WeatherForecast {
   currentState: WeatherState
-  lap1: WeatherState          // certain
-  lap2: WeatherState          // 70% confidence
-  lap2Confidence: number      // 0-1
+  lap1: WeatherState
+  lap2: WeatherState
+  lap2Confidence: number
 }
 
 export interface RaceState {
@@ -151,14 +163,14 @@ export interface RaceState {
   overtakeEvents: OvertakeEvent[]
   trackEvolutionLaps: number
   rngState: number
-  weatherTimeline: WeatherState[]   // index = lap number (0-based), length = totalLaps
+  weatherTimeline: WeatherState[]
   weatherState: WeatherState
 }
 
 export interface RaceConfig {
   circuit: CircuitSpec
   tuning: TuningConstants
-  compounds: Record<Compound, CompoundSpec>
+  compounds: Record<string, CompoundSpec>
   drivers: DriverSpec[]
   teams: TeamSpec[]
   strategies: StrategyPlan[]

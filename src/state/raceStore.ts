@@ -58,7 +58,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
   startRace() {
     const seed = 42
-    const config = buildConfig(seed, 'd_ver')
+    const config = buildConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
@@ -73,7 +73,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
   initForStartSequence() {
     const seed = 42
-    const config = buildConfig(seed, 'd_ver')
+    const config = buildConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
