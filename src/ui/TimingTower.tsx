@@ -7,6 +7,8 @@ const COMPOUND_COLORS: Record<Compound, string> = {
   S: 'var(--tyre-soft)',
   M: 'var(--tyre-medium)',
   H: 'var(--tyre-hard)',
+  I: 'var(--tyre-inter, #39B54A)',
+  W: 'var(--tyre-wet, #4DA6FF)',
 }
 
 function formatGap(gap: number, position: number): string {

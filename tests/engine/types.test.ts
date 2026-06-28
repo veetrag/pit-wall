@@ -2,8 +2,8 @@ import { describe, it, expectTypeOf } from 'vitest'
 import type { RaceState, CarState, Compound, PaceMode } from '@engine/types'
 
 describe('engine types', () => {
-  it('Compound is the union S|M|H', () => {
-    expectTypeOf<Compound>().toEqualTypeOf<'S' | 'M' | 'H'>()
+  it('Compound includes S|M|H|I|W', () => {
+    expectTypeOf<Compound>().toEqualTypeOf<'S' | 'M' | 'H' | 'I' | 'W'>()
   })
   it('PaceMode is push|neutral|conserve', () => {
     expectTypeOf<PaceMode>().toEqualTypeOf<'push' | 'neutral' | 'conserve'>()

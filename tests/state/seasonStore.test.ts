@@ -28,7 +28,7 @@ describe('seasonStore', () => {
     useSeasonStore.getState().startNewSeason()
     useSeasonStore.getState().selectDriver('d_ham')
     useSeasonStore.getState().confirmDriver()
-    expect(useSeasonStore.getState().phase).toBe('racing')
+    expect(useSeasonStore.getState().phase).toBe('race_setup')
   })
 
   it('currentSeed returns raceIndex * 1000 + 42', () => {

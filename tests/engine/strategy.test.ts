@@ -69,6 +69,8 @@ function makeState(overrides: Partial<RaceState> = {}): RaceState {
   return {
     lap: 10, sector: 2, totalLaps: 30, cars: [], sectorResults: [],
     overtakeEvents: [], trackEvolutionLaps: 10, rngState: 1,
+    weatherTimeline: Array(30).fill('DRY') as ('DRY' | 'DAMP' | 'WET')[],
+    weatherState: 'DRY' as const,
     ...overrides,
   }
 }

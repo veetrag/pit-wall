@@ -222,14 +222,16 @@ function CircuitBackground() {
           [25, 50], [25, 200], [25, 380], [25, 580],
           [365, 30], [365, 160], [365, 340], [365, 500], [365, 700],
           [195, 22],
-        ].map(([x, y], i) => (
+        ].map((pt, i) => {
+          const x = pt[0]!; const y = pt[1]!; return (
           <g key={i}>
             <line x1={x} y1={y} x2={x} y2={y - 28}
               stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
             <circle cx={x} cy={y - 30} r={3}
               fill="#fffbe6" opacity="0.7" filter="url(#lampglow)" />
           </g>
-        ))}
+        )})}
+
 
         {/* Subtle rubber line on track — along the racing line */}
         <path

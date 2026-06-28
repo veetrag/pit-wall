@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SeasonPhase = 'menu' | 'grid' | 'driver_select' | 'racing' | 'result' | 'championship'
+export type SeasonPhase = 'menu' | 'grid' | 'driver_select' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play'
 
 export interface SeasonResult {
   driverId: string
@@ -30,9 +30,12 @@ interface SeasonStore {
   currentSeed: () => number
   viewGrid: () => void
   exitGrid: () => void
+  viewHowToPlay: () => void
+  exitHowToPlay: () => void
   startNewSeason: () => void
   selectDriver: (id: string) => void
   confirmDriver: () => void
+  confirmRaceSetup: () => void
   recordRaceResult: (positions: { driverId: string; position: number }[]) => void
   nextRace: () => void
   playAgain: () => void
@@ -51,6 +54,8 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   viewGrid() { set({ phase: 'grid' }) },
   exitGrid() { set({ phase: 'menu' }) },
+  viewHowToPlay() { set({ phase: 'how_to_play' }) },
+  exitHowToPlay() { set({ phase: 'menu' }) },
 
   startNewSeason() {
     set({ phase: 'driver_select', playerDriverId: null, raceIndex: 0, standings: [], lastRaceResults: null })
@@ -62,6 +67,10 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   confirmDriver() {
     if (!get().playerDriverId) return
+    set({ phase: 'race_setup' })
+  },
+
+  confirmRaceSetup() {
     set({ phase: 'racing' })
   },
 

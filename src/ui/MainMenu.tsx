@@ -4,6 +4,7 @@ import { useSeasonStore } from '@state/seasonStore'
 export function MainMenu() {
   const startNewSeason = useSeasonStore(s => s.startNewSeason)
   const viewGrid = useSeasonStore(s => s.viewGrid)
+  const viewHowToPlay = useSeasonStore(s => s.viewHowToPlay)
 
   return (
     <motion.div
@@ -71,6 +72,35 @@ export function MainMenu() {
         >
           GRID &amp; STATS
         </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={viewHowToPlay}
+          style={{
+            background: 'transparent', color: 'var(--text-mid)',
+            border: '1px solid var(--line-hair)', borderRadius: 10, padding: '14px 0',
+            fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600,
+            letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+            width: '100%',
+          }}
+        >
+          HOW TO PLAY
+        </motion.button>
+
+        <button
+          disabled
+          style={{
+            background: 'transparent', color: 'var(--text-dim)',
+            border: '1px solid var(--line-hair)', borderRadius: 10, padding: '14px 0',
+            fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600,
+            letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'default',
+            width: '100%', opacity: 0.45,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          CAREER
+          <span style={{ fontSize: 9, letterSpacing: '0.12em', color: 'var(--text-dim)' }}>COMING SOON</span>
+        </button>
 
         <div style={{
           fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)',
