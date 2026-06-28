@@ -1,45 +1,21 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
-import type { Compound, WeatherState } from '@engine/types'
+import type { Compound } from '@engine/types'
+import { tyreCliffFraction } from '@engine/index'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { soundService } from '@audio/soundService'
 
-const ALL_COMPOUNDS: { id: Compound; label: string; colorVar: string; type: 'dry' | 'wet' }[] = [
-  { id: 'S', label: 'SOFT',   colorVar: 'var(--tyre-soft)',   type: 'dry' },
-  { id: 'M', label: 'MEDIUM', colorVar: 'var(--tyre-medium)', type: 'dry' },
-  { id: 'H', label: 'HARD',   colorVar: 'var(--tyre-hard)',   type: 'dry' },
-  { id: 'I', label: 'INTER',  colorVar: 'var(--tyre-inter)',  type: 'wet' },
-  { id: 'W', label: 'WET',    colorVar: 'var(--tyre-wet)',    type: 'wet' },
+const COMPOUNDS: { id: Compound; label: string; colorVar: string }[] = [
+  { id: 'S', label: 'SOFT',   colorVar: 'var(--tyre-soft)' },
+  { id: 'M', label: 'MEDIUM', colorVar: 'var(--tyre-medium)' },
+  { id: 'H', label: 'HARD',   colorVar: 'var(--tyre-hard)' },
 ]
 
-function getAvailableCompounds(weatherState: WeatherState) {
-  if (weatherState === 'WET') {
-    // Show all 5 in WET so player can make the call, but wet compounds are highlighted
-    return ALL_COMPOUNDS
-  }
-  if (weatherState === 'DAMP') {
-    // All 5 visible in mixed conditions
-    return ALL_COMPOUNDS
-  }
-  // DRY: show all 5, dry compounds are the sensible choice
-  return ALL_COMPOUNDS
-}
-
-function defaultCompoundForWeather(weatherState: WeatherState): Compound {
-  if (weatherState === 'WET') return 'W'
-  if (weatherState === 'DAMP') return 'I'
-  return 'M'
-}
-
 function PitPanelDrawer() {
-  const raceState = useRaceStore(s => s.raceState)
-  const weatherState: WeatherState = raceState?.weatherState ?? 'DRY'
-  const [selected, setSelected] = useState<Compound>(() => defaultCompoundForWeather(weatherState))
+  const [selected, setSelected] = useState<Compound>('M')
   const { pitNow, closePitPanel, projectionResult, updateProjection } = useRaceStore()
   const { impact } = useHaptics()
-
-  const compounds = getAvailableCompounds(weatherState)
 
   function handleSelect(c: Compound) {
     setSelected(c)
@@ -108,27 +84,21 @@ function PitPanelDrawer() {
         </motion.div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {compounds.map(({ id, label, colorVar, type }) => {
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        {COMPOUNDS.map(({ id, label, colorVar }) => {
           const active = selected === id
-          // Dim wrong-type compounds for current weather
-          const isRecommended =
-            (weatherState === 'DRY' && type === 'dry') ||
-            (weatherState === 'DAMP') ||
-            (weatherState === 'WET' && type === 'wet')
           return (
             <motion.button
               key={id}
               whileTap={{ scale: 0.94 }}
               onClick={() => handleSelect(id)}
               style={{
-                flex: 1, border: 'none', borderRadius: 10, padding: '14px 4px',
+                flex: 1, border: 'none', borderRadius: 10, padding: '14px 8px',
                 cursor: 'pointer',
                 background: active ? colorVar : 'var(--bg-panel)',
-                outline: active ? 'none' : `1px solid ${isRecommended ? colorVar + '55' : 'var(--line-hair)'}`,
+                outline: active ? 'none' : `1px solid var(--line-hair)`,
                 boxShadow: active ? `0 0 16px ${colorVar}66` : 'none',
                 transition: 'all 0.15s ease',
-                opacity: isRecommended ? 1 : 0.45,
               }}
             >
               <div style={{
@@ -139,7 +109,7 @@ function PitPanelDrawer() {
                 {id}
               </div>
               <div style={{
-                fontFamily: 'var(--font-body)', fontSize: 9,
+                fontFamily: 'var(--font-body)', fontSize: 10,
                 color: active ? 'rgba(0,0,0,0.6)' : 'var(--text-dim)',
                 marginTop: 2,
               }}>
@@ -169,22 +139,39 @@ function PitPanelDrawer() {
 export function PitButton() {
   const openPitPanel = useRaceStore(s => s.openPitPanel)
   const phase = useRaceStore(s => s.phase)
+  const raceState = useRaceStore(s => s.raceState)
+  const config = useRaceStore(s => s.config)
+  const projectionResult = useRaceStore(s => s.projectionResult)
 
   if (phase !== 'racing') return null
+
+  const player = raceState?.cars.find(c => c.isPlayer)
+  const spec = player && config ? config.compounds[player.compound] : undefined
+  const fraction = spec && player ? tyreCliffFraction(spec, player.tyreAge) : 0
+  const isUrgent = fraction >= 0.85
+
+  const projLabel = projectionResult
+    ? `PIT — P${projectionResult.rejoinPosition}`
+    : 'PIT'
 
   return (
     <motion.button
       whileTap={{ scale: 0.96 }}
+      animate={isUrgent ? { opacity: [1, 0.7, 1] } : { opacity: 1 }}
+      transition={isUrgent ? { duration: 0.9, repeat: Infinity, ease: 'easeInOut' } : {}}
       onClick={openPitPanel}
       style={{
-        border: '2px solid var(--accent-warm)', borderRadius: 8,
-        padding: '12px 24px', background: 'transparent',
-        color: 'var(--accent-warm)', fontFamily: 'var(--font-display)',
-        fontSize: 16, fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer',
-        whiteSpace: 'nowrap',
+        border: isUrgent ? 'none' : '2px solid var(--accent)',
+        borderRadius: 8, padding: '8px 16px',
+        background: isUrgent ? 'var(--accent-warm)' : 'transparent',
+        color: isUrgent ? 'var(--bg-deep)' : 'var(--accent)',
+        fontFamily: 'var(--font-display)',
+        fontSize: 14, fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer',
+        whiteSpace: 'nowrap', transition: 'background 0.4s, border 0.4s, color 0.4s',
+        boxShadow: isUrgent ? '0 0 16px rgba(255,77,94,0.5)' : 'none',
       }}
     >
-      PIT
+      {projLabel}
     </motion.button>
   )
 }
