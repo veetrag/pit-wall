@@ -5,7 +5,7 @@ describe('loadGameData', () => {
   it('loads and validates all data files without throwing', () => {
     const data = loadGameData()
     expect(data.tuning.carPerformance.deltaPerRating).toBe(0.22)
-    expect(data.compounds['S']!.cliff).toBe(12)
+    expect(data.compounds['S']!.cliff).toBe(10)
     expect(data.circuits['silverpark']!.laps).toBe(30)
     expect(data.cars.teams).toHaveLength(10)
     expect(data.drivers.drivers).toHaveLength(20)

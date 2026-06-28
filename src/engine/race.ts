@@ -3,6 +3,7 @@ import type { Rng } from './rng'
 import { createRng, gaussianPair } from './rng'
 import { computeSectorTime } from './lapModel'
 import { generateWeatherTimeline } from './weather'
+import { aiDecision } from './strategy'
 
 export function initRace(config: RaceConfig): RaceState {
   const cars: CarState[] = config.drivers.map((driver, i) => {
@@ -87,22 +88,27 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     if (lapCompleted) {
       updated.tyreAge += 1
       updated.lap += 1
-      const plannedStop = car.strategy.plannedStops.find(s => s.lap === updated.lap)
-      if (plannedStop && !car.isPlayer) {
-        const [stopNoise] = gaussianPair(rng)
-        const team = config.teams.find(t => t.id === car.teamId)!
-        const crewFactor = team.facets.pitCrew / 100
-        const effectiveStopMean = config.tuning.pit.stopMean - crewFactor * config.tuning.pit.pitCrewMeanRelief
-        const effectiveStopSigma = config.tuning.pit.stopSigma * (1 - crewFactor * config.tuning.pit.pitCrewSigmaRelief)
-        const stopTime = config.tuning.pit.laneTimeLoss +
-          effectiveStopMean +
-          stopNoise * effectiveStopSigma
-        updated = {
-          ...updated,
-          raceTime: updated.raceTime + stopTime,
-          compound: plannedStop.compound,
-          tyreAge: 0,
-          pitsDone: updated.pitsDone + 1,
+      if (!updated.isPlayer) {
+        // Build a state view for the AI decision (current positions, new lap)
+        const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes }
+        const decision = aiDecision(config, updated, stateForAI)
+        updated.paceMode = decision.paceMode
+        if (decision.pit) {
+          const [stopNoise] = gaussianPair(rng)
+          const team = config.teams.find(t => t.id === car.teamId)!
+          const crewFactor = team.facets.pitCrew / 100
+          const effectiveStopMean = config.tuning.pit.stopMean - crewFactor * config.tuning.pit.pitCrewMeanRelief
+          const effectiveStopSigma = config.tuning.pit.stopSigma * (1 - crewFactor * config.tuning.pit.pitCrewSigmaRelief)
+          const stopTime = config.tuning.pit.laneTimeLoss +
+            effectiveStopMean +
+            stopNoise * effectiveStopSigma
+          updated = {
+            ...updated,
+            raceTime: updated.raceTime + stopTime,
+            compound: decision.compound,
+            tyreAge: 0,
+            pitsDone: updated.pitsDone + 1,
+          }
         }
       }
     }

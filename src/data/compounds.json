@@ -1,8 +1,8 @@
 {
   "compounds": {
-    "S": { "name": "Soft",        "type": "dry", "offset": -0.6, "lin": 0.040, "cliff": 12, "pen": 0.030, "colorToken": "--tyre-soft" },
-    "M": { "name": "Medium",      "type": "dry", "offset":  0.0, "lin": 0.025, "cliff": 22, "pen": 0.020, "colorToken": "--tyre-medium" },
-    "H": { "name": "Hard",        "type": "dry", "offset":  0.5, "lin": 0.015, "cliff": 35, "pen": 0.012, "colorToken": "--tyre-hard" },
+    "S": { "name": "Soft",        "type": "dry", "offset": -0.8, "lin": 0.06,  "cliff": 10, "pen": 0.10,  "colorToken": "--tyre-soft" },
+    "M": { "name": "Medium",      "type": "dry", "offset":  0.0, "lin": 0.04,  "cliff": 16, "pen": 0.07,  "colorToken": "--tyre-medium" },
+    "H": { "name": "Hard",        "type": "dry", "offset":  0.6, "lin": 0.025, "cliff": 24, "pen": 0.045, "colorToken": "--tyre-hard" },
     "I": { "name": "Intermediate","type": "wet", "offset":  0.0, "lin": 0.018, "cliff": 30, "pen": 0.015, "colorToken": "--tyre-inter", "optimalState": "DAMP" },
     "W": { "name": "Full Wet",    "type": "wet", "offset":  1.0, "lin": 0.012, "cliff": 40, "pen": 0.010, "colorToken": "--tyre-wet",  "optimalState": "WET" }
   }

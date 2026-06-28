@@ -110,10 +110,13 @@ export interface PitStop {
   compound: Compound
 }
 
+export type StrategyBrain = 'naive' | 'smart' | 'optimal'
+
 export interface StrategyPlan {
   teamId: string
   startCompound: Compound
   plannedStops: PitStop[]
+  brain?: StrategyBrain
 }
 
 export interface CarState {

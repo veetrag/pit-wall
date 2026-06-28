@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { tyreDelta, tyreCliffFraction } from '@engine/tyres'
 import type { CompoundSpec } from '@engine/types'
 
-const soft: CompoundSpec = { name: 'Soft', type: 'dry', offset: -0.6, lin: 0.040, cliff: 12, pen: 0.030, colorToken: '--tyre-soft' }
+const soft: CompoundSpec = { name: 'Soft', type: 'dry', offset: -0.8, lin: 0.06,  cliff: 10, pen: 0.10, colorToken: '--tyre-soft' }
 const medium: CompoundSpec = { name: 'Medium', type: 'dry', offset: 0.0, lin: 0.025, cliff: 22, pen: 0.020, colorToken: '--tyre-medium' }
-const hard: CompoundSpec = { name: 'Hard', type: 'dry', offset: 0.5, lin: 0.015, cliff: 35, pen: 0.012, colorToken: '--tyre-hard' }
+const hard: CompoundSpec = { name: 'Hard', type: 'dry', offset: 0.6, lin: 0.025, cliff: 24, pen: 0.045, colorToken: '--tyre-hard' }
 
 describe('tyreDelta', () => {
   it('fresh soft is faster than fresh medium (negative delta)', () => {

@@ -4,7 +4,7 @@
   "fuel": { "effectPerLap": 0.035 },
   "noise": { "sigmaPerSector": 0.08, "consistencyReliefFactor": 0.40 },
   "trackEvolution": { "startDelta": 0.30, "decayLaps": 20 },
-  "traffic": { "gapThreshold": 2.2, "penalty": 0.30 },
+  "traffic": { "gapThreshold": 1.0, "penalty": 0.12 },
   "overtaking": {
     "base": 0.22,
     "paceMultiplier": 3.0,

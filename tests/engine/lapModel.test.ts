@@ -9,7 +9,7 @@ const TUNING: TuningConstants = {
   fuel: { effectPerLap: 0.035 },
   noise: { sigmaPerSector: 0.08, consistencyReliefFactor: 0.40 },
   trackEvolution: { startDelta: 0.30, decayLaps: 20 },
-  traffic: { gapThreshold: 2.2, penalty: 0.30 },
+  traffic: { gapThreshold: 1.0, penalty: 0.12 },
   overtaking: { base: 0.22, paceMultiplier: 3.0, sectorFactor: [1.0, 0.25, 0.55], attackRacecraftBase: 0.5, defenceRacecraftFactor: 0.40, tyreFreshnessBonusMax: 0.15 },
   pit: { laneTimeLoss: 22.0, stopMean: 2.4, stopSigma: 0.3, pitCrewMeanRelief: 0.6, pitCrewSigmaRelief: 0.5 },
   paceModes: {
@@ -38,9 +38,9 @@ const CIRCUIT: CircuitSpec = {
 }
 
 const COMPOUNDS: Record<'S' | 'M' | 'H', CompoundSpec> = {
-  S: { name: 'Soft',   type: 'dry', offset: -0.6, lin: 0.040, cliff: 12, pen: 0.030, colorToken: '--tyre-soft' },
-  M: { name: 'Medium', type: 'dry', offset:  0.0, lin: 0.025, cliff: 22, pen: 0.020, colorToken: '--tyre-medium' },
-  H: { name: 'Hard',   type: 'dry', offset:  0.5, lin: 0.015, cliff: 35, pen: 0.012, colorToken: '--tyre-hard' },
+  S: { name: 'Soft',   type: 'dry', offset: -0.8, lin: 0.06,  cliff: 10, pen: 0.10, colorToken: '--tyre-soft' },
+  M: { name: 'Medium', type: 'dry', offset:  0.0, lin: 0.04,  cliff: 16, pen: 0.07, colorToken: '--tyre-medium' },
+  H: { name: 'Hard',   type: 'dry', offset:  0.6, lin: 0.025, cliff: 24, pen: 0.045, colorToken: '--tyre-hard' },
 }
 
 function makeConfig(overrides: Partial<RaceConfig> = {}): RaceConfig {
