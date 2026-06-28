@@ -34,7 +34,9 @@
       "Bash(java -version)",
       "Bash(ls /usr/local/opt/ 2>/dev/null | grep -i java || ls /opt/homebrew/opt/ 2>/dev/null | grep -i java || echo \"no java via homebrew\")",
       "Bash(npm test *)",
-      "Bash(python3 -m json.tool)"
+      "Bash(python3 -m json.tool)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)"
     ]
   }
 }

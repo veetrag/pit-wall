@@ -4,3 +4,4 @@ android
 .DS_Store
 *.tsbuildinfo
 vite.config.d.ts
+.claude/worktrees/

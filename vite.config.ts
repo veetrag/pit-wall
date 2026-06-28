@@ -19,5 +19,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     coverage: { provider: 'v8' },
+    exclude: ['**/node_modules/**', '**/.claude/**', '**/dist/**'],
   },
 })

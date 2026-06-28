@@ -1,14 +1,17 @@
-export type Compound = 'S' | 'M' | 'H'
+export type Compound = 'S' | 'M' | 'H' | 'I' | 'W'
+export type WeatherState = 'DRY' | 'DAMP' | 'WET'
 export type PaceMode = 'push' | 'neutral' | 'conserve'
 export type SectorIndex = 0 | 1 | 2
 
 export interface CompoundSpec {
   name: string
+  type: 'dry' | 'wet'
   offset: number
   lin: number
   cliff: number
   pen: number
   colorToken: string
+  optimalState?: WeatherState
 }
 
 export interface TuningConstants {
@@ -23,6 +26,23 @@ export interface TuningConstants {
   paceModes: Record<PaceMode, { paceDelta: number; degMultiplier: number }>
   projection: { horizonLaps: number; useOvertakeRolls: boolean }
   incidents: { dnfPerLap: number; driverErrorPerLap: number }
+  weather: {
+    crossoverPenalty: {
+      dryInWet: number
+      dryInDamp: number
+      wetInDry: number
+      dampInDry: number
+    }
+    wetDegMultiplier: number
+    wetSkillReliefMax: number
+    forecastLap2Confidence: number
+    minDryLaps: number
+    minWetLaps: number
+    dampToWetProb: number
+    dampToDryProb: number
+    wetToDampProb: number
+    dryToDampProb: number
+  }
 }
 
 export interface CircuitSpec {
@@ -33,6 +53,8 @@ export interface CircuitSpec {
   driverSensitivity: [number, number, number]
   overtakingFactor: [number, number, number]
   pitLaneTimeLoss: number
+  rainProbability?: number
+  weatherBias?: string
 }
 
 export interface DriverFacets {
@@ -113,6 +135,13 @@ export interface OvertakeEvent {
   overtakenId: string
 }
 
+export interface WeatherForecast {
+  currentState: WeatherState
+  lap1: WeatherState          // certain
+  lap2: WeatherState          // 70% confidence
+  lap2Confidence: number      // 0-1
+}
+
 export interface RaceState {
   lap: number
   sector: SectorIndex
@@ -122,6 +151,8 @@ export interface RaceState {
   overtakeEvents: OvertakeEvent[]
   trackEvolutionLaps: number
   rngState: number
+  weatherTimeline: WeatherState[]   // index = lap number (0-based), length = totalLaps
+  weatherState: WeatherState
 }
 
 export interface RaceConfig {
@@ -133,4 +164,5 @@ export interface RaceConfig {
   strategies: StrategyPlan[]
   playerDriverId: string
   seed: number
+  weatherSeed?: number
 }

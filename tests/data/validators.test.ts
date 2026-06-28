@@ -34,8 +34,8 @@ describe('loadGameData', () => {
     }
   })
 
-  it('compound keys are exactly S, M, H', () => {
+  it('compound keys are exactly S, M, H, I, W', () => {
     const data = loadGameData()
-    expect(Object.keys(data.compounds).sort()).toEqual(['H', 'M', 'S'])
+    expect(Object.keys(data.compounds).sort()).toEqual(['H', 'I', 'M', 'S', 'W'])
   })
 })

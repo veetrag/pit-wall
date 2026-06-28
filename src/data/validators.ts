@@ -22,13 +22,42 @@ const TuningSchema = z.object({
   }),
   projection: z.object({ horizonLaps: z.number(), useOvertakeRolls: z.boolean() }),
   incidents: z.object({ dnfPerLap: z.number(), driverErrorPerLap: z.number() }),
+  weather: z.object({
+    crossoverPenalty: z.object({
+      dryInWet: z.number(),
+      dryInDamp: z.number(),
+      wetInDry: z.number(),
+      dampInDry: z.number(),
+    }),
+    wetDegMultiplier: z.number(),
+    wetSkillReliefMax: z.number(),
+    forecastLap2Confidence: z.number(),
+    minDryLaps: z.number(),
+    minWetLaps: z.number(),
+    dampToWetProb: z.number(),
+    dampToDryProb: z.number(),
+    wetToDampProb: z.number(),
+    dryToDampProb: z.number(),
+  }),
 })
 
 const CompoundEntrySchema = z.object({
-  name: z.string(), offset: z.number(), lin: z.number(),
-  cliff: z.number(), pen: z.number(), colorToken: z.string(),
+  name: z.string(),
+  type: z.enum(['dry', 'wet']),
+  offset: z.number(),
+  lin: z.number(),
+  cliff: z.number(),
+  pen: z.number(),
+  colorToken: z.string(),
+  optimalState: z.enum(['DRY', 'DAMP', 'WET']).optional(),
 })
-const CompoundsSchema = z.object({ S: CompoundEntrySchema, M: CompoundEntrySchema, H: CompoundEntrySchema })
+const CompoundsSchema = z.object({
+  S: CompoundEntrySchema,
+  M: CompoundEntrySchema,
+  H: CompoundEntrySchema,
+  I: CompoundEntrySchema,
+  W: CompoundEntrySchema,
+})
 
 const CircuitSchema = z.object({
   name: z.string(), laps: z.number(),
@@ -39,6 +68,8 @@ const CircuitSchema = z.object({
   pitLaneTimeLoss: z.number(),
   trackPath: z.string(),
   characterNote: z.string().optional(),
+  rainProbability: z.number().optional(),
+  weatherBias: z.string().optional(),
 })
 const CircuitsSchema = z.record(z.string(), CircuitSchema)
 
@@ -75,8 +106,8 @@ const DriverSchema = z.object({
 const DriversSchema = z.object({ drivers: z.array(DriverSchema) })
 
 const StrategyDefaultSchema = z.object({
-  teamId: z.string(), startCompound: z.enum(['S', 'M', 'H']),
-  plannedStops: z.array(z.object({ lap: z.number(), compound: z.enum(['S', 'M', 'H']) })),
+  teamId: z.string(), startCompound: z.enum(['S', 'M', 'H', 'I', 'W']),
+  plannedStops: z.array(z.object({ lap: z.number(), compound: z.enum(['S', 'M', 'H', 'I', 'W']) })),
 })
 const StrategiesSchema = z.object({ defaults: z.array(StrategyDefaultSchema) })
 

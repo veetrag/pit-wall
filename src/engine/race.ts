@@ -1,7 +1,8 @@
-import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent } from './types'
+import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState } from './types'
 import type { Rng } from './rng'
-import { gaussianPair } from './rng'
+import { createRng, gaussianPair } from './rng'
 import { computeSectorTime } from './lapModel'
+import { generateWeatherTimeline } from './weather'
 
 export function initRace(config: RaceConfig): RaceState {
   const cars: CarState[] = config.drivers.map((driver, i) => {
@@ -25,6 +26,16 @@ export function initRace(config: RaceConfig): RaceState {
     }
   })
 
+  // Weather timeline (separate RNG stream so it doesn't affect main race seed)
+  const weatherRng = createRng(config.weatherSeed ?? config.seed + 999999)
+  const weatherTimeline = generateWeatherTimeline(
+    config.circuit.laps,
+    config.circuit,
+    config.tuning,
+    weatherRng,
+  )
+  const weatherState: WeatherState = weatherTimeline[0] ?? 'DRY'
+
   return {
     lap: 0,
     sector: 0,
@@ -34,6 +45,8 @@ export function initRace(config: RaceConfig): RaceState {
     overtakeEvents: [],
     trackEvolutionLaps: 0,
     rngState: config.seed,
+    weatherTimeline,
+    weatherState,
   }
 }
 
@@ -44,7 +57,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
 
   // 1. Compute sector time for each car
   const updatedCars: CarState[] = state.cars.map(car => {
-    const result = computeSectorTime(config, car, sector, rng)
+    const result = computeSectorTime(config, car, sector, rng, state.weatherState)
     newSectorResults.push(result)
     return { ...car, raceTime: car.raceTime + result.sectorTime }
   })
@@ -67,6 +80,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   // 4. Advance sector/lap counters, handle pit stops, increment tyre age
   const nextSector = ((sector + 1) % 3) as SectorIndex
   const lapCompleted = sector === 2
+  const newLap = lapCompleted ? state.lap + 1 : state.lap
 
   const finalCars: CarState[] = afterOvertakes.map(car => {
     let updated = { ...car }
@@ -99,14 +113,21 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const resorted = [...finalCars].sort((a, b) => a.raceTime - b.raceTime)
   const positioned = resorted.map((car, idx) => ({ ...car, position: idx + 1 }))
 
+  // Advance weather on lap change
+  let newWeatherState = state.weatherState
+  if (lapCompleted && newLap < state.weatherTimeline.length) {
+    newWeatherState = state.weatherTimeline[newLap] ?? state.weatherState
+  }
+
   return {
     ...state,
-    lap: lapCompleted ? state.lap + 1 : state.lap,
+    lap: newLap,
     sector: nextSector,
     trackEvolutionLaps: lapCompleted ? state.trackEvolutionLaps + 1 : state.trackEvolutionLaps,
     cars: positioned,
     sectorResults: newSectorResults,
     overtakeEvents: newOvertakeEvents,
+    weatherState: newWeatherState,
   }
 }
 

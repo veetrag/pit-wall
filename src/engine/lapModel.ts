@@ -1,7 +1,8 @@
-import type { RaceConfig, CarState, SectorIndex, SectorResult } from './types'
+import type { RaceConfig, CarState, SectorIndex, SectorResult, WeatherState } from './types'
 import type { Rng } from './rng'
 import { gaussianPair } from './rng'
 import { tyreDelta } from './tyres'
+import { crossoverPenalty } from './weather'
 
 // Convert a 0-100 facet to the 0-9 engine rating (0=best, 9=worst)
 function facetToRating9(facet: number): number {
@@ -13,6 +14,7 @@ export function computeSectorTime(
   car: CarState,
   sector: SectorIndex,
   rng: Rng,
+  weatherState: WeatherState = 'DRY',
 ): SectorResult {
   const { tuning, circuit, compounds } = config
   const base = circuit.sectorBase[sector]!
@@ -35,11 +37,16 @@ export function computeSectorTime(
   const driverDelta = driverSkill * tuning.driverPerformance.deltaPerSkill * driverWeight * 3
 
   // --- Tyre delta: effAge defers the cliff for good tyre managers on CONSERVE ---
-  const compoundSpec = compounds[car.compound]!
+  const cpSpec = compounds[car.compound]!
   const degMultiplier = tuning.paceModes[car.paceMode].degMultiplier
+  // Wet tyres degrade more slowly in wet conditions
+  const finalDegMultiplier = (cpSpec.type === 'wet' && weatherState !== 'DRY') ? degMultiplier * tuning.weather.wetDegMultiplier : degMultiplier
   const tyreManagementFactor = 1 - (df.tyreManagement / 100) * 0.25
-  const effAge = car.tyreAge * tyreManagementFactor * degMultiplier
-  const tyreSectorDelta = tyreDelta(compoundSpec, effAge) / 3
+  const effAge = car.tyreAge * tyreManagementFactor * finalDegMultiplier
+  const tyreSectorDelta = tyreDelta(cpSpec, effAge) / 3
+
+  // --- Weather crossover penalty (wrong compound type) ---
+  const cpPenalty = crossoverPenalty(car.compound, cpSpec.type, weatherState, tuning) / 3
 
   // --- Fuel: lighter as laps complete ---
   const fuelDelta = -(car.lap * tuning.fuel.effectPerLap) / 3
@@ -56,7 +63,7 @@ export function computeSectorTime(
   const effSigma = tuning.noise.sigmaPerSector * (1 - (df.consistency / 100) * 0.4)
   const noiseSample = noise * effSigma
 
-  const raw = base + carDelta + driverDelta + tyreSectorDelta + fuelDelta + trackDelta + modeDelta + noiseSample
+  const raw = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + noiseSample
 
   return {
     driverId: car.driverId,

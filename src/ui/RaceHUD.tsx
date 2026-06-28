@@ -11,6 +11,8 @@ import { TrackCanvas } from '@canvas/TrackCanvas'
 import { StartLights } from './StartLights'
 import { SettingsPanel } from './SettingsPanel'
 import { PitTimer } from './PitTimer'
+import { WeatherStrip } from './WeatherStrip'
+import { getWeatherForecast } from '@engine/weather'
 import { Component, type ReactNode } from 'react'
 
 class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -89,8 +91,21 @@ function FinishBanner() {
   )
 }
 
+// Stable placeholder rng for display-only forecast fuzz
+const displayRng = () => 0.5
+
 export function RaceHUD() {
   const phase = useRaceStore(s => s.phase)
+  const raceState = useRaceStore(s => s.raceState)
+
+  const forecast = raceState
+    ? getWeatherForecast(
+        raceState.lap,
+        raceState.weatherTimeline,
+        0.7,
+        displayRng,
+      )
+    : null
 
   return (
     <div style={{
@@ -113,6 +128,9 @@ export function RaceHUD() {
           >
             {phase === 'finished' && <FinishBanner />}
             {phase === 'starting' && <StartLights />}
+
+            {/* Weather strip */}
+            {forecast && <WeatherStrip forecast={forecast} />}
 
             {/* Main area: canvas + tower */}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden', padding: '8px 8px 0', minHeight: 0, position: 'relative' }}>

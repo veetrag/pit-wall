@@ -11,6 +11,8 @@
   --tyre-soft:    #E8344E;
   --tyre-medium:  #F2C94C;
   --tyre-hard:    #EAEAEA;
+  --tyre-inter:   #39B54A;   /* intermediate — green */
+  --tyre-wet:     #4DA6FF;   /* full wet — blue */
   --positive:     #3DDC84;
   --negative:     #FF6B6B;
 
