@@ -1,104 +1,144 @@
 {
   "drivers": [
     {
-      "id": "d_voss", "name": "Voss", "code": "VOS", "teamId": "apex",
-      "facets": { "pace": 95, "racecraft": 93, "tyreManagement": 85, "consistency": 94, "wetWeather": 88, "experience": 90 },
-      "archetype": "complete", "potential": 97, "age": 27
+      "id": "d_voss", "name": "Lars Voss", "code": "VOS", "teamId": "apex",
+      "archetype": "The complete champion — elite everywhere",
+      "facets": { "pace": 96, "racecraft": 94, "tyreManagement": 90, "consistency": 95, "wetWeather": 88, "experience": 90 },
+      "potential": 97, "age": 28, "nationality": "Dutch", "flag": "🇳🇱",
+      "bio": "Ice-cold under pressure, four-time champion material"
     },
     {
-      "id": "d_chen", "name": "Chen", "code": "CHN", "teamId": "apex",
-      "facets": { "pace": 90, "racecraft": 88, "tyreManagement": 78, "consistency": 87, "wetWeather": 82, "experience": 72 },
-      "archetype": "raw_talent", "potential": 94, "age": 25
+      "id": "d_chen", "name": "Marcus Chen", "code": "CHN", "teamId": "apex",
+      "archetype": "Steady #2 — reliable points machine, not flashy",
+      "facets": { "pace": 86, "racecraft": 82, "tyreManagement": 88, "consistency": 90, "wetWeather": 78, "experience": 85 },
+      "potential": 87, "age": 31, "nationality": "Singaporean", "flag": "🇸🇬",
+      "bio": "The dependable points machine"
     },
     {
-      "id": "d_rossi", "name": "Rossi", "code": "ROS", "teamId": "meridian",
-      "facets": { "pace": 92, "racecraft": 91, "tyreManagement": 96, "consistency": 93, "wetWeather": 94, "experience": 96 },
-      "archetype": "veteran", "potential": 93, "age": 39
+      "id": "d_rossi", "name": "Enzo Rossi", "code": "ROS", "teamId": "meridian",
+      "archetype": "Mercurial star — blistering pace, error-prone",
+      "facets": { "pace": 94, "racecraft": 90, "tyreManagement": 76, "consistency": 74, "wetWeather": 85, "experience": 80 },
+      "potential": 95, "age": 26, "nationality": "Italian", "flag": "🇮🇹",
+      "bio": "Mercurial genius — sublime or in the wall"
     },
     {
-      "id": "d_haas", "name": "Haas", "code": "HAS", "teamId": "meridian",
-      "facets": { "pace": 91, "racecraft": 84, "tyreManagement": 70, "consistency": 76, "wetWeather": 85, "experience": 66 },
-      "archetype": "qualifier", "potential": 95, "age": 27
+      "id": "d_haas", "name": "Niko Haas", "code": "HAA", "teamId": "meridian",
+      "archetype": "Veteran wheel-to-wheel master — racecraft over raw pace",
+      "facets": { "pace": 84, "racecraft": 95, "tyreManagement": 85, "consistency": 88, "wetWeather": 82, "experience": 95 },
+      "potential": 85, "age": 35, "nationality": "German", "flag": "🇩🇪",
+      "bio": "Wily veteran, master of the late-braking move"
     },
     {
-      "id": "d_silva", "name": "Silva", "code": "SLV", "teamId": "vortex",
-      "facets": { "pace": 83, "racecraft": 79, "tyreManagement": 88, "consistency": 87, "wetWeather": 76, "experience": 80 },
-      "archetype": "consistent", "potential": 87, "age": 26
+      "id": "d_silva", "name": "Tomas Silva", "code": "SIL", "teamId": "vortex",
+      "archetype": "Rain master — ordinary in the dry, sublime in the wet",
+      "facets": { "pace": 85, "racecraft": 86, "tyreManagement": 83, "consistency": 84, "wetWeather": 98, "experience": 82 },
+      "potential": 89, "age": 29, "nationality": "Brazilian", "flag": "🇧🇷",
+      "bio": "Turns into a magician the moment it rains"
     },
     {
-      "id": "d_park", "name": "Park", "code": "PRK", "teamId": "vortex",
-      "facets": { "pace": 87, "racecraft": 90, "tyreManagement": 64, "consistency": 70, "wetWeather": 81, "experience": 86 },
-      "archetype": "racecraft", "potential": 88, "age": 43
+      "id": "d_park", "name": "Jae Park", "code": "PRK", "teamId": "vortex",
+      "archetype": "Tyre whisperer — makes a stint last forever",
+      "facets": { "pace": 83, "racecraft": 80, "tyreManagement": 96, "consistency": 87, "wetWeather": 75, "experience": 78 },
+      "potential": 88, "age": 27, "nationality": "South Korean", "flag": "🇰🇷",
+      "bio": "Can make a set of tyres last forever"
     },
     {
-      "id": "d_berg", "name": "Berg", "code": "BRG", "teamId": "kestrel",
-      "facets": { "pace": 84, "racecraft": 80, "tyreManagement": 82, "consistency": 85, "wetWeather": 79, "experience": 78 },
-      "archetype": "balanced", "potential": 87, "age": 29
+      "id": "d_berg", "name": "Erik Berg", "code": "BRG", "teamId": "kestrel",
+      "archetype": "Qualifying specialist — one-lap pace, fades in races",
+      "facets": { "pace": 90, "racecraft": 78, "tyreManagement": 70, "consistency": 79, "wetWeather": 74, "experience": 76 },
+      "potential": 88, "age": 25, "nationality": "Swedish", "flag": "🇸🇪",
+      "bio": "Qualifying flyer, Sunday is harder"
     },
     {
-      "id": "d_almeida", "name": "Almeida", "code": "ALM", "teamId": "kestrel",
-      "facets": { "pace": 81, "racecraft": 76, "tyreManagement": 80, "consistency": 82, "wetWeather": 74, "experience": 60 },
-      "archetype": "developing", "potential": 90, "age": 23
+      "id": "d_almeida", "name": "Rui Almeida", "code": "ALM", "teamId": "kestrel",
+      "archetype": "Aggressive overtaker — fearless, occasionally reckless",
+      "facets": { "pace": 82, "racecraft": 92, "tyreManagement": 74, "consistency": 72, "wetWeather": 80, "experience": 73 },
+      "potential": 86, "age": 24, "nationality": "Portuguese", "flag": "🇵🇹",
+      "bio": "Fearless overtaker, sometimes too fearless"
     },
     {
-      "id": "d_novak", "name": "Novak", "code": "NOV", "teamId": "solstice",
-      "facets": { "pace": 80, "racecraft": 83, "tyreManagement": 90, "consistency": 88, "wetWeather": 72, "experience": 84 },
-      "archetype": "tyre_whisperer", "potential": 83, "age": 32
+      "id": "d_novak", "name": "Petr Novak", "code": "NOV", "teamId": "solstice",
+      "archetype": "Metronome — never makes mistakes, never spectacular",
+      "facets": { "pace": 80, "racecraft": 78, "tyreManagement": 86, "consistency": 96, "wetWeather": 77, "experience": 88 },
+      "potential": 80, "age": 33, "nationality": "Czech", "flag": "🇨🇿",
+      "bio": "A metronome — never puts a wheel wrong"
     },
     {
-      "id": "d_ito", "name": "Ito", "code": "ITO", "teamId": "solstice",
-      "facets": { "pace": 78, "racecraft": 75, "tyreManagement": 85, "consistency": 80, "wetWeather": 68, "experience": 56 },
-      "archetype": "technical", "potential": 86, "age": 24
+      "id": "d_ito", "name": "Ren Ito", "code": "ITO", "teamId": "solstice",
+      "archetype": "Balanced midfielder — quietly competent",
+      "facets": { "pace": 81, "racecraft": 80, "tyreManagement": 82, "consistency": 83, "wetWeather": 79, "experience": 75 },
+      "potential": 84, "age": 28, "nationality": "Japanese", "flag": "🇯🇵",
+      "bio": "Quietly quick, quietly consistent"
     },
     {
-      "id": "d_dubois", "name": "Dubois", "code": "DUB", "teamId": "delta",
-      "facets": { "pace": 76, "racecraft": 78, "tyreManagement": 72, "consistency": 74, "wetWeather": 80, "experience": 74 },
-      "archetype": "tactical", "potential": 82, "age": 31
+      "id": "d_dubois", "name": "Theo Dubois", "code": "DUB", "teamId": "delta",
+      "archetype": "Consistent points-scorer — dependable midfield",
+      "facets": { "pace": 79, "racecraft": 79, "tyreManagement": 81, "consistency": 85, "wetWeather": 76, "experience": 80 },
+      "potential": 82, "age": 30, "nationality": "French", "flag": "🇫🇷",
+      "bio": "Reliable, intelligent, banks the points"
     },
     {
-      "id": "d_mwangi", "name": "Mwangi", "code": "MWG", "teamId": "delta",
-      "facets": { "pace": 74, "racecraft": 72, "tyreManagement": 70, "consistency": 76, "wetWeather": 76, "experience": 48 },
-      "archetype": "rookie", "potential": 88, "age": 21
+      "id": "d_mwangi", "name": "David Mwangi", "code": "MWA", "teamId": "delta",
+      "archetype": "Rising talent — raw but improving fast",
+      "facets": { "pace": 82, "racecraft": 81, "tyreManagement": 75, "consistency": 76, "wetWeather": 81, "experience": 65 },
+      "potential": 91, "age": 22, "nationality": "Kenyan", "flag": "🇰🇪",
+      "bio": "Raw talent rising fast through the ranks"
     },
     {
-      "id": "d_olsen", "name": "Olsen", "code": "OLS", "teamId": "halcyon",
-      "facets": { "pace": 73, "racecraft": 74, "tyreManagement": 76, "consistency": 78, "wetWeather": 70, "experience": 82 },
-      "archetype": "journeyman", "potential": 76, "age": 35
+      "id": "d_olsen", "name": "Kasper Olsen", "code": "OLS", "teamId": "halcyon",
+      "archetype": "Smooth operator — gentle on a fragile car",
+      "facets": { "pace": 80, "racecraft": 77, "tyreManagement": 90, "consistency": 86, "wetWeather": 78, "experience": 79 },
+      "potential": 83, "age": 29, "nationality": "Danish", "flag": "🇩🇰",
+      "bio": "Smooth hands, kind to fragile machinery"
     },
     {
-      "id": "d_reyes", "name": "Reyes", "code": "REY", "teamId": "halcyon",
-      "facets": { "pace": 71, "racecraft": 70, "tyreManagement": 74, "consistency": 72, "wetWeather": 66, "experience": 62 },
-      "archetype": "steady", "potential": 78, "age": 28
+      "id": "d_reyes", "name": "Carlos Reyes", "code": "REY", "teamId": "halcyon",
+      "archetype": "Wildcard — flashes of brilliance, inconsistent",
+      "facets": { "pace": 83, "racecraft": 84, "tyreManagement": 72, "consistency": 70, "wetWeather": 83, "experience": 70 },
+      "potential": 87, "age": 23, "nationality": "Mexican", "flag": "🇲🇽",
+      "bio": "Flashes of brilliance, maddening inconsistency"
     },
     {
-      "id": "d_fischer", "name": "Fischer", "code": "FSC", "teamId": "nimbus",
-      "facets": { "pace": 69, "racecraft": 68, "tyreManagement": 72, "consistency": 70, "wetWeather": 64, "experience": 50 },
-      "archetype": "developing", "potential": 82, "age": 22
+      "id": "d_fischer", "name": "Lena Fischer", "code": "FIS", "teamId": "nimbus",
+      "archetype": "Calculating racer — strategic, patient",
+      "facets": { "pace": 77, "racecraft": 82, "tyreManagement": 84, "consistency": 87, "wetWeather": 80, "experience": 82 },
+      "potential": 81, "age": 31, "nationality": "Austrian", "flag": "🇦🇹",
+      "bio": "The thinking driver — strategy in her bones"
     },
     {
-      "id": "d_kovac", "name": "Kovac", "code": "KOV", "teamId": "nimbus",
-      "facets": { "pace": 67, "racecraft": 65, "tyreManagement": 68, "consistency": 68, "wetWeather": 62, "experience": 44 },
-      "archetype": "rookie", "potential": 80, "age": 20
+      "id": "d_kovac", "name": "Milan Kovac", "code": "KOV", "teamId": "nimbus",
+      "archetype": "Hard-charging journeyman — gives everything",
+      "facets": { "pace": 75, "racecraft": 81, "tyreManagement": 76, "consistency": 78, "wetWeather": 74, "experience": 84 },
+      "potential": 76, "age": 34, "nationality": "Croatian", "flag": "🇭🇷",
+      "bio": "Gives 100% every lap, every race"
     },
     {
-      "id": "d_santos", "name": "Santos", "code": "SNT", "teamId": "terra",
-      "facets": { "pace": 66, "racecraft": 64, "tyreManagement": 70, "consistency": 66, "wetWeather": 60, "experience": 46 },
-      "archetype": "developing", "potential": 78, "age": 23
+      "id": "d_santos", "name": "Bruno Santos", "code": "SAN", "teamId": "terra",
+      "archetype": "Hungry rookie — high ceiling, learning the ropes",
+      "facets": { "pace": 78, "racecraft": 76, "tyreManagement": 71, "consistency": 73, "wetWeather": 77, "experience": 58 },
+      "potential": 93, "age": 20, "nationality": "Argentine", "flag": "🇦🇷",
+      "bio": "Hungry rookie with a sky-high ceiling"
     },
     {
-      "id": "d_tan", "name": "Tan", "code": "TAN", "teamId": "terra",
-      "facets": { "pace": 64, "racecraft": 62, "tyreManagement": 66, "consistency": 64, "wetWeather": 58, "experience": 40 },
-      "archetype": "rookie", "potential": 76, "age": 21
+      "id": "d_tan", "name": "Wei Tan", "code": "TAN", "teamId": "terra",
+      "archetype": "Experienced anchor — steadies a young team",
+      "facets": { "pace": 73, "racecraft": 79, "tyreManagement": 80, "consistency": 84, "wetWeather": 75, "experience": 89 },
+      "potential": 74, "age": 36, "nationality": "Malaysian", "flag": "🇲🇾",
+      "bio": "The steady hand steadying a young team"
     },
     {
-      "id": "d_petrov", "name": "Petrov", "code": "PTV", "teamId": "zenith",
-      "facets": { "pace": 83, "racecraft": 81, "tyreManagement": 80, "consistency": 82, "wetWeather": 78, "experience": 76 },
-      "archetype": "balanced", "potential": 86, "age": 30
+      "id": "d_petrov", "name": "Alexei Petrov", "code": "PET", "teamId": "zenith",
+      "archetype": "Backmarker grinder — maximises a slow car",
+      "facets": { "pace": 71, "racecraft": 78, "tyreManagement": 82, "consistency": 83, "wetWeather": 76, "experience": 86 },
+      "potential": 72, "age": 33, "nationality": "Russian", "flag": "🇷🇺",
+      "bio": "Squeezes every tenth from a slow car"
     },
     {
-      "id": "d_kane", "name": "Kane", "code": "KAN", "teamId": "zenith",
-      "facets": { "pace": 80, "racecraft": 83, "tyreManagement": 74, "consistency": 75, "wetWeather": 72, "experience": 54 },
-      "archetype": "racecraft", "potential": 91, "age": 24
+      "id": "d_kane", "name": "Jordan Kane", "code": "KAN", "teamId": "zenith",
+      "archetype": "Pay-driver with heart — limited but committed",
+      "facets": { "pace": 68, "racecraft": 72, "tyreManagement": 74, "consistency": 75, "wetWeather": 70, "experience": 68 },
+      "potential": 73, "age": 26, "nationality": "Australian", "flag": "🇦🇺",
+      "bio": "Heart of a lion, budget of a minnow"
     }
   ]
 }

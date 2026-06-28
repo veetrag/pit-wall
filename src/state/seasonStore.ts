@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { CIRCUIT_ORDER } from './raceStore'
 
 export type SeasonPhase = 'menu' | 'grid' | 'driver_select' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play'
 
@@ -28,6 +29,7 @@ interface SeasonStore {
   lastRaceResults: SeasonResult[] | null
 
   currentSeed: () => number
+  currentCircuitId: () => string
   viewGrid: () => void
   exitGrid: () => void
   viewHowToPlay: () => void
@@ -50,6 +52,10 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   currentSeed() {
     return get().raceIndex * 1000 + 42
+  },
+
+  currentCircuitId() {
+    return CIRCUIT_ORDER[get().raceIndex % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
   },
 
   viewGrid() { set({ phase: 'grid' }) },

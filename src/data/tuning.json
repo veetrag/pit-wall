@@ -49,7 +49,9 @@
         "stable":   0.05,
         "variable": 0.25,
         "wet":      0.60,
-        "mixed":    0.35
+        "mixed":    0.35,
+        "showery":  0.30,
+        "stormy":   0.65
       }
     }
   },

@@ -21,7 +21,7 @@ interface RaceStore {
   hudAlerts: AlertMessage[]
 
   startRace: () => void
-  startSeasonRace: (playerDriverId: string, seed: number) => void
+  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
   resetRace: () => void
@@ -35,16 +35,30 @@ interface RaceStore {
   dismissAlert: (id: string) => void
 }
 
-function buildConfig(seed: number, playerDriverId: string): RaceConfig {
+export const CIRCUIT_ORDER = [
+  'bengaluru', 'veloce', 'sol_desert', 'highland',
+  'monsoon_bay', 'grand_savane', 'aurora', 'harbour_lights',
+] as const
+
+function buildConfig(seed: number, playerDriverId: string, circuitId = 'bengaluru'): RaceConfig {
   const data = loadGameData()
-  const circuit = data.circuits['silverpark']!
+  const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
+  const laps = circuit.laps
+  // Scale planned pit laps proportionally to this circuit (reference: 30 laps)
+  const strategies = data.strategies.defaults.map(s => ({
+    ...s,
+    plannedStops: s.plannedStops.map(stop => ({
+      ...stop,
+      lap: Math.round((stop.lap / 30) * laps),
+    })),
+  }))
   return {
     circuit,
     tuning: data.tuning,
     compounds: data.compounds,
     drivers: data.drivers.drivers,
     teams: data.cars.teams,
-    strategies: data.strategies.defaults,
+    strategies,
     playerDriverId,
     seed,
   }
@@ -71,8 +85,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
   },
 
-  startSeasonRace(playerDriverId, seed) {
-    const config = buildConfig(seed, playerDriverId)
+  startSeasonRace(playerDriverId, seed, circuitId) {
+    const config = buildConfig(seed, playerDriverId, circuitId)
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })

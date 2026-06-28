@@ -1,13 +1,19 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
-import circuitsData from '@data/circuits.json'
+import { CIRCUIT_ORDER } from '@state/raceStore'
+import circuitsJson from '@data/circuits.json'
 import compoundsData from '@data/compounds.json'
 
 type Compound = 'S' | 'M' | 'H' | 'I' | 'W'
 type CompoundEntry = { name: string; type: string; colorToken: string }
+type CircuitEntry = {
+  name: string; laps: number; flag?: string; location?: string;
+  rainProbability?: number; weatherBias?: string; characterNote?: string;
+  funFacts?: string[];
+}
 const compounds = (compoundsData as unknown as { compounds: Record<string, CompoundEntry> }).compounds
-const circuit = (circuitsData as unknown as { circuits: Record<string, { name: string; laps: number; rainProbability?: number; weatherBias?: string; characterNote?: string }> }).circuits['silverpark']!
+const allCircuits = (circuitsJson as unknown as { circuits: Record<string, CircuitEntry> }).circuits
 
 const DRY_COMPOUNDS: Compound[] = ['S', 'M', 'H']
 
@@ -33,8 +39,12 @@ function rainColor(prob: number): string {
 
 export function RaceSetup() {
   const confirmRaceSetup = useSeasonStore(s => s.confirmRaceSetup)
+  const raceIndex = useSeasonStore(s => s.raceIndex)
+  const circuitId = CIRCUIT_ORDER[raceIndex % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
+  const circuit = allCircuits[circuitId]!
+  const roundNum = raceIndex + 1
   const [startCompound, setStartCompound] = useState<Compound>('M')
-  const [pitLap, setPitLap] = useState(15)
+  const [pitLap, setPitLap] = useState(Math.round(circuit.laps * 0.45))
 
   const rain = circuit.rainProbability ?? 0.1
 
@@ -78,11 +88,19 @@ export function RaceSetup() {
           }}>
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 4 }}>
-                ROUND 1 · CIRCUIT
+`ROUND ${roundNum} · CIRCUIT`
               </div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: 'var(--text-hi)' }}>
-                {circuit.name.toUpperCase()}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {circuit.flag && <span style={{ fontSize: 22 }}>{circuit.flag}</span>}
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text-hi)' }}>
+                  {circuit.name.toUpperCase()}
+                </div>
               </div>
+              {circuit.location && (
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>
+                  {circuit.location}
+                </div>
+              )}
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>
@@ -125,6 +143,19 @@ export function RaceSetup() {
                 lineHeight: 1.4, marginTop: 4,
               }}>
                 {circuit.characterNote}
+              </div>
+            )}
+            {circuit.funFacts && circuit.funFacts.length > 0 && (
+              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {circuit.funFacts.map((fact, i) => (
+                  <div key={i} style={{
+                    fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--accent)',
+                    display: 'flex', alignItems: 'flex-start', gap: 5,
+                  }}>
+                    <span style={{ opacity: 0.6, flexShrink: 0 }}>›</span>
+                    <span>{fact}</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>

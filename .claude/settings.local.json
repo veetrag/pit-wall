@@ -36,7 +36,32 @@
       "Bash(npm test *)",
       "Bash(python3 -m json.tool)",
       "Skill(artifact-design)",
-      "Skill(artifact-design:*)"
+      "Skill(artifact-design:*)",
+      "Bash(git rm *)",
+      "Bash(echo \".claude/worktrees/\")",
+      "Bash(rsync -av --include=*.ts --include=*.tsx --include=*.json --include=*.css --exclude=node_modules --exclude=.git '/Users/veetrag/Documents/Claude Expeiments/f1-manager/.claude/worktrees/agent-a20853d95464dd8b7/src/' '/Users/veetrag/Documents/Claude Expeiments/f1-manager/src/')",
+      "Bash(rsync -av '/Users/veetrag/Documents/Claude Expeiments/f1-manager/.claude/worktrees/agent-a20853d95464dd8b7/src/data/' '/Users/veetrag/Documents/Claude Expeiments/f1-manager/src/data/')",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('teams:', len\\(d['teams']\\), [t['id'] for t in d['teams']]\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('drivers:', len\\(d['drivers']\\), [d2['id'] for d2 in d['drivers']]\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(rsync -av --include=*.ts --include=*.tsx --include=*.json --include=*.css --exclude=node_modules --exclude=.git '/Users/veetrag/Documents/Claude Expeiments/f1-manager/.claude/worktrees/agent-abc909a8226c72ff4/src/' '/Users/veetrag/Documents/Claude Expeiments/f1-manager/src/')",
+      "Bash(git checkout *)",
+      "Bash(python3)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('src/data/drivers.json'\\)\\); print\\(list\\(d.keys\\(\\)\\), len\\(d.get\\('drivers',[]\\)\\)\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(len\\(d['teams']\\), [t['id'] for t in d['teams']]\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); pts=d['points']; print\\(len\\(pts\\), 'points'\\); print\\('first 3:', pts[:3]\\); print\\('last 3:', pts[-3:]\\)\")",
+      "Bash(rsync -av --exclude='.git' .claude/worktrees/agent-a2badd2bb6de8b9d9/ . --include=\"src/***\" --include=\"src/data/tuning.json\" --include=\"tests/***\" --exclude=\"*\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d[k] for k in ['traffic','_regressionBands']}, indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d['circuits'][0], indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); first=list\\(d.values\\(\\)\\)[0] if isinstance\\(d, dict\\) else d[0]; print\\(json.dumps\\(first, indent=2\\)\\)\")",
+      "Bash(sed -i '' 's/offset: -0.6, lin: 0.040, cliff: 12, pen: 0.030/offset: -0.8, lin: 0.06,  cliff: 10, pen: 0.10/g' tests/engine/lapModel.test.ts tests/engine/projection.test.ts tests/engine/race.test.ts tests/engine/tyres.test.ts)",
+      "Bash(sed -i '' 's/offset:  0.0, lin: 0.025, cliff: 22, pen: 0.020/offset:  0.0, lin: 0.04,  cliff: 16, pen: 0.07/g' tests/engine/lapModel.test.ts tests/engine/projection.test.ts tests/engine/race.test.ts tests/engine/tyres.test.ts)",
+      "Bash(sed -i '' 's/offset:  0.5, lin: 0.015, cliff: 35, pen: 0.012/offset:  0.6, lin: 0.025, cliff: 24, pen: 0.045/g' tests/engine/lapModel.test.ts tests/engine/projection.test.ts tests/engine/race.test.ts tests/engine/tyres.test.ts)",
+      "Bash(sed -i '' 's/offset: 0.5, lin: 0.015, cliff: 35, pen: 0.012/offset: 0.6, lin: 0.025, cliff: 24, pen: 0.045/g' tests/engine/tyres.test.ts)",
+      "Bash(ls \"/Users/veetrag/Documents/files_more details/\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(x['id'],x['code'],x['teamId'],x.get\\('flag','?'\\),x.get\\('bio',''\\)\\) for x in d['drivers']]\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('keys:', list\\(d.keys\\(\\)\\)\\); print\\('type:', d.get\\('type'\\)\\); pts=d.get\\('points',d.get\\('path',[]\\)\\); print\\('num_points:', len\\(pts\\)\\); print\\('first3:', pts[:3] if pts else 'none'\\)\")"
     ]
   }
 }

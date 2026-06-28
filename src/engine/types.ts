@@ -67,6 +67,11 @@ export interface CircuitSpec {
   rainProbability?: number
   weatherBias?: string
   characterNote?: string
+  trackPath?: string
+  location?: string
+  flag?: string
+  funFacts?: string[]
+  atmosphere?: string
 }
 
 export interface DriverFacets {

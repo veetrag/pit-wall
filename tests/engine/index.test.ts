@@ -13,7 +13,7 @@ describe('engine public API', () => {
 
   it('can init a race from real game data', () => {
     const data = loadGameData()
-    const circuit = data.circuits['silverpark']!
+    const circuit = data.circuits['bengaluru']!
     const config: RaceConfig = {
       circuit,
       tuning: data.tuning,

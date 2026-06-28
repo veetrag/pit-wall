@@ -72,6 +72,10 @@ const CircuitSchema = z.object({
   weatherBias: z.string().optional(),
   trackPath: z.string().optional(),
   characterNote: z.string().optional(),
+  location: z.string().optional(),
+  flag: z.string().optional(),
+  funFacts: z.array(z.string()).optional(),
+  atmosphere: z.string().optional(),
 })
 const CircuitsWrapperSchema = z.object({ circuits: z.record(z.string(), CircuitSchema) })
 
@@ -88,6 +92,8 @@ const TeamSchema = z.object({
   facets: TeamFacetsSchema,
   archetype: z.string().optional(),
   developmentRate: z.number().optional(),
+  nationality: z.string().optional(),
+  flag: z.string().optional(),
 })
 const CarsSchema = z.object({ teams: z.array(TeamSchema) })
 
@@ -106,6 +112,9 @@ const DriverSchema = z.object({
   archetype: z.string().optional(),
   potential: z.number().optional(),
   age: z.number().optional(),
+  nationality: z.string().optional(),
+  flag: z.string().optional(),
+  bio: z.string().optional(),
 })
 const DriversSchema = z.object({ drivers: z.array(DriverSchema) })
 

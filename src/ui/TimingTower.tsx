@@ -49,14 +49,16 @@ function WearBar({ compound, age, spec }: { compound: Compound; age: number; spe
   )
 }
 
-function TowerRow({ car, leaderTime, compounds }: {
+function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOverride }: {
   car: CarState
   leaderTime: number
   compounds: Record<string, CompoundSpec>
+  driverFlag?: string
+  driverCode?: string
 }) {
   const gap = car.raceTime - leaderTime
   const spec = compounds[car.compound]
-  const driverCode = car.driverId.replace('d_', '').toUpperCase().slice(0, 3)
+  const driverCode = codeOverride ?? car.driverId.replace('d_', '').toUpperCase().slice(0, 3)
 
   const prevPosRef = useRef(car.position)
   const [flash, setFlash] = useState<'gain' | 'loss' | null>(null)
@@ -107,7 +109,9 @@ function TowerRow({ car, leaderTime, compounds }: {
       <span style={{
         fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
         color: car.isPlayer ? 'var(--accent)' : 'var(--text-hi)', letterSpacing: '0.04em',
+        display: 'flex', alignItems: 'center', gap: 3,
       }}>
+        {driverFlag && <span style={{ fontSize: 9, lineHeight: 1 }}>{driverFlag}</span>}
         {driverCode}
       </span>
       <span style={{
@@ -133,6 +137,7 @@ export function TimingTower() {
 
   if (!raceState || !config) return null
 
+  const driverMap = new Map(config.drivers.map(d => [d.id, d]))
   const leader = raceState.cars.find(c => c.position === 1)
   const leaderTime = leader?.raceTime ?? 0
   const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
@@ -162,6 +167,8 @@ export function TimingTower() {
             car={car}
             leaderTime={leaderTime}
             compounds={config.compounds}
+            driverFlag={(driverMap.get(car.driverId) as { flag?: string } | undefined)?.flag}
+            driverCode={driverMap.get(car.driverId)?.code}
           />
         ))}
       </AnimatePresence>

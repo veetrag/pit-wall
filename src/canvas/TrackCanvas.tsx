@@ -1,22 +1,42 @@
 import { useEffect, useRef } from 'react'
 import * as PIXI from 'pixi.js'
 import { useRaceStore } from '@state/raceStore'
-import pathData from '@data/paths/silverpark.json'
+import pathBengaluru from '@data/paths/bengaluru.json'
+import pathMonsoonBay from '@data/paths/monsoon_bay.json'
+import pathVeloce from '@data/paths/veloce.json'
+import pathHarbourLights from '@data/paths/harbour_lights.json'
+import pathSolDesert from '@data/paths/sol_desert.json'
+import pathHighland from '@data/paths/highland.json'
+import pathGrandSavane from '@data/paths/grand_savane.json'
+import pathAurora from '@data/paths/aurora.json'
+import pathSilverpark from '@data/paths/silverpark.json'
 import type { RaceState, RaceConfig } from '@engine/types'
 
 type Point = [number, number]
+
+const CIRCUIT_PATHS: Record<string, { points: number[][]; sectorBoundaries: number[]; pitEntry: number[]; pitExit: number[] }> = {
+  bengaluru:      pathBengaluru,
+  monsoon_bay:    pathMonsoonBay,
+  veloce:         pathVeloce,
+  harbour_lights: pathHarbourLights,
+  sol_desert:     pathSolDesert,
+  highland:       pathHighland,
+  grand_savane:   pathGrandSavane,
+  aurora:         pathAurora,
+  silverpark:     pathSilverpark,
+}
 
 const TEAM_HEX: Record<string, string> = {
   apex:     '#00E5D0',
   meridian: '#E8344E',
   vortex:   '#F2C94C',
-  kestrel:  '#3DA6FF',
-  solstice: '#FF8C42',
-  delta:    '#A8E063',
-  halcyon:  '#C9A0DC',
-  nimbus:   '#7FFFD4',
-  terra:    '#D2691E',
-  zenith:   '#7B5EA7',
+  kestrel:  '#9B6BFF',
+  solstice: '#FF8A3D',
+  delta:    '#3DDC84',
+  halcyon:  '#5BC8FF',
+  nimbus:   '#B0B6C8',
+  terra:    '#C97B5A',
+  zenith:   '#7A8290',
 }
 
 function hexToNum(hex: string): number {
@@ -254,7 +274,10 @@ export function TrackCanvas() {
         app.canvas.style.height = '100%'
         container.appendChild(app.canvas)
 
-        const rawPts = pathData.points as Point[]
+        const { config: initConfig } = useRaceStore.getState()
+        const circuitKey = initConfig?.circuit?.trackPath?.replace('paths/', '').replace('.json', '') ?? 'bengaluru'
+        const activePath = CIRCUIT_PATHS[circuitKey] ?? CIRCUIT_PATHS['bengaluru']!
+        const rawPts = activePath.points as Point[]
         arcTable = buildArcTable(rawPts, 600)
         transform = buildTransform(arcTable.pts, cw, ch)
 
