@@ -24,7 +24,7 @@ const TUNING: TuningConstants = {
   weather: {
     crossoverPenalty: { dry: { DRY: 0, DAMP: 1.5, WET: 4.0 }, inter: { DRY: 2.0, DAMP: 0.5, WET: 0 }, wet: { DRY: 5.0, DAMP: 2.0, WET: 0 } },
     wetDegMultiplier: { inter: { DRY: 1.5, DAMP: 0.8, WET: 0.6 }, wet: { DRY: 2.0, DAMP: 1.0, WET: 0.5 } },
-    wetSkillReliefMax: 0.10, wetNoiseReliefFactor: 0.30, forecastLap2Confidence: 0.65,
+    wetSkillReliefMax: 0.10, wetNoiseReliefFactor: 0.30, forecastConfidence: [1.0, 1.0, 0.85, 0.65, 0.45],
     timeline: { onsetWindow: [5, 25], minDuration: 3, maxDuration: 15, intensityBias: { stable: 0.05, variable: 0.25, wet: 0.60, mixed: 0.35 } },
   },
 }
