@@ -8,6 +8,8 @@ import { TyreGauge } from './TyreGauge'
 import { PaceModeToggle } from './PaceModeToggle'
 import { PitPanel, PitButton } from './PitPanel'
 import { WeatherStrip } from './WeatherStrip'
+import { HudAlert } from './HudAlert'
+import { TelemetryZone } from './TelemetryZone'
 import { TrackCanvas } from '@canvas/TrackCanvas'
 import { StartLights } from './StartLights'
 import { SettingsPanel } from './SettingsPanel'
@@ -155,12 +157,15 @@ export function RaceHUD() {
             {/* Status bar: circuit · lap · speed controls */}
             <StatusBar />
 
-            {/* Weather strip */}
+            {/* Weather strip — 72px */}
             {(phase === 'racing' || phase === 'starting') && <WeatherStrip />}
 
-            {/* Track canvas — fixed height, portrait-first */}
+            {/* HUD alert slot — 0px collapsed / 44px active */}
+            {(phase === 'racing' || phase === 'starting') && <HudAlert />}
+
+            {/* Track canvas — 160px */}
             <div style={{
-              height: 220, flexShrink: 0,
+              height: 160, flexShrink: 0,
               margin: '8px 8px 0',
               borderRadius: 8, overflow: 'hidden',
               background: 'var(--bg-deep)', position: 'relative',
@@ -170,6 +175,13 @@ export function RaceHUD() {
                 <TrackCanvas />
               </CanvasBoundary>
             </div>
+
+            {/* Telemetry zone — 130px */}
+            {(phase === 'racing' || phase === 'starting') && (
+              <div style={{ margin: '6px 8px 0' }}>
+                <TelemetryZone />
+              </div>
+            )}
 
             {/* Timing tower — fills remaining space, scrollable */}
             <div style={{

@@ -95,8 +95,15 @@ function buildTransform(pts: Point[], cw: number, ch: number, pad = 28): (p: Poi
 type DotState = {
   gfx: PIXI.Graphics
   trail: PIXI.Graphics | null
-  tx: number; ty: number
-  cx: number; cy: number
+  displayT: number   // lerped, used for rendering position
+  targetT: number    // set on each sim tick
+}
+
+function lerpT(from: number, to: number, alpha: number): number {
+  let dt = to - from
+  if (dt > 0.5) dt -= 1
+  if (dt < -0.5) dt += 1
+  return ((from + dt * alpha) % 1 + 1) % 1
 }
 
 function updateCars(
@@ -129,16 +136,14 @@ function updateCars(
       const trail = isPlayer ? new PIXI.Graphics() : null
       if (trail) app.stage.addChildAt(trail, 0)
       app.stage.addChild(gfx)
-      const initPt = transform(sampleAt(arcTable, 0))
-      ds = { gfx, trail, tx: initPt[0], ty: initPt[1], cx: initPt[0], cy: initPt[1] }
+      ds = { gfx, trail, displayT: 0, targetT: 0 }
       dotMap.set(car.driverId, ds)
     }
 
     const gap = car.raceTime - leader.raceTime
     const gapFrac = lapTime > 0 ? gap / lapTime : 0
     const progress = ((leaderProgress - gapFrac) % 1 + 1) % 1
-    const [wx, wy] = transform(sampleAt(arcTable, progress))
-    ds.tx = wx; ds.ty = wy
+    ds.targetT = progress
 
     // Redraw dot
     ds.gfx.clear()
@@ -265,16 +270,22 @@ export function TrackCanvas() {
         const { raceState, config } = useRaceStore.getState()
         if (raceState && config && arcTable && transform) {
           updateCars(app, dotMap, arcTable, transform, raceState, config)
-          for (const ds of dotMap.values()) { ds.gfx.x = ds.tx; ds.gfx.y = ds.ty }
+          // Snap displayT to targetT on first render
+          for (const ds of dotMap.values()) {
+            ds.displayT = ds.targetT
+            const [wx, wy] = transform(sampleAt(arcTable, ds.displayT))
+            ds.gfx.x = wx; ds.gfx.y = wy
+          }
         }
 
-        // Smooth lerp ticker
+        // t-lerp ticker: lerp in arc-length fraction space, handles wrap-around cleanly
         app.ticker.add(() => {
+          if (!arcTable || !transform) return
           for (const ds of dotMap.values()) {
-            ds.cx += (ds.tx - ds.cx) * 0.12
-            ds.cy += (ds.ty - ds.cy) * 0.12
-            ds.gfx.x = ds.cx
-            ds.gfx.y = ds.cy
+            ds.displayT = lerpT(ds.displayT, ds.targetT, 0.12)
+            const [wx, wy] = transform(sampleAt(arcTable, ds.displayT))
+            ds.gfx.x = wx
+            ds.gfx.y = wy
           }
         })
 

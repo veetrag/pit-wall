@@ -5,6 +5,7 @@ import {
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
+import type { AlertMessage } from '../ui/HudAlert'
 
 export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 
@@ -17,6 +18,7 @@ interface RaceStore {
   playerInPit: boolean
   pitEndTime: number
   rng: Rng | null
+  hudAlerts: AlertMessage[]
 
   startRace: () => void
   startSeasonRace: (playerDriverId: string, seed: number) => void
@@ -29,6 +31,8 @@ interface RaceStore {
   openPitPanel: () => void
   closePitPanel: () => void
   updateProjection: (compound: Compound) => void
+  pushAlert: (alert: Omit<AlertMessage, 'id'>) => void
+  dismissAlert: (id: string) => void
 }
 
 function buildConfig(seed: number, playerDriverId: string): RaceConfig {
@@ -46,6 +50,8 @@ function buildConfig(seed: number, playerDriverId: string): RaceConfig {
   }
 }
 
+let alertCounter = 0
+
 export const useRaceStore = create<RaceStore>((set, get) => ({
   phase: 'idle',
   config: null,
@@ -55,6 +61,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   playerInPit: false,
   pitEndTime: 0,
   rng: null,
+  hudAlerts: [],
 
   startRace() {
     const seed = 42
@@ -84,7 +91,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   resetRace() {
-    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0, hudAlerts: [] })
   },
 
   step() {
@@ -128,6 +135,15 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
   openPitPanel() { set({ pitPanelOpen: true }) },
   closePitPanel() { set({ pitPanelOpen: false, projectionResult: null }) },
+
+  pushAlert(alert) {
+    const id = `alert-${++alertCounter}`
+    set(s => ({ hudAlerts: [...s.hudAlerts, { ...alert, id }] }))
+  },
+
+  dismissAlert(id) {
+    set(s => ({ hudAlerts: s.hudAlerts.filter(a => a.id !== id) }))
+  },
 
   updateProjection(compound: Compound) {
     const { config, raceState } = get()

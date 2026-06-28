@@ -19,11 +19,12 @@ function formatGap(gap: number, position: number): string {
 function WearBar({ compound, age, spec }: { compound: Compound; age: number; spec: CompoundSpec }) {
   const fraction = spec.cliff > 0 ? Math.min(age / spec.cliff, 1.2) : 0
   const fillPct = Math.min(fraction * 100, 100)
+  // Sharp thresholds: 0.55 = amber, 1.0 = red
   const color = fraction >= 1.0
-    ? 'var(--accent-warm)'
-    : fraction >= 0.70
+    ? '#FF4D5E'
+    : fraction >= 0.55
     ? '#F2C94C'
-    : 'var(--accent)'
+    : '#3DDC84'
   const dotColor = COMPOUND_COLORS[compound]
 
   return (
@@ -31,27 +32,26 @@ function WearBar({ compound, age, spec }: { compound: Compound; age: number; spe
       <span style={{
         width: 8, height: 8, borderRadius: '50%',
         background: dotColor, flexShrink: 0,
-        boxShadow: fraction < 0.7 ? `0 0 4px ${dotColor}` : 'none',
+        boxShadow: fraction < 0.55 ? `0 0 4px ${dotColor}` : 'none',
       }} />
       <div style={{
-        width: 26, height: 3, borderRadius: 2,
-        background: 'var(--bg-deep)', overflow: 'hidden', flexShrink: 0,
+        width: 32, height: 5, borderRadius: 2,
+        background: '#0A0E1A', overflow: 'hidden', flexShrink: 0,
       }}>
         <div style={{
           height: '100%', borderRadius: 2,
           width: `${fillPct}%`,
           background: color,
-          transition: 'width 0.5s ease, background 0.5s ease',
+          transition: 'width 0.5s ease',
         }} />
       </div>
     </div>
   )
 }
 
-function TowerRow({ car, leaderTime, prevGapRef, compounds }: {
+function TowerRow({ car, leaderTime, compounds }: {
   car: CarState
   leaderTime: number
-  prevGapRef: React.MutableRefObject<Map<string, number>>
   compounds: Record<string, CompoundSpec>
 }) {
   const gap = car.raceTime - leaderTime
@@ -75,25 +75,11 @@ function TowerRow({ car, leaderTime, prevGapRef, compounds }: {
     }
   }, [car.position])
 
-  // Momentum: compare gap to previous gap for this car
-  const prevGap = prevGapRef.current.get(car.driverId) ?? gap
-  useEffect(() => { prevGapRef.current.set(car.driverId, gap) })
-  const gapDelta = car.position === 1 ? 0 : gap - prevGap
-  const gapColor = car.position === 1
-    ? 'var(--text-dim)'
-    : gapDelta < -0.05
-    ? 'var(--positive)'
-    : gapDelta > 0.05
-    ? 'var(--negative)'
-    : 'var(--text-mid)'
+  // Gap color: LEAD = dim, all others = mid (calm, no momentum tracking)
+  const gapColor = car.position === 1 ? 'var(--text-dim)' : 'var(--text-mid)'
 
-  const flashBg = flash === 'gain'
-    ? 'rgba(61,220,132,0.12)'
-    : flash === 'loss'
-    ? 'rgba(255,107,107,0.12)'
-    : car.isPlayer
-    ? 'rgba(0,229,208,0.07)'
-    : 'transparent'
+  // Row bg: teal tint for player only, transparent for all others. No red/green rows.
+  const rowBg = car.isPlayer ? 'rgba(0,229,208,0.07)' : 'transparent'
 
   return (
     <motion.div
@@ -106,10 +92,9 @@ function TowerRow({ car, leaderTime, prevGapRef, compounds }: {
         alignItems: 'center',
         gap: 4,
         padding: '5px 10px',
-        background: flashBg,
+        background: rowBg,
         borderLeft: car.isPlayer ? '2px solid var(--accent)' : '2px solid transparent',
         borderBottom: '0.5px solid #141a2b',
-        transition: 'background 0.4s ease',
       }}
     >
       <span style={{
@@ -128,7 +113,6 @@ function TowerRow({ car, leaderTime, prevGapRef, compounds }: {
       <span style={{
         fontFamily: 'var(--font-mono)', fontSize: 10, color: gapColor,
         fontVariantNumeric: 'tabular-nums', minWidth: 0,
-        transition: 'color 0.5s',
       }}>
         {formatGap(gap, car.position)}
       </span>
@@ -146,7 +130,6 @@ function TowerRow({ car, leaderTime, prevGapRef, compounds }: {
 export function TimingTower() {
   const raceState = useRaceStore(s => s.raceState)
   const config = useRaceStore(s => s.config)
-  const prevGapRef = useRef<Map<string, number>>(new Map())
 
   if (!raceState || !config) return null
 
@@ -178,7 +161,6 @@ export function TimingTower() {
             key={car.driverId}
             car={car}
             leaderTime={leaderTime}
-            prevGapRef={prevGapRef}
             compounds={config.compounds}
           />
         ))}

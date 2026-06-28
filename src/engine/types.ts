@@ -45,7 +45,7 @@ export interface TuningConstants {
     wetDegMultiplier: Record<string, Record<string, number>>
     wetSkillReliefMax: number
     wetNoiseReliefFactor: number
-    forecastLap2Confidence: number
+    forecastConfidence: [number, number, number, number, number]
     timeline: {
       onsetWindow: [number, number]
       minDuration: number
