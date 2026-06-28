@@ -6,8 +6,8 @@ import compoundsData from '@data/compounds.json'
 
 type Compound = 'S' | 'M' | 'H' | 'I' | 'W'
 type CompoundEntry = { name: string; type: string; colorToken: string }
-const compounds = compoundsData as Record<string, CompoundEntry>
-const circuit = (circuitsData as Record<string, { name: string; laps: number; rainProbability?: number; weatherBias?: string; characterNote?: string }>)['silverpark']!
+const compounds = (compoundsData as unknown as { compounds: Record<string, CompoundEntry> }).compounds
+const circuit = (circuitsData as unknown as { circuits: Record<string, { name: string; laps: number; rainProbability?: number; weatherBias?: string; characterNote?: string }> }).circuits['silverpark']!
 
 const DRY_COMPOUNDS: Compound[] = ['S', 'M', 'H']
 
