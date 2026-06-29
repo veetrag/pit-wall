@@ -5,8 +5,12 @@ import { stepSector } from './race'
 export interface ProjectionResult {
   rejoinPosition: number
   rejoinGap: number
+  rejoinGapBehind: number
   driverAheadId: string | null
+  driverBehindId: string | null
   lapsProjected: number
+  netEstimatePosition: number
+  netEstimateLap: number
 }
 
 export function projectPitNow(
@@ -50,12 +54,31 @@ export function projectPitNow(
 
   const sortedByPosition = [...projState.cars].sort((a, b) => a.position - b.position)
   const aheadCar = sortedByPosition[position - 2] ?? null
+  const behindCar = sortedByPosition[position] ?? null
   const rejoinGap = aheadCar ? playerCar.raceTime - aheadCar.raceTime : 0
+  const rejoinGapBehind = behindCar ? behindCar.raceTime - playerCar.raceTime : 0
+
+  // Net estimate: continue to longer horizon from where we are now
+  const { netEstimateHorizonLaps } = config.tuning.projection
+  const extraLaps = netEstimateHorizonLaps - horizonLaps
+  let netState = projState
+  if (extraLaps > 0) {
+    const rng2 = createRng(seed + 2)
+    for (let i = 0; i < extraLaps * 3; i++) {
+      netState = stepSector(projectionConfig, netState, rng2)
+    }
+  }
+  const netPlayerCar = netState.cars.find(c => c.driverId === playerDriverId)!
+  const netEstimateLap = Math.min(state.lap + netEstimateHorizonLaps, state.totalLaps)
 
   return {
     rejoinPosition: position,
     rejoinGap: Math.max(0, rejoinGap),
+    rejoinGapBehind: Math.max(0, rejoinGapBehind),
     driverAheadId: aheadCar?.driverId ?? null,
+    driverBehindId: behindCar?.driverId ?? null,
     lapsProjected: horizonLaps,
+    netEstimatePosition: netPlayerCar.position,
+    netEstimateLap,
   }
 }

@@ -2,9 +2,82 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import type { Compound } from '@engine/types'
+import type { ProjectionResult } from '@engine/projection'
 import { tyreCliffFraction } from '@engine/index'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { soundService } from '@audio/soundService'
+
+function driverCode(id: string | null, drivers: { id: string; code: string }[]): string {
+  if (!id) return '---'
+  return drivers.find(d => d.id === id)?.code ?? id.replace('d_', '').toUpperCase().slice(0, 3)
+}
+
+function ProjectionCard({ result }: { result: ProjectionResult }) {
+  const config = useRaceStore(s => s.config)
+  const drivers = config?.drivers ?? []
+
+  const aheadCode = driverCode(result.driverAheadId, drivers)
+  const behindCode = driverCode(result.driverBehindId, drivers)
+
+  return (
+    <motion.div
+      key={result.rejoinPosition}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        background: 'var(--bg-panel)', borderRadius: 8, padding: '10px 14px',
+        marginBottom: 16, border: '1px solid var(--line-hair)',
+      }}
+    >
+      <div style={{
+        fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--text-dim)',
+        letterSpacing: '0.1em', marginBottom: 6,
+      }}>
+        PROJECTED REJOIN
+      </div>
+
+      {/* Big position */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <span style={{
+          fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 700,
+          color: 'var(--accent)', lineHeight: 1,
+        }}>
+          P{result.rejoinPosition}
+        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {result.driverAheadId && (
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: 11,
+              color: 'var(--negative)', fontVariantNumeric: 'tabular-nums',
+            }}>
+              +{result.rejoinGap.toFixed(1)}s behind {aheadCode}
+            </span>
+          )}
+          {result.driverBehindId && (
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: 11,
+              color: 'var(--positive)', fontVariantNumeric: 'tabular-nums',
+            }}>
+              +{result.rejoinGapBehind.toFixed(1)}s clear of {behindCode}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Net estimate */}
+      {result.netEstimatePosition !== result.rejoinPosition && (
+        <div style={{
+          borderTop: '0.5px solid var(--line-hair)', paddingTop: 6,
+          fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)',
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          recovers to ~P{result.netEstimatePosition} by lap {result.netEstimateLap}
+        </div>
+      )}
+    </motion.div>
+  )
+}
 
 const ALL_COMPOUNDS: { id: Compound; label: string; colorVar: string; wet: boolean }[] = [
   { id: 'S', label: 'SOFT',   colorVar: 'var(--tyre-soft)',              wet: false },
@@ -73,30 +146,7 @@ function PitPanelDrawer() {
         </motion.button>
       </div>
 
-      {projectionResult && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            background: 'var(--bg-panel)', borderRadius: 8, padding: '10px 14px',
-            marginBottom: 16, border: '1px solid var(--line-hair)',
-          }}
-        >
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>
-            PROJECTED REJOIN
-          </span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 4 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--accent)' }}>
-              P{projectionResult.rejoinPosition}
-            </span>
-            {projectionResult.driverAheadId && (
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-mid)', fontVariantNumeric: 'tabular-nums' }}>
-                +{projectionResult.rejoinGap.toFixed(1)}s ahead of next
-              </span>
-            )}
-          </div>
-        </motion.div>
-      )}
+      {projectionResult && <ProjectionCard result={projectionResult} />}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
         {availableCompounds.map(({ id, label, colorVar, wet }) => {

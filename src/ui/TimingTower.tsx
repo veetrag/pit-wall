@@ -16,10 +16,9 @@ function formatGap(gap: number, position: number): string {
   return `+${gap.toFixed(1)}`
 }
 
-function WearBar({ compound, age, spec }: { compound: Compound; age: number; spec: CompoundSpec }) {
+function WearBar({ compound, age, spec, fresh }: { compound: Compound; age: number; spec: CompoundSpec; fresh?: boolean }) {
   const fraction = spec.cliff > 0 ? Math.min(age / spec.cliff, 1.2) : 0
   const fillPct = Math.min(fraction * 100, 100)
-  // Sharp thresholds: 0.55 = amber, 1.0 = red
   const color = fraction >= 1.0
     ? '#FF4D5E'
     : fraction >= 0.55
@@ -32,7 +31,8 @@ function WearBar({ compound, age, spec }: { compound: Compound; age: number; spe
       <span style={{
         width: 8, height: 8, borderRadius: '50%',
         background: dotColor, flexShrink: 0,
-        boxShadow: fraction < 0.55 ? `0 0 4px ${dotColor}` : 'none',
+        boxShadow: fresh ? `0 0 8px ${dotColor}, 0 0 14px ${dotColor}88` : fraction < 0.55 ? `0 0 4px ${dotColor}` : 'none',
+        transition: 'box-shadow 1.2s ease',
       }} />
       <div style={{
         width: 32, height: 5, borderRadius: 2,
@@ -61,7 +61,9 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOver
   const driverCode = codeOverride ?? car.driverId.replace('d_', '').toUpperCase().slice(0, 3)
 
   const prevPosRef = useRef(car.position)
+  const prevAgeRef = useRef(car.tyreAge)
   const [flash, setFlash] = useState<'gain' | 'loss' | null>(null)
+  const [fresh, setFresh] = useState(false)
 
   useEffect(() => {
     if (car.position < prevPosRef.current) {
@@ -77,11 +79,22 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOver
     }
   }, [car.position])
 
-  // Gap color: LEAD = dim, all others = mid (calm, no momentum tracking)
-  const gapColor = car.position === 1 ? 'var(--text-dim)' : 'var(--text-mid)'
+  // Fresh-tyre shimmer: fires when tyreAge resets to 0 after a pit stop
+  useEffect(() => {
+    if (car.tyreAge === 0 && prevAgeRef.current > 3) {
+      setFresh(true)
+      const t = setTimeout(() => setFresh(false), 1800)
+      return () => clearTimeout(t)
+    }
+    prevAgeRef.current = car.tyreAge
+  }, [car.tyreAge])
 
-  // Row bg: teal tint for player only, transparent for all others. No red/green rows.
-  const rowBg = car.isPlayer ? 'rgba(0,229,208,0.07)' : 'transparent'
+  const gapColor = car.position === 1 ? 'var(--text-dim)' : 'var(--text-mid)'
+  const rowBg = car.isPlayer
+    ? fresh
+      ? 'rgba(0,229,208,0.14)'
+      : 'rgba(0,229,208,0.07)'
+    : 'transparent'
 
   return (
     <motion.div
@@ -97,6 +110,7 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOver
         background: rowBg,
         borderLeft: car.isPlayer ? '2px solid var(--accent)' : '2px solid transparent',
         borderBottom: '0.5px solid #141a2b',
+        transition: 'background 0.4s ease',
       }}
     >
       <span style={{
@@ -121,7 +135,7 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOver
         {formatGap(gap, car.position)}
       </span>
       {spec ? (
-        <WearBar compound={car.compound} age={car.tyreAge} spec={spec} />
+        <WearBar compound={car.compound} age={car.tyreAge} spec={spec} fresh={fresh && car.isPlayer} />
       ) : (
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>
           {car.compound}
@@ -131,16 +145,79 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOver
   )
 }
 
+function GhostRow({ position, code }: { position: number; code: string }) {
+  return (
+    <motion.div
+      layout
+      layoutId="ghost-player"
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -10 }}
+      transition={{ type: 'spring', stiffness: 450, damping: 38 }}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '18px 32px 1fr 44px',
+        alignItems: 'center',
+        gap: 4,
+        padding: '5px 10px',
+        background: 'rgba(0,229,208,0.04)',
+        borderLeft: '2px dashed var(--accent)',
+        borderBottom: '0.5px solid #141a2b',
+        opacity: 0.55,
+      }}
+    >
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
+        {position}
+      </span>
+      <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.04em' }}>
+        {code}
+      </span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--accent)', letterSpacing: '0.05em' }}>
+        PIT→
+      </span>
+      <span style={{
+        width: 8, height: 8, borderRadius: '50%',
+        background: 'var(--accent)', alignSelf: 'center',
+        boxShadow: '0 0 6px var(--accent)',
+      }} />
+    </motion.div>
+  )
+}
+
 export function TimingTower() {
   const raceState = useRaceStore(s => s.raceState)
   const config = useRaceStore(s => s.config)
+  const pitPanelOpen = useRaceStore(s => s.pitPanelOpen)
+  const projectionResult = useRaceStore(s => s.projectionResult)
 
   if (!raceState || !config) return null
 
   const driverMap = new Map(config.drivers.map(d => [d.id, d]))
   const leader = raceState.cars.find(c => c.position === 1)
   const leaderTime = leader?.raceTime ?? 0
+  const player = raceState.cars.find(c => c.isPlayer)
   const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
+
+  const ghostPos = pitPanelOpen && projectionResult ? projectionResult.rejoinPosition : null
+  const playerCode = player ? (driverMap.get(player.driverId)?.code ?? 'PLY') : 'PLY'
+
+  // Build display list with ghost at projected position, real player row hidden
+  type Row = { type: 'real'; car: typeof sorted[0] } | { type: 'ghost' }
+  const rows: Row[] = []
+  if (ghostPos != null) {
+    let ghostInserted = false
+    for (const car of sorted) {
+      if (car.isPlayer) continue
+      if (!ghostInserted && car.position >= ghostPos) {
+        rows.push({ type: 'ghost' })
+        ghostInserted = true
+      }
+      rows.push({ type: 'real', car })
+    }
+    if (!ghostInserted) rows.push({ type: 'ghost' })
+  } else {
+    sorted.forEach(car => rows.push({ type: 'real', car }))
+  }
 
   return (
     <div style={{
@@ -161,16 +238,20 @@ export function TimingTower() {
         </span>
       </div>
       <AnimatePresence initial={false}>
-        {sorted.map(car => (
-          <TowerRow
-            key={car.driverId}
-            car={car}
-            leaderTime={leaderTime}
-            compounds={config.compounds}
-            driverFlag={(driverMap.get(car.driverId) as { flag?: string } | undefined)?.flag}
-            driverCode={driverMap.get(car.driverId)?.code}
-          />
-        ))}
+        {rows.map((row, i) =>
+          row.type === 'ghost' ? (
+            <GhostRow key="ghost-player" position={ghostPos!} code={playerCode} />
+          ) : (
+            <TowerRow
+              key={row.car.driverId}
+              car={row.car}
+              leaderTime={leaderTime}
+              compounds={config.compounds}
+              driverFlag={(driverMap.get(row.car.driverId) as { flag?: string } | undefined)?.flag}
+              driverCode={driverMap.get(row.car.driverId)?.code}
+            />
+          )
+        )}
       </AnimatePresence>
     </div>
   )
