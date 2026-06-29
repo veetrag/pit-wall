@@ -40,7 +40,9 @@ function rainColor(prob: number): string {
 export function RaceSetup() {
   const confirmRaceSetup = useSeasonStore(s => s.confirmRaceSetup)
   const raceIndex = useSeasonStore(s => s.raceIndex)
-  const circuitId = CIRCUIT_ORDER[raceIndex % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
+  const defaultIdx = raceIndex % CIRCUIT_ORDER.length
+  const [selectedIdx, setSelectedIdx] = useState(defaultIdx)
+  const circuitId = CIRCUIT_ORDER[selectedIdx] ?? CIRCUIT_ORDER[0]!
   const circuit = allCircuits[circuitId]!
   const roundNum = raceIndex + 1
   const [startCompound, setStartCompound] = useState<Compound>('M')
@@ -75,6 +77,39 @@ export function RaceSetup() {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+        {/* Circuit selector */}
+        <div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 8 }}>SELECT CIRCUIT</div>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {CIRCUIT_ORDER.map((cId, i) => {
+              const c = allCircuits[cId]
+              if (!c) return null
+              const active = i === selectedIdx
+              return (
+                <motion.button
+                  key={cId}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setSelectedIdx(i)
+                    setPitLap(Math.round(c.laps * 0.45))
+                  }}
+                  style={{
+                    flexShrink: 0, border: 'none', borderRadius: 10, padding: '10px 14px',
+                    background: active ? 'var(--accent)' : 'var(--bg-elevated)',
+                    outline: active ? 'none' : '1px solid var(--line-hair)',
+                    cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  }}
+                >
+                  {c.flag && <span style={{ fontSize: 16 }}>{c.flag}</span>}
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: active ? 'var(--bg-deep)' : 'var(--text-mid)', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+                    {c.name.toUpperCase().slice(0, 8)}
+                  </span>
+                </motion.button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Circuit Card */}
         <div style={{
           background: 'var(--bg-elevated)', borderRadius: 14,
@@ -88,7 +123,7 @@ export function RaceSetup() {
           }}>
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 4 }}>
-`ROUND ${roundNum} · CIRCUIT`
+                {`ROUND ${roundNum} · CIRCUIT`}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 {circuit.flag && <span style={{ fontSize: 22 }}>{circuit.flag}</span>}
@@ -254,7 +289,7 @@ export function RaceSetup() {
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={confirmRaceSetup}
+          onClick={() => confirmRaceSetup(circuitId)}
           style={{
             width: '100%', border: 'none', borderRadius: 10, padding: '16px',
             background: 'var(--accent)', color: 'var(--bg-deep)',

@@ -1,9 +1,64 @@
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 
+function AmbientHero() {
+  return (
+    <div style={{ position: 'relative', width: '100%', height: 160, marginBottom: 8, overflow: 'hidden' }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'radial-gradient(ellipse 80% 60% at 50% 80%, rgba(0,229,208,0.07) 0%, transparent 70%)',
+      }} />
+      <svg viewBox="0 0 320 150" style={{ width: '100%', height: '100%' }} aria-hidden>
+        {/* Outer track loop */}
+        <path
+          d="M 48,115 Q 28,115 28,95 L 28,55 Q 28,38 48,38 L 128,38 Q 138,38 143,47 L 153,62 Q 160,72 160,72 Q 160,72 167,62 L 177,47 Q 182,38 192,38 L 272,38 Q 292,38 292,55 L 292,95 Q 292,115 272,115 Z"
+          fill="none" stroke="rgba(0,229,208,0.18)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"
+        />
+        {/* Inner outline */}
+        <path
+          d="M 68,100 Q 52,100 52,84 L 52,66 Q 52,52 68,52 L 118,52 Q 126,52 130,60 L 140,75 Q 148,88 160,88 Q 172,88 180,75 L 190,60 Q 194,52 202,52 L 252,52 Q 268,52 268,66 L 268,84 Q 268,100 252,100 Z"
+          fill="none" stroke="rgba(0,229,208,0.06)" strokeWidth="3"
+        />
+        {/* Start/finish tick */}
+        <line x1="52" y1="100" x2="52" y2="112" stroke="rgba(0,229,208,0.5)" strokeWidth="2" strokeDasharray="3 2" />
+        {/* Floodlight glow dots */}
+        <circle cx="28" cy="32" r="3.5" fill="rgba(242,201,76,0.2)" />
+        <circle cx="292" cy="32" r="3.5" fill="rgba(242,201,76,0.2)" />
+        <circle cx="160" cy="20" r="3" fill="rgba(242,201,76,0.15)" />
+      </svg>
+      {/* Sweep glow */}
+      <motion.div
+        animate={{ x: ['-25%', '125%'] }}
+        transition={{ duration: 7, repeat: Infinity, ease: 'linear', repeatDelay: 5 }}
+        style={{
+          position: 'absolute', top: 0, bottom: 0, width: '28%',
+          background: 'linear-gradient(90deg, transparent, rgba(0,229,208,0.05), transparent)',
+          pointerEvents: 'none',
+        }}
+      />
+    </div>
+  )
+}
+
+const MENU_ITEMS = [
+  { id: 'race',     label: 'QUICK RACE',     sub: 'Start a new season',         primary: true  },
+  { id: 'grid',     label: 'GRID & GARAGE',  sub: 'Browse drivers & teams',     primary: false },
+  { id: 'howto',    label: 'HOW TO PLAY',    sub: 'Strategy primer',            primary: false },
+  { id: 'settings', label: 'SETTINGS',       sub: 'Sound, haptics, gameplay',   primary: false },
+] as const
+
 export function MainMenu() {
   const startNewSeason = useSeasonStore(s => s.startNewSeason)
   const viewGrid = useSeasonStore(s => s.viewGrid)
+  const viewHowToPlay = useSeasonStore(s => s.viewHowToPlay)
+  const viewSettings = useSeasonStore(s => s.viewSettings)
+
+  function handleAction(id: string) {
+    if (id === 'race') startNewSeason()
+    else if (id === 'grid') viewGrid()
+    else if (id === 'howto') viewHowToPlay()
+    else if (id === 'settings') viewSettings()
+  }
 
   return (
     <motion.div
@@ -12,82 +67,92 @@ export function MainMenu() {
       exit={{ opacity: 0 }}
       style={{
         height: '100%', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        background: 'var(--bg-deep)', gap: 0,
+        background: 'var(--bg-deep)',
         paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-        position: 'relative',
+        position: 'relative', overflow: 'hidden',
       }}
     >
-      {/* Logotype */}
-      <div style={{ textAlign: 'center', marginBottom: 48 }}>
-        <div style={{
-          fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600,
-          color: 'var(--accent)', letterSpacing: '0.3em', textTransform: 'uppercase',
-          marginBottom: 8,
-        }}>
-          F1 STRATEGIST
-        </div>
-        <div style={{
-          fontFamily: 'var(--font-display)', fontSize: 52, fontWeight: 800,
-          color: 'var(--text-hi)', letterSpacing: '-0.01em', lineHeight: 1,
-          textShadow: '0 0 60px rgba(0,229,208,0.25)',
-        }}>
-          PIT WALL
-        </div>
-        <div style={{
-          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)',
-          marginTop: 10, letterSpacing: '0.15em',
-        }}>
-          SEASON 2025 · SILVERPARK
-        </div>
-      </div>
-
-      {/* Buttons */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 240 }}>
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={startNewSeason}
-          style={{
-            background: 'var(--accent)', color: 'var(--bg-deep)',
-            border: 'none', borderRadius: 10, padding: '18px 0',
-            fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700,
-            letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer',
-            width: '100%',
-          }}
-        >
-          NEW SEASON
-        </motion.button>
-
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={viewGrid}
-          style={{
-            background: 'transparent', color: 'var(--text-mid)',
-            border: '1px solid var(--line-hair)', borderRadius: 10, padding: '14px 0',
-            fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600,
-            letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
-            width: '100%',
-          }}
-        >
-          GRID &amp; STATS
-        </motion.button>
-
-        <div style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)',
-          textAlign: 'center', letterSpacing: '0.1em', marginTop: 8,
-        }}>
-          5 RACES · 10 DRIVERS
-        </div>
-      </div>
-
-      {/* Version */}
+      {/* Subtle grid lines background */}
       <div style={{
-        position: 'absolute', bottom: 'calc(var(--safe-bottom) + 16px)',
-        fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)',
-        letterSpacing: '0.1em',
-      }}>
-        v0.1 ALPHA
+        position: 'absolute', inset: 0, opacity: 0.025, pointerEvents: 'none',
+        backgroundImage: 'linear-gradient(var(--text-hi) 1px,transparent 1px),linear-gradient(90deg,var(--text-hi) 1px,transparent 1px)',
+        backgroundSize: '40px 40px',
+      }} />
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 28px' }}>
+        {/* Hero */}
+        <AmbientHero />
+
+        {/* Wordmark */}
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+            style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.32em', marginBottom: 6 }}
+          >
+            F1 STRATEGIST
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}
+            style={{
+              fontFamily: 'var(--font-display)', fontSize: 50, fontWeight: 800,
+              color: 'var(--text-hi)', letterSpacing: '-0.02em', lineHeight: 1,
+              textShadow: '0 0 60px rgba(0,229,208,0.2)',
+            }}
+          >
+            PIT WALL
+          </motion.div>
+        </div>
+
+        {/* Nav buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 300, width: '100%', alignSelf: 'center' }}>
+          {MENU_ITEMS.map(({ id, label, sub, primary }, i) => (
+            <motion.button
+              key={id}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.07 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => handleAction(id)}
+              style={{
+                background: primary ? 'var(--accent)' : 'transparent',
+                color: primary ? 'var(--bg-deep)' : 'var(--text-mid)',
+                border: primary ? 'none' : '1px solid var(--line-hair)',
+                borderRadius: 12, padding: primary ? '17px 0' : '13px 0',
+                fontFamily: 'var(--font-display)', fontWeight: primary ? 700 : 600,
+                fontSize: primary ? 16 : 13, letterSpacing: '0.09em', cursor: 'pointer',
+                width: '100%', textAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              }}
+            >
+              <span>{label}</span>
+              {!primary && (
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.05em', fontWeight: 400 }}>
+                  {sub}
+                </span>
+              )}
+            </motion.button>
+          ))}
+
+          {/* Career seam — coming soon */}
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.52 }}
+            style={{
+              borderRadius: 12, padding: '12px 0', textAlign: 'center',
+              border: '1px solid var(--line-hair)', opacity: 0.3,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              pointerEvents: 'none',
+            }}
+          >
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600, color: 'var(--text-dim)', letterSpacing: '0.09em' }}>CAREER</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Coming soon</span>
+          </motion.div>
+        </div>
       </div>
+
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+        style={{ textAlign: 'center', paddingBottom: 16, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.12em' }}
+      >
+        v0.1 ALPHA · PIT WALL
+      </motion.div>
     </motion.div>
   )
 }
