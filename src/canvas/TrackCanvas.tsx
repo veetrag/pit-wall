@@ -142,7 +142,12 @@ function updateCars(
 
   const leader = [...state.cars].sort((a, b) => a.position - b.position)[0]
   if (!leader) return
-  const leaderProgress = lapTime > 0 ? (leader.raceTime % lapTime) / lapTime : 0
+
+  // Use car.lap as authoritative lap count to avoid raceTime drift over long races
+  const getLapFrac = (c: { raceTime: number; lap: number }) =>
+    lapTime > 0 ? Math.max(0, c.raceTime - c.lap * lapTime) / lapTime : 0
+
+  const leaderProgress = getLapFrac(leader) % 1
 
   for (const car of state.cars) {
     let ds = dotMap.get(car.driverId)
@@ -160,9 +165,10 @@ function updateCars(
       dotMap.set(car.driverId, ds)
     }
 
-    const gap = car.raceTime - leader.raceTime
-    const gapFrac = lapTime > 0 ? gap / lapTime : 0
-    const progress = ((leaderProgress - gapFrac) % 1 + 1) % 1
+    // Position relative to leader, accounting for lapped cars
+    const carLapFrac = getLapFrac(car)
+    const lapsBehind = leader.lap - car.lap
+    const progress = ((carLapFrac - lapsBehind) % 1 + 1) % 1
     ds.targetT = progress
 
     // Redraw dot
@@ -309,6 +315,19 @@ export function TrackCanvas() {
             const [wx, wy] = transform(sampleAt(arcTable, ds.displayT))
             ds.gfx.x = wx
             ds.gfx.y = wy
+
+            // Draw tapering trail for player car
+            if (ds.trail) {
+              ds.trail.clear()
+              const TRAIL_STEPS = 8
+              for (let i = 1; i <= TRAIL_STEPS; i++) {
+                const tBack = ((ds.displayT - i * 0.006) % 1 + 1) % 1
+                const [tx, ty] = transform(sampleAt(arcTable, tBack))
+                const alpha = (1 - i / TRAIL_STEPS) * 0.5
+                const r = 3 * (1 - i / TRAIL_STEPS)
+                ds.trail.circle(tx, ty, Math.max(0.5, r)).fill({ color: 0x00E5D0, alpha })
+              }
+            }
           }
         })
 

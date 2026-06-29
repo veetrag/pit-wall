@@ -20,9 +20,10 @@ export interface TuningConstants {
   fuel: { effectPerLap: number }
   noise: { sigmaPerSector: number; consistencyReliefFactor: number }
   trackEvolution: { startDelta: number; decayLaps: number }
-  traffic: { gapThreshold: number; penalty: number }
+  traffic: { gapThreshold: number; penalty: number; trafficCap: number }
   overtaking: {
     base: number
+    paceGateMin: number
     paceMultiplier: number
     sectorFactor: [number, number, number]
     attackRacecraftBase: number

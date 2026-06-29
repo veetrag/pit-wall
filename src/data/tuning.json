@@ -4,14 +4,15 @@
   "fuel": { "effectPerLap": 0.035 },
   "noise": { "sigmaPerSector": 0.08, "consistencyReliefFactor": 0.40 },
   "trackEvolution": { "startDelta": 0.30, "decayLaps": 20 },
-  "traffic": { "gapThreshold": 1.0, "penalty": 0.12 },
+  "traffic": { "gapThreshold": 1.0, "penalty": 0.12, "trafficCap": 0.70 },
   "overtaking": {
     "base": 0.22,
+    "paceGateMin": 0.05,
     "paceMultiplier": 3.0,
     "sectorFactor": [1.0, 0.25, 0.55],
     "attackRacecraftBase": 0.5,
     "defenceRacecraftFactor": 0.40,
-    "tyreFreshnessBonusMax": 0.15
+    "tyreFreshnessBonusMax": 0.06
   },
   "pit": {
     "laneTimeLoss": 22.0,

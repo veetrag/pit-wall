@@ -12,9 +12,9 @@ const TuningSchema = z.object({
   fuel: z.object({ effectPerLap: z.number() }),
   noise: z.object({ sigmaPerSector: z.number(), consistencyReliefFactor: z.number() }),
   trackEvolution: z.object({ startDelta: z.number(), decayLaps: z.number() }),
-  traffic: z.object({ gapThreshold: z.number(), penalty: z.number() }),
+  traffic: z.object({ gapThreshold: z.number(), penalty: z.number(), trafficCap: z.number() }),
   overtaking: z.object({
-    base: z.number(), paceMultiplier: z.number(),
+    base: z.number(), paceGateMin: z.number(), paceMultiplier: z.number(),
     sectorFactor: z.tuple([z.number(), z.number(), z.number()]),
     attackRacecraftBase: z.number(),
     defenceRacecraftFactor: z.number(),

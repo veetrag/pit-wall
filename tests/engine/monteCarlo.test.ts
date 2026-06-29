@@ -7,7 +7,7 @@ import type { RaceConfig } from '@engine/types'
 // Reference circuit for regression: balanced sensitivity, 30 laps (car performance dominant)
 const REFERENCE_CIRCUIT = {
   name: 'Reference', laps: 30,
-  sectorBase: [28.0, 34.0, 28.0],
+  sectorBase: [28.0, 34.0, 28.0] as [number, number, number],
   carSensitivity: [0.30, 0.45, 0.25] as [number, number, number],
   driverSensitivity: [0.30, 0.40, 0.30] as [number, number, number],
   overtakingFactor: [1.0, 0.25, 0.55] as [number, number, number],

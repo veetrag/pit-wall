@@ -70,7 +70,10 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     const ahead = sorted[idx - 1]!
     const gap = car.raceTime - ahead.raceTime
     if (gap <= config.tuning.traffic.gapThreshold) {
-      return { ...car, raceTime: car.raceTime + config.tuning.traffic.penalty / 3 }
+      const paceAdv = calculatePaceAdvantage(config, car, ahead)
+      const rawPenalty = config.tuning.traffic.penalty / 3
+      const cappedPenalty = Math.min(rawPenalty, paceAdv * config.tuning.traffic.trafficCap)
+      return { ...car, raceTime: car.raceTime + cappedPenalty }
     }
     return car
   })
@@ -161,6 +164,10 @@ function resolveOvertakes(
     if (gap > config.tuning.traffic.gapThreshold) continue
 
     const paceAdv = calculatePaceAdvantage(config, behind, ahead)
+
+    // Hard gate: require genuine pace advantage before any dice roll
+    if (paceAdv < config.tuning.overtaking.paceGateMin) continue
+
     const attackerDriver = config.drivers.find(d => d.id === behind.driverId)!
     const defenderDriver = config.drivers.find(d => d.id === ahead.driverId)!
     const attackMult = config.tuning.overtaking.attackRacecraftBase + (attackerDriver.facets.racecraft / 100)
@@ -202,5 +209,11 @@ function calculatePaceAdvantage(config: RaceConfig, faster: CarState, slower: Ca
   const fasterDriverSkill = (1 - fasterDriver.facets.pace / 100) * 10
   const slowerDriverSkill = (1 - slowerDriver.facets.pace / 100) * 10
   const driverAdv = (slowerDriverSkill - fasterDriverSkill) * config.tuning.driverPerformance.deltaPerSkill
-  return Math.max(0, carAdv + driverAdv)
+
+  // Tyre freshness: fresher tyres on the faster car add pace advantage (saturates at 15-lap diff)
+  // Pace mode is intentionally excluded — it's already captured in raceTime gap (lap model handles it)
+  const tyreAgeDiff = slower.tyreAge - faster.tyreAge
+  const freshnessAdv = config.tuning.overtaking.tyreFreshnessBonusMax * Math.max(0, tyreAgeDiff) / 15
+
+  return Math.max(0, carAdv + driverAdv + freshnessAdv)
 }
