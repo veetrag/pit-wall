@@ -51,7 +51,7 @@ describe('seasonStore', () => {
       { driverId: 'd_ham', position: 2 },
       { driverId: 'd_lec', position: 3 },
     ]
-    useSeasonStore.getState().recordRaceResult(positions)
+    useSeasonStore.getState().recordRaceResult(positions, { overtakesGained: 0, pitsDone: 1, hadRain: false })
     const s = useSeasonStore.getState()
     expect(s.phase).toBe('result')
     const verStanding = s.standings.find(st => st.driverId === 'd_ver')

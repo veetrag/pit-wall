@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useRaceStore } from '@state/raceStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useClockStore } from '@state/clockStore'
+import type { RaceEventSummary } from '@state/seasonStore'
 
 export function RaceWatcher() {
   const racePhase = useRaceStore(s => s.phase)
@@ -17,7 +18,6 @@ export function RaceWatcher() {
 
   const hasFiredRef = useRef(false)
 
-  // When season transitions to 'racing' and raceStore is idle, kick off the race
   useEffect(() => {
     if (seasonPhase === 'racing' && racePhase === 'idle' && playerDriverId) {
       hasFiredRef.current = false
@@ -25,15 +25,19 @@ export function RaceWatcher() {
     }
   }, [seasonPhase, racePhase, playerDriverId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When race finishes, record result and transition to result screen
   useEffect(() => {
     if (racePhase === 'finished' && raceState && !hasFiredRef.current) {
       hasFiredRef.current = true
       setSpeed(0)
-      const positions = [...raceState.cars]
-        .sort((a, b) => a.position - b.position)
-        .map(car => ({ driverId: car.driverId, position: car.position }))
-      recordRaceResult(positions)
+      const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
+      const positions = sorted.map(car => ({ driverId: car.driverId, position: car.position }))
+      const player = raceState.cars.find(c => c.isPlayer)
+      const events: RaceEventSummary = {
+        overtakesGained: raceState.overtakeEvents.filter(e => e.overtakerId === player?.driverId).length,
+        pitsDone: player?.pitsDone ?? 0,
+        hadRain: raceState.weatherTimeline.some(w => w !== 'DRY'),
+      }
+      recordRaceResult(positions, events)
       setTimeout(() => resetRace(), 1500)
     }
   }, [racePhase]) // eslint-disable-line react-hooks/exhaustive-deps
