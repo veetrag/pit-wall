@@ -5,6 +5,7 @@ import { useSeasonStore } from './state/seasonStore'
 import { useSettingsStore } from './state/settingsStore'
 import { MainMenu } from './ui/MainMenu'
 import { GridStats } from './ui/GridStats'
+import { TeamSelect } from './ui/TeamSelect'
 import { DriverSelect } from './ui/DriverSelect'
 import { RaceSetup } from './ui/RaceSetup'
 import { HowToPlay } from './ui/HowToPlay'
@@ -30,6 +31,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         {phase === 'menu' && <MainMenu key="menu" />}
         {phase === 'grid' && <GridStats key="grid" />}
+        {phase === 'team_select' && <TeamSelect key="team_select" />}
         {phase === 'driver_select' && <DriverSelect key="driver_select" />}
         {phase === 'race_setup' && <RaceSetup key="race_setup" />}
         {phase === 'how_to_play' && <HowToPlay key="how_to_play" />}

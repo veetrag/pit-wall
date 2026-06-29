@@ -1,134 +1,59 @@
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
+import { HelmetAvatar, type HelmetPattern } from './HelmetAvatar'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 
-const TEAM_COLORS: Record<string, string> = {
-  apex:     '#00E5D0',
-  meridian: '#FF4D5E',
-  vortex:   '#F2C94C',
-  zenith:   '#7B5EA7',
-  torque:   '#FF7A00',
-}
-
-// Unique helmet color combos per driver (bg gradient stops, visor color)
-const DRIVER_HELMET: Record<string, { from: string; to: string; visor: string; number: number }> = {
-  d_ver: { from: '#001a6e', to: '#0052cc', visor: '#00cfff', number: 1  },
-  d_nor: { from: '#cc2200', to: '#ff6b3d', visor: '#ffe066', number: 4  },
-  d_ham: { from: '#222222', to: '#555555', visor: '#00E5D0', number: 44 },
-  d_lec: { from: '#a30000', to: '#e00000', visor: '#ffffff', number: 16 },
-  d_rus: { from: '#00509e', to: '#003d7a', visor: '#ffd700', number: 63 },
-  d_alo: { from: '#004a99', to: '#0074e8', visor: '#00ff9d', number: 14 },
-  d_sai: { from: '#c70000', to: '#ff3333', visor: '#ffcc00', number: 55 },
-  d_pia: { from: '#ff5500', to: '#cc3d00', visor: '#00ccff', number: 81 },
-  d_oco: { from: '#0090d4', to: '#005a8a', visor: '#ff9500', number: 31 },
-  d_gas: { from: '#1e1e2e', to: '#3a3a5c', visor: '#ff4d5e', number: 10 },
-}
-
 type DriverFacets = { pace: number; racecraft: number; tyreManagement: number; consistency: number; wetWeather: number; experience: number }
-type DriverEntry = { id: string; name: string; teamId: string; facets: DriverFacets }
-type TeamEntry = { id: string; name: string }
+type DriverEntry = { id: string; name: string; code: string; teamId: string; flag?: string; facets: DriverFacets }
+type TeamEntry   = { id: string; name: string; colorPrimary: string; colorSecondary?: string }
 
-const drivers = driversData.drivers as DriverEntry[]
-const teams = carsData.teams as TeamEntry[]
+const allDrivers = driversData.drivers as DriverEntry[]
+const allTeams   = (carsData as unknown as { teams: TeamEntry[] }).teams
 
-function teamName(teamId: string): string {
-  return teams.find(t => t.id === teamId)?.name ?? teamId
+function teamEntry(teamId: string): TeamEntry {
+  return allTeams.find(t => t.id === teamId) ?? { id: teamId, name: teamId, colorPrimary: '#888' }
 }
 
-function skillLabel(pace: number): string {
-  if (pace >= 88) return 'ELITE'
-  if (pace >= 78) return 'PRO'
-  return 'RESERVE'
+function avgFacets(f: DriverFacets): number {
+  const vals = Object.values(f).filter(v => typeof v === 'number') as number[]
+  return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0
 }
 
-function skillColor(pace: number): string {
-  if (pace >= 88) return 'var(--accent)'
-  if (pace >= 78) return 'var(--tyre-medium)'
-  return 'var(--text-dim)'
+function driverTier(overall: number): { label: string; color: string } {
+  if (overall >= 90) return { label: 'ELITE',  color: 'var(--accent)' }
+  if (overall >= 80) return { label: 'PRO',    color: 'var(--tyre-medium)' }
+  return              { label: 'ROOKIE', color: 'var(--text-dim)' }
 }
 
-function DriverPhoto({ driverId, teamId, selected }: { driverId: string; teamId: string; selected: boolean }) {
-  const helmet = DRIVER_HELMET[driverId]
-  const teamColor = TEAM_COLORS[teamId] ?? '#888'
-  const h = helmet ?? { from: '#333', to: '#555', visor: '#aaa', number: 0 }
-
-  return (
-    <svg
-      width="56"
-      height="56"
-      viewBox="0 0 56 56"
-      style={{
-        flexShrink: 0,
-        filter: selected ? `drop-shadow(0 0 8px ${teamColor}88)` : 'none',
-        transition: 'filter 0.2s ease',
-      }}
-    >
-      <defs>
-        <radialGradient id={`hg_${driverId}`} cx="40%" cy="30%" r="70%">
-          <stop offset="0%" stopColor={h.from} />
-          <stop offset="100%" stopColor={h.to} />
-        </radialGradient>
-        <clipPath id={`hc_${driverId}`}>
-          <ellipse cx="28" cy="28" rx="26" ry="26" />
-        </clipPath>
-      </defs>
-
-      {/* Base helmet shape */}
-      <ellipse cx="28" cy="28" rx="26" ry="26" fill={`url(#hg_${driverId})`} />
-
-      {/* Helmet dome highlight */}
-      <ellipse cx="22" cy="18" rx="10" ry="7" fill="rgba(255,255,255,0.12)" />
-
-      {/* Visor */}
-      <rect x="9" y="26" width="38" height="14" rx="5" fill={h.visor} opacity="0.9"
-        clipPath={`url(#hc_${driverId})`} />
-      <rect x="9" y="26" width="38" height="14" rx="5" fill="rgba(0,0,0,0.35)"
-        clipPath={`url(#hc_${driverId})`} />
-
-      {/* Visor tint overlay (left edge darker) */}
-      <rect x="9" y="26" width="12" height="14" fill="rgba(0,0,0,0.25)"
-        clipPath={`url(#hc_${driverId})`} />
-
-      {/* Chin */}
-      <ellipse cx="28" cy="50" rx="18" ry="8" fill={h.to} clipPath={`url(#hc_${driverId})`} />
-
-      {/* Race number */}
-      <text
-        x="28"
-        y="23"
-        textAnchor="middle"
-        fontFamily="monospace"
-        fontWeight="bold"
-        fontSize={h.number > 9 ? '10' : '12'}
-        fill="rgba(255,255,255,0.85)"
-        letterSpacing="-0.5"
-      >
-        {h.number}
-      </text>
-
-      {/* Team color stripe on top */}
-      <rect x="20" y="3" width="16" height="4" rx="2" fill={teamColor} opacity="0.9" />
-
-      {/* Selection ring */}
-      {selected && (
-        <ellipse cx="28" cy="28" rx="26" ry="26" fill="none"
-          stroke={teamColor} strokeWidth="2.5" />
-      )}
-    </svg>
-  )
+function driverPattern(driverId: string, teamId: string): HelmetPattern {
+  const teamDriverIds = allDrivers.filter(d => d.teamId === teamId).map(d => d.id)
+  return teamDriverIds.indexOf(driverId) === 0 ? 'stripe' : 'chevron'
 }
+
+function gridNumber(driverId: string): number {
+  return allDrivers.findIndex(d => d.id === driverId) + 1
+}
+
+const FACET_LABELS: [keyof DriverFacets, string][] = [
+  ['pace',           'PCE'],
+  ['racecraft',      'RCE'],
+  ['tyreManagement', 'TYR'],
+  ['consistency',    'CON'],
+]
 
 export function DriverSelect() {
+  const selectedTeamId = useSeasonStore(s => s.selectedTeamId)
   const playerDriverId = useSeasonStore(s => s.playerDriverId)
-  const selectDriver = useSeasonStore(s => s.selectDriver)
-  const confirmDriver = useSeasonStore(s => s.confirmDriver)
+  const selectDriver   = useSeasonStore(s => s.selectDriver)
+  const confirmDriver  = useSeasonStore(s => s.confirmDriver)
+
+  const team    = selectedTeamId ? teamEntry(selectedTeamId) : null
+  const drivers = allDrivers.filter(d => d.teamId === selectedTeamId)
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -40 }}
+      initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
       style={{
         height: '100%', display: 'flex', flexDirection: 'column',
         background: 'var(--bg-deep)',
@@ -136,91 +61,126 @@ export function DriverSelect() {
       }}
     >
       {/* Header */}
-      <div style={{
-        padding: '20px 20px 16px',
-        borderBottom: '1px solid var(--line-hair)',
-        flexShrink: 0,
-      }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-          SEASON 2025
+      <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
+            QUICK RACE · STEP 2 OF 2
+          </div>
+          {team && (
+            <div style={{
+              fontFamily: 'var(--font-mono)', fontSize: 10, color: team.colorPrimary,
+              padding: '2px 7px', borderRadius: 4, border: `1px solid ${team.colorPrimary}66`,
+              background: `${team.colorPrimary}12`, letterSpacing: '0.06em',
+            }}>
+              {team.name.toUpperCase()}
+            </div>
+          )}
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
-          Choose Your Driver
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)' }}>
+          Field a Driver
+        </div>
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+          Pick which driver you'll race this round.
         </div>
       </div>
 
-      {/* Driver list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Driver cards — only this team's 2 drivers */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {drivers.map((driver, i) => {
-          const selected = playerDriverId === driver.id
-          const color = TEAM_COLORS[driver.teamId] ?? 'var(--text-mid)'
+          const selected   = playerDriverId === driver.id
+          const overall    = avgFacets(driver.facets)
+          const tier       = driverTier(overall)
+          const pattern    = driverPattern(driver.id, driver.teamId)
+          const teamColor  = team?.colorPrimary ?? '#888'
+          const teamSec    = team?.colorSecondary
+
           return (
             <motion.button
               key={driver.id}
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04, ease: 'easeOut' }}
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => selectDriver(driver.id)}
               style={{
-                border: selected ? `1px solid ${color}` : '1px solid var(--line-hair)',
-                borderRadius: 14,
-                padding: '10px 14px 10px 10px',
+                border: selected ? `1.5px solid ${teamColor}` : '1px solid var(--line-hair)',
+                borderRadius: 16, padding: '16px 14px',
                 background: selected
-                  ? `linear-gradient(135deg, ${color}14 0%, var(--bg-elevated) 100%)`
+                  ? `linear-gradient(135deg, ${teamColor}18 0%, var(--bg-elevated) 100%)`
                   : 'var(--bg-elevated)',
-                cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 14,
-                outline: 'none',
-                boxShadow: selected ? `0 2px 24px ${color}28` : 'none',
-                transition: 'border-color 0.15s, box-shadow 0.15s, background 0.15s',
+                cursor: 'pointer', outline: 'none', textAlign: 'left',
+                boxShadow: selected ? `0 3px 24px ${teamColor}30` : 'none',
+                transition: 'all 0.15s',
               }}
             >
-              <DriverPhoto driverId={driver.id} teamId={driver.teamId} selected={selected} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <HelmetAvatar
+                  teamPrimary={teamColor}
+                  teamSecondary={teamSec}
+                  pattern={pattern}
+                  number={gridNumber(driver.id)}
+                  size={64}
+                  selected={selected}
+                  selectionColor={teamColor}
+                />
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700,
-                  color: selected ? color : 'var(--text-hi)', letterSpacing: '0.04em',
-                  lineHeight: 1.1,
-                }}>
-                  {driver.name.toUpperCase()}
-                </div>
-                <div style={{
-                  fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 3,
-                }}>
-                  {teamName(driver.teamId)}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Flag + name */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                    {driver.flag && <span style={{ fontSize: 16 }}>{driver.flag}</span>}
+                    <span style={{
+                      fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700,
+                      color: selected ? teamColor : 'var(--text-hi)', letterSpacing: '0.03em',
+                    }}>
+                      {driver.name}
+                    </span>
+                  </div>
+
+                  {/* Tier + overall */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{
+                      fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.1em',
+                      color: tier.color, padding: '2px 7px', borderRadius: 4,
+                      border: `1px solid ${tier.color}66`, background: `${tier.color}10`,
+                    }}>
+                      {tier.label}
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
+                      {overall} OVR
+                    </span>
+                  </div>
+
+                  {/* Facet mini-bars */}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {FACET_LABELS.map(([key, label]) => {
+                      const val = driver.facets[key]
+                      return (
+                        <div key={key} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-dim)', letterSpacing: '0.06em' }}>{label}</span>
+                          <div style={{ height: 3, borderRadius: 1.5, background: 'var(--line-hair)', overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', borderRadius: 1.5, width: `${val}%`,
+                              background: selected ? teamColor : 'var(--text-mid)',
+                              transition: 'background 0.2s',
+                            }} />
+                          </div>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
-
-              {/* Skill badge */}
-              <div style={{
-                fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.08em',
-                padding: '4px 8px', borderRadius: 6,
-                color: selected ? color : skillColor(driver.facets.pace),
-                border: `1px solid ${selected ? color : skillColor(driver.facets.pace)}`,
-                background: selected ? `${color}18` : 'transparent',
-                flexShrink: 0,
-              }}>
-                {skillLabel(driver.facets.pace)}
-              </div>
-
-              {/* Selected chevron */}
-              {selected && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  style={{ color, fontSize: 18, flexShrink: 0, marginLeft: -6 }}
-                >
-                  ›
-                </motion.div>
-              )}
             </motion.button>
           )
         })}
+
+        {drivers.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px 20px', fontFamily: 'var(--font-body)', color: 'var(--text-dim)' }}>
+            No drivers found. Go back and select a team.
+          </div>
+        )}
       </div>
 
-      {/* Confirm button */}
+      {/* CTA */}
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
@@ -230,13 +190,15 @@ export function DriverSelect() {
             width: '100%', border: 'none', borderRadius: 10, padding: '16px',
             background: playerDriverId ? 'var(--accent)' : 'var(--bg-elevated)',
             color: playerDriverId ? 'var(--bg-deep)' : 'var(--text-dim)',
-            fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700,
+            fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700,
             letterSpacing: '0.08em', cursor: playerDriverId ? 'pointer' : 'default',
             outline: playerDriverId ? 'none' : '1px solid var(--line-hair)',
             transition: 'all 0.2s',
           }}
         >
-          {playerDriverId ? 'GO RACING →' : 'SELECT A DRIVER'}
+          {playerDriverId
+            ? `RACE WITH ${allDrivers.find(d => d.id === playerDriverId)?.code ?? '...'} →`
+            : 'SELECT A DRIVER'}
         </motion.button>
       </div>
     </motion.div>
