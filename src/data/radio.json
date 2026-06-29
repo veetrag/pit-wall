@@ -1,0 +1,100 @@
+{
+  "pit_entry": [
+    "Box box box. Come in now.",
+    "Box this lap. Tyres are ready.",
+    "Come in. We're good to go.",
+    "Pit this lap. Box box.",
+    "Tyres primed. Come in now."
+  ],
+  "pit_exit": [
+    "Out of the box, push push push.",
+    "Fresh rubber. Go go go.",
+    "Clean air ahead. Push hard.",
+    "You're out. Attack now.",
+    "New tyres on. Make them count."
+  ],
+  "overtake_made": [
+    "Excellent move! P{pos} now.",
+    "Great pass! You're P{pos}.",
+    "Beautiful overtake. P{pos}.",
+    "That's P{pos}. Keep pushing.",
+    "Clean move. P{pos} confirmed."
+  ],
+  "overtake_lost": [
+    "Stay focused. Hunt them down.",
+    "That's P{pos}. We'll get it back.",
+    "Keep your head. Recover the gap.",
+    "P{pos}. Tyres are still there.",
+    "Fine. Stay on the pace."
+  ],
+  "tyre_cliff": [
+    "Tyres are dropping off. Watch the cliff.",
+    "Degradation increasing. Manage it.",
+    "You're at the cliff. Conserve now.",
+    "Tyres critical. Decision coming.",
+    "Deg is high. Think about boxing."
+  ],
+  "gap_closing": [
+    "Gap closing. Push harder.",
+    "{n} tenths to close. Push.",
+    "You're catching them. Keep it up.",
+    "Gap is coming down. Stay focused.",
+    "Nice pace. Keep the pressure on."
+  ],
+  "gap_pulling": [
+    "Gap building. Keep it up.",
+    "You're pulling away. Solid.",
+    "{n} seconds to the car behind.",
+    "Clean air. Maintain the pace.",
+    "Looking good. Stay consistent."
+  ],
+  "rain_coming": [
+    "Weather incoming. Stay alert.",
+    "Rain on the way. Be ready.",
+    "Conditions changing. Watch the track.",
+    "Rain forecast. Decision soon.",
+    "It's coming. Prepare for wet."
+  ],
+  "rain_arrived": [
+    "It's wet. Adjust your style.",
+    "Rain is here. Be careful.",
+    "Wet conditions. Smooth inputs.",
+    "Rain confirmed. Tyre call coming.",
+    "Track going wet. Think about inters."
+  ],
+  "final_lap": [
+    "Final lap. Give everything.",
+    "Last lap. Bring it home.",
+    "One lap left. You've got this.",
+    "Final lap. Push all the way.",
+    "This is it. Go."
+  ],
+  "win": [
+    "P1! Brilliant race!",
+    "You've won it! Incredible drive!",
+    "Race winner. Absolutely stunning.",
+    "P1 at the flag. Fantastic!",
+    "That's a win! Well done."
+  ],
+  "podium": [
+    "P{pos} at the flag. Great race!",
+    "Podium finish. Excellent work.",
+    "P{pos}. That's a podium. Well done.",
+    "Solid race. P{pos} confirmed.",
+    "P{pos}. Good job today."
+  ],
+  "fastest_lap": [
+    "Fastest lap! Purple sector.",
+    "That's the fastest lap of the race.",
+    "Purple! Fastest on track.",
+    "Fastest lap in the bag.",
+    "Quickest of the session. Well done."
+  ],
+  "encouragement": [
+    "Stay focused. You've got this.",
+    "Good pace. Keep it consistent.",
+    "Solid. Stay on the strategy.",
+    "Looking good. Maintain the gap.",
+    "Keep pushing. Stay in the zone."
+  ]
+}

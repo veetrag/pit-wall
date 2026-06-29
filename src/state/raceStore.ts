@@ -6,6 +6,7 @@ import {
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
 import type { AlertMessage } from '../ui/HudAlert'
+import { processRadioTick, makeRadioState, type RadioState } from './radioMapper'
 
 export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 
@@ -19,6 +20,7 @@ interface RaceStore {
   pitEndTime: number
   rng: Rng | null
   hudAlerts: AlertMessage[]
+  radioState: RadioState
 
   startRace: () => void
   startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string) => void
@@ -76,6 +78,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   pitEndTime: 0,
   rng: null,
   hudAlerts: [],
+  radioState: makeRadioState(),
 
   startRace() {
     const seed = 42
@@ -105,11 +108,11 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   resetRace() {
-    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0, hudAlerts: [] })
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0, hudAlerts: [], radioState: makeRadioState() })
   },
 
   step() {
-    const { phase, config, raceState, rng, playerInPit, pitEndTime } = get()
+    const { phase, config, raceState, rng, playerInPit, pitEndTime, radioState } = get()
     if (phase !== 'racing' || !config || !raceState || !rng) return
 
     const nextState = stepSector(config, raceState, rng)
@@ -118,7 +121,12 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const playerNow = nextState.cars.find(c => c.isPlayer)?.raceTime ?? 0
     const stillInPit = playerInPit && playerNow < pitEndTime + config.tuning.pit.laneTimeLoss
 
-    set({ raceState: nextState, phase: finished ? 'finished' : 'racing', playerInPit: stillInPit })
+    const nextRadio = processRadioTick(nextState, config, radioState, (msg, severity) => {
+      const id = `alert-${++alertCounter}`
+      set(s => ({ hudAlerts: [...s.hudAlerts, { id, severity, category: 'RADIO', message: msg, icon: '📻' }] }))
+    })
+
+    set({ raceState: nextState, phase: finished ? 'finished' : 'racing', playerInPit: stillInPit, radioState: nextRadio })
   },
 
   pitNow(compound: Compound) {
@@ -132,12 +140,14 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       return { ...car, raceTime: car.raceTime + stopTime, compound, tyreAge: 0, pitsDone: car.pitsDone + 1 }
     })
     const playerTime = updatedCars.find(c => c.isPlayer)?.raceTime ?? 0
-    set({
+    const id = `alert-${++alertCounter}`
+    set(s => ({
       raceState: { ...raceState, cars: updatedCars },
       pitPanelOpen: false,
       playerInPit: true,
       pitEndTime: playerTime,
-    })
+      hudAlerts: [...s.hudAlerts, { id, severity: 'caution' as const, category: 'RADIO', message: 'Box box box. Come in now.', icon: '📻' }],
+    }))
   },
 
   setPaceMode(mode: PaceMode) {
