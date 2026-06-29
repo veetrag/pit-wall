@@ -39,6 +39,7 @@ function rainColor(prob: number): string {
 
 export function RaceSetup() {
   const confirmRaceSetup = useSeasonStore(s => s.confirmRaceSetup)
+  const backToDriverSelect = useSeasonStore(s => s.backToDriverSelect)
   const raceIndex = useSeasonStore(s => s.raceIndex)
   const defaultIdx = raceIndex % CIRCUIT_ORDER.length
   const [selectedIdx, setSelectedIdx] = useState(defaultIdx)
@@ -66,13 +67,20 @@ export function RaceSetup() {
         padding: '20px 20px 16px',
         borderBottom: '1px solid var(--line-hair)',
         flexShrink: 0,
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
       }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-          PRE-RACE SETUP
+        <div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
+            PRE-RACE SETUP
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
+            Strategy Plan
+          </div>
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
-          Strategy Plan
-        </div>
+        <motion.button whileTap={{ scale: 0.94 }} onClick={backToDriverSelect}
+          style={{ flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
+          ← BACK
+        </motion.button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>

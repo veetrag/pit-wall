@@ -47,6 +47,7 @@ export function DriverSelect() {
   const playerDriverId = useSeasonStore(s => s.playerDriverId)
   const selectDriver   = useSeasonStore(s => s.selectDriver)
   const confirmDriver  = useSeasonStore(s => s.confirmDriver)
+  const backToTeamSelect = useSeasonStore(s => s.backToTeamSelect)
 
   const team    = selectedTeamId ? teamEntry(selectedTeamId) : null
   const drivers = allDrivers.filter(d => d.teamId === selectedTeamId)
@@ -61,7 +62,8 @@ export function DriverSelect() {
       }}
     >
       {/* Header */}
-      <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0 }}>
+      <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
             QUICK RACE · STEP 2 OF 2
@@ -82,6 +84,11 @@ export function DriverSelect() {
         <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
           Pick which driver you'll race this round.
         </div>
+        </div>
+        <motion.button whileTap={{ scale: 0.94 }} onClick={backToTeamSelect}
+          style={{ flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
+          ← BACK
+        </motion.button>
       </div>
 
       {/* Driver cards — only this team's 2 drivers */}

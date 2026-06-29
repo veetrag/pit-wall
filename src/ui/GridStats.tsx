@@ -21,11 +21,11 @@ const teams   = carsData.teams as Team[]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const TEAM_COLORS: Record<string, string> = {
-  apex: '#00E5D0', meridian: '#FF4D5E', vortex: '#F2C94C', zenith: '#7B5EA7', torque: '#FF7A00',
-}
+const TEAM_COLOR_MAP: Record<string, string> = Object.fromEntries(
+  (carsData.teams as Team[]).map(t => [t.id, t.colorPrimary])
+)
 
-function teamColor(teamId: string) { return TEAM_COLORS[teamId] ?? '#888' }
+function teamColor(teamId: string) { return TEAM_COLOR_MAP[teamId] ?? '#888' }
 function teamName(teamId: string)  { return teams.find(t => t.id === teamId)?.name ?? teamId }
 
 // ─── Radar polygon ────────────────────────────────────────────────────────────

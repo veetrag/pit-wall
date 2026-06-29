@@ -33,6 +33,7 @@ export function TeamSelect() {
   const selectedTeamId = useSeasonStore(s => s.selectedTeamId)
   const selectTeam = useSeasonStore(s => s.selectTeam)
   const confirmTeam = useSeasonStore(s => s.confirmTeam)
+  const backToMenu = useSeasonStore(s => s.backToMenu)
 
   return (
     <motion.div
@@ -44,16 +45,22 @@ export function TeamSelect() {
       }}
     >
       {/* Header */}
-      <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-          QUICK RACE · STEP 1 OF 2
+      <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
+            QUICK RACE · STEP 1 OF 2
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
+            Choose Your Team
+          </div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+            Your team's car, pit crew, and both drivers are yours to manage.
+          </div>
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
-          Choose Your Team
-        </div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
-          Your team's car, pit crew, and both drivers are yours to manage.
-        </div>
+        <motion.button whileTap={{ scale: 0.94 }} onClick={backToMenu}
+          style={{ flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
+          ← BACK
+        </motion.button>
       </div>
 
       {/* Team list */}
