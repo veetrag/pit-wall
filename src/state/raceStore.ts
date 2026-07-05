@@ -2,11 +2,12 @@ import { create } from 'zustand'
 import { loadGameData } from '@data/validators'
 import {
   initRace, stepSector, projectPitNow,
-  type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
+  type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult, type StrategyBrain,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
 import type { AlertMessage } from '../ui/HudAlert'
 import { processRadioTick, makeRadioState, type RadioState } from './radioMapper'
+import type { Difficulty } from './settingsStore'
 
 export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 
@@ -23,7 +24,7 @@ interface RaceStore {
   radioState: RadioState
 
   startRace: () => void
-  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string) => void
+  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
   resetRace: () => void
@@ -42,13 +43,24 @@ export const CIRCUIT_ORDER = [
   'monsoon_bay', 'grand_savane', 'aurora', 'harbour_lights',
 ] as const
 
-function buildConfig(seed: number, playerDriverId: string, circuitId = 'bengaluru'): RaceConfig {
+function applyBrain(baseBrain: StrategyBrain, difficulty: Difficulty): StrategyBrain {
+  if (difficulty === 'pro') {
+    if (baseBrain === 'naive') return 'smart'
+    if (baseBrain === 'smart') return 'optimal'
+    return 'optimal'
+  }
+  // rookie: cap at smart
+  return baseBrain === 'optimal' ? 'smart' : baseBrain
+}
+
+function buildConfig(seed: number, playerDriverId: string, circuitId = 'bengaluru', difficulty: Difficulty = 'rookie'): RaceConfig {
   const data = loadGameData()
   const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
   const laps = circuit.laps
   // Scale planned pit laps proportionally to this circuit (reference: 30 laps)
   const strategies = data.strategies.defaults.map(s => ({
     ...s,
+    brain: applyBrain((s.brain ?? 'naive') as StrategyBrain, difficulty),
     plannedStops: s.plannedStops.map(stop => ({
       ...stop,
       lap: Math.round((stop.lap / 30) * laps),
@@ -88,8 +100,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
   },
 
-  startSeasonRace(playerDriverId, seed, circuitId) {
-    const config = buildConfig(seed, playerDriverId, circuitId)
+  startSeasonRace(playerDriverId, seed, circuitId, difficulty) {
+    const config = buildConfig(seed, playerDriverId, circuitId, difficulty)
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })

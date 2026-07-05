@@ -68,6 +68,9 @@ interface SeasonStore {
   exitHowToPlay: () => void
   viewSettings: () => void
   exitSettings: () => void
+  backToMenu: () => void
+  backToTeamSelect: () => void
+  backToDriverSelect: () => void
   startNewSeason: () => void
   selectTeam: (id: string) => void
   confirmTeam: () => void
@@ -107,6 +110,9 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   exitHowToPlay() { set({ phase: 'menu' }) },
   viewSettings() { set({ phase: 'settings' }) },
   exitSettings() { set({ phase: 'menu' }) },
+  backToMenu() { set({ phase: 'menu' }) },
+  backToTeamSelect() { set({ phase: 'team_select', playerDriverId: null }) },
+  backToDriverSelect() { set({ phase: 'driver_select' }) },
 
   startNewSeason() {
     set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null })

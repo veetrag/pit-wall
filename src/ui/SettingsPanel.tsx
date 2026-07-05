@@ -72,7 +72,7 @@ function DifficultySelect({ value, onChange }: { value: Difficulty; onChange: (v
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 0', borderBottom: '1px solid var(--line-hair)' }}>
       <div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--text-hi)' }}>Difficulty</div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Rookie shows tyre hints; Pro hides them</div>
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Pro fields sharper, more aggressive rival strategy</div>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         {(['rookie', 'pro'] as Difficulty[]).map(d => (

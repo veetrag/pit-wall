@@ -13,19 +13,23 @@ describe('seasonStore', () => {
     expect(useSeasonStore.getState().phase).toBe('menu')
   })
 
-  it('startNewSeason transitions to driver_select', () => {
+  it('startNewSeason transitions to team_select', () => {
     useSeasonStore.getState().startNewSeason()
-    expect(useSeasonStore.getState().phase).toBe('driver_select')
+    expect(useSeasonStore.getState().phase).toBe('team_select')
   })
 
   it('selectDriver sets playerDriverId', () => {
     useSeasonStore.getState().startNewSeason()
+    useSeasonStore.getState().selectTeam('apex')
+    useSeasonStore.getState().confirmTeam()
     useSeasonStore.getState().selectDriver('d_voss')
     expect(useSeasonStore.getState().playerDriverId).toBe('d_voss')
   })
 
   it('confirmDriver transitions to race_setup', () => {
     useSeasonStore.getState().startNewSeason()
+    useSeasonStore.getState().selectTeam('apex')
+    useSeasonStore.getState().confirmTeam()
     useSeasonStore.getState().selectDriver('d_voss')
     useSeasonStore.getState().confirmDriver()
     expect(useSeasonStore.getState().phase).toBe('race_setup')
@@ -33,6 +37,8 @@ describe('seasonStore', () => {
 
   it('confirmRaceSetup transitions to racing', () => {
     useSeasonStore.getState().startNewSeason()
+    useSeasonStore.getState().selectTeam('apex')
+    useSeasonStore.getState().confirmTeam()
     useSeasonStore.getState().selectDriver('d_voss')
     useSeasonStore.getState().confirmDriver()
     useSeasonStore.getState().confirmRaceSetup()
@@ -58,21 +64,21 @@ describe('seasonStore', () => {
     expect(verStanding?.points).toBe(25)
   })
 
-  it('nextRace at raceIndex 4 transitions to championship', () => {
-    useSeasonStore.setState({ phase: 'result', raceIndex: 4, standings: [], playerDriverId: 'd_ver', lastRaceResults: null })
+  it('nextRace at last raceIndex transitions to championship', () => {
+    useSeasonStore.setState({ phase: 'result', raceIndex: 7, standings: [], playerDriverId: 'd_ver', lastRaceResults: null })
     useSeasonStore.getState().nextRace()
     expect(useSeasonStore.getState().phase).toBe('championship')
   })
 
-  it('nextRace before last race increments raceIndex and goes to racing', () => {
+  it('nextRace before last race increments raceIndex and goes to race_setup', () => {
     useSeasonStore.setState({ phase: 'result', raceIndex: 2, standings: [], playerDriverId: 'd_ver', lastRaceResults: null })
     useSeasonStore.getState().nextRace()
     expect(useSeasonStore.getState().raceIndex).toBe(3)
-    expect(useSeasonStore.getState().phase).toBe('racing')
+    expect(useSeasonStore.getState().phase).toBe('race_setup')
   })
 
   it('playAgain resets to menu', () => {
-    useSeasonStore.setState({ phase: 'championship', raceIndex: 4, standings: [{ driverId: 'd_ver', points: 100 }], playerDriverId: 'd_ver', lastRaceResults: null })
+    useSeasonStore.setState({ phase: 'championship', raceIndex: 7, standings: [{ driverId: 'd_ver', points: 100 }], playerDriverId: 'd_ver', lastRaceResults: null })
     useSeasonStore.getState().playAgain()
     expect(useSeasonStore.getState().phase).toBe('menu')
     expect(useSeasonStore.getState().standings).toHaveLength(0)

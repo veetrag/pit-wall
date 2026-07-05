@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useRaceStore } from '@state/raceStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useClockStore } from '@state/clockStore'
+import { useSettingsStore } from '@state/settingsStore'
 import type { RaceEventSummary } from '@state/seasonStore'
 
 export function RaceWatcher() {
@@ -15,13 +16,14 @@ export function RaceWatcher() {
   const currentCircuitId = useSeasonStore(s => s.currentCircuitId)
   const recordRaceResult = useSeasonStore(s => s.recordRaceResult)
   const setSpeed = useClockStore(s => s.setSpeed)
+  const difficulty = useSettingsStore(s => s.difficulty)
 
   const hasFiredRef = useRef(false)
 
   useEffect(() => {
     if (seasonPhase === 'racing' && racePhase === 'idle' && playerDriverId) {
       hasFiredRef.current = false
-      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId())
+      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty)
     }
   }, [seasonPhase, racePhase, playerDriverId]) // eslint-disable-line react-hooks/exhaustive-deps
 

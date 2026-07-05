@@ -121,6 +121,7 @@ const DriversSchema = z.object({ drivers: z.array(DriverSchema) })
 const StrategyDefaultSchema = z.object({
   teamId: z.string(), startCompound: z.enum(['S', 'M', 'H', 'I', 'W']),
   plannedStops: z.array(z.object({ lap: z.number(), compound: z.enum(['S', 'M', 'H', 'I', 'W']) })),
+  brain: z.enum(['naive', 'smart', 'optimal']).optional(),
 })
 const StrategiesSchema = z.object({ defaults: z.array(StrategyDefaultSchema) })
 
