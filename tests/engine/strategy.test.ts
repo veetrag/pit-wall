@@ -133,8 +133,9 @@ describe('aiDecision pace modes', () => {
   })
 
   it('smart brain pits when cliff imminent', () => {
-    // M cliff=16, tyreAge=15 → fraction 0.9375 ≥ 0.88 → pit
-    const car = makeCar({ compound: 'M', tyreAge: 15, lap: 20, strategy: { teamId: 't1', startCompound: 'M', plannedStops: [], brain: 'smart' } })
+    // M cliff=16, driver tyreManagement=80 → tyreManagementFactor 0.8, so effective
+    // age = tyreAge * 0.8. tyreAge=19 → effAge=15.2 → fraction 0.95 ≥ 0.90 → pit
+    const car = makeCar({ compound: 'M', tyreAge: 19, lap: 20, strategy: { teamId: 't1', startCompound: 'M', plannedStops: [], brain: 'smart' } })
     const result = aiDecision(makeConfig(), car, makeState({ lap: 20, totalLaps: 30 }), createRng(1))
     expect(result.pit).toBe(true)
   })

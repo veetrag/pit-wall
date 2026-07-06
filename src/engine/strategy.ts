@@ -1,5 +1,5 @@
 import type { RaceConfig, CarState, RaceState, Compound, WeatherState, PaceMode } from './types'
-import { tyreCliffFraction } from './tyres'
+import { tyreCliffFraction, effectiveTyreAge } from './tyres'
 import { createRng, type Rng } from './rng'
 
 const CLIFF_EMERGENCY_THRESHOLD = 1.5
@@ -39,7 +39,8 @@ export function aiDecision(
   if (wPit) return wPit
 
   const spec = config.compounds[car.compound]
-  const cliffFrac = spec ? tyreCliffFraction(spec, car.tyreAge) : 0
+  const driver = config.drivers.find(d => d.id === car.driverId)!
+  const cliffFrac = spec ? tyreCliffFraction(spec, effectiveTyreAge(car, driver, weatherState, config.tuning)) : 0
   const remainingLaps = state.totalLaps - state.lap
   // Use pitsDone as index so dynamic early pits don't cause a second planned stop later
   const nextStop = car.strategy.plannedStops[car.pitsDone]

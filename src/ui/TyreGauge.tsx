@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
-import { tyreCliffFraction } from '@engine/index'
+import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
 
 const COMPOUND_LABEL: Record<string, string> = { S: 'SOFT', M: 'MED', H: 'HARD', I: 'INTER', W: 'WET' }
 const COMPOUND_COLOR: Record<string, string> = {
@@ -28,10 +28,14 @@ export function TyreGauge() {
   const spec = config.compounds[player.compound]
   if (!spec) return null
 
-  const fraction = tyreCliffFraction(spec, player.tyreAge)
+  const driver = config.drivers.find(d => d.id === player.driverId)
+  const effAge = driver ? effectiveTyreAge(player, driver, raceState.weatherState, config.tuning) : player.tyreAge
+  // per-lap wear rate under current pace mode/weather/compound — effAge is linear in tyreAge, so this is exact
+  const wearRate = driver ? effectiveTyreAge({ ...player, tyreAge: 1 }, driver, raceState.weatherState, config.tuning) : 1
+  const fraction = tyreCliffFraction(spec, effAge)
   const fillPct = Math.min(fraction * 100, 100)
   const color = cliffColor(fraction)
-  const lapsToCliff = Math.max(0, Math.ceil(spec.cliff - player.tyreAge))
+  const lapsToCliff = Math.max(0, Math.ceil((spec.cliff - effAge) / Math.max(wearRate, 0.01)))
   const isPulsing = fraction >= 0.80
   const isPastCliff = fraction >= 1.0
   const compoundColor = COMPOUND_COLOR[player.compound] ?? color

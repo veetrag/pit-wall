@@ -2,7 +2,7 @@ export { initRace, stepSector } from './race'
 export { projectPitNow } from './projection'
 export { shouldAIPit, aiDecision } from './strategy'
 export type { AIDecision } from './strategy'
-export { tyreDelta, tyreCliffFraction } from './tyres'
+export { tyreDelta, tyreCliffFraction, effectiveTyreAge } from './tyres'
 export { computeSectorTime } from './lapModel'
 export { createRng, gaussianPair } from './rng'
 export type {

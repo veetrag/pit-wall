@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import type { Compound } from '@engine/types'
 import type { ProjectionResult } from '@engine/projection'
-import { tyreCliffFraction } from '@engine/index'
+import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { soundService } from '@audio/soundService'
 
@@ -212,7 +212,9 @@ export function PitButton() {
 
   const player = raceState?.cars.find(c => c.isPlayer)
   const spec = player && config ? config.compounds[player.compound] : undefined
-  const fraction = spec && player ? tyreCliffFraction(spec, player.tyreAge) : 0
+  const driver = player && config ? config.drivers.find(d => d.id === player.driverId) : undefined
+  const effAge = spec && player && driver && raceState ? effectiveTyreAge(player, driver, raceState.weatherState, config!.tuning) : player?.tyreAge ?? 0
+  const fraction = spec && player ? tyreCliffFraction(spec, effAge) : 0
   const isUrgent = fraction >= 0.85
 
   const projLabel = projectionResult

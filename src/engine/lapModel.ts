@@ -1,7 +1,7 @@
 import type { RaceConfig, CarState, SectorIndex, SectorResult, WeatherState } from './types'
 import type { Rng } from './rng'
 import { gaussianPair } from './rng'
-import { tyreDelta } from './tyres'
+import { tyreDelta, effectiveTyreAge } from './tyres'
 import { crossoverPenalty } from './weather'
 
 // Convert a 0-100 facet to the 0-9 engine rating (0=best, 9=worst)
@@ -36,15 +36,10 @@ export function computeSectorTime(
   const driverWeight = tuning.driverPerformance.sectorSplit[sector]!
   const driverDelta = driverSkill * tuning.driverPerformance.deltaPerSkill * driverWeight * 3
 
-  // --- Tyre delta: effAge defers the cliff for good tyre managers on CONSERVE ---
+  // --- Tyre delta: effAge defers the cliff for good tyre managers on CONSERVE,
+  // and accelerates it for the wrong compound in the wrong weather ---
   const cpSpec = compounds[car.compound]!
-  const degMultiplier = tuning.paceModes[car.paceMode].degMultiplier
-  // Wet tyres degrade more slowly in wet conditions
-  const wetDegKey = car.compound === 'I' ? 'inter' : car.compound === 'W' ? 'wet' : null
-  const wetDegMult = wetDegKey ? (tuning.weather.wetDegMultiplier[wetDegKey]?.[weatherState] ?? 1.0) : 1.0
-  const finalDegMultiplier = degMultiplier * wetDegMult
-  const tyreManagementFactor = 1 - (df.tyreManagement / 100) * tuning.tyreManagement.degReliefFactor
-  const effAge = car.tyreAge * tyreManagementFactor * finalDegMultiplier
+  const effAge = effectiveTyreAge(car, driver, weatherState, tuning)
   const tyreSectorDelta = tyreDelta(cpSpec, effAge) / 3
 
   // --- Weather crossover penalty (wrong compound type) ---
