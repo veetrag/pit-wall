@@ -56,11 +56,26 @@ export function computeSectorTime(
   const modeDelta = tuning.paceModes[car.paceMode].paceDelta / 3
 
   // --- Noise: reduced by high consistency ---
-  const [noise] = gaussianPair(rng)
+  const [noise, noise2] = gaussianPair(rng)
   const effSigma = tuning.noise.sigmaPerSector * (1 - (df.consistency / 100) * tuning.noise.consistencyReliefFactor)
   const noiseSample = noise * effSigma
 
-  const raw = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + noiseSample
+  // --- Wet mismatch risk: dry-compound tyres in the wet can genuinely spin,
+  // costing a chunk of real time. Chance scales with weather severity, mitigated
+  // (not eliminated) by the driver's wetWeather skill — nobody is safe on slicks
+  // in the wet, but a skilled wet driver spins less often. Rolled per sector.
+  let spinLoss = 0
+  if (cpSpec.type === 'dry' && weatherState !== 'DRY') {
+    const baseChance = tuning.weather.wetIncident.spinChance[weatherState]
+    const wetSkillRelief = (df.wetWeather / 100) * tuning.weather.wetSkillReliefMax
+    const effChance = baseChance * (1 - wetSkillRelief)
+    if (rng() < effChance) {
+      const magnitude = tuning.weather.wetIncident.spinTimeLossMean + noise2 * tuning.weather.wetIncident.spinTimeLossSigma
+      spinLoss = Math.max(0, magnitude)
+    }
+  }
+
+  const raw = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + noiseSample + spinLoss
 
   return {
     driverId: car.driverId,
@@ -68,5 +83,6 @@ export function computeSectorTime(
     tyreContribution: tyreSectorDelta,
     trafficPenalty: 0,
     noiseSample,
+    spinLoss,
   }
 }

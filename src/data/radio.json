@@ -48,19 +48,12 @@
     "Clean air. Maintain the pace.",
     "Looking good. Stay consistent."
   ],
-  "rain_coming": [
-    "Weather incoming. Stay alert.",
-    "Rain on the way. Be ready.",
-    "Conditions changing. Watch the track.",
-    "Rain forecast. Decision soon.",
-    "It's coming. Prepare for wet."
-  ],
-  "rain_arrived": [
-    "It's wet. Adjust your style.",
-    "Rain is here. Be careful.",
-    "Wet conditions. Smooth inputs.",
-    "Rain confirmed. Tyre call coming.",
-    "Track going wet. Think about inters."
+  "wet_spin": [
+    "Careful! Lost it for a moment there.",
+    "That's a slide. Those tyres can't grip in this.",
+    "You're on the wrong rubber for this. Watch it.",
+    "Big moment there. You need wets or inters now.",
+    "That'll cost you. Slicks won't hold in this."
   ],
   "final_lap": [
     "Final lap. Give everything.",

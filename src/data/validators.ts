@@ -49,6 +49,11 @@ const TuningSchema = z.object({
     wetDegMultiplier: z.record(z.string(), z.record(z.string(), z.number())),
     wetSkillReliefMax: z.number(),
     wetNoiseReliefFactor: z.number(),
+    wetIncident: z.object({
+      spinChance: z.object({ DRY: z.number(), DAMP: z.number(), WET: z.number() }),
+      spinTimeLossMean: z.number(),
+      spinTimeLossSigma: z.number(),
+    }),
     forecastConfidence: z.tuple([z.number(), z.number(), z.number(), z.number(), z.number()]),
     timeline: z.object({
       onsetWindow: z.tuple([z.number(), z.number()]),

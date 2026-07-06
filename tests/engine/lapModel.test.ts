@@ -2,6 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { computeSectorTime } from '@engine/lapModel'
 import { createRng } from '@engine/rng'
 import type { RaceConfig, CarState, TuningConstants, CircuitSpec, CompoundSpec } from '@engine/types'
+import type { Rng } from '@engine/rng'
+
+// Deterministic rng stub — feeds a fixed sequence of draws so probabilistic
+// branches (like the wet-spin roll) can be tested exactly, not statistically.
+function fakeRng(values: number[]): Rng {
+  let i = 0
+  return () => values[i++ % values.length]!
+}
 
 const TUNING: TuningConstants = {
   carPerformance: { deltaPerRating: 0.22, sectorSplit: [0.30, 0.45, 0.25] },
@@ -30,7 +38,9 @@ const TUNING: TuningConstants = {
   weather: {
     crossoverPenalty: { dry: { DRY: 0, DAMP: 1.5, WET: 4.0 }, inter: { DRY: 2.0, DAMP: 0.5, WET: 0 }, wet: { DRY: 5.0, DAMP: 2.0, WET: 0 } },
     wetDegMultiplier: { inter: { DRY: 1.5, DAMP: 0.8, WET: 0.6 }, wet: { DRY: 2.0, DAMP: 1.0, WET: 0.5 } },
-    wetSkillReliefMax: 0.10, wetNoiseReliefFactor: 0.30, forecastConfidence: [1.0, 1.0, 0.85, 0.65, 0.45],
+    wetSkillReliefMax: 0.10, wetNoiseReliefFactor: 0.30,
+    wetIncident: { spinChance: { DRY: 0.0, DAMP: 0.010, WET: 0.040 }, spinTimeLossMean: 4.0, spinTimeLossSigma: 1.5 },
+    forecastConfidence: [1.0, 1.0, 0.85, 0.65, 0.45],
     timeline: { onsetWindow: [5, 25], minDuration: 3, maxDuration: 15, intensityBias: { stable: 0.05, variable: 0.25, wet: 0.60, mixed: 0.35 } },
   },
 }
@@ -119,5 +129,64 @@ describe('computeSectorTime', () => {
     const heavy = computeSectorTime(makeConfig(), makeCar({ raceTime: 0, lap: 0 }), 0, rng1)
     const light  = computeSectorTime(makeConfig(), makeCar({ raceTime: 2700, lap: 30 }), 0, rng2)
     expect(light.sectorTime).toBeLessThan(heavy.sectorTime)
+  })
+})
+
+describe('wet mismatch spin (dry tyres in the wet)', () => {
+  // Noise (gaussianPair) consumes draws [0],[1]; the spin roll consumes draw [2].
+  // wetWeather=80 (default test driver) → effChance = 0.04 * (1 - 0.8*0.10) = 0.0368.
+  const NOISE_DRAWS = [0.5, 0.5]
+
+  it('never spins on a dry compound in DRY weather, no matter the roll', () => {
+    const rng = fakeRng([...NOISE_DRAWS, 0.0])
+    const result = computeSectorTime(makeConfig(), makeCar({ compound: 'M' }), 0, rng, 'DRY')
+    expect(result.spinLoss).toBe(0)
+  })
+
+  it('spins on a dry compound in WET weather when the roll is under the effective threshold', () => {
+    const rng = fakeRng([...NOISE_DRAWS, 0.03]) // < 0.0368
+    const result = computeSectorTime(makeConfig(), makeCar({ compound: 'M' }), 0, rng, 'WET')
+    expect(result.spinLoss).toBeGreaterThan(0)
+  })
+
+  it('does not spin on a dry compound in WET weather when the roll is over the effective threshold', () => {
+    const rng = fakeRng([...NOISE_DRAWS, 0.05]) // > 0.0368
+    const result = computeSectorTime(makeConfig(), makeCar({ compound: 'M' }), 0, rng, 'WET')
+    expect(result.spinLoss).toBe(0)
+  })
+
+  it('a spin adds real time to the sector, on top of the base crossover penalty', () => {
+    const rngSpin = fakeRng([...NOISE_DRAWS, 0.03])
+    const rngNoSpin = fakeRng([...NOISE_DRAWS, 0.05])
+    const withSpin = computeSectorTime(makeConfig(), makeCar({ compound: 'M' }), 0, rngSpin, 'WET')
+    const withoutSpin = computeSectorTime(makeConfig(), makeCar({ compound: 'M' }), 0, rngNoSpin, 'WET')
+    expect(withSpin.sectorTime).toBeGreaterThan(withoutSpin.sectorTime)
+  })
+
+  it('a proper wet compound never spins, even in WET weather', () => {
+    const wetCompounds: Record<string, CompoundSpec> = {
+      ...COMPOUNDS,
+      W: { name: 'Wet', type: 'wet', offset: 1.0, lin: 0.012, cliff: 40, pen: 0.010, colorToken: '--tyre-wet' },
+    }
+    const config = makeConfig({ compounds: wetCompounds })
+    const rng = fakeRng([...NOISE_DRAWS, 0.0]) // would trigger every time if the gate were open
+    const result = computeSectorTime(config, makeCar({ compound: 'W' }), 0, rng, 'WET')
+    expect(result.spinLoss).toBe(0)
+  })
+
+  it('a skilled wet-weather driver spins less often than an unskilled one at the same roll', () => {
+    // Roll 0.038 sits between the two drivers' effective thresholds:
+    // skill 0   → effChance 0.0400 → 0.038 < 0.0400 → spins
+    // skill 100 → effChance 0.0360 → 0.038 > 0.0360 → does not spin
+    const config = makeConfig({
+      drivers: [{ id: 'd1', name: 'Test', code: 'TST', teamId: 't1', facets: { pace: 50, racecraft: 80, tyreManagement: 80, consistency: 90, wetWeather: 0, experience: 80 } }],
+    })
+    const skilledConfig = makeConfig({
+      drivers: [{ id: 'd1', name: 'Test', code: 'TST', teamId: 't1', facets: { pace: 50, racecraft: 80, tyreManagement: 80, consistency: 90, wetWeather: 100, experience: 80 } }],
+    })
+    const unskilled = computeSectorTime(config, makeCar({ compound: 'M' }), 0, fakeRng([...NOISE_DRAWS, 0.038]), 'WET')
+    const skilled = computeSectorTime(skilledConfig, makeCar({ compound: 'M' }), 0, fakeRng([...NOISE_DRAWS, 0.038]), 'WET')
+    expect(unskilled.spinLoss).toBeGreaterThan(0)
+    expect(skilled.spinLoss).toBe(0)
   })
 })

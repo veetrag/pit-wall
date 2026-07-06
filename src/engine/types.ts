@@ -53,6 +53,11 @@ export interface TuningConstants {
     wetDegMultiplier: Record<string, Record<string, number>>
     wetSkillReliefMax: number
     wetNoiseReliefFactor: number
+    wetIncident: {
+      spinChance: { DRY: number; DAMP: number; WET: number }
+      spinTimeLossMean: number
+      spinTimeLossSigma: number
+    }
     forecastConfidence: [number, number, number, number, number]
     timeline: {
       onsetWindow: [number, number]
@@ -154,6 +159,7 @@ export interface SectorResult {
   tyreContribution: number
   trafficPenalty: number
   noiseSample: number
+  spinLoss: number
 }
 
 export interface OvertakeEvent {

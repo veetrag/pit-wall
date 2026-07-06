@@ -48,6 +48,11 @@
     },
     "wetSkillReliefMax": 0.10,
     "wetNoiseReliefFactor": 0.30,
+    "wetIncident": {
+      "spinChance": { "DRY": 0.0, "DAMP": 0.010, "WET": 0.040 },
+      "spinTimeLossMean": 4.0,
+      "spinTimeLossSigma": 1.5
+    },
     "forecastConfidence": [1.0, 1.0, 0.85, 0.65, 0.45],
     "timeline": {
       "onsetWindow": [5, 25],

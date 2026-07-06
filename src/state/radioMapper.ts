@@ -35,11 +35,11 @@ function tryPush(
 
 export interface RadioState {
   prevOvertakeCount: number
-  prevWeatherState: string
   prevLap: number
   prevPlayerTyreAge: number
   prevPlayerPos: number
   prevGap: number
+  prevSpinCount: number
   hasWon: boolean
   cliffWarned: boolean
 }
@@ -47,11 +47,11 @@ export interface RadioState {
 export function makeRadioState(): RadioState {
   return {
     prevOvertakeCount: 0,
-    prevWeatherState: 'DRY',
     prevLap: 0,
     prevPlayerTyreAge: 0,
     prevPlayerPos: -1,
     prevGap: Infinity,
+    prevSpinCount: 0,
     hasWon: false,
     cliffWarned: false,
   }
@@ -83,18 +83,13 @@ export function processRadioTick(
     if (player.tyreAge === 0) next.cliffWarned = false // reset after pit
   }
 
-  // 2. Rain state change
-  if (state.weatherState !== radio.prevWeatherState) {
-    const arrived = state.weatherState !== 'DRY'
-    tryPush(arrived ? 'rain_arrived' : 'rain_coming', 2, {}, pushAlert)
-    next.prevWeatherState = state.weatherState
-  } else if (state.weatherState === 'DRY' && state.lap < totalLaps - 3) {
-    // warn if rain appears in near forecast
-    const wt = state.weatherTimeline
-    if (wt[2] != null && wt[2] !== 'DRY' && radio.prevWeatherState === 'DRY') {
-      tryPush('rain_coming', 2, {}, pushAlert)
-    }
+  // 2. Wet spin — event-driven (fires exactly when it happens), not a vague
+  // weather forecast. The strip in the HUD already covers "what's the weather."
+  const playerSpinCount = state.sectorResults.filter(r => r.driverId === player.driverId && r.spinLoss > 0).length
+  if (playerSpinCount > radio.prevSpinCount) {
+    tryPush('wet_spin', 2, {}, pushAlert)
   }
+  next.prevSpinCount = playerSpinCount
 
   // 3. Win / podium (fire once)
   if (state.lap >= totalLaps && !radio.hasWon) {
