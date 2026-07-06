@@ -39,6 +39,13 @@ export interface TuningConstants {
   }
   paceModes: Record<PaceMode, { paceDelta: number; degMultiplier: number }>
   tyreManagement: { degReliefFactor: number }
+  strategyReaction: {
+    coverUndercutEnabled: boolean
+    coverWindowGap: number
+    coverReactionProb: Record<StrategyBrain, number>
+    minCliffFracToCover: number
+    minRemainingLaps: number
+  }
   projection: { horizonLaps: number; useOvertakeRolls: boolean; netEstimateHorizonLaps: number }
   incidents: { dnfPerLap: number; driverErrorPerLap: number }
   weather: {

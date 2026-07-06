@@ -27,6 +27,13 @@
     "conserve": { "paceDelta":  0.20, "degMultiplier": 0.75 }
   },
   "tyreManagement": { "degReliefFactor": 0.25 },
+  "strategyReaction": {
+    "coverUndercutEnabled": true,
+    "coverWindowGap": 1.5,
+    "coverReactionProb": { "optimal": 0.85, "smart": 0.45, "naive": 0.0 },
+    "minCliffFracToCover": 0.45,
+    "minRemainingLaps": 6
+  },
   "projection": { "horizonLaps": 4, "useOvertakeRolls": false, "netEstimateHorizonLaps": 12 },
   "incidents": { "dnfPerLap": 0.0, "driverErrorPerLap": 0.0 },
   "weather": {

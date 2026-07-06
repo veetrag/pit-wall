@@ -21,6 +21,13 @@ const TUNING: TuningConstants = {
   projection: { horizonLaps: 4, useOvertakeRolls: false, netEstimateHorizonLaps: 12 },
   incidents: { dnfPerLap: 0.0, driverErrorPerLap: 0.0 },
   tyreManagement: { degReliefFactor: 0.25 },
+  strategyReaction: {
+    coverUndercutEnabled: true,
+    coverWindowGap: 1.5,
+    coverReactionProb: { optimal: 0.85, smart: 0.45, naive: 0.0 },
+    minCliffFracToCover: 0.45,
+    minRemainingLaps: 6,
+  },
   weather: {
     crossoverPenalty: { dry: { DRY: 0, DAMP: 1.5, WET: 4.0 }, inter: { DRY: 2.0, DAMP: 0.5, WET: 0 }, wet: { DRY: 5.0, DAMP: 2.0, WET: 0 } },
     wetDegMultiplier: { inter: { DRY: 1.5, DAMP: 0.8, WET: 0.6 }, wet: { DRY: 2.0, DAMP: 1.0, WET: 0.5 } },

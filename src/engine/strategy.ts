@@ -1,5 +1,6 @@
 import type { RaceConfig, CarState, RaceState, Compound, WeatherState, PaceMode } from './types'
 import { tyreCliffFraction } from './tyres'
+import { createRng, type Rng } from './rng'
 
 const CLIFF_EMERGENCY_THRESHOLD = 1.5
 
@@ -28,6 +29,7 @@ export function aiDecision(
   config: RaceConfig,
   car: CarState,
   state: RaceState,
+  rng: Rng,
 ): AIDecision {
   const brain = car.strategy.brain ?? 'naive'
   const weatherState = state.weatherState
@@ -70,6 +72,25 @@ export function aiDecision(
     return { pit: true, compound, paceMode: 'neutral' }
   }
 
+  // OPTIMAL: cover an undercut — a car just behind has pitted onto fresh tyres
+  if (brain === 'optimal' && config.tuning.strategyReaction?.coverUndercutEnabled) {
+    const r = config.tuning.strategyReaction
+    const sorted = [...state.cars].sort((a, b) => a.raceTime - b.raceTime)
+    const myIdx = sorted.findIndex(c => c.driverId === car.driverId)
+    const behind = sorted[myIdx + 1]
+    if (behind && remainingLaps > r.minRemainingLaps && cliffFrac >= r.minCliffFracToCover) {
+      const gapBehind = behind.raceTime - car.raceTime
+      const behindJustPitted = behind.pitsDone > 0 && behind.tyreAge <= 1
+      if (gapBehind <= r.coverWindowGap && behindJustPitted) {
+        const prob = r.coverReactionProb[brain] ?? 0
+        if (rng() < prob) {
+          const compound = nextStop?.compound ?? bestDryCompound(config, remainingLaps)
+          return { pit: true, compound, paceMode: 'push' } // push the out-lap to defend
+        }
+      }
+    }
+  }
+
   // OPTIMAL: undercut attempt — stuck in dirty air with older tyres than the car ahead
   if (brain === 'optimal') {
     const sortedCars = [...state.cars].sort((a, b) => a.raceTime - b.raceTime)
@@ -105,13 +126,15 @@ export function aiDecision(
   return { pit: false, compound: car.compound, paceMode }
 }
 
-// Backward-compatible wrapper
+// Backward-compatible wrapper. No rng of its own — reactive/probabilistic branches
+// (e.g. cover-undercut) are deterministically rolled against a fixed local stream,
+// since this wrapper isn't part of the live race loop's rng stream.
 export function shouldAIPit(
   config: RaceConfig,
   car: CarState,
   state: RaceState,
   _weatherState: WeatherState = 'DRY',
 ): { pit: boolean; compound: Compound } {
-  const d = aiDecision(config, car, state)
+  const d = aiDecision(config, car, state, createRng(1))
   return { pit: d.pit, compound: d.compound }
 }

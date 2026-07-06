@@ -21,6 +21,13 @@ const TUNING: TuningConstants = {
   projection: { horizonLaps: 4, useOvertakeRolls: false, netEstimateHorizonLaps: 12 },
   incidents: { dnfPerLap: 0.0, driverErrorPerLap: 0.0 },
   tyreManagement: { degReliefFactor: 0.25 },
+  strategyReaction: {
+    coverUndercutEnabled: true,
+    coverWindowGap: 1.5,
+    coverReactionProb: { optimal: 0.85, smart: 0.45, naive: 0.0 },
+    minCliffFracToCover: 0.45,
+    minRemainingLaps: 6,
+  },
   weather: {
     crossoverPenalty: { dry: { DRY: 0, DAMP: 1.5, WET: 4.0 }, inter: { DRY: 2.0, DAMP: 0.5, WET: 0 }, wet: { DRY: 5.0, DAMP: 2.0, WET: 0 } },
     wetDegMultiplier: { inter: { DRY: 1.5, DAMP: 0.8, WET: 0.6 }, wet: { DRY: 2.0, DAMP: 1.0, WET: 0.5 } },
@@ -113,7 +120,7 @@ describe('aiDecision pace modes', () => {
   it('smart brain uses neutral pace in mid-stint (not conserve)', () => {
     // S cliff=10, tyreAge=7 → fraction 0.70 — smart brain no longer conserves mid-stint
     const car = makeCar({ compound: 'S', tyreAge: 7, lap: 7, strategy: { teamId: 't1', startCompound: 'S', plannedStops: [{ lap: 20, compound: 'H' }], brain: 'smart' } })
-    const result = aiDecision(makeConfig(), car, makeState({ lap: 7, totalLaps: 30 }))
+    const result = aiDecision(makeConfig(), car, makeState({ lap: 7, totalLaps: 30 }), createRng(1))
     expect(result.paceMode).toBe('neutral')
     expect(result.pit).toBe(false)
   })
@@ -121,15 +128,69 @@ describe('aiDecision pace modes', () => {
   it('smart brain pushes on fresh tyres', () => {
     // H cliff=24, tyreAge=2 → fraction 0.083 < 0.20 → push
     const car = makeCar({ compound: 'H', tyreAge: 2, lap: 16, strategy: { teamId: 't1', startCompound: 'H', plannedStops: [], brain: 'smart' } })
-    const result = aiDecision(makeConfig(), car, makeState({ lap: 16, totalLaps: 30 }))
+    const result = aiDecision(makeConfig(), car, makeState({ lap: 16, totalLaps: 30 }), createRng(1))
     expect(result.paceMode).toBe('push')
   })
 
   it('smart brain pits when cliff imminent', () => {
     // M cliff=16, tyreAge=15 → fraction 0.9375 ≥ 0.88 → pit
     const car = makeCar({ compound: 'M', tyreAge: 15, lap: 20, strategy: { teamId: 't1', startCompound: 'M', plannedStops: [], brain: 'smart' } })
-    const result = aiDecision(makeConfig(), car, makeState({ lap: 20, totalLaps: 30 }))
+    const result = aiDecision(makeConfig(), car, makeState({ lap: 20, totalLaps: 30 }), createRng(1))
     expect(result.pit).toBe(true)
+  })
+})
+
+// ─── M2: Reactive Cover (Undercut Response) ─────────────────────────────────
+// Scripted 2-car scenario: a trailing car has just pitted onto fresh tyres and
+// sits within `coverWindowGap` of the leader, whose own tyres are worn enough
+// to be cover-eligible. Spec: optimal covers ≥70% of seeds; naive never does
+// (naive doesn't run the reactive branch at all).
+
+describe('M2 reactive cover', () => {
+  function makeUndercutScenario(leaderBrain: StrategyBrain) {
+    const leader = makeCar({
+      driverId: 'leader', teamId: 'leader', raceTime: 1000, lap: 15,
+      compound: 'M', tyreAge: 9, pitsDone: 0, // M cliff=16 → cliffFrac 0.5625, above minCliffFracToCover 0.45
+      strategy: { teamId: 'leader', startCompound: 'M', plannedStops: [], brain: leaderBrain },
+    })
+    const trailer = makeCar({
+      driverId: 'trailer', teamId: 'trailer', raceTime: 1001, lap: 15,
+      compound: 'M', tyreAge: 1, pitsDone: 1, // just pitted, fresh tyres
+      strategy: { teamId: 'trailer', startCompound: 'M', plannedStops: [], brain: 'naive' },
+    })
+    const config: RaceConfig = {
+      ...makeConfig(),
+      drivers: [
+        { id: 'leader', name: 'Leader', code: 'LDR', teamId: 'leader', facets: { pace: 70, racecraft: 85, tyreManagement: 80, consistency: 90, wetWeather: 80, experience: 80 } },
+        { id: 'trailer', name: 'Trailer', code: 'TRL', teamId: 'trailer', facets: { pace: 70, racecraft: 85, tyreManagement: 80, consistency: 90, wetWeather: 80, experience: 80 } },
+      ],
+      teams: [
+        { id: 'leader', name: 'Leader', colorPrimary: '#fff', colorSecondary: '#000', facets: { power: 77.8, aero: 77.8, handling: 77.8, reliability: 99, pitCrew: 80 } },
+        { id: 'trailer', name: 'Trailer', colorPrimary: '#fff', colorSecondary: '#000', facets: { power: 77.8, aero: 77.8, handling: 77.8, reliability: 99, pitCrew: 80 } },
+      ],
+      strategies: [leader.strategy, trailer.strategy],
+    }
+    const state = makeState({ lap: 15, totalLaps: 30, cars: [leader, trailer] })
+    return { config, leader, state }
+  }
+
+  it('optimal leader covers the undercut in ≥70% of seeds', () => {
+    const { config, leader, state } = makeUndercutScenario('optimal')
+    const SEEDS = 300
+    let covered = 0
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      const result = aiDecision(config, leader, state, createRng(seed))
+      if (result.pit) covered++
+    }
+    expect(covered / SEEDS).toBeGreaterThanOrEqual(0.70)
+  })
+
+  it('naive leader never reactively covers', () => {
+    const { config, leader, state } = makeUndercutScenario('naive')
+    for (let seed = 1; seed <= 50; seed++) {
+      const result = aiDecision(config, leader, state, createRng(seed))
+      expect(result.pit).toBe(false)
+    }
   })
 })
 

@@ -94,7 +94,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       if (!updated.isPlayer) {
         // Build a state view for the AI decision (current positions, new lap)
         const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes }
-        const decision = aiDecision(config, updated, stateForAI)
+        const decision = aiDecision(config, updated, stateForAI, rng)
         updated.paceMode = decision.paceMode
         if (decision.pit) {
           const [stopNoise] = gaussianPair(rng)

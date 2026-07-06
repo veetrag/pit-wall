@@ -30,6 +30,15 @@ const TuningSchema = z.object({
     conserve: z.object({ paceDelta: z.number(), degMultiplier: z.number() }),
   }),
   tyreManagement: z.object({ degReliefFactor: z.number() }),
+  strategyReaction: z.object({
+    coverUndercutEnabled: z.boolean(),
+    coverWindowGap: z.number(),
+    coverReactionProb: z.object({
+      naive: z.number(), smart: z.number(), optimal: z.number(),
+    }),
+    minCliffFracToCover: z.number(),
+    minRemainingLaps: z.number(),
+  }),
   projection: z.object({
     horizonLaps: z.number(), useOvertakeRolls: z.boolean(),
     netEstimateHorizonLaps: z.number(),
