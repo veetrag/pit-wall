@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
+import { useUiTap } from '@hooks/useUiTap'
 import carsData from '@data/cars.json'
 import driversData from '@data/drivers.json'
 
@@ -34,6 +35,7 @@ export function TeamSelect() {
   const selectTeam = useSeasonStore(s => s.selectTeam)
   const confirmTeam = useSeasonStore(s => s.confirmTeam)
   const backToMenu = useSeasonStore(s => s.backToMenu)
+  const uiTap = useUiTap()
 
   return (
     <motion.div
@@ -48,7 +50,7 @@ export function TeamSelect() {
       <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-            QUICK RACE · STEP 1 OF 2
+            NEW SEASON · STEP 1 OF 2
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
             Choose Your Team
@@ -57,7 +59,7 @@ export function TeamSelect() {
             Your team's car, pit crew, and both drivers are yours to manage.
           </div>
         </div>
-        <motion.button whileTap={{ scale: 0.94 }} onClick={backToMenu}
+        <motion.button whileTap={{ scale: 0.94 }} onClick={() => { uiTap(); backToMenu() }}
           style={{ flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
           ← BACK
         </motion.button>
@@ -165,7 +167,7 @@ export function TeamSelect() {
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={confirmTeam}
+          onClick={() => { uiTap(); confirmTeam() }}
           disabled={!selectedTeamId}
           style={{
             width: '100%', border: 'none', borderRadius: 10, padding: '16px',

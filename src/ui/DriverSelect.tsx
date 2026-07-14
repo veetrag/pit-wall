@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
+import { useUiTap } from '@hooks/useUiTap'
 import { HelmetAvatar, type HelmetPattern } from './HelmetAvatar'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
@@ -48,6 +49,7 @@ export function DriverSelect() {
   const selectDriver   = useSeasonStore(s => s.selectDriver)
   const confirmDriver  = useSeasonStore(s => s.confirmDriver)
   const backToTeamSelect = useSeasonStore(s => s.backToTeamSelect)
+  const uiTap = useUiTap()
 
   const team    = selectedTeamId ? teamEntry(selectedTeamId) : null
   const drivers = allDrivers.filter(d => d.teamId === selectedTeamId)
@@ -66,7 +68,7 @@ export function DriverSelect() {
         <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-            QUICK RACE · STEP 2 OF 2
+            NEW SEASON · STEP 2 OF 2
           </div>
           {team && (
             <div style={{
@@ -85,7 +87,7 @@ export function DriverSelect() {
           Pick which driver you'll race this round.
         </div>
         </div>
-        <motion.button whileTap={{ scale: 0.94 }} onClick={backToTeamSelect}
+        <motion.button whileTap={{ scale: 0.94 }} onClick={() => { uiTap(); backToTeamSelect() }}
           style={{ flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
           ← BACK
         </motion.button>
@@ -191,7 +193,7 @@ export function DriverSelect() {
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={confirmDriver}
+          onClick={() => { uiTap(); confirmDriver() }}
           disabled={!playerDriverId}
           style={{
             width: '100%', border: 'none', borderRadius: 10, padding: '16px',

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
+import { useUiTap } from '@hooks/useUiTap'
 import driversData from '@data/drivers.json'
 
 type DriverEntry = { id: string; name: string; teamId: string }
@@ -11,6 +12,7 @@ function driverName(id: string): string {
 
 export function Championship() {
   const { standings, playerDriverId, playAgain } = useSeasonStore()
+  const uiTap = useUiTap()
 
   const winner = standings[0]
   const playerStanding = standings.find(s => s.driverId === playerDriverId)
@@ -134,7 +136,7 @@ export function Championship() {
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={playAgain}
+          onClick={() => { uiTap(); playAgain() }}
           style={{
             width: '100%', border: 'none', borderRadius: 10, padding: '16px',
             background: 'var(--accent)', color: 'var(--bg-deep)',

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
+import { useUiTap } from '@hooks/useUiTap'
 
 function AmbientHero() {
   return (
@@ -41,7 +42,7 @@ function AmbientHero() {
 }
 
 const MENU_ITEMS = [
-  { id: 'race',     label: 'QUICK RACE',     sub: 'Start a new season',         primary: true  },
+  { id: 'race',     label: 'NEW SEASON',     sub: '8-race championship',       primary: true  },
   { id: 'grid',     label: 'GRID & GARAGE',  sub: 'Browse drivers & teams',     primary: false },
   { id: 'howto',    label: 'HOW TO PLAY',    sub: 'Strategy primer',            primary: false },
   { id: 'settings', label: 'SETTINGS',       sub: 'Sound, haptics, gameplay',   primary: false },
@@ -52,8 +53,10 @@ export function MainMenu() {
   const viewGrid = useSeasonStore(s => s.viewGrid)
   const viewHowToPlay = useSeasonStore(s => s.viewHowToPlay)
   const viewSettings = useSeasonStore(s => s.viewSettings)
+  const uiTap = useUiTap()
 
   function handleAction(id: string) {
+    uiTap()
     if (id === 'race') startNewSeason()
     else if (id === 'grid') viewGrid()
     else if (id === 'howto') viewHowToPlay()
@@ -130,20 +133,6 @@ export function MainMenu() {
               )}
             </motion.button>
           ))}
-
-          {/* Career seam — coming soon */}
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.52 }}
-            style={{
-              borderRadius: 12, padding: '12px 0', textAlign: 'center',
-              border: '1px solid var(--line-hair)', opacity: 0.3,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              pointerEvents: 'none',
-            }}
-          >
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600, color: 'var(--text-dim)', letterSpacing: '0.09em' }}>CAREER</span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.08em' }}>Coming soon</span>
-          </motion.div>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useSeasonStore, TOTAL_RACES, raceHeadline } from '@state/seasonStore'
+import { useUiTap } from '@hooks/useUiTap'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 
@@ -39,6 +40,7 @@ function Confetti() {
 
 export function RaceResult() {
   const { lastRaceResults, lastRaceEvents, standings, playerDriverId, raceIndex, nextRace, playAgain } = useSeasonStore()
+  const uiTap = useUiTap()
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
   const sorted = [...(lastRaceResults ?? [])].sort((a, b) => a.position - b.position)
@@ -218,7 +220,7 @@ export function RaceResult() {
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', display: 'flex', gap: 10, flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={isSeasonEnd ? undefined : nextRace}
+          onClick={isSeasonEnd ? undefined : () => { uiTap(); nextRace() }}
           disabled={isSeasonEnd}
           style={{
             flex: 1, background: isSeasonEnd ? 'var(--bg-panel)' : 'var(--accent)',
@@ -233,7 +235,7 @@ export function RaceResult() {
         </motion.button>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={playAgain}
+          onClick={() => { uiTap(); playAgain() }}
           style={{
             flex: isSeasonEnd ? 1 : 0, minWidth: isSeasonEnd ? 0 : 90,
             background: 'transparent', color: 'var(--text-mid)',

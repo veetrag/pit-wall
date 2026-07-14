@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
+import { useUiTap } from '@hooks/useUiTap'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 
@@ -337,6 +338,7 @@ function MiniBar({ value, color }: { value: number; color: string }) {
 
 export function GridStats() {
   const exitGrid = useSeasonStore(s => s.exitGrid)
+  const uiTap = useUiTap()
   const [tab, setTab] = useState<'drivers' | 'cars'>('drivers')
   const [expanded, setExpanded] = useState<string | null>(null)
 
@@ -364,7 +366,7 @@ export function GridStats() {
       }}>
         <motion.button
           whileTap={{ scale: 0.92 }}
-          onClick={exitGrid}
+          onClick={() => { uiTap(); exitGrid() }}
           style={{
             background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
             borderRadius: 8, width: 36, height: 36, cursor: 'pointer',

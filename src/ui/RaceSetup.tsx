@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useUiTap } from '@hooks/useUiTap'
 import { useSeasonStore } from '@state/seasonStore'
+import type { PlayerStrategyChoice } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
 import circuitsJson from '@data/circuits.json'
 import compoundsData from '@data/compounds.json'
@@ -37,9 +39,44 @@ function rainColor(prob: number): string {
   return 'var(--tyre-medium)'
 }
 
+// Minimum laps required between two planned stops (and from a stop to the flag).
+const MIN_STINT_GAP = 4
+
+function CompoundChips({ value, onChange, size = 'sm' }: { value: Compound; onChange: (c: Compound) => void; size?: 'sm' | 'md' }) {
+  const dim = size === 'md' ? 28 : 20
+  const fontSize = size === 'md' ? 12 : 10
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      {DRY_COMPOUNDS.map(c => {
+        const color = COMPOUND_COLORS[c] ?? 'var(--text-mid)'
+        const selected = value === c
+        return (
+          <motion.button
+            key={c}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => onChange(c)}
+            style={{
+              width: dim, height: dim, borderRadius: '50%',
+              border: selected ? `1.5px solid ${color}` : '1px solid var(--line-hair)',
+              background: selected ? color : 'var(--bg-panel)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'var(--font-mono)', fontSize, fontWeight: 700,
+              color: selected ? 'var(--bg-deep)' : 'var(--text-mid)',
+              cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s',
+            }}
+          >
+            {c}
+          </motion.button>
+        )
+      })}
+    </div>
+  )
+}
+
 export function RaceSetup() {
   const confirmRaceSetup = useSeasonStore(s => s.confirmRaceSetup)
   const backToDriverSelect = useSeasonStore(s => s.backToDriverSelect)
+  const uiTap = useUiTap()
   const raceIndex = useSeasonStore(s => s.raceIndex)
   const defaultIdx = raceIndex % CIRCUIT_ORDER.length
   const [selectedIdx, setSelectedIdx] = useState(defaultIdx)
@@ -47,9 +84,29 @@ export function RaceSetup() {
   const circuit = allCircuits[circuitId]!
   const roundNum = raceIndex + 1
   const [startCompound, setStartCompound] = useState<Compound>('M')
-  const [pitLap, setPitLap] = useState(Math.round(circuit.laps * 0.45))
+  const [stopCount, setStopCount] = useState<1 | 2>(1)
+  const [pitLap1, setPitLap1] = useState(Math.round(circuit.laps * 0.45))
+  const [pitCompound1, setPitCompound1] = useState<Compound>('H')
+  const [pitLap2, setPitLap2] = useState(Math.round(circuit.laps * 0.7))
+  const [pitCompound2, setPitCompound2] = useState<Compound>('M')
 
   const rain = circuit.rainProbability ?? 0.1
+
+  // Bounds: each stop needs room from the last (or the start) and from the flag.
+  const maxLap1 = stopCount === 2
+    ? circuit.laps - 3 - MIN_STINT_GAP
+    : circuit.laps - 3
+  const minLap2 = pitLap1 + MIN_STINT_GAP
+  const maxLap2 = circuit.laps - 2
+
+  function selectStopCount(n: 1 | 2) {
+    setStopCount(n)
+    if (n === 2) {
+      const clampedLap1 = Math.min(pitLap1, circuit.laps - 3 - MIN_STINT_GAP)
+      setPitLap1(clampedLap1)
+      setPitLap2(prev => Math.max(clampedLap1 + MIN_STINT_GAP, Math.min(prev, circuit.laps - 2)))
+    }
+  }
 
   return (
     <motion.div
@@ -77,7 +134,7 @@ export function RaceSetup() {
             Strategy Plan
           </div>
         </div>
-        <motion.button whileTap={{ scale: 0.94 }} onClick={backToDriverSelect}
+        <motion.button whileTap={{ scale: 0.94 }} onClick={() => { uiTap(); backToDriverSelect() }}
           style={{ flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
           ← BACK
         </motion.button>
@@ -99,7 +156,8 @@ export function RaceSetup() {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
                     setSelectedIdx(i)
-                    setPitLap(Math.round(c.laps * 0.45))
+                    setPitLap1(Math.round(c.laps * (stopCount === 2 ? 0.33 : 0.45)))
+                    setPitLap2(Math.round(c.laps * 0.7))
                   }}
                   style={{
                     flexShrink: 0, border: 'none', borderRadius: 10, padding: '10px 14px',
@@ -247,38 +305,84 @@ export function RaceSetup() {
 
         {/* Pit Stop Plan */}
         <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--line-hair)' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 12 }}>
-            PLANNED PIT STOP
-          </div>
-
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-mid)' }}>
-              Target lap
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em' }}>
+              STRATEGY PLAN
             </div>
-            <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 700, color: 'var(--accent)',
-            }}>
-              LAP {pitLap}
+            <div style={{ display: 'flex', gap: 4, background: 'var(--bg-panel)', borderRadius: 8, padding: 3 }}>
+              {([1, 2] as const).map(n => (
+                <motion.button
+                  key={n}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => selectStopCount(n)}
+                  style={{
+                    border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+                    background: stopCount === n ? 'var(--accent)' : 'transparent',
+                    color: stopCount === n ? 'var(--bg-deep)' : 'var(--text-mid)',
+                    fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+                  }}
+                >
+                  {n === 1 ? 'ONE STOP' : 'TWO STOP'}
+                </motion.button>
+              ))}
             </div>
           </div>
 
+          {/* Stop 1 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-mid)' }}>
+              Pit {stopCount === 2 ? '1' : ''} — fit
+            </div>
+            <CompoundChips value={pitCompound1} onChange={setPitCompound1} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>Target lap</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>LAP {pitLap1}</span>
+          </div>
           <input
             type="range"
             min={5}
-            max={circuit.laps - 3}
-            value={pitLap}
-            onChange={e => setPitLap(Number(e.target.value))}
-            style={{
-              width: '100%', height: 4, borderRadius: 2,
-              accentColor: 'var(--accent)',
-              cursor: 'pointer',
+            max={maxLap1}
+            value={pitLap1}
+            onChange={e => {
+              const v = Number(e.target.value)
+              setPitLap1(v)
+              if (stopCount === 2) setPitLap2(prev => Math.max(prev, v + MIN_STINT_GAP))
             }}
+            style={{ width: '100%', height: 4, borderRadius: 2, accentColor: 'var(--accent)', cursor: 'pointer' }}
           />
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, marginBottom: stopCount === 2 ? 16 : 0 }}>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>LAP 5</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>LAP {circuit.laps - 3}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>LAP {maxLap1}</div>
           </div>
+
+          {/* Stop 2 */}
+          {stopCount === 2 && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-mid)' }}>
+                  Pit 2 — fit
+                </div>
+                <CompoundChips value={pitCompound2} onChange={setPitCompound2} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>Target lap</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>LAP {pitLap2}</span>
+              </div>
+              <input
+                type="range"
+                min={minLap2}
+                max={maxLap2}
+                value={pitLap2}
+                onChange={e => setPitLap2(Number(e.target.value))}
+                style={{ width: '100%', height: 4, borderRadius: 2, accentColor: 'var(--accent)', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>LAP {minLap2}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>LAP {maxLap2}</div>
+              </div>
+            </>
+          )}
 
           <div style={{
             marginTop: 12, padding: '8px 12px', borderRadius: 8,
@@ -286,7 +390,8 @@ export function RaceSetup() {
             fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)',
             lineHeight: 1.5,
           }}>
-            PLAN: {startCompound} → {startCompound === 'S' ? 'M' : startCompound === 'M' ? 'H' : 'M'} on lap {pitLap}
+            PLAN: {startCompound} → {pitCompound1} on lap {pitLap1}
+            {stopCount === 2 && <> → {pitCompound2} on lap {pitLap2}</>}
             <br />
             <span style={{ color: 'var(--text-mid)' }}>You can override this live during the race.</span>
           </div>
@@ -297,7 +402,14 @@ export function RaceSetup() {
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => confirmRaceSetup(circuitId)}
+          onClick={() => {
+            uiTap()
+            const plannedStops = stopCount === 2
+              ? [{ lap: pitLap1, compound: pitCompound1 }, { lap: pitLap2, compound: pitCompound2 }]
+              : [{ lap: pitLap1, compound: pitCompound1 }]
+            const strategy: PlayerStrategyChoice = { startCompound, plannedStops }
+            confirmRaceSetup(circuitId, strategy)
+          }}
           style={{
             width: '100%', border: 'none', borderRadius: 10, padding: '16px',
             background: 'var(--accent)', color: 'var(--bg-deep)',

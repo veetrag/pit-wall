@@ -199,4 +199,8 @@ export interface RaceConfig {
   playerDriverId: string
   seed: number
   weatherSeed?: number
+  // Overrides the player's own strategy (start compound + planned stops) chosen
+  // at Race Setup. Only applies to the car whose driverId === playerDriverId —
+  // teammates and rivals keep whatever `strategies` assigns them.
+  playerStrategyOverride?: StrategyPlan
 }

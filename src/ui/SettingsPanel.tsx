@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSettingsStore, type SimSpeed, type Difficulty } from '@state/settingsStore'
 import { useSeasonStore } from '@state/seasonStore'
+import { useUiTap } from '@hooks/useUiTap'
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
 
 function Toggle({ label, sublabel, value, onChange }: {
   label: string; sublabel: string; value: boolean; onChange: (v: boolean) => void
 }) {
+  const uiTap = useUiTap()
   return (
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -19,7 +21,7 @@ function Toggle({ label, sublabel, value, onChange }: {
       </div>
       <motion.button
         whileTap={{ scale: 0.9 }}
-        onClick={() => onChange(!value)}
+        onClick={() => { uiTap(); onChange(!value) }}
         style={{
           width: 50, height: 28, borderRadius: 14, border: 'none',
           background: value ? 'var(--accent)' : 'var(--bg-elevated)',
@@ -105,6 +107,7 @@ function SectionHeader({ title }: { title: string }) {
 
 export function SettingsScreen() {
   const exitSettings = useSeasonStore(s => s.exitSettings)
+  const uiTap = useUiTap()
   const {
     soundEnabled, hapticsEnabled, reducedMotion,
     simSpeed, proMode, skipStartSequence, difficulty,
@@ -126,7 +129,7 @@ export function SettingsScreen() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>CONFIG</div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>Settings</div>
         </div>
-        <motion.button whileTap={{ scale: 0.94 }} onClick={exitSettings}
+        <motion.button whileTap={{ scale: 0.94 }} onClick={() => { uiTap(); exitSettings() }}
           style={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
           BACK
         </motion.button>
@@ -170,6 +173,7 @@ export function SettingsScreen() {
 
 function SettingsPanelDrawer({ onClose }: { onClose: () => void }) {
   const { soundEnabled, hapticsEnabled, reducedMotion, setSoundEnabled, setHapticsEnabled, setReducedMotion } = useSettingsStore()
+  const uiTap = useUiTap()
   return (
     <motion.div
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -182,7 +186,7 @@ function SettingsPanelDrawer({ onClose }: { onClose: () => void }) {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text-hi)', letterSpacing: '0.05em' }}>SETTINGS</span>
-        <motion.button whileTap={{ scale: 0.9 }} onClick={onClose}
+        <motion.button whileTap={{ scale: 0.9 }} onClick={() => { uiTap(); onClose() }}
           style={{ background: 'transparent', border: '1px solid var(--line-hair)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 12, cursor: 'pointer' }}>
           DONE
         </motion.button>

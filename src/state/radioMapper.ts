@@ -1,6 +1,7 @@
 import radioData from '@data/radio.json'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
 import type { RaceState, RaceConfig } from '@engine/types'
+import { soundService } from '@audio/soundService'
 
 type RadioPool = Record<string, string[]>
 const pools = radioData as RadioPool
@@ -113,8 +114,10 @@ export function processRadioTick(
     const latest = state.overtakeEvents[newOvertakes - 1]!
     if (latest.overtakerId === player.driverId) {
       tryPush('overtake_made', 1, { pos }, pushAlert)
+      soundService.play('positionGain')
     } else if (latest.overtakenId === player.driverId) {
       tryPush('overtake_lost', 1, { pos }, pushAlert)
+      soundService.play('positionLoss')
     }
     next.prevOvertakeCount = newOvertakes
   }

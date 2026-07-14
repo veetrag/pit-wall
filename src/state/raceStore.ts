@@ -8,6 +8,7 @@ import { createRng, type Rng } from '@engine/rng'
 import type { AlertMessage } from '../ui/HudAlert'
 import { processRadioTick, makeRadioState, type RadioState } from './radioMapper'
 import type { Difficulty } from './settingsStore'
+import type { PlayerStrategyChoice } from './seasonStore'
 
 export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 
@@ -24,7 +25,7 @@ interface RaceStore {
   radioState: RadioState
 
   startRace: () => void
-  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty) => void
+  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
   resetRace: () => void
@@ -53,7 +54,13 @@ function applyBrain(baseBrain: StrategyBrain, difficulty: Difficulty): StrategyB
   return baseBrain === 'optimal' ? 'smart' : baseBrain
 }
 
-function buildConfig(seed: number, playerDriverId: string, circuitId = 'bengaluru', difficulty: Difficulty = 'rookie'): RaceConfig {
+function buildConfig(
+  seed: number,
+  playerDriverId: string,
+  circuitId = 'bengaluru',
+  difficulty: Difficulty = 'rookie',
+  playerStrategy?: PlayerStrategyChoice | null,
+): RaceConfig {
   const data = loadGameData()
   const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
   const laps = circuit.laps
@@ -66,6 +73,12 @@ function buildConfig(seed: number, playerDriverId: string, circuitId = 'bengalur
       lap: Math.round((stop.lap / 30) * laps),
     })),
   }))
+
+  const playerTeamId = data.drivers.drivers.find(d => d.id === playerDriverId)?.teamId ?? ''
+  const playerStrategyOverride = playerStrategy
+    ? { teamId: playerTeamId, startCompound: playerStrategy.startCompound, plannedStops: playerStrategy.plannedStops }
+    : undefined
+
   return {
     circuit,
     tuning: data.tuning,
@@ -75,6 +88,7 @@ function buildConfig(seed: number, playerDriverId: string, circuitId = 'bengalur
     strategies,
     playerDriverId,
     seed,
+    playerStrategyOverride,
   }
 }
 
@@ -100,8 +114,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
   },
 
-  startSeasonRace(playerDriverId, seed, circuitId, difficulty) {
-    const config = buildConfig(seed, playerDriverId, circuitId, difficulty)
+  startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy) {
+    const config = buildConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy)
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })

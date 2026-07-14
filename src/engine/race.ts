@@ -7,9 +7,12 @@ import { aiDecision } from './strategy'
 
 export function initRace(config: RaceConfig): RaceState {
   const cars: CarState[] = config.drivers.map((driver, i) => {
-    const strategy = config.strategies.find(s => s.teamId === driver.teamId) ?? {
-      teamId: driver.teamId, startCompound: 'M' as const, plannedStops: [],
-    }
+    const isPlayer = driver.id === config.playerDriverId
+    const strategy = (isPlayer && config.playerStrategyOverride)
+      ? config.playerStrategyOverride
+      : config.strategies.find(s => s.teamId === driver.teamId) ?? {
+          teamId: driver.teamId, startCompound: 'M' as const, plannedStops: [],
+        }
     return {
       driverId: driver.id,
       teamId: driver.teamId,
@@ -23,7 +26,7 @@ export function initRace(config: RaceConfig): RaceState {
       pitted: false,
       pitsDone: 0,
       strategy,
-      isPlayer: driver.id === config.playerDriverId,
+      isPlayer,
     }
   })
 

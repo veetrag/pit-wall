@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
+import { useUiTap } from '@hooks/useUiTap'
 
 const STEPS = [
   {
@@ -41,6 +42,7 @@ export function HowToPlay() {
   const startNewSeason = useSeasonStore(s => s.startNewSeason)
   const isLast = step === STEPS.length - 1
   const current = STEPS[step]!
+  const uiTap = useUiTap()
 
   return (
     <motion.div
@@ -57,7 +59,7 @@ export function HowToPlay() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>HOW TO PLAY</div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>Strategy primer</div>
         </div>
-        <motion.button whileTap={{ scale: 0.94 }} onClick={exitHowToPlay}
+        <motion.button whileTap={{ scale: 0.94 }} onClick={() => { uiTap(); exitHowToPlay() }}
           style={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
           SKIP
         </motion.button>
@@ -102,7 +104,7 @@ export function HowToPlay() {
       {/* Nav */}
       <div style={{ padding: '12px 24px 16px', display: 'flex', gap: 10, flexShrink: 0 }}>
         {step > 0 && (
-          <motion.button whileTap={{ scale: 0.97 }} onClick={() => setStep(s => s - 1)}
+          <motion.button whileTap={{ scale: 0.97 }} onClick={() => { uiTap(); setStep(s => s - 1) }}
             style={{
               flex: 1, background: 'transparent', color: 'var(--text-mid)',
               border: '1px solid var(--line-hair)', borderRadius: 10, padding: '14px 0',
@@ -114,7 +116,7 @@ export function HowToPlay() {
         )}
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={isLast ? startNewSeason : () => setStep(s => s + 1)}
+          onClick={() => { uiTap(); if (isLast) startNewSeason(); else setStep(s => s + 1) }}
           style={{
             flex: 2, background: isLast ? 'var(--accent)' : 'var(--bg-elevated)',
             color: isLast ? 'var(--bg-deep)' : 'var(--text-hi)',

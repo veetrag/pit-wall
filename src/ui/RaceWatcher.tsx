@@ -15,6 +15,7 @@ export function RaceWatcher() {
   const currentSeed = useSeasonStore(s => s.currentSeed)
   const currentCircuitId = useSeasonStore(s => s.currentCircuitId)
   const recordRaceResult = useSeasonStore(s => s.recordRaceResult)
+  const playerStrategy = useSeasonStore(s => s.playerStrategy)
   const setSpeed = useClockStore(s => s.setSpeed)
   const difficulty = useSettingsStore(s => s.difficulty)
 
@@ -23,7 +24,7 @@ export function RaceWatcher() {
   useEffect(() => {
     if (seasonPhase === 'racing' && racePhase === 'idle' && playerDriverId) {
       hasFiredRef.current = false
-      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty)
+      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty, playerStrategy)
     }
   }, [seasonPhase, racePhase, playerDriverId]) // eslint-disable-line react-hooks/exhaustive-deps
 

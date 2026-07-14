@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { Preferences } from '@capacitor/preferences'
 import { CIRCUIT_ORDER } from './raceStore'
+import type { Compound, PitStop } from '@engine/index'
 
 export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings'
 
@@ -19,6 +20,11 @@ export interface RaceEventSummary {
   overtakesGained: number
   pitsDone: number
   hadRain: boolean
+}
+
+export interface PlayerStrategyChoice {
+  startCompound: Compound
+  plannedStops: PitStop[]
 }
 
 export const TOTAL_RACES = 8
@@ -58,6 +64,7 @@ interface SeasonStore {
   lastRaceEvents: RaceEventSummary | null
   selectedCircuitId: string | null
   selectedTeamId: string | null
+  playerStrategy: PlayerStrategyChoice | null
 
   currentSeed: () => number
   currentCircuitId: () => string
@@ -76,7 +83,7 @@ interface SeasonStore {
   confirmTeam: () => void
   selectDriver: (id: string) => void
   confirmDriver: () => void
-  confirmRaceSetup: (circuitId?: string) => void
+  confirmRaceSetup: (circuitId?: string, strategy?: PlayerStrategyChoice) => void
   recordRaceResult: (positions: { driverId: string; position: number }[], events: RaceEventSummary) => void
   nextRace: () => void
   playAgain: () => void
@@ -92,6 +99,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   lastRaceEvents: null,
   selectedCircuitId: null,
   selectedTeamId: null,
+  playerStrategy: null,
 
   currentSeed() {
     return get().raceIndex * 1000 + 42
@@ -115,7 +123,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   backToDriverSelect() { set({ phase: 'driver_select' }) },
 
   startNewSeason() {
-    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null })
+    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null })
   },
 
   selectTeam(id) { set({ selectedTeamId: id, playerDriverId: null }) },
@@ -133,9 +141,9 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     set({ phase: 'race_setup', selectedCircuitId: defaultCircuit })
   },
 
-  confirmRaceSetup(circuitId) {
+  confirmRaceSetup(circuitId, strategy) {
     if (circuitId) set({ selectedCircuitId: circuitId })
-    set({ phase: 'racing' })
+    set({ phase: 'racing', playerStrategy: strategy ?? null })
   },
 
   recordRaceResult(positions, events) {
@@ -166,12 +174,12 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       set({ phase: 'championship' })
     } else {
       const nextCircuit = CIRCUIT_ORDER[next % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
-      set({ raceIndex: next, phase: 'race_setup', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit })
+      set({ raceIndex: next, phase: 'race_setup', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit, playerStrategy: null })
     }
   },
 
   playAgain() {
-    set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null })
+    set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null })
     void Preferences.remove({ key: SAVE_KEY })
   },
 
