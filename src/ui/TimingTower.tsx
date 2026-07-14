@@ -55,12 +55,13 @@ function WearBar({ compound, age, spec, fresh }: { compound: Compound; age: numb
   )
 }
 
-function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOverride }: {
+function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOverride, teamColor }: {
   car: CarState
   leaderTime: number
   compounds: Record<string, CompoundSpec>
   driverFlag?: string
   driverCode?: string
+  teamColor?: string
 }) {
   const gap = car.raceTime - leaderTime
   const spec = compounds[car.compound]
@@ -109,12 +110,12 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOver
       transition={{ type: 'spring', stiffness: 450, damping: 38 }}
       style={{
         display: 'grid',
-        gridTemplateColumns: '18px 32px 1fr 44px',
+        gridTemplateColumns: '18px 42px 1fr 44px',
         alignItems: 'center',
         gap: 4,
         padding: '5px 10px',
         background: rowBg,
-        borderLeft: car.isPlayer ? '2px solid var(--accent)' : '2px solid transparent',
+        borderLeft: car.isPlayer ? '2px solid var(--accent)' : `2px solid ${teamColor ? teamColor + '44' : 'transparent'}`,
         borderBottom: '0.5px solid #141a2b',
         transition: 'background 0.4s ease',
       }}
@@ -129,8 +130,12 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, driverCode: codeOver
       <span style={{
         fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
         color: car.isPlayer ? 'var(--accent)' : 'var(--text-hi)', letterSpacing: '0.04em',
-        display: 'flex', alignItems: 'center', gap: 3,
+        display: 'flex', alignItems: 'center', gap: 4,
       }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+          background: car.isPlayer ? 'var(--accent)' : (teamColor ?? 'var(--text-dim)'),
+        }} />
         {driverFlag && <span style={{ fontSize: 9, lineHeight: 1 }}>{driverFlag}</span>}
         {driverCode}
       </span>
@@ -162,7 +167,7 @@ function GhostRow({ position, code }: { position: number; code: string }) {
       transition={{ type: 'spring', stiffness: 450, damping: 38 }}
       style={{
         display: 'grid',
-        gridTemplateColumns: '18px 32px 1fr 44px',
+        gridTemplateColumns: '18px 42px 1fr 44px',
         alignItems: 'center',
         gap: 4,
         padding: '5px 10px',
@@ -201,6 +206,7 @@ export function TimingTower() {
   if (!raceState || !config) return null
 
   const driverMap = new Map(config.drivers.map(d => [d.id, d]))
+  const teamColorMap = new Map(config.teams.map(t => [t.id, t.colorPrimary]))
   const leaderTime = raceState.cars.find(c => c.position === 1)?.raceTime ?? 0
   const player = raceState.cars.find(c => c.isPlayer)
   const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
@@ -280,6 +286,7 @@ export function TimingTower() {
                 compounds={config.compounds}
                 driverFlag={(driverMap.get(row.car.driverId) as { flag?: string } | undefined)?.flag}
                 driverCode={driverMap.get(row.car.driverId)?.code}
+                teamColor={teamColorMap.get(row.car.teamId)}
               />
             )
           )}

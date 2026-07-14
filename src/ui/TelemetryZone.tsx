@@ -162,9 +162,9 @@ export function TelemetryZone() {
         {/* 1. CLIFF */}
         <div style={{
           background: 'var(--bg-elevated)', borderRadius: 6,
-          padding: '5px 8px',
-          border: pastCliff || (cliffIn !== null && cliffIn <= 3)
-            ? '1px solid #FF4D5E40' : '1px solid var(--line-hair)',
+          padding: '5px 8px 5px 7px',
+          borderTop: '1px solid var(--line-hair)', borderRight: '1px solid var(--line-hair)', borderBottom: '1px solid var(--line-hair)',
+          borderLeft: `3px solid ${gaugeColor(fraction)}`,
         }}>
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 8,
@@ -190,7 +190,9 @@ export function TelemetryZone() {
         {/* 2. POSITION */}
         <div style={{
           background: 'var(--bg-elevated)', borderRadius: 6,
-          padding: '5px 8px', border: '1px solid var(--line-hair)',
+          padding: '5px 8px 5px 7px',
+          borderTop: '1px solid var(--line-hair)', borderRight: '1px solid var(--line-hair)', borderBottom: '1px solid var(--line-hair)',
+          borderLeft: '3px solid var(--accent)',
         }}>
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 8,
@@ -232,7 +234,9 @@ export function TelemetryZone() {
         {/* 3. PIT WINDOW */}
         <div style={{
           background: 'var(--bg-elevated)', borderRadius: 6,
-          padding: '5px 8px', border: '1px solid var(--line-hair)',
+          padding: '5px 8px 5px 7px',
+          borderTop: '1px solid var(--line-hair)', borderRight: '1px solid var(--line-hair)', borderBottom: '1px solid var(--line-hair)',
+          borderLeft: '3px solid var(--accent-violet)',
         }}>
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 8,
@@ -242,7 +246,7 @@ export function TelemetryZone() {
           </div>
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600,
-            color: 'var(--text-mid)', fontVariantNumeric: 'tabular-nums',
+            color: nextStop ? 'var(--accent-violet)' : 'var(--text-mid)', fontVariantNumeric: 'tabular-nums',
           }}>
             {nextStop
               ? `Planned: L${nextStop.lap}`
