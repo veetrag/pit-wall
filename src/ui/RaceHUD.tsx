@@ -4,7 +4,6 @@ import { useClockStore, type GameSpeed } from '@state/clockStore'
 import { GameClock } from './GameClock'
 import { StartScreen } from './StartScreen'
 import { TimingTower } from './TimingTower'
-import { TyreGauge } from './TyreGauge'
 import { PaceModeToggle } from './PaceModeToggle'
 import { PitPanel, PitButton } from './PitPanel'
 import { WeatherStrip } from './WeatherStrip'
@@ -157,7 +156,7 @@ export function RaceHUD() {
             {/* Status bar: circuit · lap · speed controls */}
             <StatusBar />
 
-            {/* Weather strip — 72px */}
+            {/* Weather strip */}
             {(phase === 'racing' || phase === 'starting') && <WeatherStrip />}
 
             {/* HUD alert slot — 0px collapsed / 44px active */}
@@ -183,7 +182,7 @@ export function RaceHUD() {
               </div>
             )}
 
-            {/* Timing tower — fills remaining space, scrollable */}
+            {/* Timing tower — compact context window by default, tap to expand */}
             <div style={{
               flex: 1, overflow: 'hidden',
               margin: '6px 8px 0', minHeight: 0,
@@ -202,7 +201,6 @@ export function RaceHUD() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <PaceModeToggle />
               </div>
-              <TyreGauge />
               <PitButton />
             </div>
           </motion.div>

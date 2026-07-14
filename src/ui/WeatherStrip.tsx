@@ -18,12 +18,10 @@ const WEATHER_COLOR: Record<WeatherState, string> = {
   WET:  'var(--tyre-wet, #4DA6FF)',
 }
 
-// opacity, icon size, label color for each cell index 0..4
-const CELL_OPACITY   = [1, 0.9, 0.75, 0.60, 0.45] as const
-const CELL_ICON_SZ   = [20, 18, 16, 15, 14] as const
-const CELL_LABEL_CLR = [
-  '#F2F5FF', '#F2F5FF', 'var(--text-mid)', 'var(--text-mid)', 'var(--text-dim)',
-] as const
+// Depth-of-forecast cues: only the border/background haze fades with distance —
+// text stays legible all the way out so the +3/+4 cells aren't just decorative.
+const CELL_BG_OPACITY = [1, 0.85, 0.65, 0.5, 0.4] as const
+const CELL_ICON_SZ    = [24, 21, 18, 18, 17] as const
 
 function WeatherCell({
   label, state, index, confidence, pulse,
@@ -35,48 +33,40 @@ function WeatherCell({
   pulse?: boolean
 }) {
   const color = WEATHER_COLOR[state]
-  const opacity = CELL_OPACITY[index] ?? 0.45
-  const iconSz   = CELL_ICON_SZ[index] ?? 14
-  const labelClr = CELL_LABEL_CLR[index] ?? 'var(--text-dim)'
-  const dashed   = index >= 2
+  const bgOpacity = CELL_BG_OPACITY[index] ?? 0.4
+  const iconSz = CELL_ICON_SZ[index] ?? 17
+  const isNow = index === 0
+  const dashed = index >= 2
 
   return (
     <motion.div
-      animate={pulse ? { opacity: [opacity, opacity * 0.5, opacity] } : { opacity }}
+      animate={pulse ? { opacity: [1, 0.55, 1] } : { opacity: 1 }}
       transition={pulse ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
       style={{
         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: '4px 5px',
+        padding: isNow ? '7px 6px' : '6px 4px',
         border: dashed
-          ? `1px dashed rgba(42,51,80,${opacity})`
-          : `1px solid ${color}40`,
-        borderRadius: 6,
-        background: '#1B2238',
+          ? `1px dashed rgba(90,102,140,${bgOpacity})`
+          : `1.5px solid ${color}55`,
+        borderRadius: 8,
+        background: isNow ? `${color}12` : `rgba(27,34,56,${bgOpacity})`,
         minWidth: 0,
       }}
     >
       <span style={{ fontSize: iconSz, lineHeight: 1 }}>{WEATHER_ICON[state]}</span>
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: index === 0 ? 9 : 8, fontWeight: 700,
-        color: labelClr,
-        letterSpacing: '0.08em', marginTop: 2,
+        fontFamily: 'var(--font-mono)', fontSize: isNow ? 12 : 10, fontWeight: 700,
+        color: isNow ? '#F2F5FF' : 'var(--text-mid)',
+        letterSpacing: '0.06em', marginTop: 3,
       }}>
         {WEATHER_LABEL[state]}
       </span>
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 7,
-        color: 'var(--text-dim)', letterSpacing: '0.06em', marginTop: 1,
+        fontFamily: 'var(--font-mono)', fontSize: 9,
+        color: 'var(--text-dim)', letterSpacing: '0.05em', marginTop: 1,
       }}>
-        {label}
+        {label}{index >= 2 ? ` · ${Math.round(confidence * 100)}%` : ''}
       </span>
-      {index >= 2 && (
-        <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 7,
-          color: 'var(--text-dim)', letterSpacing: '0.04em', marginTop: 1,
-        }}>
-          {Math.round(confidence * 100)}%
-        </span>
-      )}
     </motion.div>
   )
 }
@@ -106,43 +96,45 @@ export function WeatherStrip() {
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 3,
-      padding: '5px 8px',
+      display: 'flex', flexDirection: 'column', gap: 5,
+      padding: '7px 8px',
       background: 'var(--bg-panel)',
       borderBottom: '1px solid var(--line-hair)',
-      height: 72, flexShrink: 0,
+      flexShrink: 0,
     }}>
-      <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 7,
-        color: 'var(--text-dim)', letterSpacing: '0.12em',
-        marginRight: 2, flexShrink: 0,
-        writingMode: 'vertical-rl', transform: 'rotate(180deg)',
-      }}>
-        WX
-      </span>
-      {states.map((state, i) => (
-        <WeatherCell
-          key={i}
-          label={cellLabels[i]!}
-          state={state}
-          index={i}
-          confidence={confidence[i] ?? 1.0}
-          pulse={i > 0 && (wetIncoming || rainIncoming) && state !== now}
-        />
-      ))}
-      {(wetIncoming || rainIncoming) && (
-        <motion.span
-          animate={{ opacity: [1, 0.4, 1] }}
-          transition={{ duration: 1.4, repeat: Infinity }}
-          style={{
-            fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700,
-            color: wetIncoming ? 'var(--accent-warm)' : 'var(--tyre-inter, #39B54A)',
-            letterSpacing: '0.08em', marginLeft: 2, flexShrink: 0,
-          }}
-        >
-          {wetIncoming ? '⚠ WET' : '⚠ RAIN'}
-        </motion.span>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)', fontSize: 9,
+          color: 'var(--text-dim)', letterSpacing: '0.14em',
+        }}>
+          WEATHER
+        </span>
+        {(wetIncoming || rainIncoming) && (
+          <motion.span
+            animate={{ opacity: [1, 0.4, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+            style={{
+              fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+              color: wetIncoming ? 'var(--accent-warm)' : 'var(--tyre-inter, #39B54A)',
+              letterSpacing: '0.06em',
+            }}
+          >
+            {wetIncoming ? '⚠ WET INCOMING' : '⚠ RAIN INCOMING'}
+          </motion.span>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 5 }}>
+        {states.map((state, i) => (
+          <WeatherCell
+            key={i}
+            label={cellLabels[i]!}
+            state={state}
+            index={i}
+            confidence={confidence[i] ?? 1.0}
+            pulse={i > 0 && (wetIncoming || rainIncoming) && state !== now}
+          />
+        ))}
+      </div>
     </div>
   )
 }

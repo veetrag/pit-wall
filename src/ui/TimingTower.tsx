@@ -2,6 +2,12 @@ import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import type { CarState, Compound, CompoundSpec } from '@engine/types'
+import { useUiTap } from '@hooks/useUiTap'
+
+// Default compact view targets a fixed row count centred on the player (not a
+// fixed radius) so a P1 or P20 player still gets a full-looking window instead
+// of 2-3 rows adrift in empty space. Full field is one tap away, not gone.
+const COMPACT_WINDOW_SIZE = 6
 
 const COMPOUND_COLORS: Record<Compound, string> = {
   S: 'var(--tyre-soft)',
@@ -189,24 +195,38 @@ export function TimingTower() {
   const config = useRaceStore(s => s.config)
   const pitPanelOpen = useRaceStore(s => s.pitPanelOpen)
   const projectionResult = useRaceStore(s => s.projectionResult)
+  const [expanded, setExpanded] = useState(false)
+  const uiTap = useUiTap()
 
   if (!raceState || !config) return null
 
   const driverMap = new Map(config.drivers.map(d => [d.id, d]))
-  const leader = raceState.cars.find(c => c.position === 1)
-  const leaderTime = leader?.raceTime ?? 0
+  const leaderTime = raceState.cars.find(c => c.position === 1)?.raceTime ?? 0
   const player = raceState.cars.find(c => c.isPlayer)
   const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
+  const totalCars = sorted.length
 
   const ghostPos = pitPanelOpen && projectionResult ? projectionResult.rejoinPosition : null
   const playerCode = player ? (driverMap.get(player.driverId)?.code ?? 'PLY') : 'PLY'
+
+  // Compact default: a fixed-size window of nearby rivals centred on the
+  // player, clamped to the field so a P1 or P20 player still fills the window
+  // instead of trailing off into empty space near an edge.
+  let visibleCars = sorted
+  if (!expanded && player && totalCars > COMPACT_WINDOW_SIZE) {
+    let start = player.position - Math.floor(COMPACT_WINDOW_SIZE / 2)
+    let end = start + COMPACT_WINDOW_SIZE - 1
+    if (start < 1) { start = 1; end = COMPACT_WINDOW_SIZE }
+    if (end > totalCars) { end = totalCars; start = totalCars - COMPACT_WINDOW_SIZE + 1 }
+    visibleCars = sorted.filter(c => c.position >= start && c.position <= end)
+  }
 
   // Build display list with ghost at projected position, real player row hidden
   type Row = { type: 'real'; car: typeof sorted[0] } | { type: 'ghost' }
   const rows: Row[] = []
   if (ghostPos != null) {
     let ghostInserted = false
-    for (const car of sorted) {
+    for (const car of visibleCars) {
       if (car.isPlayer) continue
       if (!ghostInserted && car.position >= ghostPos) {
         rows.push({ type: 'ghost' })
@@ -216,43 +236,55 @@ export function TimingTower() {
     }
     if (!ghostInserted) rows.push({ type: 'ghost' })
   } else {
-    sorted.forEach(car => rows.push({ type: 'real', car }))
+    visibleCars.forEach(car => rows.push({ type: 'real', car }))
   }
 
   return (
     <div style={{
       background: 'var(--bg-panel)', borderRadius: 8,
-      width: '100%', border: '1px solid var(--line-hair)',
-      overflow: 'hidden',
+      width: '100%', height: '100%', border: '1px solid var(--line-hair)',
+      overflow: 'hidden', display: 'flex', flexDirection: 'column',
     }}>
-      <div style={{
-        padding: '6px 10px 6px',
-        fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
-        color: 'var(--text-dim)', letterSpacing: '0.12em',
-        borderBottom: '1px solid var(--line-hair)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <span>TOWER</span>
+      <motion.button
+        whileTap={{ scale: 0.99 }}
+        onClick={() => { uiTap(); setExpanded(v => !v) }}
+        style={{
+          padding: '6px 10px 6px',
+          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
+          color: 'var(--text-dim)', letterSpacing: '0.12em',
+          borderBottom: '1px solid var(--line-hair)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          border: 'none', background: 'transparent', cursor: 'pointer', flexShrink: 0,
+          width: '100%',
+        }}
+      >
+        <span>{expanded ? 'FULL FIELD ▴' : `NEARBY ▾ (${totalCars})`}</span>
         <span style={{ color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
           L{raceState.lap + 1}/{raceState.totalLaps}
         </span>
+      </motion.button>
+      <div style={{
+        flex: 1, overflowY: expanded ? 'auto' : 'hidden', minHeight: 0,
+        display: 'flex', flexDirection: 'column',
+        justifyContent: expanded ? 'flex-start' : 'center',
+      }}>
+        <AnimatePresence initial={false}>
+          {rows.map((row) =>
+            row.type === 'ghost' ? (
+              <GhostRow key="ghost-player" position={ghostPos!} code={playerCode} />
+            ) : (
+              <TowerRow
+                key={row.car.driverId}
+                car={row.car}
+                leaderTime={leaderTime}
+                compounds={config.compounds}
+                driverFlag={(driverMap.get(row.car.driverId) as { flag?: string } | undefined)?.flag}
+                driverCode={driverMap.get(row.car.driverId)?.code}
+              />
+            )
+          )}
+        </AnimatePresence>
       </div>
-      <AnimatePresence initial={false}>
-        {rows.map((row, i) =>
-          row.type === 'ghost' ? (
-            <GhostRow key="ghost-player" position={ghostPos!} code={playerCode} />
-          ) : (
-            <TowerRow
-              key={row.car.driverId}
-              car={row.car}
-              leaderTime={leaderTime}
-              compounds={config.compounds}
-              driverFlag={(driverMap.get(row.car.driverId) as { flag?: string } | undefined)?.flag}
-              driverCode={driverMap.get(row.car.driverId)?.code}
-            />
-          )
-        )}
-      </AnimatePresence>
     </div>
   )
 }
