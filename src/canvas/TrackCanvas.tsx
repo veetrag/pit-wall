@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as PIXI from 'pixi.js'
 import { useRaceStore } from '@state/raceStore'
+import { useSettingsStore } from '@state/settingsStore'
 import pathBengaluru from '@data/paths/bengaluru.json'
 import pathMonsoonBay from '@data/paths/monsoon_bay.json'
 import pathVeloce from '@data/paths/veloce.json'
@@ -10,7 +11,7 @@ import pathHighland from '@data/paths/highland.json'
 import pathGrandSavane from '@data/paths/grand_savane.json'
 import pathAurora from '@data/paths/aurora.json'
 import pathSilverpark from '@data/paths/silverpark.json'
-import type { RaceState, RaceConfig } from '@engine/types'
+import type { RaceState, RaceConfig, WeatherState } from '@engine/types'
 
 type Point = [number, number]
 
@@ -41,6 +42,32 @@ const TEAM_HEX: Record<string, string> = {
 
 function hexToNum(hex: string): number {
   return parseInt(hex.replace('#', ''), 16)
+}
+
+// R2: per-circuit atmosphere wash — a subtle two-stop gradient behind the
+// track plus a matching stroke tint, all within the dark-theme family so the
+// HUD stays readable on top (CLAUDE.md §6.1). Weather cools/darkens it live.
+const ATMOSPHERE_PALETTES: Record<string, { top: number; bottom: number; trackTint: number }> = {
+  day:           { top: 0x141E38, bottom: 0x0A0E1A, trackTint: 0x3A4A70 },
+  dusk:          { top: 0x241A38, bottom: 0x0A0E1A, trackTint: 0x4A3A66 },
+  night:         { top: 0x060911, bottom: 0x020305, trackTint: 0x2A3350 },
+  desert_night:  { top: 0x1E1420, bottom: 0x0A0E1A, trackTint: 0x5A3A2E },
+  storm:         { top: 0x121A22, bottom: 0x05070A, trackTint: 0x2A3A3E },
+  northern_dusk: { top: 0x0E2436, bottom: 0x0A0E1A, trackTint: 0x2A5A62 },
+}
+const STORM_COOL = 0x0A1018
+
+function mixColor(a: number, b: number, t: number): number {
+  const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff
+  const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff
+  const r = Math.round(ar + (br - ar) * t)
+  const g = Math.round(ag + (bg - ag) * t)
+  const bch = Math.round(ab + (bb - ab) * t)
+  return (r << 16) | (g << 8) | bch
+}
+
+function weatherCoolFactor(weatherState: WeatherState): number {
+  return weatherState === 'WET' ? 0.55 : weatherState === 'DAMP' ? 0.25 : 0
 }
 
 // Catmull-Rom point evaluation
@@ -114,9 +141,30 @@ function buildTransform(pts: Point[], cw: number, ch: number, pad = 28): (p: Poi
 
 type DotState = {
   gfx: PIXI.Graphics
-  trail: PIXI.Graphics | null
+  trail: PIXI.Graphics
+  flashGfx: PIXI.Graphics
+  driverId: string
+  isPlayer: boolean
   displayT: number   // lerped, used for rendering position
   targetT: number    // set on each sim tick
+}
+
+const FLASH_DURATION_FRAMES = 40 // ~0.65s at 60fps
+
+// R4: rain particle pool — capped and reused, never allocated per frame.
+type RainDrop = { x: number; y: number; len: number; speed: number; drift: number }
+const MAX_RAIN_DROPS = 70
+function makeRainPool(cw: number, ch: number): RainDrop[] {
+  return Array.from({ length: MAX_RAIN_DROPS }, () => ({
+    x: Math.random() * cw,
+    y: Math.random() * ch,
+    len: 8 + Math.random() * 10,
+    speed: 6 + Math.random() * 5,
+    drift: -1.5 - Math.random() * 1,
+  }))
+}
+function rainDropCount(weatherState: WeatherState): number {
+  return weatherState === 'WET' ? MAX_RAIN_DROPS : weatherState === 'DAMP' ? Math.round(MAX_RAIN_DROPS * 0.4) : 0
 }
 
 function lerpT(from: number, to: number, alpha: number): number {
@@ -158,10 +206,12 @@ function updateCars(
 
     if (!ds) {
       const gfx = new PIXI.Graphics()
-      const trail = isPlayer ? new PIXI.Graphics() : null
-      if (trail) app.stage.addChildAt(trail, 0)
+      const trail = new PIXI.Graphics()
+      const flashGfx = new PIXI.Graphics()
+      app.stage.addChildAt(trail, 0)
+      app.stage.addChild(flashGfx)
       app.stage.addChild(gfx)
-      ds = { gfx, trail, displayT: 0, targetT: 0 }
+      ds = { gfx, trail, flashGfx, driverId: car.driverId, isPlayer, displayT: 0, targetT: 0 }
       dotMap.set(car.driverId, ds)
     }
 
@@ -189,7 +239,8 @@ function updateCars(
   for (const [id, ds] of dotMap) {
     if (!state.cars.find(c => c.driverId === id)) {
       app.stage.removeChild(ds.gfx)
-      if (ds.trail) app.stage.removeChild(ds.trail)
+      app.stage.removeChild(ds.flashGfx)
+      app.stage.removeChild(ds.trail)
       dotMap.delete(id)
     }
   }
@@ -199,6 +250,8 @@ function drawTrack(
   graphics: PIXI.Graphics,
   arcTable: ReturnType<typeof buildArcTable>,
   transform: (p: Point) => Point,
+  trackTint = 0x3A4A70,
+  wetSheenAlpha = 0,
 ) {
   graphics.clear()
 
@@ -220,11 +273,56 @@ function drawTrack(
   graphics.closePath()
   graphics.stroke({ color: 0x2A3350, width: 6, cap: 'round', join: 'round' })
 
-  // Centreline (subtle)
+  // Centreline — tinted per circuit atmosphere (R2)
   graphics.moveTo(x0, y0)
   for (let i = 1; i < tfPts.length; i++) graphics.lineTo(tfPts[i]![0], tfPts[i]![1])
   graphics.closePath()
-  graphics.stroke({ color: 0x3A4A70, width: 1.5, alpha: 0.4 })
+  graphics.stroke({ color: trackTint, width: 1.5, alpha: 0.4 })
+
+  // R4: wet track sheen — a bright, thin highlight over the racing line so a
+  // damp/wet track visibly glistens, without needing animated particles.
+  if (wetSheenAlpha > 0) {
+    graphics.moveTo(x0, y0)
+    for (let i = 1; i < tfPts.length; i++) graphics.lineTo(tfPts[i]![0], tfPts[i]![1])
+    graphics.closePath()
+    graphics.stroke({ color: 0x9AD8FF, width: 2, alpha: wetSheenAlpha, cap: 'round', join: 'round' })
+  }
+}
+
+// R2: full-canvas two-stop gradient wash behind the track, cooling/darkening
+// as weather worsens. Redrawn only when atmosphere/weather actually change,
+// not per frame.
+function drawAtmosphere(graphics: PIXI.Graphics, cw: number, ch: number, atmosphere: string, weatherState: WeatherState) {
+  const palette = ATMOSPHERE_PALETTES[atmosphere] ?? ATMOSPHERE_PALETTES['day']!
+  const cool = weatherCoolFactor(weatherState)
+  const top = mixColor(palette.top, STORM_COOL, cool)
+  const bottom = mixColor(palette.bottom, 0x000000, cool * 0.6)
+
+  graphics.clear()
+  const gradient = new PIXI.FillGradient({ start: { x: 0, y: 0 }, end: { x: 0, y: 1 } })
+  gradient.addColorStop(0, top)
+  gradient.addColorStop(1, bottom)
+  graphics.rect(0, 0, cw, ch).fill(gradient)
+}
+
+// R6: rubber line — a faint, slowly-intensifying darker line on the racing
+// line, visualising trackEvolution. Redrawn on state updates only.
+function drawRubberLine(
+  graphics: PIXI.Graphics,
+  arcTable: ReturnType<typeof buildArcTable>,
+  transform: (p: Point) => Point,
+  evolutionFraction: number,
+) {
+  graphics.clear()
+  if (evolutionFraction <= 0) return
+  const pts = arcTable.pts.filter((_, i) => i % 2 === 0)
+  const tfPts = pts.map(p => transform(p))
+  if (tfPts.length < 2) return
+  const [x0, y0] = tfPts[0]!
+  graphics.moveTo(x0, y0)
+  for (let i = 1; i < tfPts.length; i++) graphics.lineTo(tfPts[i]![0], tfPts[i]![1])
+  graphics.closePath()
+  graphics.stroke({ color: 0x000000, width: 3.5, alpha: Math.min(0.28, evolutionFraction * 0.28), cap: 'round', join: 'round' })
 }
 
 function drawMarkers(
@@ -270,6 +368,18 @@ export function TrackCanvas() {
     let arcTable: ReturnType<typeof buildArcTable> | null = null
     let transform: ((p: Point) => Point) | null = null
 
+    const reducedMotion = useSettingsStore.getState().reducedMotion
+    const rainPool = makeRainPool(1, 1) // resized once real canvas dims are known below
+
+    // R6: overtake flash bookkeeping — a frame counter avoids any wall-clock API.
+    let frameCounter = 0
+    const flashExpiry = new Map<string, number>()
+    let prevOvertakeCount = 0
+
+    // R2/R4: redrawn only when atmosphere/weather actually change, not per frame.
+    let lastAtmosphere = ''
+    let lastWeather: WeatherState | '' = ''
+
     const cw = container.clientWidth || 400
     const ch = container.clientHeight || 300
 
@@ -280,6 +390,9 @@ export function TrackCanvas() {
         app.canvas.style.height = '100%'
         container.appendChild(app.canvas)
 
+        rainPool.length = 0
+        rainPool.push(...makeRainPool(cw, ch))
+
         const { config: initConfig } = useRaceStore.getState()
         const circuitKey = initConfig?.circuit?.trackPath?.replace('paths/', '').replace('.json', '') ?? 'bengaluru'
         const activePath = CIRCUIT_PATHS[circuitKey] ?? CIRCUIT_PATHS['bengaluru']!
@@ -287,18 +400,44 @@ export function TrackCanvas() {
         arcTable = buildArcTable(rawPts, 600)
         transform = buildTransform(arcTable.pts, cw, ch)
 
-        // Static layers
+        // Layer order (back to front): atmosphere wash, track, rubber line,
+        // markers, wet static overlay (reduced-motion only), cars, rain (front).
+        const atmosphereGfx = new PIXI.Graphics()
         const trackGfx = new PIXI.Graphics()
+        const rubberGfx = new PIXI.Graphics()
         const markerGfx = new PIXI.Graphics()
-        app.stage.addChildAt(trackGfx, 0)
-        app.stage.addChildAt(markerGfx, 1)
-        drawTrack(trackGfx, arcTable, transform)
+        const wetOverlayGfx = new PIXI.Graphics()
+        const rainGfx = new PIXI.Graphics()
+        app.stage.addChildAt(atmosphereGfx, 0)
+        app.stage.addChildAt(trackGfx, 1)
+        app.stage.addChildAt(rubberGfx, 2)
+        app.stage.addChildAt(markerGfx, 3)
+        app.stage.addChildAt(wetOverlayGfx, 4)
         drawMarkers(markerGfx, arcTable, transform)
+        app.stage.addChild(rainGfx)
+
+        const atmosphere = initConfig?.circuit?.atmosphere ?? 'day'
+        const redrawAtmosphere = (weatherState: WeatherState) => {
+          const palette = ATMOSPHERE_PALETTES[atmosphere] ?? ATMOSPHERE_PALETTES['day']!
+          drawAtmosphere(atmosphereGfx, cw, ch, atmosphere, weatherState)
+          drawTrack(trackGfx, arcTable!, transform!, palette.trackTint, weatherState === 'WET' ? 0.35 : weatherState === 'DAMP' ? 0.15 : 0)
+          // Reduced motion: static wet tint instead of animated rain (R4)
+          wetOverlayGfx.clear()
+          if (reducedMotion && weatherState !== 'DRY') {
+            const alpha = weatherState === 'WET' ? 0.07 : 0.035
+            wetOverlayGfx.rect(0, 0, cw, ch).fill({ color: 0x1a2840, alpha })
+          }
+          lastAtmosphere = atmosphere
+          lastWeather = weatherState
+        }
 
         // Initial car draw
         const { raceState, config } = useRaceStore.getState()
         if (raceState && config && arcTable && transform) {
           updateCars(app, dotMap, arcTable, transform, raceState, config)
+          redrawAtmosphere(raceState.weatherState)
+          drawRubberLine(rubberGfx, arcTable, transform, raceState.trackEvolutionLaps / Math.max(1, config.tuning.trackEvolution.decayLaps))
+          prevOvertakeCount = raceState.overtakeEvents.length
           // Snap displayT to targetT on first render
           for (const ds of dotMap.values()) {
             ds.displayT = ds.targetT
@@ -310,22 +449,63 @@ export function TrackCanvas() {
         // t-lerp ticker: lerp in arc-length fraction space, handles wrap-around cleanly
         app.ticker.add(() => {
           if (!arcTable || !transform) return
+          frameCounter++
+
+          const currentWeather = useRaceStore.getState().raceState?.weatherState ?? 'DRY'
+          const cars = useRaceStore.getState().raceState?.cars
+          const leaderId = cars ? [...cars].sort((a, b) => a.position - b.position)[0]?.driverId : undefined
+
           for (const ds of dotMap.values()) {
             ds.displayT = lerpT(ds.displayT, ds.targetT, 0.12)
             const [wx, wy] = transform(sampleAt(arcTable, ds.displayT))
             ds.gfx.x = wx
             ds.gfx.y = wy
 
-            // Draw tapering trail for player car
-            if (ds.trail) {
+            // Trail: player always gets the teal identity trail; the current
+            // race leader gets a light wet-spray trail in DAMP/WET (R4) —
+            // "strongest for the leader in clean air".
+            const isLeaderSpray = !ds.isPlayer && ds.driverId === leaderId && currentWeather !== 'DRY' && !reducedMotion
+            if (ds.isPlayer || isLeaderSpray) {
               ds.trail.clear()
-              const TRAIL_STEPS = 8
+              const TRAIL_STEPS = ds.isPlayer ? 8 : 5
+              const color = ds.isPlayer ? 0x00E5D0 : 0x9AD8FF
+              const maxAlpha = ds.isPlayer ? 0.5 : 0.3
               for (let i = 1; i <= TRAIL_STEPS; i++) {
                 const tBack = ((ds.displayT - i * 0.006) % 1 + 1) % 1
                 const [tx, ty] = transform(sampleAt(arcTable, tBack))
-                const alpha = (1 - i / TRAIL_STEPS) * 0.5
+                const alpha = (1 - i / TRAIL_STEPS) * maxAlpha
                 const r = 3 * (1 - i / TRAIL_STEPS)
-                ds.trail.circle(tx, ty, Math.max(0.5, r)).fill({ color: 0x00E5D0, alpha })
+                ds.trail.circle(tx, ty, Math.max(0.5, r)).fill({ color, alpha })
+              }
+            } else {
+              ds.trail.clear()
+            }
+
+            // R6: overtake flash — a brief bright pulse ring on both cars involved
+            const flashEnd = flashExpiry.get(ds.driverId)
+            ds.flashGfx.clear()
+            if (flashEnd !== undefined && frameCounter < flashEnd) {
+              const remaining = (flashEnd - frameCounter) / FLASH_DURATION_FRAMES
+              const radius = 6 + (1 - remaining) * 10
+              ds.flashGfx.circle(wx, wy, radius).stroke({ color: 0xFFD866, width: 2, alpha: remaining * 0.9 })
+            } else if (flashEnd !== undefined) {
+              flashExpiry.delete(ds.driverId)
+            }
+          }
+
+          // R4: falling rain, pooled and capped — skipped entirely for reduced motion
+          if (!reducedMotion) {
+            const activeCount = rainDropCount(currentWeather)
+            rainGfx.clear()
+            if (activeCount > 0) {
+              for (let i = 0; i < activeCount; i++) {
+                const drop = rainPool[i]!
+                drop.y += drop.speed
+                drop.x += drop.drift
+                if (drop.y > ch) { drop.y = -drop.len; drop.x = Math.random() * cw }
+                if (drop.x < 0) drop.x = cw
+                rainGfx.moveTo(drop.x, drop.y).lineTo(drop.x + drop.drift * 2, drop.y + drop.len)
+                  .stroke({ color: 0x9AD8FF, width: 1, alpha: 0.35 })
               }
             }
           }
@@ -335,6 +515,22 @@ export function TrackCanvas() {
           if (!alive || !arcTable || !transform) return
           if (state.raceState && state.config) {
             updateCars(app, dotMap, arcTable, transform, state.raceState, state.config)
+
+            if (state.raceState.weatherState !== lastWeather || lastAtmosphere !== atmosphere) {
+              redrawAtmosphere(state.raceState.weatherState)
+            }
+
+            drawRubberLine(rubberGfx, arcTable, transform, state.raceState.trackEvolutionLaps / Math.max(1, state.config.tuning.trackEvolution.decayLaps))
+
+            const newCount = state.raceState.overtakeEvents.length
+            if (newCount > prevOvertakeCount) {
+              for (let i = prevOvertakeCount; i < newCount; i++) {
+                const ev = state.raceState.overtakeEvents[i]!
+                flashExpiry.set(ev.overtakerId, frameCounter + FLASH_DURATION_FRAMES)
+                flashExpiry.set(ev.overtakenId, frameCounter + FLASH_DURATION_FRAMES)
+              }
+            }
+            prevOvertakeCount = newCount
           }
         })
       })

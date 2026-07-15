@@ -11,7 +11,8 @@
       "rainProbability": 0.25, "weatherBias": "showery",
       "trackPath": "paths/bengaluru.json",
       "characterNote": "Short, tight, technical city circuit. Many laps, hard to pass, driver-dominated.",
-      "funFacts": ["Tightest sequence of corners on the calendar", "Track position is everything — overtaking is rare", "Warm evenings keep tyre temps high"]
+      "funFacts": ["Tightest sequence of corners on the calendar", "Track position is everything — overtaking is rare", "Warm evenings keep tyre temps high"],
+      "atmosphere": "dusk"
     },
     "monsoon_bay": {
       "name": "Monsoon Bay GP", "location": "Kuala Lumpur, Malaysia", "flag": "🇲🇾",
@@ -24,7 +25,8 @@
       "rainProbability": 0.75, "weatherBias": "stormy",
       "trackPath": "paths/monsoon_bay.json",
       "characterNote": "Tropical circuit infamous for sudden downpours. Weather and wet-tyre gambles decide races.",
-      "funFacts": ["Highest rain chance on the calendar", "Storms can arrive within a single lap", "Brutal humidity — drivers lose fluids fast"]
+      "funFacts": ["Highest rain chance on the calendar", "Storms can arrive within a single lap", "Brutal humidity — drivers lose fluids fast"],
+      "atmosphere": "storm"
     },
     "veloce": {
       "name": "Veloce GP", "location": "Monza, Italy", "flag": "🇮🇹",
@@ -37,7 +39,8 @@
       "rainProbability": 0.20, "weatherBias": "stable",
       "trackPath": "paths/veloce.json",
       "characterNote": "Temple of speed. Long straights, easy overtaking, rewards raw engine power. Low pit loss.",
-      "funFacts": ["Highest top speeds of the season", "Lowest-downforce setups used here", "Slipstream battles make for thrilling finishes"]
+      "funFacts": ["Highest top speeds of the season", "Lowest-downforce setups used here", "Slipstream battles make for thrilling finishes"],
+      "atmosphere": "day"
     },
     "harbour_lights": {
       "name": "Harbour Lights GP", "location": "Monaco-style coastal city", "flag": "🇲🇨",
@@ -50,7 +53,8 @@
       "rainProbability": 0.30, "weatherBias": "showery",
       "trackPath": "paths/harbour_lights.json",
       "characterNote": "Legendary street circuit. Almost impossible to overtake — qualifying and track position are king. Most laps on the calendar.",
-      "funFacts": ["Barriers line every corner — no room for error", "Overtaking is nearly impossible", "A driver's circuit above all others"]
+      "funFacts": ["Barriers line every corner — no room for error", "Overtaking is nearly impossible", "A driver's circuit above all others"],
+      "atmosphere": "night"
     },
     "sol_desert": {
       "name": "Sol Desert GP", "location": "Manama, Bahrain", "flag": "🇧🇭",
@@ -63,7 +67,8 @@
       "rainProbability": 0.05, "weatherBias": "stable",
       "trackPath": "paths/sol_desert.json",
       "characterNote": "Scorching desert night race. Extreme heat shreds tyres — degradation is the dominant strategic factor.",
-      "funFacts": ["Hottest track temperatures of the year", "Tyre wear is punishing — multi-stop strategies common", "Run under floodlights to escape the daytime heat"]
+      "funFacts": ["Hottest track temperatures of the year", "Tyre wear is punishing — multi-stop strategies common", "Run under floodlights to escape the daytime heat"],
+      "atmosphere": "desert_night"
     },
     "highland": {
       "name": "Highland GP", "location": "Spielberg, Austria", "flag": "🇦🇹",
@@ -76,7 +81,8 @@
       "rainProbability": 0.40, "weatherBias": "showery",
       "trackPath": "paths/highland.json",
       "characterNote": "Short, fast lap nestled in the mountains. Quick laps mean many of them; elevation and weather add spice.",
-      "funFacts": ["Largest elevation changes on the calendar", "Mountain weather is famously unpredictable", "One of the shortest laps — completed in under 70 seconds"]
+      "funFacts": ["Largest elevation changes on the calendar", "Mountain weather is famously unpredictable", "One of the shortest laps — completed in under 70 seconds"],
+      "atmosphere": "day"
     },
     "grand_savane": {
       "name": "Grand Savane GP", "location": "near Johannesburg, South Africa", "flag": "🇿🇦",
@@ -89,7 +95,8 @@
       "rainProbability": 0.20, "weatherBias": "stable",
       "trackPath": "paths/grand_savane.json",
       "characterNote": "Long, flowing high-altitude circuit. Big lap, high pit loss makes the stop decision costly. Balanced challenge.",
-      "funFacts": ["Highest-altitude race — thinner air affects engines", "Long lap rewards a well-balanced car", "Costly pit lane makes every stop a big commitment"]
+      "funFacts": ["Highest-altitude race — thinner air affects engines", "Long lap rewards a well-balanced car", "Costly pit lane makes every stop a big commitment"],
+      "atmosphere": "dusk"
     },
     "aurora": {
       "name": "Aurora GP", "location": "near Helsinki, Finland", "flag": "🇫🇮",
@@ -102,7 +109,8 @@
       "rainProbability": 0.45, "weatherBias": "showery",
       "trackPath": "paths/aurora.json",
       "characterNote": "Cool northern circuit, flowing and fast. Lower temps are gentle on tyres but cold tyres are tricky to switch on.",
-      "funFacts": ["Coolest track temperatures of the season", "Tyre warm-up is a real challenge here", "Long northern dusk makes for a stunning backdrop"]
+      "funFacts": ["Coolest track temperatures of the season", "Tyre warm-up is a real challenge here", "Long northern dusk makes for a stunning backdrop"],
+      "atmosphere": "northern_dusk"
     }
   }
 }
