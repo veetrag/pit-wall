@@ -31,6 +31,7 @@ export function initRace(config: RaceConfig): RaceState {
       isPlayer,
       tyreAllocation: consumeTyreSet({ ...baseAllocation }, strategy.startCompound),
       compoundsUsed: [strategy.startCompound],
+      lapsInDirtyAir: 0,
     }
   })
 
@@ -93,11 +94,25 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const lapCompleted = sector === 2
   const newLap = lapCompleted ? state.lap + 1 : state.lap
 
+  // Dirty air: a car held within gapThreshold of the car ahead across a whole
+  // lap counts as a lap "stuck in traffic" — checked against the post-overtake
+  // running order so a successful pass this lap resets the follower's count.
+  const dirtyAirSorted = [...afterOvertakes].sort((a, b) => a.raceTime - b.raceTime)
+  const inDirtyAir = new Set<string>()
+  for (let i = 1; i < dirtyAirSorted.length; i++) {
+    const car = dirtyAirSorted[i]!
+    const ahead = dirtyAirSorted[i - 1]!
+    if (car.raceTime - ahead.raceTime <= config.tuning.traffic.gapThreshold) {
+      inDirtyAir.add(car.driverId)
+    }
+  }
+
   const finalCars: CarState[] = afterOvertakes.map(car => {
     let updated = { ...car }
     if (lapCompleted) {
       updated.tyreAge += 1
       updated.lap += 1
+      updated.lapsInDirtyAir = inDirtyAir.has(car.driverId) ? car.lapsInDirtyAir + 1 : 0
       if (!updated.isPlayer) {
         // Build a state view for the AI decision (current positions, new lap)
         const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes }
@@ -235,9 +250,16 @@ function calculatePaceAdvantage(config: RaceConfig, faster: CarState, slower: Ca
   const driverAdv = (slowerDriverSkill - fasterDriverSkill) * config.tuning.driverPerformance.deltaPerSkill
 
   // Tyre freshness: fresher tyres on the faster car add pace advantage (saturates at 15-lap diff)
-  // Pace mode is intentionally excluded — it's already captured in raceTime gap (lap model handles it)
   const tyreAgeDiff = slower.tyreAge - faster.tyreAge
   const freshnessAdv = config.tuning.overtaking.tyreFreshnessBonusMax * Math.max(0, tyreAgeDiff) / 15
 
-  return Math.max(0, carAdv + driverAdv + freshnessAdv)
+  // Pace mode: an attacker on PUSH vs. a defender on NEUTRAL/CONSERVE gains a
+  // real overtake-probability edge, on top of whatever raceTime gap it already
+  // bought them — paceDelta is negative for PUSH (faster), so the attacker's
+  // more-negative delta minus the defender's produces a positive advantage.
+  const paceModeAdv =
+    (config.tuning.paceModes[slower.paceMode].paceDelta - config.tuning.paceModes[faster.paceMode].paceDelta) *
+    config.tuning.overtaking.paceModeFactor
+
+  return Math.max(0, carAdv + driverAdv + freshnessAdv + paceModeAdv)
 }

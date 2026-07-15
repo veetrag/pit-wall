@@ -18,7 +18,7 @@ export function tyreCliffFraction(spec: CompoundSpec, ageLaps: number): number {
 // gauge, radio warnings) must use it too, or a car can look fine on the gauge
 // while it's already well past its real cliff (e.g. wet tyres on a dry track).
 export function effectiveTyreAge(
-  car: Pick<CarState, 'tyreAge' | 'paceMode' | 'compound'>,
+  car: Pick<CarState, 'tyreAge' | 'paceMode' | 'compound' | 'lapsInDirtyAir'>,
   driver: Pick<DriverSpec, 'facets'>,
   weatherState: WeatherState,
   tuning: TuningConstants,
@@ -27,7 +27,12 @@ export function effectiveTyreAge(
   const wetDegKey = car.compound === 'I' ? 'inter' : car.compound === 'W' ? 'wet' : null
   const wetDegMult = wetDegKey ? (tuning.weather.wetDegMultiplier[wetDegKey]?.[weatherState] ?? 1.0) : 1.0
   const tyreManagementFactor = 1 - (driver.facets.tyreManagement / 100) * tuning.tyreManagement.degReliefFactor
-  return car.tyreAge * tyreManagementFactor * paceDegMultiplier * wetDegMult
+  // Dirty air: sitting in another car's wake for consecutive laps cooks tyres
+  // slightly faster (real-world overheating from turbulent air), capped so it
+  // doesn't runaway for a car stuck in traffic for the whole race.
+  const cappedDirtyAirLaps = Math.min(car.lapsInDirtyAir, tuning.traffic.dirtyAirDegCapLaps)
+  const dirtyAirMult = 1 + cappedDirtyAirLaps * tuning.traffic.dirtyAirDegBonus
+  return car.tyreAge * tyreManagementFactor * paceDegMultiplier * wetDegMult * dirtyAirMult
 }
 
 // Effectively-infinite sets — used when a RaceConfig doesn't specify

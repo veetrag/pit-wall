@@ -21,7 +21,7 @@ export interface TuningConstants {
   fuel: { effectPerLap: number }
   noise: { sigmaPerSector: number; consistencyReliefFactor: number }
   trackEvolution: { startDelta: number; decayLaps: number }
-  traffic: { gapThreshold: number; penalty: number; trafficCap: number }
+  traffic: { gapThreshold: number; penalty: number; trafficCap: number; dirtyAirDegBonus: number; dirtyAirDegCapLaps: number }
   overtaking: {
     base: number
     paceGateMin: number
@@ -30,6 +30,7 @@ export interface TuningConstants {
     attackRacecraftBase: number
     defenceRacecraftFactor: number
     tyreFreshnessBonusMax: number
+    paceModeFactor: number
   }
   pit: {
     laneTimeLoss: number
@@ -159,6 +160,7 @@ export interface CarState {
   isPlayer: boolean
   tyreAllocation: TyreAllocation
   compoundsUsed: Compound[]
+  lapsInDirtyAir: number
 }
 
 export interface SectorResult {

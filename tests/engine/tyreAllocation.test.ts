@@ -113,6 +113,7 @@ function makeCarAt(overrides: Partial<CarState> & { driverId: string; teamId: st
     strategy: { teamId: overrides.teamId, startCompound: 'M', plannedStops: [], brain: 'naive' },
     isPlayer: false,
     tyreAllocation: { S: 4, M: 4, H: 4, I: 3, W: 3 },
+    lapsInDirtyAir: 0,
     ...overrides,
   }
 }
