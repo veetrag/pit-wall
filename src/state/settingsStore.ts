@@ -3,6 +3,7 @@ import { Preferences } from '@capacitor/preferences'
 
 export type SimSpeed = 1 | 2 | 4
 export type Difficulty = 'rookie' | 'pro'
+export type DriverNameFormat = 'code' | 'full'
 
 export interface SettingsState {
   soundEnabled: boolean
@@ -12,6 +13,7 @@ export interface SettingsState {
   proMode: boolean
   skipStartSequence: boolean
   difficulty: Difficulty
+  driverNameFormat: DriverNameFormat
   setSoundEnabled: (v: boolean) => void
   setHapticsEnabled: (v: boolean) => void
   setReducedMotion: (v: boolean) => void
@@ -19,6 +21,7 @@ export interface SettingsState {
   setProMode: (v: boolean) => void
   setSkipStartSequence: (v: boolean) => void
   setDifficulty: (v: Difficulty) => void
+  setDriverNameFormat: (v: DriverNameFormat) => void
   loadSettings: () => Promise<void>
 }
 
@@ -30,6 +33,7 @@ const K = {
   proMode: 'settings.proMode',
   skipStart: 'settings.skipStart',
   difficulty: 'settings.difficulty',
+  driverNameFormat: 'settings.driverNameFormat',
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -40,6 +44,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   proMode: false,
   skipStartSequence: false,
   difficulty: 'rookie',
+  driverNameFormat: 'code',
 
   setSoundEnabled(v) { set({ soundEnabled: v }); void Preferences.set({ key: K.sound, value: String(v) }) },
   setHapticsEnabled(v) { set({ hapticsEnabled: v }); void Preferences.set({ key: K.haptics, value: String(v) }) },
@@ -48,11 +53,12 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setProMode(v) { set({ proMode: v }); void Preferences.set({ key: K.proMode, value: String(v) }) },
   setSkipStartSequence(v) { set({ skipStartSequence: v }); void Preferences.set({ key: K.skipStart, value: String(v) }) },
   setDifficulty(v) { set({ difficulty: v }); void Preferences.set({ key: K.difficulty, value: v }) },
+  setDriverNameFormat(v) { set({ driverNameFormat: v }); void Preferences.set({ key: K.driverNameFormat, value: v }) },
 
   async loadSettings() {
     const keys = Object.values(K)
     const results = await Promise.all(keys.map(k => Preferences.get({ key: k })))
-    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty] = results.map(r => r.value)
+    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty, driverNameFormat] = results.map(r => r.value)
     set({
       soundEnabled:      sound     != null ? sound     === 'true' : true,
       hapticsEnabled:    haptics   != null ? haptics   === 'true' : true,
@@ -61,6 +67,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       proMode:           proMode   != null ? proMode   === 'true' : false,
       skipStartSequence: skipStart != null ? skipStart === 'true' : false,
       difficulty:        difficulty === 'pro' ? 'pro' : 'rookie',
+      driverNameFormat:  driverNameFormat === 'full' ? 'full' : 'code',
     })
   },
 }))

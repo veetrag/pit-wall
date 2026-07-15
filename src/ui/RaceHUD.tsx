@@ -162,17 +162,26 @@ export function RaceHUD() {
             {/* HUD alert slot — 0px collapsed / 44px active */}
             {(phase === 'racing' || phase === 'starting') && <HudAlert />}
 
-            {/* Track canvas — 160px */}
+            {/* Track section — labelled for consistency with the other panels */}
             <div style={{
-              height: 160, flexShrink: 0,
-              margin: '8px 8px 0',
+              flexShrink: 0, margin: '8px 8px 0',
+              background: 'var(--bg-panel)', border: '1px solid var(--line-hair)',
               borderRadius: 8, overflow: 'hidden',
-              background: 'var(--bg-deep)', position: 'relative',
             }}>
-              <PitTimer />
-              <CanvasBoundary>
-                <TrackCanvas />
-              </CanvasBoundary>
+              <div style={{
+                padding: '6px 10px 4px',
+                fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
+                color: 'var(--text-dim)', letterSpacing: '0.12em',
+                borderBottom: '1px solid var(--line-hair)',
+              }}>
+                TRACK
+              </div>
+              <div style={{ height: 160, position: 'relative', background: 'var(--bg-deep)' }}>
+                <PitTimer />
+                <CanvasBoundary>
+                  <TrackCanvas />
+                </CanvasBoundary>
+              </div>
             </div>
 
             {/* Telemetry zone — 130px */}
@@ -182,7 +191,7 @@ export function RaceHUD() {
               </div>
             )}
 
-            {/* Timing tower — compact context window by default, tap to expand */}
+            {/* Timing tower — full field by default, NEARBY toggle for a tighter context window */}
             <div style={{
               flex: 1, overflow: 'hidden',
               margin: '6px 8px 0', minHeight: 0,
