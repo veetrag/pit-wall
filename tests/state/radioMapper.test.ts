@@ -19,6 +19,11 @@ const TUNING: TuningConstants = {
   projection: { horizonLaps: 4, useOvertakeRolls: false, netEstimateHorizonLaps: 12 },
   incidents: { dnfPerLap: 0.0, driverErrorPerLap: 0.0 },
   tyreManagement: { degReliefFactor: 0.25 },
+  tyreRules: {
+    allocation: { rookie: { S: 4, M: 4, H: 4, I: 3, W: 3 }, pro: { S: 2, M: 2, H: 2, I: 2, W: 2 } },
+    mandatoryTwoCompound: { rookie: false, pro: true },
+    twoCompoundPenaltySec: 30.0,
+  },
   strategyReaction: {
     coverUndercutEnabled: true, coverWindowGap: 1.5,
     coverReactionProb: { optimal: 0.85, smart: 0.45, naive: 0.0 },
@@ -66,6 +71,7 @@ function makeCar(overrides: Partial<CarState> = {}): CarState {
     sector: 0, compound: 'M', tyreAge: 3, paceMode: 'neutral', pitted: false,
     pitsDone: 0, strategy: { teamId: 't1', startCompound: 'M', plannedStops: [] },
     isPlayer: true,
+    tyreAllocation: { S: 4, M: 4, H: 4, I: 3, W: 3 }, compoundsUsed: ['M'],
     ...overrides,
   }
 }

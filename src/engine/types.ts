@@ -1,4 +1,5 @@
 export type Compound = 'S' | 'M' | 'H' | 'I' | 'W'
+export type TyreAllocation = Record<Compound, number>
 export type PaceMode = 'push' | 'neutral' | 'conserve'
 export type SectorIndex = 0 | 1 | 2
 export type WeatherState = 'DRY' | 'DAMP' | 'WET'
@@ -65,6 +66,11 @@ export interface TuningConstants {
       maxDuration: number
       intensityBias: Record<string, number>
     }
+  }
+  tyreRules: {
+    allocation: { rookie: TyreAllocation; pro: TyreAllocation }
+    mandatoryTwoCompound: { rookie: boolean; pro: boolean }
+    twoCompoundPenaltySec: number
   }
   _regressionBands?: Record<string, unknown>
 }
@@ -151,6 +157,8 @@ export interface CarState {
   pitsDone: number
   strategy: StrategyPlan
   isPlayer: boolean
+  tyreAllocation: TyreAllocation
+  compoundsUsed: Compound[]
 }
 
 export interface SectorResult {
@@ -203,4 +211,10 @@ export interface RaceConfig {
   // at Race Setup. Only applies to the car whose driverId === playerDriverId —
   // teammates and rivals keep whatever `strategies` assigns them.
   playerStrategyOverride?: StrategyPlan
+  // Resolved per-difficulty by the caller (mirrors how brains are resolved in
+  // raceStore's buildConfig) — the engine itself is difficulty-agnostic. If
+  // absent, tyre sets are treated as unlimited (back-compat for configs that
+  // don't care about allocation).
+  tyreAllocationBase?: TyreAllocation
+  mandatoryTwoCompound?: boolean
 }

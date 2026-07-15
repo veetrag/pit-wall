@@ -30,6 +30,14 @@ const TuningSchema = z.object({
     conserve: z.object({ paceDelta: z.number(), degMultiplier: z.number() }),
   }),
   tyreManagement: z.object({ degReliefFactor: z.number() }),
+  tyreRules: z.object({
+    allocation: z.object({
+      rookie: z.object({ S: z.number(), M: z.number(), H: z.number(), I: z.number(), W: z.number() }),
+      pro: z.object({ S: z.number(), M: z.number(), H: z.number(), I: z.number(), W: z.number() }),
+    }),
+    mandatoryTwoCompound: z.object({ rookie: z.boolean(), pro: z.boolean() }),
+    twoCompoundPenaltySec: z.number(),
+  }),
   strategyReaction: z.object({
     coverUndercutEnabled: z.boolean(),
     coverWindowGap: z.number(),

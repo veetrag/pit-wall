@@ -1,5 +1,5 @@
 import type { RaceConfig, CarState, RaceState, Compound, WeatherState, PaceMode } from './types'
-import { tyreCliffFraction, effectiveTyreAge } from './tyres'
+import { tyreCliffFraction, effectiveTyreAge, resolveAllocatedCompound } from './tyres'
 import { createRng, type Rng } from './rng'
 
 const CLIFF_EMERGENCY_THRESHOLD = 1.5
@@ -8,6 +8,16 @@ export type AIDecision = {
   pit: boolean
   compound: Compound
   paceMode: PaceMode
+}
+
+// Every pit:true exit point routes through here so no AI decision can ever
+// request a compound with zero sets left — reroutes to the nearest available
+// compound in the same family, or forces pit:false if literally nothing
+// remains (spec: "keep current tyres").
+function pitWith(car: CarState, compound: Compound, paceMode: PaceMode): AIDecision {
+  const resolved = resolveAllocatedCompound(compound, car.tyreAllocation)
+  if (!resolved) return { pit: false, compound: car.compound, paceMode: 'neutral' }
+  return { pit: true, compound: resolved, paceMode }
 }
 
 function weatherPit(car: CarState, weatherState: WeatherState, config: RaceConfig): AIDecision | null {
@@ -36,7 +46,7 @@ export function aiDecision(
 
   // Weather emergency — all brains react
   const wPit = weatherPit(car, weatherState, config)
-  if (wPit) return wPit
+  if (wPit) return pitWith(car, wPit.compound, wPit.paceMode)
 
   const spec = config.compounds[car.compound]
   const driver = config.drivers.find(d => d.id === car.driverId)!
@@ -49,10 +59,10 @@ export function aiDecision(
   if (brain === 'naive') {
     if (cliffFrac >= CLIFF_EMERGENCY_THRESHOLD) {
       const fallback: Compound = car.compound === 'S' ? 'M' : 'H'
-      return { pit: true, compound: nextStop?.compound ?? fallback, paceMode: 'neutral' }
+      return pitWith(car, nextStop?.compound ?? fallback, 'neutral')
     }
     if (nextStop && car.lap >= nextStop.lap) {
-      return { pit: true, compound: nextStop.compound, paceMode: 'neutral' }
+      return pitWith(car, nextStop.compound, 'neutral')
     }
     return { pit: false, compound: car.compound, paceMode: 'neutral' }
   }
@@ -62,7 +72,7 @@ export function aiDecision(
   // Emergency cliff
   if (cliffFrac >= CLIFF_EMERGENCY_THRESHOLD) {
     const fallback: Compound = car.compound === 'S' ? 'M' : 'H'
-    return { pit: true, compound: nextStop?.compound ?? bestDryCompound(config, remainingLaps), paceMode: 'push' }
+    return pitWith(car, nextStop?.compound ?? bestDryCompound(config, remainingLaps), 'push')
   }
 
   // Pit when tyre is near the real cliff (not buffered by tyreManagement)
@@ -70,7 +80,7 @@ export function aiDecision(
   const pitThreshold = brain === 'optimal' ? 0.94 : 0.90
   if (cliffFrac >= pitThreshold && remainingLaps > 3) {
     const compound = nextStop?.compound ?? bestDryCompound(config, remainingLaps)
-    return { pit: true, compound, paceMode: 'neutral' }
+    return pitWith(car, compound, 'neutral')
   }
 
   // OPTIMAL: cover an undercut — a car just behind has pitted onto fresh tyres
@@ -86,7 +96,7 @@ export function aiDecision(
         const prob = r.coverReactionProb[brain] ?? 0
         if (rng() < prob) {
           const compound = nextStop?.compound ?? bestDryCompound(config, remainingLaps)
-          return { pit: true, compound, paceMode: 'push' } // push the out-lap to defend
+          return pitWith(car, compound, 'push') // push the out-lap to defend
         }
       }
     }
@@ -107,7 +117,7 @@ export function aiDecision(
             ahead.tyreAge <= car.tyreAge + 2 && // car ahead not meaningfully fresher
             remainingLaps > 8) {
           const compound = nextStop?.compound ?? bestDryCompound(config, remainingLaps)
-          return { pit: true, compound, paceMode: 'neutral' }
+          return pitWith(car, compound, 'neutral')
         }
       }
     }
@@ -116,7 +126,7 @@ export function aiDecision(
   // Planned stop
   if (nextStop && car.lap >= nextStop.lap) {
     const paceMode: PaceMode = cliffFrac < 0.20 ? 'push' : 'neutral'
-    return { pit: true, compound: nextStop.compound, paceMode }
+    return pitWith(car, nextStop.compound, paceMode)
   }
 
   // Pace mode: push on fresh tyres, neutral otherwise.

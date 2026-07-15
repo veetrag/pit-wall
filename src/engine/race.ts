@@ -4,6 +4,7 @@ import { createRng, gaussianPair } from './rng'
 import { computeSectorTime } from './lapModel'
 import { generateWeatherTimeline } from './weather'
 import { aiDecision } from './strategy'
+import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet } from './tyres'
 
 export function initRace(config: RaceConfig): RaceState {
   const cars: CarState[] = config.drivers.map((driver, i) => {
@@ -13,6 +14,7 @@ export function initRace(config: RaceConfig): RaceState {
       : config.strategies.find(s => s.teamId === driver.teamId) ?? {
           teamId: driver.teamId, startCompound: 'M' as const, plannedStops: [],
         }
+    const baseAllocation = config.tyreAllocationBase ?? UNLIMITED_TYRE_ALLOCATION
     return {
       driverId: driver.id,
       teamId: driver.teamId,
@@ -27,6 +29,8 @@ export function initRace(config: RaceConfig): RaceState {
       pitsDone: 0,
       strategy,
       isPlayer,
+      tyreAllocation: consumeTyreSet({ ...baseAllocation }, strategy.startCompound),
+      compoundsUsed: [strategy.startCompound],
     }
   })
 
@@ -114,6 +118,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
             compound: decision.compound,
             tyreAge: 0,
             pitsDone: updated.pitsDone + 1,
+            tyreAllocation: consumeTyreSet(updated.tyreAllocation, decision.compound),
+            compoundsUsed: [...updated.compoundsUsed, decision.compound],
           }
         }
       }
@@ -121,8 +127,23 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     return updated
   })
 
+  // Two-compound rule: apply the penalty at the exact tick the race ends, so
+  // it's baked into raceTime before the final classification sort below.
+  const isRaceEnd = lapCompleted && newLap >= state.totalLaps
+  const carsBeforeSort = isRaceEnd && config.mandatoryTwoCompound
+    ? finalCars.map(car => {
+        const usedWet = car.compoundsUsed.some(c => c === 'I' || c === 'W')
+        if (usedWet) return car // wet-affected races are exempt, matches real regs
+        const distinctDry = new Set(car.compoundsUsed).size
+        if (distinctDry < 2) {
+          return { ...car, raceTime: car.raceTime + config.tuning.tyreRules.twoCompoundPenaltySec }
+        }
+        return car
+      })
+    : finalCars
+
   // Re-sort and assign positions
-  const resorted = [...finalCars].sort((a, b) => a.raceTime - b.raceTime)
+  const resorted = [...carsBeforeSort].sort((a, b) => a.raceTime - b.raceTime)
   const positioned = resorted.map((car, idx) => ({ ...car, position: idx + 1 }))
 
   // Advance weather on lap change

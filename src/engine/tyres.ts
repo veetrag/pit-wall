@@ -1,4 +1,4 @@
-import type { CarState, CompoundSpec, DriverSpec, TuningConstants, WeatherState } from './types'
+import type { CarState, Compound, CompoundSpec, DriverSpec, TuningConstants, TyreAllocation, WeatherState } from './types'
 
 // Formula: offset + lin*age + pen * max(0, age - cliff)^2
 export function tyreDelta(spec: CompoundSpec, ageLaps: number): number {
@@ -28,4 +28,35 @@ export function effectiveTyreAge(
   const wetDegMult = wetDegKey ? (tuning.weather.wetDegMultiplier[wetDegKey]?.[weatherState] ?? 1.0) : 1.0
   const tyreManagementFactor = 1 - (driver.facets.tyreManagement / 100) * tuning.tyreManagement.degReliefFactor
   return car.tyreAge * tyreManagementFactor * paceDegMultiplier * wetDegMult
+}
+
+// Effectively-infinite sets — used when a RaceConfig doesn't specify
+// tyreAllocationBase (back-compat: configs that don't care about M3 scarcity).
+export const UNLIMITED_TYRE_ALLOCATION: TyreAllocation = { S: 999, M: 999, H: 999, I: 999, W: 999 }
+
+// Nearest-available fallback order per requested compound, within the same
+// family (dry stays dry, wet stays wet) — spec: "pick the nearest available
+// dry compound (S↔M↔H)".
+const COMPOUND_FALLBACK_ORDER: Record<Compound, Compound[]> = {
+  S: ['S', 'M', 'H'],
+  M: ['M', 'H', 'S'],
+  H: ['H', 'M', 'S'],
+  I: ['I', 'W'],
+  W: ['W', 'I'],
+}
+
+// Returns the requested compound if sets remain, else the nearest available
+// compound in the same family, else null if literally nothing is left.
+export function resolveAllocatedCompound(
+  requested: Compound,
+  allocation: TyreAllocation,
+): Compound | null {
+  for (const c of COMPOUND_FALLBACK_ORDER[requested]) {
+    if ((allocation[c] ?? 0) > 0) return c
+  }
+  return null
+}
+
+export function consumeTyreSet(allocation: TyreAllocation, compound: Compound): TyreAllocation {
+  return { ...allocation, [compound]: Math.max(0, (allocation[compound] ?? 0) - 1) }
 }

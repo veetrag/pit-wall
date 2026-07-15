@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { loadGameData } from '@data/validators'
 import {
-  initRace, stepSector, projectPitNow,
+  initRace, stepSector, projectPitNow, resolveAllocatedCompound, consumeTyreSet,
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult, type StrategyBrain,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
@@ -89,6 +89,8 @@ function buildConfig(
     playerDriverId,
     seed,
     playerStrategyOverride,
+    tyreAllocationBase: data.tuning.tyreRules.allocation[difficulty],
+    mandatoryTwoCompound: data.tuning.tyreRules.mandatoryTwoCompound[difficulty],
   }
 }
 
@@ -158,12 +160,33 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   pitNow(compound: Compound) {
     const { config, raceState, rng } = get()
     if (!config || !raceState || !rng) return
+    const player = raceState.cars.find(c => c.isPlayer)
+    if (!player) return
+
+    const resolved = resolveAllocatedCompound(compound, player.tyreAllocation)
+    if (!resolved) {
+      const id = `alert-${++alertCounter}`
+      set(s => ({
+        pitPanelOpen: false,
+        hudAlerts: [...s.hudAlerts, { id, severity: 'urgent' as const, category: 'RADIO', message: 'No tyres left of any type. Staying out.', icon: '⚠️' }],
+      }))
+      return
+    }
+
     const { laneTimeLoss, stopMean, stopSigma } = config.tuning.pit
     const stopTime = laneTimeLoss + stopMean + (rng() - 0.5) * 2 * stopSigma
 
     const updatedCars = raceState.cars.map(car => {
       if (!car.isPlayer) return car
-      return { ...car, raceTime: car.raceTime + stopTime, compound, tyreAge: 0, pitsDone: car.pitsDone + 1 }
+      return {
+        ...car,
+        raceTime: car.raceTime + stopTime,
+        compound: resolved,
+        tyreAge: 0,
+        pitsDone: car.pitsDone + 1,
+        tyreAllocation: consumeTyreSet(car.tyreAllocation, resolved),
+        compoundsUsed: [...car.compoundsUsed, resolved],
+      }
     })
     const playerTime = updatedCars.find(c => c.isPlayer)?.raceTime ?? 0
     const id = `alert-${++alertCounter}`
