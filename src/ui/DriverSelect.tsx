@@ -37,10 +37,10 @@ function gridNumber(driverId: string): number {
 }
 
 const FACET_LABELS: [keyof DriverFacets, string][] = [
-  ['pace',           'PCE'],
-  ['racecraft',      'RCE'],
-  ['tyreManagement', 'TYR'],
-  ['consistency',    'CON'],
+  ['pace',           'PACE'],
+  ['racecraft',      'RACECRAFT'],
+  ['tyreManagement', 'TYRE MGMT'],
+  ['consistency',    'CONSISTENCY'],
 ]
 
 export function DriverSelect() {
@@ -157,21 +157,23 @@ export function DriverSelect() {
                     </span>
                   </div>
 
-                  {/* Facet mini-bars */}
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  {/* Facet stats — 2x2 grid, not a single lined-up bar strip */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 14, rowGap: 6 }}>
                     {FACET_LABELS.map(([key, label]) => {
                       const val = driver.facets[key]
                       return (
-                        <div key={key} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-dim)', letterSpacing: '0.06em' }}>{label}</span>
-                          <div style={{ height: 3, borderRadius: 1.5, background: 'var(--line-hair)', overflow: 'hidden' }}>
+                        <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.04em' }}>{label}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-mid)', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
+                          </div>
+                          <div style={{ height: 4, borderRadius: 2, background: 'var(--line-hair)', overflow: 'hidden' }}>
                             <div style={{
-                              height: '100%', borderRadius: 1.5, width: `${val}%`,
+                              height: '100%', borderRadius: 2, width: `${val}%`,
                               background: selected ? teamColor : 'var(--text-mid)',
                               transition: 'background 0.2s',
                             }} />
                           </div>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
                         </div>
                       )
                     })}
