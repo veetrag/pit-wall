@@ -73,7 +73,23 @@ export interface TuningConstants {
     mandatoryTwoCompound: { rookie: boolean; pro: boolean }
     twoCompoundPenaltySec: number
   }
+  // M5: every difficulty-sensitive lever built across M1-M4, collected into one
+  // profile so difficulty is a coordinated curve rather than scattered branches.
+  // tyreRules.allocation/mandatoryTwoCompound (M3) stay difficulty-keyed above —
+  // not duplicated here — buildConfig composes both when resolving a RaceConfig.
+  difficultyProfiles: {
+    rookie: DifficultyProfile
+    pro: DifficultyProfile
+  }
   _regressionBands?: Record<string, unknown>
+}
+
+export interface DifficultyProfile {
+  brainCap: StrategyBrain
+  brainPromote: boolean
+  coverReactionScale: number
+  aiPaceModeAggression: number
+  pitCrewConsistency: number
 }
 
 export interface CircuitSpec {
@@ -219,4 +235,9 @@ export interface RaceConfig {
   // don't care about allocation).
   tyreAllocationBase?: TyreAllocation
   mandatoryTwoCompound?: boolean
+  // M5: resolved from the active DifficultyProfile by the caller, same pattern
+  // as tyreAllocationBase above. Undefined defaults to 1.0 (no scaling) so
+  // configs built before M5 behave identically.
+  coverReactionScale?: number
+  paceModeAggression?: number
 }

@@ -39,7 +39,7 @@ function Confetti() {
 }
 
 export function RaceResult() {
-  const { lastRaceResults, lastRaceEvents, standings, playerDriverId, raceIndex, nextRace, playAgain } = useSeasonStore()
+  const { lastRaceResults, lastRaceEvents, standings, playerDriverId, raceIndex, nextRace, playAgain, retryRace } = useSeasonStore()
   const uiTap = useUiTap()
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
@@ -217,7 +217,22 @@ export function RaceResult() {
       </div>
 
       {/* Actions */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', display: 'flex', gap: 10, flexShrink: 0 }}>
+      <div style={{ padding: '12px 16px 0', flexShrink: 0 }}>
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={() => { uiTap(); retryRace() }}
+          style={{
+            width: '100%', marginBottom: 10,
+            background: 'transparent', color: 'var(--text-dim)',
+            border: '1px dashed var(--line-hair)', borderRadius: 8,
+            padding: '10px 0', fontFamily: 'var(--font-mono)', fontSize: 11,
+            letterSpacing: '0.08em', cursor: 'pointer',
+          }}
+        >
+          ↺ RETRY THIS ROUND · different conditions
+        </motion.button>
+      </div>
+      <div style={{ padding: '0 16px 12px', borderTop: '1px solid var(--line-hair)', paddingTop: 12, display: 'flex', gap: 10, flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={isSeasonEnd ? undefined : () => { uiTap(); nextRace() }}

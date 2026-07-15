@@ -24,6 +24,10 @@ const TUNING: TuningConstants = {
     mandatoryTwoCompound: { rookie: false, pro: true },
     twoCompoundPenaltySec: 30.0,
   },
+  difficultyProfiles: {
+    rookie: { brainCap: 'smart', brainPromote: false, coverReactionScale: 0.6, aiPaceModeAggression: 0.7, pitCrewConsistency: 1.0 },
+    pro: { brainCap: 'optimal', brainPromote: true, coverReactionScale: 1.0, aiPaceModeAggression: 1.3, pitCrewConsistency: 1.0 },
+  },
   strategyReaction: {
     coverUndercutEnabled: true, coverWindowGap: 1.5,
     coverReactionProb: { optimal: 0.85, smart: 0.45, naive: 0.0 },

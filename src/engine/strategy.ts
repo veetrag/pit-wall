@@ -93,7 +93,7 @@ export function aiDecision(
       const gapBehind = behind.raceTime - car.raceTime
       const behindJustPitted = behind.pitsDone > 0 && behind.tyreAge <= 1
       if (gapBehind <= r.coverWindowGap && behindJustPitted) {
-        const prob = r.coverReactionProb[brain] ?? 0
+        const prob = (r.coverReactionProb[brain] ?? 0) * (config.coverReactionScale ?? 1.0)
         if (rng() < prob) {
           const compound = nextStop?.compound ?? bestDryCompound(config, remainingLaps)
           return pitWith(car, compound, 'push') // push the out-lap to defend
@@ -123,16 +123,23 @@ export function aiDecision(
     }
   }
 
+  // M5: aiPaceModeAggression scales how readily a brain reaches for PUSH —
+  // rookie rivals attack less, pro rivals attack more, on top of the same
+  // fresh-tyre gating. Only the discretionary "push on fresh tyres" calls
+  // scale with this; the emergency-cliff push above is a necessity, not a
+  // preference, so it stays unconditional.
+  const aggression = config.paceModeAggression ?? 1.0
+
   // Planned stop
   if (nextStop && car.lap >= nextStop.lap) {
-    const paceMode: PaceMode = cliffFrac < 0.20 ? 'push' : 'neutral'
+    const paceMode: PaceMode = cliffFrac < 0.20 * aggression ? 'push' : 'neutral'
     return pitWith(car, nextStop.compound, paceMode)
   }
 
   // Pace mode: push on fresh tyres, neutral otherwise.
   // Conserve is NOT used here — it hurts when pitting dynamically (slows the car
   // but doesn't defer the pit since we pit on cliff proximity, not lap count).
-  const paceMode: PaceMode = cliffFrac < 0.18 ? 'push' : 'neutral'
+  const paceMode: PaceMode = cliffFrac < 0.18 * aggression ? 'push' : 'neutral'
 
   return { pit: false, compound: car.compound, paceMode }
 }

@@ -12,7 +12,7 @@ export type {
   RaceConfig, RaceState, CarState, SectorResult, OvertakeEvent,
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
-  TyreAllocation,
+  TyreAllocation, DifficultyProfile,
 } from './types'
 export type { ProjectionResult } from './projection'
 export type { Rng } from './rng'

@@ -6,6 +6,14 @@ import carsJson from './cars.json'
 import driversJson from './drivers.json'
 import strategiesJson from './strategies.json'
 
+const DifficultyProfileSchema = z.object({
+  brainCap: z.enum(['naive', 'smart', 'optimal']),
+  brainPromote: z.boolean(),
+  coverReactionScale: z.number(),
+  aiPaceModeAggression: z.number(),
+  pitCrewConsistency: z.number(),
+})
+
 const TuningSchema = z.object({
   carPerformance: z.object({ deltaPerRating: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
   driverPerformance: z.object({ deltaPerSkill: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
@@ -41,6 +49,10 @@ const TuningSchema = z.object({
     }),
     mandatoryTwoCompound: z.object({ rookie: z.boolean(), pro: z.boolean() }),
     twoCompoundPenaltySec: z.number(),
+  }),
+  difficultyProfiles: z.object({
+    rookie: DifficultyProfileSchema,
+    pro: DifficultyProfileSchema,
   }),
   strategyReaction: z.object({
     coverUndercutEnabled: z.boolean(),

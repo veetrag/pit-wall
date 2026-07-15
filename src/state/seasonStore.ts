@@ -65,8 +65,13 @@ interface SeasonStore {
   selectedCircuitId: string | null
   selectedTeamId: string | null
   playerStrategy: PlayerStrategyChoice | null
+  // M5: increments each time the player retries the current round without
+  // advancing — varies the seed (and therefore the weather stream, which
+  // derives from seed+999999) so a retry isn't a byte-identical replay.
+  attemptNonce: number
 
   currentSeed: () => number
+  retryRace: () => void
   currentCircuitId: () => string
   setCircuit: (id: string) => void
   viewGrid: () => void
@@ -100,9 +105,16 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   selectedCircuitId: null,
   selectedTeamId: null,
   playerStrategy: null,
+  attemptNonce: 0,
 
+  // 7919 is prime — keeps each attempt's seed stream well-separated from the
+  // next round's base seed (raceIndex*1000+42) and from other attempts.
   currentSeed() {
-    return get().raceIndex * 1000 + 42
+    return get().raceIndex * 1000 + 42 + get().attemptNonce * 7919
+  },
+
+  retryRace() {
+    set(s => ({ attemptNonce: s.attemptNonce + 1, phase: 'racing', lastRaceResults: null, lastRaceEvents: null }))
   },
 
   currentCircuitId() {
@@ -123,7 +135,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   backToDriverSelect() { set({ phase: 'driver_select' }) },
 
   startNewSeason() {
-    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null })
+    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0 })
   },
 
   selectTeam(id) { set({ selectedTeamId: id, playerDriverId: null }) },
@@ -174,12 +186,12 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       set({ phase: 'championship' })
     } else {
       const nextCircuit = CIRCUIT_ORDER[next % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
-      set({ raceIndex: next, phase: 'race_setup', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit, playerStrategy: null })
+      set({ raceIndex: next, phase: 'race_setup', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit, playerStrategy: null, attemptNonce: 0 })
     }
   },
 
   playAgain() {
-    set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null })
+    set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0 })
     void Preferences.remove({ key: SAVE_KEY })
   },
 

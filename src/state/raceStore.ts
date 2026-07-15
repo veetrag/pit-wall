@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { loadGameData } from '@data/validators'
 import {
   initRace, stepSector, projectPitNow, resolveAllocatedCompound, consumeTyreSet,
-  type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult, type StrategyBrain,
+  type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
+  type StrategyBrain, type DifficultyProfile,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
 import type { AlertMessage } from '../ui/HudAlert'
@@ -44,14 +45,15 @@ export const CIRCUIT_ORDER = [
   'monsoon_bay', 'grand_savane', 'aurora', 'harbour_lights',
 ] as const
 
-function applyBrain(baseBrain: StrategyBrain, difficulty: Difficulty): StrategyBrain {
-  if (difficulty === 'pro') {
-    if (baseBrain === 'naive') return 'smart'
-    if (baseBrain === 'smart') return 'optimal'
-    return 'optimal'
-  }
-  // rookie: cap at smart
-  return baseBrain === 'optimal' ? 'smart' : baseBrain
+const BRAIN_ORDER: StrategyBrain[] = ['naive', 'smart', 'optimal']
+
+// M5: brain mix is now one profile lookup instead of a difficulty if/else —
+// promote one step if the profile allows it, then cap at the profile's ceiling.
+function applyBrainProfile(baseBrain: StrategyBrain, profile: DifficultyProfile): StrategyBrain {
+  const baseIdx = BRAIN_ORDER.indexOf(baseBrain)
+  const capIdx = BRAIN_ORDER.indexOf(profile.brainCap)
+  const promotedIdx = profile.brainPromote ? Math.min(baseIdx + 1, BRAIN_ORDER.length - 1) : baseIdx
+  return BRAIN_ORDER[Math.min(promotedIdx, capIdx)]!
 }
 
 function buildConfig(
@@ -64,10 +66,11 @@ function buildConfig(
   const data = loadGameData()
   const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
   const laps = circuit.laps
+  const profile = data.tuning.difficultyProfiles[difficulty]
   // Scale planned pit laps proportionally to this circuit (reference: 30 laps)
   const strategies = data.strategies.defaults.map(s => ({
     ...s,
-    brain: applyBrain((s.brain ?? 'naive') as StrategyBrain, difficulty),
+    brain: applyBrainProfile((s.brain ?? 'naive') as StrategyBrain, profile),
     plannedStops: s.plannedStops.map(stop => ({
       ...stop,
       lap: Math.round((stop.lap / 30) * laps),
@@ -91,6 +94,8 @@ function buildConfig(
     playerStrategyOverride,
     tyreAllocationBase: data.tuning.tyreRules.allocation[difficulty],
     mandatoryTwoCompound: data.tuning.tyreRules.mandatoryTwoCompound[difficulty],
+    coverReactionScale: profile.coverReactionScale,
+    paceModeAggression: profile.aiPaceModeAggression,
   }
 }
 
