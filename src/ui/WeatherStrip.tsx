@@ -12,10 +12,13 @@ const WEATHER_LABEL: Record<WeatherState, string> = {
   DAMP: 'DAMP',
   WET:  'WET',
 }
+// Literal hex, not CSS var() — these get alpha suffixes concatenated on
+// (e.g. `${color}55`) for the glow/border below, which only works with a
+// real hex string.
 const WEATHER_COLOR: Record<WeatherState, string> = {
-  DRY:  'var(--tyre-medium)',
-  DAMP: 'var(--tyre-inter, #39B54A)',
-  WET:  'var(--tyre-wet, #4DA6FF)',
+  DRY:  '#F2C94C',
+  DAMP: '#39B54A',
+  WET:  '#4DA6FF',
 }
 
 // Depth-of-forecast cues: only the border/background haze fades with distance —
@@ -50,6 +53,10 @@ function WeatherCell({
           : `1.5px solid ${color}55`,
         borderRadius: 8,
         background: isNow ? `${color}12` : `rgba(27,34,56,${bgOpacity})`,
+        // NOW gets a soft glow so the live reading feels active — the hazy
+        // forecast cells (already faded via bgOpacity/iconSz) stay flat,
+        // reinforcing "this one is real, those are a forecast."
+        boxShadow: isNow ? `0 0 12px ${color}40` : 'none',
         minWidth: 0,
       }}
     >

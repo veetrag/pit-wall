@@ -10,12 +10,14 @@ import { useUiTap } from '@hooks/useUiTap'
 // of 2-3 rows adrift in empty space. Full field is one tap away, not gone.
 const COMPACT_WINDOW_SIZE = 6
 
+// Literal hex, not CSS var() — these get alpha suffixes concatenated on
+// below (glow), which only works with a real hex string.
 const COMPOUND_COLORS: Record<Compound, string> = {
-  S: 'var(--tyre-soft)',
-  M: 'var(--tyre-medium)',
-  H: 'var(--tyre-hard)',
-  I: 'var(--tyre-inter, #39B54A)',
-  W: 'var(--tyre-wet, #4DA6FF)',
+  S: '#E8344E',
+  M: '#F2C94C',
+  H: '#EAEAEA',
+  I: '#39B54A',
+  W: '#4DA6FF',
 }
 
 function formatGap(gap: number, position: number): string {
@@ -48,8 +50,9 @@ function WearBar({ compound, age, spec, fresh }: { compound: Compound; age: numb
         <div style={{
           height: '100%', borderRadius: 2,
           width: `${fillPct}%`,
-          background: color,
-          transition: 'width 0.5s ease',
+          background: `linear-gradient(90deg, ${color}99 0%, ${color} 100%)`,
+          boxShadow: fraction >= 0.55 ? `0 0 4px ${color}` : 'none',
+          transition: 'width 0.5s ease, box-shadow 0.5s ease',
         }} />
       </div>
     </div>

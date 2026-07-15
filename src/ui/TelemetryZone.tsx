@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
@@ -56,7 +57,14 @@ function TyreGaugeRadial({ fraction, compound, tyreAge }: {
     <motion.div
       animate={shouldPulse ? { opacity: [1, 0.7, 1] } : { opacity: 1 }}
       transition={shouldPulse ? { duration: 0.9, repeat: Infinity, ease: 'easeInOut' } : {}}
-      style={{ width: size, height: size, flexShrink: 0 }}
+      style={{
+        width: size, height: size, flexShrink: 0,
+        // Soft colour wash behind the gauge — reads as "live" without adding
+        // a new visual element; intensity tracks the same wear-state color
+        // driving the arc, so nothing here is decoration.
+        background: `radial-gradient(circle, ${color}1a 0%, transparent 65%)`,
+        borderRadius: '50%',
+      }}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {/* Track arc */}
@@ -75,6 +83,7 @@ function TyreGaugeRadial({ fraction, compound, tyreAge }: {
             stroke={color}
             strokeWidth={strokeW}
             strokeLinecap="round"
+            style={{ filter: `drop-shadow(0 0 5px ${color}99)` }}
           />
         )}
         {/* Compound letter */}
@@ -108,6 +117,29 @@ function TyreGaugeRadial({ fraction, compound, tyreAge }: {
           L{tyreAge} stint
         </text>
       </svg>
+    </motion.div>
+  )
+}
+
+// Shared stat-card chrome: a soft colour wash bleeding in from the accent
+// border (same colour driving the gauge/urgency state) instead of a flat
+// panel fill — gives each card a little life without adding new elements.
+// `critical` adds a slow breathing glow, reserved for the one card that
+// actually needs urgency (never more than one at a time).
+function StatCard({ accent, critical, children }: { accent: string; critical?: boolean; children: ReactNode }) {
+  return (
+    <motion.div
+      animate={critical ? { boxShadow: [`0 0 0px ${accent}00`, `0 0 10px ${accent}55`, `0 0 0px ${accent}00`] } : {}}
+      transition={critical ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : {}}
+      style={{
+        background: `linear-gradient(90deg, ${accent}16 0%, var(--bg-elevated) 60%)`,
+        borderRadius: 6,
+        padding: '5px 8px 5px 7px',
+        borderTop: '1px solid var(--line-hair)', borderRight: '1px solid var(--line-hair)', borderBottom: '1px solid var(--line-hair)',
+        borderLeft: `3px solid ${accent}`,
+      }}
+    >
+      {children}
     </motion.div>
   )
 }
@@ -160,12 +192,7 @@ export function TelemetryZone() {
         flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0,
       }}>
         {/* 1. CLIFF */}
-        <div style={{
-          background: 'var(--bg-elevated)', borderRadius: 6,
-          padding: '5px 8px 5px 7px',
-          borderTop: '1px solid var(--line-hair)', borderRight: '1px solid var(--line-hair)', borderBottom: '1px solid var(--line-hair)',
-          borderLeft: `3px solid ${gaugeColor(fraction)}`,
-        }}>
+        <StatCard accent={gaugeColor(fraction)} critical={pastCliff || (cliffIn !== null && cliffIn <= 3)}>
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 8,
             color: 'var(--text-dim)', letterSpacing: '0.1em', marginBottom: 2,
@@ -178,6 +205,7 @@ export function TelemetryZone() {
               : cliffIn !== null && cliffIn <= 3 ? '#FF4D5E'
               : 'var(--text-hi)',
             fontVariantNumeric: 'tabular-nums',
+            textShadow: pastCliff || (cliffIn !== null && cliffIn <= 3) ? '0 0 8px #FF4D5E77' : 'none',
           }}>
             {pastCliff
               ? '⚠ PAST CLIFF'
@@ -185,15 +213,10 @@ export function TelemetryZone() {
               ? `~${cliffIn}L`
               : '—'}
           </div>
-        </div>
+        </StatCard>
 
         {/* 2. POSITION */}
-        <div style={{
-          background: 'var(--bg-elevated)', borderRadius: 6,
-          padding: '5px 8px 5px 7px',
-          borderTop: '1px solid var(--line-hair)', borderRight: '1px solid var(--line-hair)', borderBottom: '1px solid var(--line-hair)',
-          borderLeft: '3px solid var(--accent)',
-        }}>
+        <StatCard accent="#00E5D0">
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 8,
             color: 'var(--text-dim)', letterSpacing: '0.1em', marginBottom: 2,
@@ -203,9 +226,10 @@ export function TelemetryZone() {
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700,
             color: 'var(--accent)', fontVariantNumeric: 'tabular-nums',
+            textShadow: '0 0 8px rgba(0,229,208,0.45)',
           }}>
             P{player.position}
-            <span style={{ color: 'var(--text-dim)', fontWeight: 400, fontSize: 10 }}>
+            <span style={{ color: 'var(--text-dim)', fontWeight: 400, fontSize: 10, textShadow: 'none' }}>
               {' '}of {totalCars}
             </span>
           </div>
@@ -229,15 +253,10 @@ export function TelemetryZone() {
               </span>
             )}
           </div>
-        </div>
+        </StatCard>
 
         {/* 3. PIT WINDOW */}
-        <div style={{
-          background: 'var(--bg-elevated)', borderRadius: 6,
-          padding: '5px 8px 5px 7px',
-          borderTop: '1px solid var(--line-hair)', borderRight: '1px solid var(--line-hair)', borderBottom: '1px solid var(--line-hair)',
-          borderLeft: '3px solid var(--accent-violet)',
-        }}>
+        <StatCard accent="#9B8CFF">
           <div style={{
             fontFamily: 'var(--font-mono)', fontSize: 8,
             color: 'var(--text-dim)', letterSpacing: '0.1em', marginBottom: 2,
@@ -252,7 +271,7 @@ export function TelemetryZone() {
               ? `Planned: L${nextStop.lap}`
               : 'No stop'}
           </div>
-        </div>
+        </StatCard>
       </div>
     </div>
   )
