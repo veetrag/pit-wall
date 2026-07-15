@@ -258,24 +258,24 @@ export function TimingTower() {
 
   return (
     <div style={{
-      background: 'var(--bg-panel)', borderRadius: 8,
+      background: 'var(--bg-elevated)', borderRadius: 10,
       width: '100%', height: '100%', border: '1px solid var(--line-hair)',
       overflow: 'hidden', display: 'flex', flexDirection: 'column',
     }}>
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '6px 10px 4px',
+        padding: '7px 10px 5px',
         borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
       }}>
         <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
-          color: 'var(--text-dim)', letterSpacing: '0.12em',
+          fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
+          color: 'var(--accent)', letterSpacing: '0.14em',
         }}>
-          POSITION
+          RACE LEADERBOARD
         </span>
         <span style={{
           fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
-          color: 'var(--accent)', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.06em',
+          color: 'var(--text-mid)', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.06em',
         }}>
           L{raceState.lap + 1}/{raceState.totalLaps}
         </span>

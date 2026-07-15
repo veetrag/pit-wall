@@ -102,6 +102,22 @@ function StatusBar() {
   )
 }
 
+// Top-level group label — bolder/brighter than a component's own internal
+// sub-label (e.g. TRACK inside LIVE RACE) so the HUD reads as a small number
+// of clear sections rather than an unlabelled stack of panels.
+function GroupLabel({ children }: { children: ReactNode }) {
+  return (
+    <div style={{
+      padding: '7px 10px 5px',
+      fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
+      color: 'var(--accent)', letterSpacing: '0.14em',
+      borderBottom: '1px solid var(--line-hair)',
+    }}>
+      {children}
+    </div>
+  )
+}
+
 function FinishBanner() {
   const raceState = useRaceStore(s => s.raceState)
   const winner = raceState?.cars.find(c => c.position === 1)
@@ -156,61 +172,77 @@ export function RaceHUD() {
             {/* Status bar: circuit · lap · speed controls */}
             <StatusBar />
 
-            {/* Weather strip */}
-            {(phase === 'racing' || phase === 'starting') && <WeatherStrip />}
-
-            {/* HUD alert slot — 0px collapsed / 44px active */}
-            {(phase === 'racing' || phase === 'starting') && <HudAlert />}
-
-            {/* Track section — labelled for consistency with the other panels */}
+            {/* LIVE RACE — conditions (weather/radio), track, and car telemetry:
+                everything describing what's happening right now, grouped under
+                one label instead of an unlabelled stack of panels. */}
             <div style={{
               flexShrink: 0, margin: '8px 8px 0',
-              background: 'var(--bg-panel)', border: '1px solid var(--line-hair)',
-              borderRadius: 8, overflow: 'hidden',
+              background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
+              borderRadius: 10, overflow: 'hidden',
             }}>
+              <GroupLabel>LIVE RACE</GroupLabel>
+
+              {(phase === 'racing' || phase === 'starting') && <WeatherStrip />}
+
+              {/* HUD alert slot — 0px collapsed / 44px active */}
+              {(phase === 'racing' || phase === 'starting') && <HudAlert />}
+
+              {/* Track sub-section */}
               <div style={{
-                padding: '6px 10px 4px',
-                fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
-                color: 'var(--text-dim)', letterSpacing: '0.12em',
-                borderBottom: '1px solid var(--line-hair)',
+                margin: '8px 8px 0',
+                background: 'var(--bg-panel)', border: '1px solid var(--line-hair)',
+                borderRadius: 8, overflow: 'hidden',
               }}>
-                TRACK
+                <div style={{
+                  padding: '6px 10px 4px',
+                  fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
+                  color: 'var(--text-dim)', letterSpacing: '0.12em',
+                  borderBottom: '1px solid var(--line-hair)',
+                }}>
+                  TRACK
+                </div>
+                <div style={{ height: 160, position: 'relative', background: 'var(--bg-deep)' }}>
+                  <PitTimer />
+                  <CanvasBoundary>
+                    <TrackCanvas />
+                  </CanvasBoundary>
+                </div>
               </div>
-              <div style={{ height: 160, position: 'relative', background: 'var(--bg-deep)' }}>
-                <PitTimer />
-                <CanvasBoundary>
-                  <TrackCanvas />
-                </CanvasBoundary>
-              </div>
+
+              {/* Telemetry zone — 130px */}
+              {(phase === 'racing' || phase === 'starting') && (
+                <div style={{ margin: '6px 8px 8px' }}>
+                  <TelemetryZone />
+                </div>
+              )}
             </div>
 
-            {/* Telemetry zone — 130px */}
-            {(phase === 'racing' || phase === 'starting') && (
-              <div style={{ margin: '6px 8px 0' }}>
-                <TelemetryZone />
-              </div>
-            )}
-
-            {/* Timing tower — full field by default, NEARBY toggle for a tighter context window */}
+            {/* RACE LEADERBOARD — full field by default, NEARBY toggle for a
+                tighter context window (label lives in TimingTower's own header) */}
             <div style={{
               flex: 1, overflow: 'hidden',
-              margin: '6px 8px 0', minHeight: 0,
+              margin: '8px 8px 0', minHeight: 0,
             }}>
               <TimingTower />
             </div>
 
-            {/* Bottom control strip — thumb zone */}
+            {/* RACE CONTROL — the player's actual levers over the race, kept
+                at the bottom for thumb reach */}
             <div style={{
-              padding: '8px 12px 10px',
               background: 'var(--bg-panel)',
               borderTop: '1px solid var(--line-hair)',
-              display: 'flex', gap: 8, alignItems: 'stretch',
               flexShrink: 0,
             }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <PaceModeToggle />
+              <GroupLabel>RACE CONTROL</GroupLabel>
+              <div style={{
+                padding: '8px 12px 10px',
+                display: 'flex', gap: 8, alignItems: 'stretch',
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <PaceModeToggle />
+                </div>
+                <PitButton />
               </div>
-              <PitButton />
             </div>
           </motion.div>
         )}
