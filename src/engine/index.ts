@@ -8,11 +8,12 @@ export {
 } from './tyres'
 export { computeSectorTime } from './lapModel'
 export { createRng, gaussianPair } from './rng'
+export { generateWeatherTimeline, getWeatherForecast } from './weather'
 export type {
   RaceConfig, RaceState, CarState, SectorResult, OvertakeEvent,
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
-  TyreAllocation, DifficultyProfile,
+  TyreAllocation, DifficultyProfile, WeatherState, WeatherForecast,
 } from './types'
 export type { ProjectionResult } from './projection'
 export type { Rng } from './rng'

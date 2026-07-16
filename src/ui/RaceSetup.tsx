@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSeasonStore } from '@state/seasonStore'
 import type { PlayerStrategyChoice } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
+import { loadGameData } from '@data/validators'
+import { generateWeatherTimeline, createRng, type WeatherState } from '@engine/index'
 import circuitsJson from '@data/circuits.json'
 import compoundsData from '@data/compounds.json'
 
@@ -16,8 +18,11 @@ type CircuitEntry = {
 }
 const compounds = (compoundsData as unknown as { compounds: Record<string, CompoundEntry> }).compounds
 const allCircuits = (circuitsJson as unknown as { circuits: Record<string, CircuitEntry> }).circuits
+const GAME_DATA = loadGameData()
 
 const DRY_COMPOUNDS: Compound[] = ['S', 'M', 'H']
+const START_COMPOUNDS: Compound[] = ['S', 'M', 'H', 'I', 'W']
+const COMPOUND_SHORT_LABEL: Record<Compound, string> = { S: 'SOFT', M: 'MED', H: 'HARD', I: 'INTER', W: 'WET' }
 
 const COMPOUND_COLORS: Record<string, string> = {
   S: 'var(--tyre-soft)',
@@ -27,16 +32,24 @@ const COMPOUND_COLORS: Record<string, string> = {
   W: 'var(--tyre-wet, #4DA6FF)',
 }
 
-function rainLabel(prob: number): string {
-  if (prob >= 0.5) return 'HIGH CHANCE OF RAIN'
-  if (prob >= 0.25) return 'POSSIBLE SHOWERS'
-  return 'LIKELY DRY'
+// Literal hex, not CSS var() — WeatherStrip.tsx's shared convention, since
+// these get alpha suffixes concatenated onto them for glow/wash below.
+const WEATHER_ICON: Record<WeatherState, string> = { DRY: '☀', DAMP: '⛅', WET: '🌧' }
+const WEATHER_COLOR: Record<WeatherState, string> = { DRY: '#F2C94C', DAMP: '#39B54A', WET: '#4DA6FF' }
+
+function recommendedStartCompound(weather: WeatherState): Compound {
+  if (weather === 'WET') return 'W'
+  if (weather === 'DAMP') return 'I'
+  return 'M'
 }
 
-function rainColor(prob: number): string {
-  if (prob >= 0.5) return 'var(--accent-warm)'
-  if (prob >= 0.25) return 'var(--tyre-inter, #39B54A)'
-  return 'var(--tyre-medium)'
+// Real, seeded forecast for THIS specific attempt — not the circuit's base
+// probability. Uses the exact same seed derivation initRace() uses
+// (seed + 999999) so what's shown here is what the race actually opens with.
+function computeStartWeather(circuitId: string, laps: number, seed: number): WeatherState[] {
+  const spec = GAME_DATA.circuits[circuitId]
+  if (!spec) return ['DRY']
+  return generateWeatherTimeline(laps, spec, GAME_DATA.tuning, createRng(seed + 999999))
 }
 
 // Minimum laps required between two planned stops (and from a stop to the flag).
@@ -78,19 +91,29 @@ export function RaceSetup() {
   const backToDriverSelect = useSeasonStore(s => s.backToDriverSelect)
   const uiTap = useUiTap()
   const raceIndex = useSeasonStore(s => s.raceIndex)
+  const currentSeed = useSeasonStore(s => s.currentSeed)
   const defaultIdx = raceIndex % CIRCUIT_ORDER.length
   const [selectedIdx, setSelectedIdx] = useState(defaultIdx)
   const circuitId = CIRCUIT_ORDER[selectedIdx] ?? CIRCUIT_ORDER[0]!
   const circuit = allCircuits[circuitId]!
   const roundNum = raceIndex + 1
-  const [startCompound, setStartCompound] = useState<Compound>('M')
+
+  // The ACTUAL seeded forecast for this attempt — same seed initRace() will
+  // use — not just the circuit's base rain probability. This is what fixes
+  // "the race starts wet and we had no idea": the player now sees it here.
+  const seed = currentSeed()
+  const weatherTimeline = useMemo(
+    () => computeStartWeather(circuitId, circuit.laps, seed),
+    [circuitId, circuit.laps, seed],
+  )
+  const startingWeather = weatherTimeline[0] ?? 'DRY'
+
+  const [startCompound, setStartCompound] = useState<Compound>(() => recommendedStartCompound(startingWeather))
   const [stopCount, setStopCount] = useState<1 | 2>(1)
   const [pitLap1, setPitLap1] = useState(Math.round(circuit.laps * 0.45))
   const [pitCompound1, setPitCompound1] = useState<Compound>('H')
   const [pitLap2, setPitLap2] = useState(Math.round(circuit.laps * 0.7))
   const [pitCompound2, setPitCompound2] = useState<Compound>('M')
-
-  const rain = circuit.rainProbability ?? 0.1
 
   // Bounds: each stop needs room from the last (or the start) and from the flag.
   const maxLap1 = stopCount === 2
@@ -158,6 +181,8 @@ export function RaceSetup() {
                     setSelectedIdx(i)
                     setPitLap1(Math.round(c.laps * (stopCount === 2 ? 0.33 : 0.45)))
                     setPitLap2(Math.round(c.laps * 0.7))
+                    const newWeather = computeStartWeather(cId, c.laps, seed)[0] ?? 'DRY'
+                    setStartCompound(recommendedStartCompound(newWeather))
                   }}
                   style={{
                     flexShrink: 0, border: 'none', borderRadius: 10, padding: '10px 14px',
@@ -214,29 +239,47 @@ export function RaceSetup() {
           </div>
 
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* Rain probability */}
+            {/* Actual seeded starting conditions — not just a probability */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>
-                WEATHER FORECAST
+                CONDITIONS AT LIGHTS OUT
               </div>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {weatherTimeline.slice(0, 4).map((w, i) => (
+                <div
+                  key={i}
+                  style={{
+                    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    padding: i === 0 ? '7px 4px' : '6px 4px',
+                    border: `1.5px solid ${WEATHER_COLOR[w]}${i === 0 ? '99' : '44'}`,
+                    borderRadius: 8,
+                    background: i === 0 ? `${WEATHER_COLOR[w]}18` : 'rgba(27,34,56,0.5)',
+                    boxShadow: i === 0 ? `0 0 10px ${WEATHER_COLOR[w]}40` : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: i === 0 ? 18 : 14, lineHeight: 1 }}>{WEATHER_ICON[w]}</span>
+                  <span style={{
+                    fontFamily: 'var(--font-mono)', fontSize: i === 0 ? 11 : 9, fontWeight: 700,
+                    color: i === 0 ? 'var(--text-hi)' : 'var(--text-mid)', marginTop: 3,
+                  }}>
+                    {w}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-dim)', marginTop: 1 }}>
+                    {i === 0 ? 'LAP 1' : `+${i}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {startingWeather !== 'DRY' && (
               <div style={{
-                fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
-                color: rainColor(rain), letterSpacing: '0.08em',
+                marginTop: 2, padding: '7px 10px', borderRadius: 8,
+                background: `${WEATHER_COLOR[startingWeather]}14`, border: `1px solid ${WEATHER_COLOR[startingWeather]}55`,
+                fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--text-hi)', lineHeight: 1.4,
               }}>
-                {rainLabel(rain)}
+                ⚠ Track is <strong>{startingWeather}</strong> at lights out — starting compound below has been set to {recommendedStartCompound(startingWeather)}.
               </div>
-            </div>
-            <div style={{
-              height: 4, borderRadius: 2,
-              background: 'var(--line-hair)', overflow: 'hidden',
-            }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${rain * 100}%` }}
-                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
-                style={{ height: '100%', borderRadius: 2, background: rainColor(rain) }}
-              />
-            </div>
+            )}
 
             {circuit.characterNote && (
               <div style={{
@@ -267,35 +310,35 @@ export function RaceSetup() {
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 12 }}>
             STARTING COMPOUND
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {DRY_COMPOUNDS.map(c => {
-              const spec = compounds[c]!
+          <div style={{ display: 'flex', gap: 6 }}>
+            {START_COMPOUNDS.map(c => {
               const color = COMPOUND_COLORS[c] ?? 'var(--text-mid)'
               const selected = startCompound === c
+              const recommended = c === recommendedStartCompound(startingWeather)
               return (
                 <motion.button
                   key={c}
                   whileTap={{ scale: 0.94 }}
                   onClick={() => setStartCompound(c)}
                   style={{
-                    flex: 1, border: selected ? `1.5px solid ${color}` : '1px solid var(--line-hair)',
-                    borderRadius: 10, padding: '12px 8px',
+                    flex: 1, border: selected ? `1.5px solid ${color}` : recommended ? `1px dashed ${color}88` : '1px solid var(--line-hair)',
+                    borderRadius: 10, padding: '10px 4px',
                     background: selected ? `${color}18` : 'var(--bg-panel)',
-                    cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                    cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                     outline: 'none',
                     boxShadow: selected ? `0 0 16px ${color}30` : 'none',
                     transition: 'all 0.15s',
                   }}
                 >
                   <div style={{
-                    width: 28, height: 28, borderRadius: '50%',
+                    width: 24, height: 24, borderRadius: '50%',
                     background: color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--bg-deep)',
+                    fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--bg-deep)',
                   }}>
                     {c}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: selected ? color : 'var(--text-mid)', letterSpacing: '0.06em' }}>
-                    {spec.name.toUpperCase()}
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 8.5, color: selected ? color : 'var(--text-mid)', letterSpacing: '0.02em', textAlign: 'center' }}>
+                    {COMPOUND_SHORT_LABEL[c]}
                   </div>
                 </motion.button>
               )
