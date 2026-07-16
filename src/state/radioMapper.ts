@@ -43,6 +43,7 @@ export interface RadioState {
   prevSpinCount: number
   hasWon: boolean
   cliffWarned: boolean
+  prevRetired: boolean
 }
 
 export function makeRadioState(): RadioState {
@@ -55,6 +56,7 @@ export function makeRadioState(): RadioState {
     prevSpinCount: 0,
     hasWon: false,
     cliffWarned: false,
+    prevRetired: false,
   }
 }
 
@@ -71,6 +73,13 @@ export function processRadioTick(
   const pos = player.position
   const totalLaps = state.totalLaps
   const compound = config.compounds[player.compound]
+
+  // 0. Retirement (highest priority — the race is over, nothing else matters)
+  if (player.retired && !radio.prevRetired) {
+    tryPush('retired', 2, {}, pushAlert)
+  }
+  next.prevRetired = player.retired
+  if (player.retired) return next // nothing else is relevant once retired
 
   // 1. Tyre cliff (high priority, fire once per stint)
   if (compound) {

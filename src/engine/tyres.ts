@@ -24,8 +24,12 @@ export function effectiveTyreAge(
   tuning: TuningConstants,
 ): number {
   const paceDegMultiplier = tuning.paceModes[car.paceMode].degMultiplier
-  const wetDegKey = car.compound === 'I' ? 'inter' : car.compound === 'W' ? 'wet' : null
-  const wetDegMult = wetDegKey ? (tuning.weather.wetDegMultiplier[wetDegKey]?.[weatherState] ?? 1.0) : 1.0
+  // Every compound family has a wetDegMultiplier entry now (dry.DRY = 1.0, a
+  // no-op for the common case) so dry-compound tyres left on in the wet also
+  // degrade faster — not just cost a flat crossover time penalty — same as
+  // wet-family tyres already did on a dry track.
+  const wetDegKey = car.compound === 'I' ? 'inter' : car.compound === 'W' ? 'wet' : 'dry'
+  const wetDegMult = tuning.weather.wetDegMultiplier[wetDegKey]?.[weatherState] ?? 1.0
   const tyreManagementFactor = 1 - (driver.facets.tyreManagement / 100) * tuning.tyreManagement.degReliefFactor
   // Dirty air: sitting in another car's wake for consecutive laps cooks tyres
   // slightly faster (real-world overheating from turbulent air), capped so it

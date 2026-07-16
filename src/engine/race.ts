@@ -4,7 +4,7 @@ import { createRng, gaussianPair } from './rng'
 import { computeSectorTime } from './lapModel'
 import { generateWeatherTimeline } from './weather'
 import { aiDecision } from './strategy'
-import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet } from './tyres'
+import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, effectiveTyreAge, tyreCliffFraction } from './tyres'
 
 export function initRace(config: RaceConfig): RaceState {
   const cars: CarState[] = config.drivers.map((driver, i) => {
@@ -32,6 +32,8 @@ export function initRace(config: RaceConfig): RaceState {
       tyreAllocation: consumeTyreSet({ ...baseAllocation }, strategy.startCompound),
       compoundsUsed: [strategy.startCompound],
       lapsInDirtyAir: 0,
+      retired: false,
+      retiredLap: null,
     }
   })
 
@@ -64,15 +66,43 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const newSectorResults = [...state.sectorResults]
   const newOvertakeEvents: OvertakeEvent[] = [...state.overtakeEvents]
 
-  // 1. Compute sector time for each car
+  // 1. Compute sector time for each car. Retired cars are frozen entirely —
+  // no more sector time, no more sim work happens to them.
   const updatedCars: CarState[] = state.cars.map(car => {
+    if (car.retired) return car
     const result = computeSectorTime(config, car, sector, rng, state.weatherState)
     newSectorResults.push(result)
-    return { ...car, raceTime: car.raceTime + result.sectorTime }
+    let updated = { ...car, raceTime: car.raceTime + result.sectorTime }
+
+    // Tyre failure risk: once cliffFraction runs meaningfully past the
+    // threshold, roll a per-sector chance of a puncture/mechanical failure
+    // that ends the car's race outright — the consequence that makes
+    // "don't run tyres into the cliff and beyond" a real constraint, not
+    // just an ever-steeper (but survivable) time-loss curve.
+    const driver = config.drivers.find(d => d.id === car.driverId)!
+    const spec = config.compounds[car.compound]
+    if (spec) {
+      const effAge = effectiveTyreAge(car, driver, state.weatherState, config.tuning)
+      const cliffFrac = tyreCliffFraction(spec, effAge)
+      const tf = config.tuning.tyreFailure
+      const over = cliffFrac - tf.cliffFractionThreshold
+      if (over > 0) {
+        const chance = Math.min(tf.maxChancePerLap, tf.chancePerLapOverThreshold * over) / 3
+        if (rng() < chance) {
+          updated = { ...updated, retired: true, retiredLap: car.lap }
+        }
+      }
+    }
+    return updated
   })
 
+  // Retired cars stop racing entirely — excluded from traffic, overtakes,
+  // dirty air, and AI decisions below; merged back in for final classification.
+  const activeCars = updatedCars.filter(c => !c.retired)
+  const retiredCars = updatedCars.filter(c => c.retired)
+
   // 2. Sort by raceTime (fastest first = leader) then apply traffic penalty
-  const sorted = [...updatedCars].sort((a, b) => a.raceTime - b.raceTime)
+  const sorted = [...activeCars].sort((a, b) => a.raceTime - b.raceTime)
   const penalisedCars = sorted.map((car, idx) => {
     if (idx === 0) return car
     const ahead = sorted[idx - 1]!
@@ -87,7 +117,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   })
 
   // 3. Sector-boundary overtake checks
-  const afterOvertakes = resolveOvertakes(config, penalisedCars, sector, state.lap, rng, newOvertakeEvents)
+  const afterOvertakesActive = resolveOvertakes(config, penalisedCars, sector, state.lap, rng, newOvertakeEvents)
+  const afterOvertakes = [...afterOvertakesActive, ...retiredCars]
 
   // 4. Advance sector/lap counters, handle pit stops, increment tyre age
   const nextSector = ((sector + 1) % 3) as SectorIndex
@@ -97,7 +128,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   // Dirty air: a car held within gapThreshold of the car ahead across a whole
   // lap counts as a lap "stuck in traffic" — checked against the post-overtake
   // running order so a successful pass this lap resets the follower's count.
-  const dirtyAirSorted = [...afterOvertakes].sort((a, b) => a.raceTime - b.raceTime)
+  // Retired cars aren't part of this — they're no longer racing.
+  const dirtyAirSorted = [...afterOvertakesActive].sort((a, b) => a.raceTime - b.raceTime)
   const inDirtyAir = new Set<string>()
   for (let i = 1; i < dirtyAirSorted.length; i++) {
     const car = dirtyAirSorted[i]!
@@ -109,6 +141,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
 
   const finalCars: CarState[] = afterOvertakes.map(car => {
     let updated = { ...car }
+    if (car.retired) return updated // frozen: no more laps, pits, or AI
     if (lapCompleted) {
       updated.tyreAge += 1
       updated.lap += 1
@@ -147,6 +180,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const isRaceEnd = lapCompleted && newLap >= state.totalLaps
   const carsBeforeSort = isRaceEnd && config.mandatoryTwoCompound
     ? finalCars.map(car => {
+        if (car.retired) return car // DNFs are exempt — they never finished
         const usedWet = car.compoundsUsed.some(c => c === 'I' || c === 'W')
         if (usedWet) return car // wet-affected races are exempt, matches real regs
         const distinctDry = new Set(car.compoundsUsed).size
@@ -157,8 +191,14 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       })
     : finalCars
 
-  // Re-sort and assign positions
-  const resorted = [...carsBeforeSort].sort((a, b) => a.raceTime - b.raceTime)
+  // Re-sort and assign positions: active cars by raceTime; retired cars sort
+  // after every classified runner, ranked by retiredLap descending (later
+  // retirement = closer to being classified — real motorsport convention).
+  const resorted = [...carsBeforeSort].sort((a, b) => {
+    if (a.retired !== b.retired) return a.retired ? 1 : -1
+    if (a.retired && b.retired) return (b.retiredLap ?? 0) - (a.retiredLap ?? 0)
+    return a.raceTime - b.raceTime
+  })
   const positioned = resorted.map((car, idx) => ({ ...car, position: idx + 1 }))
 
   // Advance weather on lap change

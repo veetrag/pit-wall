@@ -59,6 +59,11 @@ export interface TuningConstants {
       spinChance: { DRY: number; DAMP: number; WET: number }
       spinTimeLossMean: number
       spinTimeLossSigma: number
+      // Mirrors spinChance but for the opposite mismatch (wet-family
+      // compound on a genuinely DRY track) — a single flat chance since
+      // there's only one "wrong" direction there, unlike dry-in-wet which
+      // scales with how wet it actually is.
+      dryTrackSpinChance: number
     }
     forecastConfidence: [number, number, number, number, number]
     timeline: {
@@ -72,6 +77,16 @@ export interface TuningConstants {
     allocation: { rookie: TyreAllocation; pro: TyreAllocation }
     mandatoryTwoCompound: { rookie: boolean; pro: boolean }
     twoCompoundPenaltySec: number
+  }
+  // Tyre-failure risk: running a tyre meaningfully past its cliff carries a
+  // real chance of a puncture/mechanical failure that retires the car, not
+  // just an ever-steeper time-loss curve with no floor. Rolled per sector
+  // once tyreCliffFraction exceeds cliffFractionThreshold; chance scales
+  // linearly with how far over, capped at maxChancePerLap.
+  tyreFailure: {
+    cliffFractionThreshold: number
+    chancePerLapOverThreshold: number
+    maxChancePerLap: number
   }
   // M5: every difficulty-sensitive lever built across M1-M4, collected into one
   // profile so difficulty is a coordinated curve rather than scattered branches.
@@ -177,6 +192,11 @@ export interface CarState {
   tyreAllocation: TyreAllocation
   compoundsUsed: Compound[]
   lapsInDirtyAir: number
+  // Set once by a tyre-failure roll (see tuning.tyreFailure); once true the
+  // car is frozen — no more sector time, traffic, overtakes, or AI pit
+  // decisions — and sorts after every classified car in final position.
+  retired: boolean
+  retiredLap: number | null
 }
 
 export interface SectorResult {

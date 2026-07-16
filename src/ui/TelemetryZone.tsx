@@ -153,6 +153,25 @@ export function TelemetryZone() {
   const player = raceState.cars.find(c => c.isPlayer)
   if (!player) return null
 
+  if (player.retired) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '6px 10px', background: 'var(--bg-panel)',
+        borderBottom: '1px solid var(--line-hair)', height: 130, flexShrink: 0,
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--accent-warm)', letterSpacing: '0.05em' }}>
+            DNF
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
+            Retired on lap {player.retiredLap ?? '—'} — tyre failure
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const spec = config.compounds[player.compound]
   const driver = config.drivers.find(d => d.id === player.driverId)
   const effAge = driver && spec ? effectiveTyreAge(player, driver, raceState.weatherState, config.tuning) : player.tyreAge

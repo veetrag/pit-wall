@@ -107,6 +107,7 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
       ? 'rgba(0,229,208,0.14)'
       : 'rgba(0,229,208,0.07)'
     : 'transparent'
+  const nameColor = car.retired ? 'var(--text-dim)' : (car.isPlayer ? 'var(--accent)' : 'var(--text-hi)')
 
   return (
     <motion.div
@@ -134,28 +135,44 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
       </span>
       <span style={{
         fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-        color: car.isPlayer ? 'var(--accent)' : 'var(--text-hi)', letterSpacing: '0.04em',
+        color: nameColor, letterSpacing: '0.04em', opacity: car.retired ? 0.6 : 1,
         display: 'flex', alignItems: 'center', gap: 4, minWidth: 0,
       }}>
         <span style={{
           width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-          background: car.isPlayer ? 'var(--accent)' : (teamColor ?? 'var(--text-dim)'),
+          background: car.retired ? 'var(--text-dim)' : (car.isPlayer ? 'var(--accent)' : (teamColor ?? 'var(--text-dim)')),
         }} />
         {driverFlag && <span style={{ fontSize: 9, lineHeight: 1, flexShrink: 0 }}>{driverFlag}</span>}
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{driverCode}</span>
       </span>
-      <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 10, color: gapColor,
-        fontVariantNumeric: 'tabular-nums', minWidth: 0,
-      }}>
-        {formatGap(gap, car.position)}
-      </span>
-      {spec ? (
-        <WearBar compound={car.compound} age={car.tyreAge} spec={spec} fresh={fresh && car.isPlayer} />
+      {car.retired ? (
+        <>
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--accent-warm)',
+            letterSpacing: '0.06em', fontWeight: 700,
+          }}>
+            DNF
+          </span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>
+            OUT
+          </span>
+        </>
       ) : (
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>
-          {car.compound}
-        </span>
+        <>
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontSize: 10, color: gapColor,
+            fontVariantNumeric: 'tabular-nums', minWidth: 0,
+          }}>
+            {formatGap(gap, car.position)}
+          </span>
+          {spec ? (
+            <WearBar compound={car.compound} age={car.tyreAge} spec={spec} fresh={fresh && car.isPlayer} />
+          ) : (
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>
+              {car.compound}
+            </span>
+          )}
+        </>
       )}
     </motion.div>
   )

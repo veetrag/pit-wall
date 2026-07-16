@@ -44,9 +44,11 @@ export function RaceResult() {
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
   const sorted = [...(lastRaceResults ?? [])].sort((a, b) => a.position - b.position)
-  const podium = sorted.filter(r => r.position <= 3)
-  const isTopThree = (playerResult?.position ?? 99) <= 3
-  const headline = playerResult && lastRaceEvents ? raceHeadline(playerResult.position, lastRaceEvents) : null
+  const podium = sorted.filter(r => r.position <= 3 && !r.retired)
+  const isTopThree = !playerResult?.retired && (playerResult?.position ?? 99) <= 3
+  const headline = playerResult && lastRaceEvents
+    ? (playerResult.retired ? 'Retired — a puncture ended the race early.' : raceHeadline(playerResult.position, lastRaceEvents))
+    : null
   const isSeasonEnd = raceIndex >= TOTAL_RACES - 1
 
   // Key moments
@@ -169,8 +171,10 @@ export function RaceResult() {
                     borderBottom: i < sorted.length - 1 ? '0.5px solid var(--line-hair)' : 'none',
                   }}
                 >
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>{r.position}</span>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: isPlayer ? 'var(--accent)' : 'var(--text-hi)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: r.retired ? 'var(--accent-warm)' : 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
+                    {r.retired ? 'DNF' : r.position}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: isPlayer ? 'var(--accent)' : 'var(--text-hi)', opacity: r.retired ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 5 }}>
                     {d.flag && <span style={{ fontSize: 10 }}>{d.flag}</span>}
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
                     {d.code}

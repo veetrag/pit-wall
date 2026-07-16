@@ -67,7 +67,7 @@ describe('effectiveTyreAge', () => {
       sector: 0, compound: 'M', tyreAge: 10, paceMode: 'neutral', pitted: false,
       pitsDone: 0, strategy: { teamId: 't1', startCompound: 'M', plannedStops: [] },
       isPlayer: false,
-      tyreAllocation: { S: 4, M: 4, H: 4, I: 3, W: 3 }, compoundsUsed: ['M'], lapsInDirtyAir: 0,
+      tyreAllocation: { S: 4, M: 4, H: 4, I: 3, W: 3 }, compoundsUsed: ['M'], lapsInDirtyAir: 0, retired: false, retiredLap: null,
       ...overrides,
     }
   }
@@ -116,10 +116,13 @@ describe('effectiveTyreAge', () => {
     expect(tyreCliffFraction(interSpec, effAge)).toBeGreaterThan(tyreCliffFraction(interSpec, car.tyreAge))
   })
 
-  it('a dry compound is unaffected by weather-mismatch multipliers', () => {
+  it('a dry compound left on in the wet degrades faster than in the dry', () => {
+    // Mismatched tyres now cost more than just the flat crossover time
+    // penalty — they age faster too, reaching the cliff (and tyreFailure
+    // risk) sooner if not swapped off promptly.
     const car = makeCar({ compound: 'M', tyreAge: 10, paceMode: 'neutral' })
     const dry = effectiveTyreAge(car, noManagementDriver, 'DRY', tuning)
     const wet = effectiveTyreAge(car, noManagementDriver, 'WET', tuning)
-    expect(dry).toBeCloseTo(wet, 5)
+    expect(wet).toBeGreaterThan(dry)
   })
 })

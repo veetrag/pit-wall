@@ -73,6 +73,18 @@ export function computeSectorTime(
       const magnitude = tuning.weather.wetIncident.spinTimeLossMean + noise2 * tuning.weather.wetIncident.spinTimeLossSigma
       spinLoss = Math.max(0, magnitude)
     }
+  } else if (cpSpec.type === 'wet' && weatherState === 'DRY') {
+    // Mirrored risk: wet-family tyres on a genuinely dry track — cold, greasy,
+    // and prone to a moment under braking, same consequence as slicks in the
+    // wet above, just a single flat chance since there's only one direction
+    // of mismatch to model here (inters/wets are legitimate in DAMP).
+    const baseChance = tuning.weather.wetIncident.dryTrackSpinChance
+    const wetSkillRelief = (df.wetWeather / 100) * tuning.weather.wetSkillReliefMax
+    const effChance = baseChance * (1 - wetSkillRelief)
+    if (rng() < effChance) {
+      const magnitude = tuning.weather.wetIncident.spinTimeLossMean + noise2 * tuning.weather.wetIncident.spinTimeLossSigma
+      spinLoss = Math.max(0, magnitude)
+    }
   }
 
   const raw = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + noiseSample + spinLoss

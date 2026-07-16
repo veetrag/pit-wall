@@ -25,6 +25,8 @@ const TUNING: TuningConstants = {
     mandatoryTwoCompound: { rookie: false, pro: true },
     twoCompoundPenaltySec: 30.0,
   },
+  tyreFailure: { cliffFractionThreshold: 1.45, chancePerLapOverThreshold: 0.30, maxChancePerLap: 0.50
+  },
   difficultyProfiles: {
     rookie: { brainCap: 'smart', brainPromote: false, coverReactionScale: 0.6, aiPaceModeAggression: 0.7, pitCrewConsistency: 1.0 },
     pro: { brainCap: 'optimal', brainPromote: true, coverReactionScale: 1.0, aiPaceModeAggression: 1.3, pitCrewConsistency: 1.0 },
@@ -40,7 +42,7 @@ const TUNING: TuningConstants = {
     crossoverPenalty: { dry: { DRY: 0, DAMP: 1.5, WET: 4.0 }, inter: { DRY: 2.0, DAMP: 0.5, WET: 0 }, wet: { DRY: 5.0, DAMP: 2.0, WET: 0 } },
     wetDegMultiplier: { inter: { DRY: 1.5, DAMP: 0.8, WET: 0.6 }, wet: { DRY: 2.0, DAMP: 1.0, WET: 0.5 } },
     wetSkillReliefMax: 0.10, wetNoiseReliefFactor: 0.30,
-    wetIncident: { spinChance: { DRY: 0.0, DAMP: 0.010, WET: 0.040 }, spinTimeLossMean: 4.0, spinTimeLossSigma: 1.5 },
+    wetIncident: { spinChance: { DRY: 0.0, DAMP: 0.010, WET: 0.040 }, spinTimeLossMean: 4.0, spinTimeLossSigma: 1.5, dryTrackSpinChance: 0.03 },
     forecastConfidence: [1.0, 1.0, 0.85, 0.65, 0.45],
     timeline: { onsetWindow: [5, 25], minDuration: 3, maxDuration: 15, intensityBias: { stable: 0.05, variable: 0.25, wet: 0.60, mixed: 0.35 } },
   },

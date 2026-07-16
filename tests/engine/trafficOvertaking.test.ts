@@ -54,7 +54,7 @@ function makeCar(overrides: Partial<CarState> & { driverId: string; teamId: stri
     isPlayer: true,
     tyreAllocation: { S: 99, M: 99, H: 99, I: 99, W: 99 },
     compoundsUsed: ['M'],
-    lapsInDirtyAir: 0,
+    lapsInDirtyAir: 0, retired: false, retiredLap: null,
     ...overrides,
   }
 }

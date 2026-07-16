@@ -50,6 +50,11 @@ const TuningSchema = z.object({
     mandatoryTwoCompound: z.object({ rookie: z.boolean(), pro: z.boolean() }),
     twoCompoundPenaltySec: z.number(),
   }),
+  tyreFailure: z.object({
+    cliffFractionThreshold: z.number(),
+    chancePerLapOverThreshold: z.number(),
+    maxChancePerLap: z.number(),
+  }),
   difficultyProfiles: z.object({
     rookie: DifficultyProfileSchema,
     pro: DifficultyProfileSchema,
@@ -77,6 +82,7 @@ const TuningSchema = z.object({
       spinChance: z.object({ DRY: z.number(), DAMP: z.number(), WET: z.number() }),
       spinTimeLossMean: z.number(),
       spinTimeLossSigma: z.number(),
+      dryTrackSpinChance: z.number(),
     }),
     forecastConfidence: z.tuple([z.number(), z.number(), z.number(), z.number(), z.number()]),
     timeline: z.object({
