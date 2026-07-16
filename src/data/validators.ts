@@ -5,6 +5,7 @@ import circuitsJson from './circuits.json'
 import carsJson from './cars.json'
 import driversJson from './drivers.json'
 import strategiesJson from './strategies.json'
+import rivalriesJson from './rivalries.json'
 
 const DifficultyProfileSchema = z.object({
   brainCap: z.enum(['naive', 'smart', 'optimal']),
@@ -138,6 +139,7 @@ const TeamSchema = z.object({
   developmentRate: z.number().optional(),
   nationality: z.string().optional(),
   flag: z.string().optional(),
+  history: z.string().optional(),
 })
 const CarsSchema = z.object({ teams: z.array(TeamSchema) })
 
@@ -159,8 +161,12 @@ const DriverSchema = z.object({
   nationality: z.string().optional(),
   flag: z.string().optional(),
   bio: z.string().optional(),
+  backstory: z.string().optional(),
 })
 const DriversSchema = z.object({ drivers: z.array(DriverSchema) })
+
+const RivalrySchema = z.object({ a: z.string(), b: z.string(), note: z.string() })
+const RivalriesSchema = z.object({ rivalries: z.array(RivalrySchema) })
 
 const StrategyDefaultSchema = z.object({
   teamId: z.string(), startCompound: z.enum(['S', 'M', 'H', 'I', 'W']),
@@ -175,6 +181,8 @@ export type CircuitsWrapper = z.infer<typeof CircuitsWrapperSchema>
 export type Cars = z.infer<typeof CarsSchema>
 export type Drivers = z.infer<typeof DriversSchema>
 export type Strategies = z.infer<typeof StrategiesSchema>
+export type Rivalries = z.infer<typeof RivalriesSchema>
+export type Rivalry = z.infer<typeof RivalrySchema>
 
 export interface GameData {
   tuning: Tuning
@@ -183,6 +191,7 @@ export interface GameData {
   cars: Cars
   drivers: Drivers
   strategies: Strategies
+  rivalries: Rivalry[]
 }
 
 export function loadGameData(): GameData {
@@ -192,6 +201,7 @@ export function loadGameData(): GameData {
   const cars = CarsSchema.parse(carsJson)
   const drivers = DriversSchema.parse(driversJson)
   const strategies = StrategiesSchema.parse(strategiesJson)
+  const rivalries = RivalriesSchema.parse(rivalriesJson)
 
   const teamIds = new Set(cars.teams.map(t => t.id))
   for (const d of drivers.drivers) {
@@ -199,6 +209,10 @@ export function loadGameData(): GameData {
   }
   for (const s of strategies.defaults) {
     if (!teamIds.has(s.teamId)) throw new Error(`Strategy references unknown teamId "${s.teamId}"`)
+  }
+  const driverIds = new Set(drivers.drivers.map(d => d.id))
+  for (const r of rivalries.rivalries) {
+    if (!driverIds.has(r.a) || !driverIds.has(r.b)) throw new Error(`Rivalry references unknown driverId in pair (${r.a}, ${r.b})`)
   }
 
   return {
@@ -208,5 +222,6 @@ export function loadGameData(): GameData {
     cars,
     drivers,
     strategies,
+    rivalries: rivalries.rivalries,
   }
 }

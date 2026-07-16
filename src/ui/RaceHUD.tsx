@@ -8,6 +8,7 @@ import { PaceModeToggle } from './PaceModeToggle'
 import { PitPanel, PitButton } from './PitPanel'
 import { WeatherStrip } from './WeatherStrip'
 import { HudAlert } from './HudAlert'
+import { CommentaryTicker } from './CommentaryTicker'
 import { TelemetryZone } from './TelemetryZone'
 import { TrackCanvas } from '@canvas/TrackCanvas'
 import { StartLights } from './StartLights'
@@ -186,6 +187,9 @@ export function RaceHUD() {
 
               {/* HUD alert slot — 0px collapsed / 44px active */}
               {(phase === 'racing' || phase === 'starting') && <HudAlert />}
+
+              {/* Neutral broadcast ticker — factual events, any car */}
+              {(phase === 'racing' || phase === 'starting') && <CommentaryTicker />}
 
               {/* Track sub-section */}
               <div style={{

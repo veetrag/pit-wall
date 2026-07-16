@@ -1,0 +1,26 @@
+{
+  "overtake": [
+    "L{lap} {attacker} passes {defender} for P{pos}"
+  ],
+  "pit": [
+    "L{lap} {code} pits, fits the {compound}"
+  ],
+  "retired": [
+    "L{lap} {code} is out — retires from P{pos}"
+  ],
+  "weather_wet": [
+    "L{lap} rain arrives — track now wet"
+  ],
+  "weather_damp": [
+    "L{lap} spots of rain — track now damp"
+  ],
+  "weather_dry": [
+    "L{lap} track drying out"
+  ],
+  "race_start": [
+    "Lights out and away we go"
+  ],
+  "final_lap": [
+    "L{lap} final lap of the race"
+  ]
+}

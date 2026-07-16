@@ -4,6 +4,7 @@ import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
+import rivalriesData from '@data/rivalries.json'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -14,11 +15,31 @@ type DriverFacets = {
 type TeamFacets = {
   power: number; aero: number; handling: number; reliability: number; pitCrew: number
 }
-type Driver = { id: string; name: string; code: string; teamId: string; facets: DriverFacets; potential?: number; age?: number }
-type Team   = { id: string; name: string; colorPrimary: string; colorSecondary: string; facets: TeamFacets }
+type Driver = {
+  id: string; name: string; code: string; teamId: string; facets: DriverFacets
+  potential?: number; age?: number; nationality?: string; flag?: string
+  archetype?: string; bio?: string; backstory?: string
+}
+type Team = {
+  id: string; name: string; colorPrimary: string; colorSecondary: string; facets: TeamFacets
+  nationality?: string; flag?: string; archetype?: string; history?: string
+}
+type Rivalry = { a: string; b: string; note: string }
 
 const drivers = driversData.drivers as Driver[]
 const teams   = carsData.teams as Team[]
+const rivalries = rivalriesData.rivalries as Rivalry[]
+
+function rivalriesFor(driverId: string): { rival: Driver; note: string }[] {
+  return rivalries
+    .filter(r => r.a === driverId || r.b === driverId)
+    .map(r => {
+      const rivalId = r.a === driverId ? r.b : r.a
+      const rival = drivers.find(d => d.id === rivalId)
+      return rival ? { rival, note: r.note } : null
+    })
+    .filter((x): x is { rival: Driver; note: string } => x !== null)
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -33,7 +54,10 @@ function teamName(teamId: string)  { return teams.find(t => t.id === teamId)?.na
 
 type RadarDatum = { label: string; value: number; dormant?: boolean }
 
-function RadarChart({ data, color, size = 140 }: { data: RadarDatum[]; color: string; size?: number }) {
+function RadarChart({ data, color, size = 140, compareData, compareColor }: {
+  data: RadarDatum[]; color: string; size?: number
+  compareData?: RadarDatum[]; compareColor?: string
+}) {
   const cx = size / 2
   const cy = size / 2
   const maxR = size * 0.42
@@ -44,6 +68,10 @@ function RadarChart({ data, color, size = 140 }: { data: RadarDatum[]; color: st
   const rings = [0.25, 0.5, 0.75, 1.0]
   // Data polygon points
   const pts = data.map((d, i) => {
+    const r = (d.value / 100) * maxR
+    return `${cx + r * Math.cos(angle(i))},${cy + r * Math.sin(angle(i))}`
+  })
+  const comparePts = compareData?.map((d, i) => {
     const r = (d.value / 100) * maxR
     return `${cx + r * Math.cos(angle(i))},${cy + r * Math.sin(angle(i))}`
   })
@@ -81,6 +109,21 @@ function RadarChart({ data, color, size = 140 }: { data: RadarDatum[]; color: st
         <line key={i} x1={cx} y1={cy} x2={a.x2} y2={a.y2}
           stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
       ))}
+      {/* Compare polygon drawn first, underneath the primary one */}
+      {comparePts && compareColor && (
+        <motion.polygon
+          initial={{ opacity: 0, scale: 0.2 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 22, delay: 0.05 }}
+          style={{ transformOrigin: `${cx}px ${cy}px` }}
+          points={comparePts.join(' ')}
+          fill={`${compareColor}22`}
+          stroke={compareColor}
+          strokeWidth="1.5"
+          strokeDasharray="3 2"
+          strokeLinejoin="round"
+        />
+      )}
       {/* Filled data polygon */}
       <motion.polygon
         initial={{ opacity: 0, scale: 0.2 }}
@@ -179,6 +222,7 @@ function DriverCard({ driver }: { driver: Driver }) {
     { label: 'WET',      value: driver.facets.wetWeather,   dormant: true },
     { label: 'EXP',      value: driver.facets.experience },
   ]
+  const rivals = rivalriesFor(driver.id)
 
   return (
     <motion.div
@@ -196,6 +240,23 @@ function DriverCard({ driver }: { driver: Driver }) {
         padding: '16px',
         marginTop: -2,
       }}>
+        {(driver.archetype || driver.backstory) && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              {driver.flag && <span style={{ fontSize: 13 }}>{driver.flag}</span>}
+              {driver.archetype && (
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color, letterSpacing: '0.02em' }}>
+                  {driver.archetype}
+                </span>
+              )}
+            </div>
+            {driver.backstory && (
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--text-mid)', lineHeight: 1.5, margin: 0 }}>
+                {driver.backstory}
+              </p>
+            )}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
           {/* Radar */}
           <div style={{ flexShrink: 0 }}>
@@ -226,6 +287,27 @@ function DriverCard({ driver }: { driver: Driver }) {
             <span style={{ ...hintStyle, opacity: 0.5 }}>💧 Wet weather ace (dormant in v1)</span>
           )}
         </div>
+        {/* Rivalries */}
+        {rivals.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--accent-warm)', letterSpacing: '0.15em', marginBottom: 6 }}>
+              RIVALS
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {rivals.map(({ rival, note }) => (
+                <div key={rival.id} style={{
+                  display: 'flex', alignItems: 'baseline', gap: 6,
+                  fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-mid)',
+                }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: teamColor(rival.teamId), flexShrink: 0 }}>
+                    {rival.flag} {rival.code}
+                  </span>
+                  <span>{note}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   )
@@ -269,6 +351,23 @@ function CarCard({ team }: { team: Team }) {
         padding: '16px',
         marginTop: -2,
       }}>
+        {(team.archetype || team.history) && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              {team.flag && <span style={{ fontSize: 13 }}>{team.flag}</span>}
+              {team.archetype && (
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color, letterSpacing: '0.02em' }}>
+                  {team.archetype}
+                </span>
+              )}
+            </div>
+            {team.history && (
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--text-mid)', lineHeight: 1.5, margin: 0 }}>
+                {team.history}
+              </p>
+            )}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
           {/* Radar */}
           <div style={{ flexShrink: 0 }}>
@@ -324,6 +423,154 @@ const hintStyle: React.CSSProperties = {
   padding: '4px 8px', display: 'inline-block',
 }
 
+// ─── Comparison view ──────────────────────────────────────────────────────────
+
+function CompareFacetRow({ label, valueA, valueB, colorA, colorB }: {
+  label: string; valueA: number; valueB: number; colorA: string; colorB: string
+}) {
+  const delta = valueA - valueB
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '32px 1fr 60px 1fr 32px', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colorA, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{valueA}</span>
+      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ width: `${valueA}%`, height: '100%', background: colorA }} />
+      </div>
+      <span style={{
+        fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.06em', textAlign: 'center',
+        color: 'var(--text-dim)',
+      }}>
+        {label}
+      </span>
+      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+        <div style={{ width: `${valueB}%`, height: '100%', background: colorB }} />
+      </div>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colorB, fontVariantNumeric: 'tabular-nums' }}>{valueB}</span>
+      <div style={{ gridColumn: '1 / -1', textAlign: 'center', marginTop: 1 }}>
+        {delta !== 0 && (
+          <span style={{
+            fontFamily: 'var(--font-mono)', fontSize: 8,
+            color: delta > 0 ? colorA : colorB,
+          }}>
+            {delta > 0 ? '◀' : '▶'} {Math.abs(delta)}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CompareHeader({ a, b, colorA, colorB, nameA, nameB, subA, subB }: {
+  a: string; b: string; colorA: string; colorB: string; nameA: string; nameB: string; subA?: string; subB?: string
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+      <div style={{ flex: 1, textAlign: 'left' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: colorA }}>{a}</div>
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)' }}>{nameA}</div>
+        {subA && <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--text-dim)' }}>{subA}</div>}
+      </div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.1em', flexShrink: 0, padding: '0 10px' }}>VS</div>
+      <div style={{ flex: 1, textAlign: 'right' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: colorB }}>{b}</div>
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)' }}>{nameB}</div>
+        {subB && <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--text-dim)' }}>{subB}</div>}
+      </div>
+    </div>
+  )
+}
+
+function DriverCompareView({ a, b, onClose }: { a: Driver; b: Driver; onClose: () => void }) {
+  const colorA = teamColor(a.teamId)
+  const colorB = teamColor(b.teamId)
+  const radarA: RadarDatum[] = [
+    { label: 'PACE', value: a.facets.pace }, { label: 'CRAFT', value: a.facets.racecraft },
+    { label: 'TYRES', value: a.facets.tyreManagement }, { label: 'CONSIST', value: a.facets.consistency },
+    { label: 'WET', value: a.facets.wetWeather, dormant: true }, { label: 'EXP', value: a.facets.experience },
+  ]
+  const radarB: RadarDatum[] = [
+    { label: 'PACE', value: b.facets.pace }, { label: 'CRAFT', value: b.facets.racecraft },
+    { label: 'TYRES', value: b.facets.tyreManagement }, { label: 'CONSIST', value: b.facets.consistency },
+    { label: 'WET', value: b.facets.wetWeather, dormant: true }, { label: 'EXP', value: b.facets.experience },
+  ]
+  const mutualRivalry = rivalries.find(r => (r.a === a.id && r.b === b.id) || (r.a === b.id && r.b === a.id))
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+      style={{
+        background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
+        borderRadius: 12, padding: 16, marginBottom: 14,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.15em' }}>COMPARING</span>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+      </div>
+      <CompareHeader
+        a={a.code} b={b.code} colorA={colorA} colorB={colorB}
+        nameA={a.name} nameB={b.name}
+        subA={a.archetype} subB={b.archetype}
+      />
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+        <RadarChart data={radarA} color={colorA} compareData={radarB} compareColor={colorB} size={150} />
+      </div>
+      <CompareFacetRow label="PACE"     valueA={a.facets.pace}           valueB={b.facets.pace}           colorA={colorA} colorB={colorB} />
+      <CompareFacetRow label="CRAFT"    valueA={a.facets.racecraft}      valueB={b.facets.racecraft}      colorA={colorA} colorB={colorB} />
+      <CompareFacetRow label="TYRES"    valueA={a.facets.tyreManagement} valueB={b.facets.tyreManagement} colorA={colorA} colorB={colorB} />
+      <CompareFacetRow label="CONSIST"  valueA={a.facets.consistency}    valueB={b.facets.consistency}    colorA={colorA} colorB={colorB} />
+      <CompareFacetRow label="EXP"      valueA={a.facets.experience}     valueB={b.facets.experience}     colorA={colorA} colorB={colorB} />
+      {mutualRivalry && (
+        <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(255,77,94,0.08)', border: '1px solid rgba(255,77,94,0.3)', borderRadius: 8 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, color: 'var(--accent-warm)', letterSpacing: '0.12em', marginBottom: 3 }}>RIVALRY</div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-mid)' }}>{mutualRivalry.note}</div>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
+function TeamCompareView({ a, b, onClose }: { a: Team; b: Team; onClose: () => void }) {
+  const colorA = a.colorPrimary
+  const colorB = b.colorPrimary
+  const radarA: RadarDatum[] = [
+    { label: 'POWER', value: a.facets.power }, { label: 'AERO', value: a.facets.aero },
+    { label: 'HANDLING', value: a.facets.handling }, { label: 'CREW', value: a.facets.pitCrew },
+    { label: 'RELI', value: a.facets.reliability, dormant: true },
+  ]
+  const radarB: RadarDatum[] = [
+    { label: 'POWER', value: b.facets.power }, { label: 'AERO', value: b.facets.aero },
+    { label: 'HANDLING', value: b.facets.handling }, { label: 'CREW', value: b.facets.pitCrew },
+    { label: 'RELI', value: b.facets.reliability, dormant: true },
+  ]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+      style={{
+        background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
+        borderRadius: 12, padding: 16, marginBottom: 14,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.15em' }}>COMPARING</span>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+      </div>
+      <CompareHeader
+        a={a.flag ?? ''} b={b.flag ?? ''} colorA={colorA} colorB={colorB}
+        nameA={a.name} nameB={b.name}
+        subA={a.archetype} subB={b.archetype}
+      />
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+        <RadarChart data={radarA} color={colorA} compareData={radarB} compareColor={colorB} size={150} />
+      </div>
+      <CompareFacetRow label="POWER"    valueA={a.facets.power}    valueB={b.facets.power}    colorA={colorA} colorB={colorB} />
+      <CompareFacetRow label="AERO"     valueA={a.facets.aero}     valueB={b.facets.aero}     colorA={colorA} colorB={colorB} />
+      <CompareFacetRow label="HANDLING" valueA={a.facets.handling} valueB={b.facets.handling} colorA={colorA} colorB={colorB} />
+      <CompareFacetRow label="CREW"     valueA={a.facets.pitCrew}  valueB={b.facets.pitCrew}  colorA={colorA} colorB={colorB} />
+    </motion.div>
+  )
+}
+
 // ─── Mini stat bar row ────────────────────────────────────────────────────────
 
 function MiniBar({ value, color }: { value: number; color: string }) {
@@ -341,9 +588,25 @@ export function GridStats() {
   const uiTap = useUiTap()
   const [tab, setTab] = useState<'drivers' | 'cars'>('drivers')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [compareMode, setCompareMode] = useState(false)
+  const [compareIds, setCompareIds] = useState<string[]>([])
 
   function toggle(id: string) {
     setExpanded(prev => prev === id ? null : id)
+  }
+
+  function toggleCompareSelection(id: string) {
+    setCompareIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id)
+      if (prev.length >= 2) return [prev[1]!, id] // FIFO swap once 2 are already picked
+      return [...prev, id]
+    })
+  }
+
+  function toggleCompareMode() {
+    setCompareMode(v => !v)
+    setCompareIds([])
+    setExpanded(null)
   }
 
   return (
@@ -388,33 +651,79 @@ export function GridStats() {
       <div style={{
         display: 'flex', padding: '10px 16px',
         borderBottom: '1px solid var(--line-hair)', flexShrink: 0, gap: 8,
+        justifyContent: 'space-between',
       }}>
-        {(['drivers', 'cars'] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => { setTab(t); setExpanded(null) }}
-            style={{
-              fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-              letterSpacing: '0.1em', padding: '7px 18px', borderRadius: 8,
-              border: 'none', cursor: 'pointer',
-              background: tab === t ? 'var(--accent)' : 'var(--bg-elevated)',
-              color: tab === t ? 'var(--bg-deep)' : 'var(--text-mid)',
-              transition: 'all 0.15s',
-            }}
-          >
-            {t.toUpperCase()}
-          </button>
-        ))}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['drivers', 'cars'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => { setTab(t); setExpanded(null); setCompareIds([]) }}
+              style={{
+                fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
+                letterSpacing: '0.1em', padding: '7px 18px', borderRadius: 8,
+                border: 'none', cursor: 'pointer',
+                background: tab === t ? 'var(--accent)' : 'var(--bg-elevated)',
+                color: tab === t ? 'var(--bg-deep)' : 'var(--text-mid)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {t.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => { uiTap(); toggleCompareMode() }}
+          style={{
+            fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.06em', padding: '7px 14px', borderRadius: 8,
+            border: compareMode ? 'none' : '1px solid var(--line-hair)', cursor: 'pointer',
+            background: compareMode ? 'var(--accent-warm)' : 'transparent',
+            color: compareMode ? 'var(--bg-deep)' : 'var(--text-mid)',
+            transition: 'all 0.15s',
+          }}
+        >
+          {compareMode ? '✕ COMPARE' : '⇄ COMPARE'}
+        </button>
       </div>
+
+      {compareMode && (
+        <div style={{
+          padding: '8px 16px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
+          fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.05em',
+        }}>
+          {compareIds.length < 2
+            ? `Tap ${2 - compareIds.length} more ${tab === 'drivers' ? 'driver' : 'team'}${2 - compareIds.length > 1 ? 's' : ''} to compare`
+            : 'Tap a row to swap it into the comparison'}
+        </div>
+      )}
 
       {/* List */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
+        {compareMode && compareIds.length === 2 && tab === 'drivers' && (
+          <AnimatePresence>
+            <DriverCompareView
+              a={drivers.find(d => d.id === compareIds[0])!}
+              b={drivers.find(d => d.id === compareIds[1])!}
+              onClose={() => setCompareIds([])}
+            />
+          </AnimatePresence>
+        )}
+        {compareMode && compareIds.length === 2 && tab === 'cars' && (
+          <AnimatePresence>
+            <TeamCompareView
+              a={teams.find(t => t.id === compareIds[0])!}
+              b={teams.find(t => t.id === compareIds[1])!}
+              onClose={() => setCompareIds([])}
+            />
+          </AnimatePresence>
+        )}
         <AnimatePresence mode="wait">
           {tab === 'drivers' ? (
             <motion.div key="drivers" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {drivers.map((driver, i) => {
                 const color = teamColor(driver.teamId)
                 const isOpen = expanded === driver.id
+                const isSelected = compareIds.includes(driver.id)
                 return (
                   <motion.div
                     key={driver.id}
@@ -425,13 +734,13 @@ export function GridStats() {
                   >
                     {/* Row */}
                     <button
-                      onClick={() => toggle(driver.id)}
+                      onClick={() => compareMode ? toggleCompareSelection(driver.id) : toggle(driver.id)}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 14,
                         padding: '11px 14px',
-                        background: isOpen ? `${color}14` : 'var(--bg-elevated)',
-                        border: `1px solid ${isOpen ? color + '66' : 'var(--line-hair)'}`,
-                        borderRadius: isOpen ? '12px 12px 0 0' : 12,
+                        background: isSelected ? `${color}1c` : isOpen ? `${color}14` : 'var(--bg-elevated)',
+                        border: `1px solid ${isSelected ? color : isOpen ? color + '66' : 'var(--line-hair)'}`,
+                        borderRadius: isOpen && !compareMode ? '12px 12px 0 0' : 12,
                         cursor: 'pointer', outline: 'none', textAlign: 'left',
                         transition: 'all 0.15s',
                       }}
@@ -482,6 +791,7 @@ export function GridStats() {
               {teams.map((team, i) => {
                 const color = team.colorPrimary
                 const isOpen = expanded === team.id
+                const isSelected = compareIds.includes(team.id)
                 const f = team.facets
                 return (
                   <motion.div
@@ -492,13 +802,13 @@ export function GridStats() {
                     style={{ marginBottom: 8 }}
                   >
                     <button
-                      onClick={() => toggle(team.id)}
+                      onClick={() => compareMode ? toggleCompareSelection(team.id) : toggle(team.id)}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 14,
                         padding: '11px 14px',
-                        background: isOpen ? `${color}14` : 'var(--bg-elevated)',
-                        border: `1px solid ${isOpen ? color + '66' : 'var(--line-hair)'}`,
-                        borderRadius: isOpen ? '12px 12px 0 0' : 12,
+                        background: isSelected ? `${color}1c` : isOpen ? `${color}14` : 'var(--bg-elevated)',
+                        border: `1px solid ${isSelected ? color : isOpen ? color + '66' : 'var(--line-hair)'}`,
+                        borderRadius: isOpen && !compareMode ? '12px 12px 0 0' : 12,
                         cursor: 'pointer', outline: 'none', textAlign: 'left',
                         transition: 'all 0.15s',
                       }}

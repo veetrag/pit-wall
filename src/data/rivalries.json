@@ -1,0 +1,16 @@
+{
+  "rivalries": [
+    { "a": "d_voss", "b": "d_chen", "note": "The ice man vs. his steady wingman — same garage, opposite temperatures." },
+    { "a": "d_rossi", "b": "d_haas", "note": "Mercurial genius vs. the wily veteran — radio silence after every clash." },
+    { "a": "d_silva", "b": "d_park", "note": "Rain god vs. tyre whisperer — opposite superpowers, same garage." },
+    { "a": "d_berg", "b": "d_almeida", "note": "Saturday hero vs. Sunday brawler." },
+    { "a": "d_novak", "b": "d_ito", "note": "Two metronomes — the closest teammate battle on the grid." },
+    { "a": "d_dubois", "b": "d_mwangi", "note": "The old head vs. the wonderkid snapping at his heels." },
+    { "a": "d_olsen", "b": "d_reyes", "note": "Smooth vs. wild — somehow it works." },
+    { "a": "d_fischer", "b": "d_kovac", "note": "The strategist vs. the grafter." },
+    { "a": "d_santos", "b": "d_tan", "note": "Rookie fire vs. veteran calm." },
+    { "a": "d_petrov", "b": "d_kane", "note": "Grinder vs. gambler — bragging rights at the back of the grid." },
+    { "a": "d_voss", "b": "d_rossi", "note": "The championship fight — ice against fire, season after season." },
+    { "a": "d_mwangi", "b": "d_santos", "note": "Next generation's title fight, years before it matters to the standings." }
+  ]
+}
