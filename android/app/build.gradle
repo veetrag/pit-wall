@@ -43,7 +43,7 @@ android {
     buildTypes {
         release {
             if (hasReleaseKeystore) {
-                signingConfig signingConfigs.release
+                signingConfig = signingConfigs.release
             } else {
                 logger.warn('Pit Wall: android/keystore.properties not found — release build will be UNSIGNED and cannot be uploaded to Play. See keystore.properties.example.')
             }
