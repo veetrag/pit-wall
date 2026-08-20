@@ -23,6 +23,11 @@ export type Metrics = {
   paceRankCorrelation: number
   meanOvertakeEvents: number
   minOvertakeEvents: number
+  // Retirements with retiredCause === 'mechanical', per car-race. Banded in
+  // tuning.json as mechanicalDnfPerCarRace; MODEL_SPEC.md §3 bands it 0.06-0.10
+  // against a real-F1 9.8pp, but the sim measures 5-6%, so that band is
+  // ASPIRATIONAL and owned by the race-incidents plan, not this one.
+  mechanicalDnfPerCarRace: number
 }
 
 // Duplicated from src/state/raceStore.ts:53 and :57-62 (BRAIN_ORDER and
@@ -122,6 +127,8 @@ export function runRaces(opts: HarnessOptions): Metrics {
   let spearmanSum = 0
   let overtakeTotal = 0
   let overtakeMin = Number.POSITIVE_INFINITY
+  let mechanicalDnfs = 0
+  let carRaces = 0
   const finishSumByTeam = new Map<string, number>()
   const finishCountByTeam = new Map<string, number>()
 
@@ -140,6 +147,8 @@ export function runRaces(opts: HarnessOptions): Metrics {
     const gs: number[] = []
     const fs: number[] = []
     for (const car of state.cars) {
+      carRaces++
+      if (car.retired && car.retiredCause === 'mechanical') mechanicalDnfs++
       const g = grid.get(car.driverId)!
       absPosChanges.push(Math.abs(g - car.position))
       gs.push(g); fs.push(car.position)
@@ -179,5 +188,6 @@ export function runRaces(opts: HarnessOptions): Metrics {
     paceRankCorrelation: spearman(paceRanks, meanFinishes),
     meanOvertakeEvents: overtakeTotal / races,
     minOvertakeEvents: overtakeMin,
+    mechanicalDnfPerCarRace: mechanicalDnfs / carRaces,
   }
 }

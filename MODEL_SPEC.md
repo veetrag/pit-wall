@@ -82,6 +82,17 @@ therefore tightens as the work lands:
 
 Each step must be met before the next begins. Do not weaken a gate that has already been met.
 
+**How the win-share gate is measured — this qualification is part of the band.** The figures above
+are **field-wide**: pooled over a multi-circuit sample at a single stated difficulty. They are
+**not** per-circuit-per-difficulty ceilings, and asserting them that way is invalid. An earlier
+version of this section stated `≤ 0.97` unconditionally, which is false as written: measured on the
+single-circuit fixture in `tests/engine/difficultyProfile.test.ts`, apex's win rate at **rookie is
+0.99** (n=100), while the same grid measured across a 4-circuit sample at pro is **0.921** ± 1.74pp
+(n=240, `tests/engine/monteCarloHarness.ts`). Single-circuit samples are systematically more
+deterministic — one circuit means one lap count, one rain probability and one strategy pattern, so
+the disruption that lets a second team win is absent. Any test asserting a win-share band must
+therefore state its sample and difficulty, and must pool at least four circuits.
+
 ## 5. Why overtake counts are not a band
 
 "Overtakes per race" is two different metrics differing by roughly 2×, and neither can gate this
