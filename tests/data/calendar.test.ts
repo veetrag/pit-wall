@@ -153,4 +153,15 @@ describe('new circuits', () => {
     expect(TOTAL_RACES).toBe(12)
     expect(CIRCUIT_ORDER.length).toBe(12)
   })
+
+  it('never schedules two wet-leaning rounds back to back', () => {
+    const { circuits } = loadGameData()
+    const RAIN_THRESHOLD = 0.35
+    for (let i = 0; i < CIRCUIT_ORDER.length - 1; i++) {
+      const a = circuits[CIRCUIT_ORDER[i]!]!
+      const b = circuits[CIRCUIT_ORDER[i + 1]!]!
+      const bothWet = (a.rainProbability ?? 0) > RAIN_THRESHOLD && (b.rainProbability ?? 0) > RAIN_THRESHOLD
+      expect(bothWet, `${CIRCUIT_ORDER[i]} -> ${CIRCUIT_ORDER[i + 1]}`).toBe(false)
+    }
+  })
 })
