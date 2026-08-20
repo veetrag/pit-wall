@@ -1,22 +1,30 @@
-import type { UpgradeAttribute } from '@data/validators'
+import { loadGameData, type UpgradeAttribute } from '@data/validators'
 
 // Facets feed facetToRating9() in engine/lapModel.ts as (1 - facet/100) * 9.
 // Above 100 that goes negative and the benefit inverts — a facet of 101 makes a
 // car *slower*. The ceiling is therefore a correctness bound, not a balance
-// choice, which is why it lives in code and not in data/upgrades.json.
+// choice, which is why this one number lives in code and not in upgrades.json.
 const FACET_MAX = 100
 
-// Rival development is spread evenly across the three pace facets rather than
-// weighted toward a team's existing strength, so it stays legible and does not
-// silently amplify the aero-is-worth-more asymmetry (MODEL_SPEC §4).
-const RIVAL_FACETS = ['power', 'aero', 'handling'] as const
+// WHICH facets a rival's development pool spreads across, and how many ways it
+// divides, both come from data/upgrades.json (`rivalDevelopment.facets`) —
+// CLAUDE.md §5, the designer balances by editing data. Memoised because
+// loadGameData() re-parses eight zod schemas per call and this is read once per
+// rival team per race build; the underlying JSON is a static import, so the
+// list cannot change within a process and caching it stays deterministic.
+let rivalFacetsCache: readonly string[] | null = null
+function rivalFacets(): readonly string[] {
+  return (rivalFacetsCache ??= loadGameData().upgrades.rivalDevelopment.facets)
+}
 
 /**
  * Converts a raw accumulated development pool for one rival team into the
  * effective value of a single facet, given that facet's un-upgraded base.
- * The pool is a season-long total split evenly across `RIVAL_FACETS`, so it is
- * divided by three here — at the same point a caller would otherwise write
- * `pool / 3` straight onto a facet.
+ * The pool is a season-long total spread evenly across
+ * `rivalDevelopment.facets`, so it is divided by that list's length here — at
+ * the same point a caller would otherwise write `pool / n` straight onto a
+ * facet. `seasonStore.accumulateRivalDevelopment` multiplies by the same
+ * length on accrual, so accrual and application share one source of truth.
  *
  * Clamped HERE, where the effective facet value is produced, rather than on the
  * raw pool: the pool is not a facet, and clamping it would cap development for
@@ -25,8 +33,8 @@ const RIVAL_FACETS = ['power', 'aero', 'handling'] as const
  * Lives in this pure module rather than in seasonStore so the dependency
  * direction stays state -> pure-computation (CLAUDE.md §3).
  */
-export function rivalFacetValue(baseFacet: number, pool: number): number {
-  return Math.min(FACET_MAX, baseFacet + pool / RIVAL_FACETS.length)
+export function rivalFacetValue(baseFacet: number, pool: number, facetCount = rivalFacets().length): number {
+  return Math.min(FACET_MAX, baseFacet + pool / facetCount)
 }
 
 /**
@@ -67,11 +75,21 @@ export interface UpgradeOverlayOptions<T extends FacetEntity> {
  * (CLAUDE.md §3, the golden rule).
  *
  * Never mutates its input, and never returns an object reachable from its
- * input. `loadGameData()` hands out shared, cached objects; writing through
- * them would leak one race's upgrades into every later race in the process and
- * destroy determinism. Every entity is copied unconditionally — an
- * "only copy when changed" optimisation would hand the caller live references
- * to the load cache for untouched entities, which is precisely the leak.
+ * input. This makes the overlay safe *regardless of whether the data loader
+ * caches*. As of today `loadGameData()` does NOT cache — it re-runs
+ * `zod.parse` on every call and zod constructs fresh objects recursively, so
+ * each caller already gets its own copy. But memoising `loadGameData()` is an
+ * obvious future optimisation (it re-parses eight schemas per race build), and
+ * the day someone does it, an overlay that wrote through its input would leak
+ * one race's upgrades into every later race in the process and destroy
+ * determinism. The copy is what makes that refactor safe instead of
+ * catastrophic. `tests/state/upgradeOverlay.test.ts` asserts the isolation
+ * directly against a single held `loadGameData()` result, so it tests this
+ * function's contract rather than an incidental property of zod.
+ *
+ * Every entity is copied unconditionally — an "only copy when changed"
+ * optimisation would hand the caller live references to its own input for
+ * untouched entities, which is exactly the aliasing this prevents.
  */
 export function applyUpgrades<T extends FacetEntity>(
   entities: T[],
@@ -79,6 +97,7 @@ export function applyUpgrades<T extends FacetEntity>(
 ): T[] {
   const { attributes, purchasedTiers, target, appliesTo, rivalDevelopment } = opts
   const relevant = attributes.filter(a => a.target === target)
+  const spread = rivalFacets()
 
   return entities.map(entity => {
     const facets: Record<string, number> = { ...entity.facets }
@@ -96,10 +115,10 @@ export function applyUpgrades<T extends FacetEntity>(
     } else {
       const pool = rivalDevelopment?.[entity.id] ?? 0
       if (pool > 0) {
-        for (const facet of RIVAL_FACETS) {
+        for (const facet of spread) {
           const base = facets[facet]
           if (base === undefined) continue
-          facets[facet] = rivalFacetValue(base, pool)
+          facets[facet] = rivalFacetValue(base, pool, spread.length)
         }
       }
     }

@@ -60,7 +60,7 @@ const SAVE_KEY = 'season.v1'
 
 // Facet points a developmentRate-1.0 team gains per race, and how many team
 // facets that pool is split across, both live in data/upgrades.json
-// (`rivalDevelopment.poolPerRace` / `.facetSplit`) rather than here — per
+// (`rivalDevelopment.poolPerRace` / `.facets`) rather than here — per
 // CLAUDE.md §4/§5 ("the player/designer balances by editing data, not
 // code"), a designer tuning how fast rivals close in on the player must
 // never require a code change. Sized (at the data's current values) so that
@@ -76,11 +76,11 @@ const SAVE_KEY = 'season.v1'
 // correcting.
 function accumulateRivalDevelopment(current: Record<string, number>): Record<string, number> {
   const { cars, upgrades } = loadGameData()
-  const { poolPerRace, facetSplit } = upgrades.rivalDevelopment
+  const { poolPerRace, facets } = upgrades.rivalDevelopment
   const next: Record<string, number> = { ...current }
   for (const team of cars.teams) {
     const rate = team.developmentRate ?? 1.0
-    next[team.id] = (next[team.id] ?? 0) + poolPerRace * rate * facetSplit
+    next[team.id] = (next[team.id] ?? 0) + poolPerRace * rate * facets.length
   }
   return next
 }

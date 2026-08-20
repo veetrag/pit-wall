@@ -86,17 +86,32 @@ function buildConfig(
     })),
   }))
 
-  const playerTeamId = data.drivers.drivers.find(d => d.id === playerDriverId)?.teamId ?? ''
+  // `playerTeam` is undefined when playerDriverId matches no driver. The `?? ''`
+  // fallback below is pre-existing behaviour for playerStrategyOverride; the
+  // overlay must NOT reuse it, see the guard at `overlayActive`.
+  const playerTeam = data.drivers.drivers.find(d => d.id === playerDriverId)?.teamId
+  const playerTeamId = playerTeam ?? ''
   const playerStrategyOverride = playerStrategy
     ? { teamId: playerTeamId, startCompound: playerStrategy.startCompound, plannedStops: playerStrategy.plannedStops }
     : undefined
 
   // Upgrades are applied here and nowhere else: the engine receives ordinary
   // facet numbers and never learns that progression exists (CLAUDE.md §3).
-  // Run unconditionally even with no overlay, so `config` never holds a live
-  // reference into loadGameData()'s shared cache.
-  const purchasedTiers = upgrades?.purchasedTiers ?? {}
-  const rivalDevelopment = upgrades?.rivalDevelopment ?? {}
+  //
+  // Run unconditionally, even with no overlay, so `config` never aliases the
+  // objects `loadGameData()` returned. That loader does not memoise today (it
+  // re-parses every schema per call), so this is currently belt-and-braces —
+  // but memoising it is an obvious optimisation, and this keeps that refactor
+  // from silently leaking one race's upgrades into the next.
+  //
+  // If playerDriverId resolves to no team, apply NO overlay rather than an
+  // inverted one: with playerTeamId falling back to '', `appliesTo` is false
+  // for every team, so the player's purchases would be discarded *and* the
+  // player's own team would take the rival-development branch — a bad id would
+  // produce a loudly wrong grid instead of a harmless no-op.
+  const overlayActive = playerTeam !== undefined
+  const purchasedTiers = overlayActive ? upgrades?.purchasedTiers ?? {} : {}
+  const rivalDevelopment = overlayActive ? upgrades?.rivalDevelopment ?? {} : {}
   const teams = applyUpgrades(data.cars.teams, {
     attributes: data.upgrades.attributes,
     purchasedTiers,

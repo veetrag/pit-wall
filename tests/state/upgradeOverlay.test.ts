@@ -22,7 +22,7 @@ describe('applyUpgrades', () => {
     expect(out[0]!.facets.aero).toBe(95)
   })
 
-  it('never mutates the input — the load cache is shared', () => {
+  it('never mutates the input', () => {
     const original = ent('apex', { power: 82 })
     const snapshot = { ...original.facets }
     const out = applyUpgrades([original], {
@@ -101,11 +101,11 @@ describe('applyUpgrades', () => {
   })
 
   it('clamps a full 12-race rival pool for the strongest team', () => {
-    const { poolPerRace, facetSplit } = loadGameData().upgrades.rivalDevelopment
+    const { poolPerRace, facets } = loadGameData().upgrades.rivalDevelopment
     const apex = loadGameData().cars.teams.find(t => t.id === 'apex')!
-    const pool = poolPerRace * (apex.developmentRate ?? 1) * facetSplit * 12
+    const pool = poolPerRace * (apex.developmentRate ?? 1) * facets.length * 12
     // sanity: unclamped this really would breach 100, so the clamp is exercised
-    expect(apex.facets.aero + pool / 3).toBeGreaterThan(100)
+    expect(apex.facets.aero + pool / facets.length).toBeGreaterThan(100)
     const out = applyUpgrades([{ id: apex.id, facets: { ...apex.facets } }], {
       attributes: ATTRS, purchasedTiers: {}, target: 'team',
       appliesTo: () => false,
@@ -188,14 +188,18 @@ describe('buildConfig overlay wiring', () => {
     expect(chen.facets).toEqual(rawChen.facets)
   })
 
-  it('does not leak upgrades into a later race built without them', () => {
+  // Kept as a regression guard on buildConfig's output, but note it is NOT
+  // what proves the copy: loadGameData() does not memoise today, so each build
+  // parses fresh objects and this would pass even against an overlay that
+  // mutated its input. The real proof is the `input isolation` suite below,
+  // which holds one loadGameData() result and asserts applyUpgrades never
+  // writes through it. This test becomes load-bearing the day loadGameData()
+  // is memoised.
+  it('builds a plain, un-upgraded config after an upgraded one', () => {
     store().startSeasonRace('d_voss', 42, 'bengaluru', 'rookie', null, {
       purchasedTiers: { power: 3, pace: 3 },
       rivalDevelopment: { terra: 12 },
     })
-    const upgraded = store().config!
-
-    // Second build, same process, no overlay at all.
     store().startSeasonRace('d_voss', 42, 'bengaluru', 'rookie', null)
     const plain = store().config!
     const rawTeams = loadGameData().cars.teams
@@ -206,18 +210,26 @@ describe('buildConfig overlay wiring', () => {
     for (const d of plain.drivers) {
       expect(d.facets).toEqual(rawDrivers.find(r => r.id === d.id)!.facets)
     }
+  })
 
-    // Third build after deliberately vandalising the first result: the shared
-    // loaded data must not be reachable from the overlay's output.
-    const apexUp = upgraded.teams.find(t => t.id === 'apex')!
-    ;(apexUp.facets as unknown as Record<string, number>).power = 1
-    ;(upgraded.drivers.find(d => d.id === 'd_voss')!.facets as unknown as Record<string, number>).pace = 1
-    store().startSeasonRace('d_voss', 42, 'bengaluru', 'rookie', null)
-    const third = store().config!
-    expect(third.teams.find(t => t.id === 'apex')!.facets.power)
-      .toBe(rawTeams.find(t => t.id === 'apex')!.facets.power)
-    expect(third.drivers.find(d => d.id === 'd_voss')!.facets.pace)
-      .toBe(rawDrivers.find(d => d.id === 'd_voss')!.facets.pace)
+  it('applies no overlay at all when playerDriverId matches no driver', () => {
+    // playerTeamId falls back to '' for an unknown driver, so every team fails
+    // appliesTo. Without the overlayActive guard the player's own team would
+    // then take the *rival* branch: purchases discarded and a rival pool
+    // applied to the player's car. A bad id must be a no-op, not an inversion.
+    store().startSeasonRace('NOPE', 42, 'bengaluru', 'rookie', null, {
+      purchasedTiers: { power: 3, pace: 3 },
+      rivalDevelopment: { apex: 30, terra: 30 },
+    })
+    const cfg = store().config!
+    const rawTeams = loadGameData().cars.teams
+    const rawDrivers = loadGameData().drivers.drivers
+    for (const t of cfg.teams) {
+      expect(t.facets).toEqual(rawTeams.find(r => r.id === t.id)!.facets)
+    }
+    for (const d of cfg.drivers) {
+      expect(d.facets).toEqual(rawDrivers.find(r => r.id === d.id)!.facets)
+    }
   })
 
   it('an overlay with nothing purchased is equivalent to no overlay', () => {
@@ -232,5 +244,85 @@ describe('buildConfig overlay wiring', () => {
     const overlaid = store().config!
     expect(overlaid.teams).toEqual(plainTeams)
     expect(overlaid.drivers).toEqual(plainDrivers)
+  })
+})
+
+// The proof that applyUpgrades never writes through its input. Unlike the
+// buildConfig tests above, these hold a SINGLE loadGameData() result and reuse
+// it, so they fail if the copy in applyUpgrades is removed — regardless of
+// whether the loader memoises.
+describe('input isolation', () => {
+  it('leaves one held result untouched across repeated, differing calls', () => {
+    const data = loadGameData()
+    const teams = data.cars.teams
+    const apex = teams.find(t => t.id === 'apex')!
+    const apexFacets = apex.facets
+    const before = structuredClone(teams)
+
+    applyUpgrades(teams, {
+      attributes: ATTRS, purchasedTiers: { power: 3, aero: 3, handling: 3 }, target: 'team',
+      appliesTo: t => t.id === 'apex', rivalDevelopment: { terra: 30, zenith: 12 },
+    })
+    applyUpgrades(teams, {
+      attributes: ATTRS, purchasedTiers: { handling: 2 }, target: 'team',
+      appliesTo: t => t.id === 'terra', rivalDevelopment: { apex: 30 },
+    })
+
+    // Identity preserved at array, entity and nested-facets level...
+    expect(teams).toBe(data.cars.teams)
+    expect(teams.find(t => t.id === 'apex')!).toBe(apex)
+    expect(apex.facets).toBe(apexFacets)
+    // ...and every value too.
+    expect(structuredClone(teams)).toEqual(before)
+  })
+
+  it('gives a second call the same result as if it had run first', () => {
+    // The sharpest form of the invariant: if call 1 wrote through the shared
+    // input, call 2 would compound on top of call 1's deltas.
+    const teams = loadGameData().cars.teams
+    const opts = {
+      attributes: ATTRS, purchasedTiers: { power: 3 }, target: 'team' as const,
+      appliesTo: (t: { id: string }) => t.id === 'apex',
+      rivalDevelopment: { terra: 30 },
+    }
+    const alone = structuredClone(applyUpgrades(teams, opts).map(t => t.facets))
+    applyUpgrades(teams, {
+      ...opts, purchasedTiers: { aero: 3, handling: 3 }, rivalDevelopment: { terra: 60, apex: 0 },
+    })
+    expect(applyUpgrades(teams, opts).map(t => t.facets)).toEqual(alone)
+  })
+
+  it('returns objects unreachable from the input, at every level', () => {
+    const drivers = loadGameData().drivers.drivers
+    const out = applyUpgrades(drivers, {
+      attributes: ATTRS, purchasedTiers: { pace: 1 }, target: 'driver',
+      appliesTo: d => d.id === 'd_voss',
+    })
+    expect(out).not.toBe(drivers)
+    for (const [i, d] of drivers.entries()) {
+      // Untouched entities are copied too: returning them by reference would
+      // hand the caller live aliases into its own input.
+      expect(out[i]).not.toBe(d)
+      expect(out[i]!.facets).not.toBe(d.facets)
+    }
+  })
+
+  it('spreads a rival pool across exactly the facets named in upgrades.json', () => {
+    // Pins the spread to data, not to a hardcoded list in upgradeOverlay.ts.
+    // Accrual (seasonStore) multiplies by facets.length and application divides
+    // by it; a hardcoded list on either side desynchronises the round trip and
+    // silently rescales every rival's development.
+    const { facets } = loadGameData().upgrades.rivalDevelopment
+    const base: Record<string, number> = {
+      power: 50, aero: 50, handling: 50, reliability: 50, pitCrew: 50,
+    }
+    const pool = facets.length * 4
+    const out = applyUpgrades([{ id: 'terra', facets: base }], {
+      attributes: ATTRS, purchasedTiers: {}, target: 'team',
+      appliesTo: () => false, rivalDevelopment: { terra: pool },
+    })
+    for (const [facet, value] of Object.entries(out[0]!.facets)) {
+      expect(value).toBe(facets.includes(facet as never) ? 54 : 50)
+    }
   })
 })

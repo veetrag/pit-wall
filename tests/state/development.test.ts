@@ -185,12 +185,12 @@ describe('rival development', () => {
 
   it('reads pool size and facet split from upgrades.json, not a hardcoded constant', () => {
     // Pins rivalDevelopment's per-race pool contribution to the JSON's
-    // poolPerRace/facetSplit values, the same way the income test pins
+    // poolPerRace / facets.length values, the same way the income test pins
     // `perRace` — a careless edit to data/upgrades.json (or a regression back
     // to a hardcoded constant in seasonStore.ts) must fail this loudly.
-    const { poolPerRace, facetSplit } = loadGameData().upgrades.rivalDevelopment
+    const { poolPerRace, facets } = loadGameData().upgrades.rivalDevelopment
     finishRace()
     const apexRate = loadGameData().cars.teams.find(t => t.id === 'apex')!.developmentRate ?? 1.0
-    expect(useSeasonStore.getState().rivalDevelopment['apex']).toBeCloseTo(poolPerRace * apexRate * facetSplit)
+    expect(useSeasonStore.getState().rivalDevelopment['apex']).toBeCloseTo(poolPerRace * apexRate * facets.length)
   })
 })

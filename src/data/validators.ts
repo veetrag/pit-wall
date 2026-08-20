@@ -204,7 +204,14 @@ export const UpgradesSchema = z.object({
   tierCosts: z.array(z.number().int().positive()).length(3),
   rivalDevelopment: z.object({
     poolPerRace: z.number().positive(),
-    facetSplit: z.number().int().positive(),
+    // WHICH team facets a rival's development pool is spread across, and
+    // therefore (via .length) how many ways it divides. Previously a bare
+    // `facetSplit: 3` here with the facet names hardcoded in
+    // upgradeOverlay.ts: the pool was multiplied by facetSplit on accrual but
+    // divided by the hardcoded list's length on application, so raising
+    // facetSplit to 4 would not have widened the spread — it would have handed
+    // every rival a silent 33% pace buff. One source of truth removes that.
+    facets: z.array(z.enum(['power', 'aero', 'handling', 'reliability', 'pitCrew'])).nonempty(),
   }),
   attributes: z.array(UpgradeAttributeSchema).length(8),
 })
