@@ -104,12 +104,12 @@
     }
   },
   "_regressionBands": {
-    "topTeamWinRate": [0.0, 0.97],
-    "minDistinctWinners": 2,
+    "topTeamWinRate": [0.0, 0.90],
+    "minDistinctWinners": 4,
     "meanAbsPosChange": [1.75, 4.0],
-    "gridFinishSpearman": [0.78, 0.90],
+    "gridFinishSpearman": [0.60, 0.80],
     "minPaceRankCorrelation": 0.90,
     "mechanicalDnfPerCarRace": [0.06, 0.10],
-    "_note": "Bands and their provenance live in MODEL_SPEC.md section 3; the staging table is section 4. STAGED (these are the today values, NOT the targets -- do not read a staged floor as a goal): topTeamWinRate, minDistinctWinners, meanAbsPosChange, gridFinishSpearman. The competitive-grid plan tightens topTeamWinRate to [0.0, 0.90] and minDistinctWinners to 4; the race-incidents plan tightens topTeamWinRate to [0.35, 0.55], meanAbsPosChange to [2.5, 4.0] and gridFinishSpearman to [0.60, 0.80]. FINAL, not staged: minPaceRankCorrelation, and mechanicalDnfPerCarRace which is section 3's real-F1 band that the sim does NOT currently meet (measures 5.06%) -- its assertion is skipped and owned by the race-incidents plan. Never loosen a gate that has already been met, and never widen a band to make a skipped test pass. Overtake event counts are deliberately NOT banded -- see MODEL_SPEC.md section 5."
+    "_note": "Bands and their provenance live in MODEL_SPEC.md section 3; the staging table is section 4. STAGED (these are the today values, NOT the targets -- do not read a staged floor as a goal): topTeamWinRate, minDistinctWinners, meanAbsPosChange, gridFinishSpearman. The competitive-grid plan has LANDED: it tightened topTeamWinRate to [0.0, 0.90], minDistinctWinners to 4, and -- unpredicted by the staging table -- reached the FINAL section 3 band for gridFinishSpearman, which is therefore now [0.60, 0.80] (measured 0.7357-0.7593 over six n=240 pro samples; the old 0.78 floor was no longer satisfiable and the net change is a tightening, 0.90 -> 0.80 ceiling). meanAbsPosChange measures 2.803-2.968, which would satisfy the final [2.5, 4.0], but is deliberately left staged at [1.75, 4.0] -- advancing it is the race-incidents plan's call. That plan still tightens topTeamWinRate to [0.35, 0.55] and meanAbsPosChange to [2.5, 4.0]. FINAL, not staged: minPaceRankCorrelation, and mechanicalDnfPerCarRace which is section 3's real-F1 band that the sim does NOT currently meet (measures 5.06%) -- its assertion is skipped and owned by the race-incidents plan. Never loosen a gate that has already been met, and never widen a band to make a skipped test pass. Overtake event counts are deliberately NOT banded -- see MODEL_SPEC.md section 5."
   }
 }

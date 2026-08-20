@@ -77,19 +77,33 @@ therefore tighten as the work lands. The values in `tuning.json._regressionBands
 
 | After | Top-team win share | Distinct winners | Mean \|grid−finish\| | Grid↔finish ρ |
 |---|---|---|---|---|
-| Today | ≤ 0.97 (current behaviour) | ≥ 2 | **1.75 – 4.0** | **0.78 – 0.90** |
-| The competitive-grid plan | **≤ 0.90** | **≥ 4** | 1.75 – 4.0 | 0.78 – 0.90 |
-| The race-incidents plan | **0.35 – 0.55** | ≥ 4 | **2.5 – 4.0** (the §3 target) | **0.60 – 0.80** (the §3 target) |
+| Pre-competitive-grid | ≤ 0.97 (behaviour then) | ≥ 2 | **1.75 – 4.0** | **0.78 – 0.90** |
+| The competitive-grid plan (landed) | **≤ 0.90** | **≥ 4** | 1.75 – 4.0 | **0.60 – 0.80** (the §3 target, reached early — see below) |
+| The race-incidents plan | **0.35 – 0.55** | ≥ 4 | **2.5 – 4.0** (the §3 target) | 0.60 – 0.80 |
 
-**Why \|Δpos\| and ρ are staged rather than simply banded at their §3 values.** The simulation
-measures \|Δpos\| **1.83 – 2.06** and ρ **0.834 – 0.856** (four-circuit samples, both difficulties,
-n = 120–240), which is outside §3's 2.5–4.0 and 0.60–0.80 in both cases. Both gaps have the same
-cause as the win-share gap — §7's "the simulation has no chaos" — and the same owner, the
-race-incidents plan. The today-stage bands are set just wide enough to admit the measured values
-(the \|Δpos\| floor of 1.75 sits ~1.6 SE below the lowest observed 1.832 ± 0.051; the ρ floor of
-0.78 sits below the lowest observed 0.834) and no wider. **They must not be loosened further**: a
-floor of 1.5 would let a genuine *regression* in churn pass CI while still violating this oracle,
-which is how a staged gate turns into no gate at all.
+**Why \|Δpos\| and ρ were staged rather than simply banded at their §3 values.** Before the
+competitive-grid change the simulation measured \|Δpos\| **1.83 – 2.06** and ρ **0.834 – 0.856**
+(four-circuit samples, both difficulties, n = 120–240), outside §3's 2.5–4.0 and 0.60–0.80 in both
+cases. Both gaps had the same cause as the win-share gap — §7's "the simulation has no chaos" —
+and were assigned to the race-incidents plan.
+
+**Measured correction (competitive-grid plan).** Narrowing the car spread from 1.482 to 0.674 s/lap
+moved both metrics into their §3 target bands on its own, which this section did not predict. Six
+independent n=240 pro samples on the four-circuit sample measure \|Δpos\| **2.803 – 2.968**
+(± 0.041–0.043) and ρ **0.7357 – 0.7593** (mean 0.7479). Both now sit inside §3's 2.5–4.0 and
+0.60–0.80. ρ therefore **advanced straight to its final §3 band**: the old staged floor of 0.78 is
+no longer satisfiable and holding it would gate against realism, because the metric moved *toward*
+real F1's 0.779, not away from it. Note the net effect is a **tightening**, not a loosening — the
+ceiling drops 0.90 → 0.80 — and the anti-lottery job the 0.78 floor was doing is carried by
+`minPaceRankCorrelation` (measured 0.9636) plus the oracle's own 0.60 floor.
+
+`meanAbsPosChange` is deliberately **left at its staged \[1.75, 4.0\]** even though 2.80 – 2.97
+would satisfy \[2.5, 4.0\]: advancing it is the race-incidents plan's call, and the competitive-grid
+plan's remit was the win-share gates only.
+
+Beyond these two, the staged bands **must not be loosened**: a \|Δpos\| floor of 1.5 would let a
+genuine *regression* in churn pass CI while still violating this oracle, which is how a staged gate
+turns into no gate at all. A band may only ever be advanced to its §3 target, never past it.
 
 Not staged, and not to be widened: `minPaceRankCorrelation` (0.90, met) and
 `mechanicalDnfPerCarRace` (§3's 0.06–0.10, **not** met — the sim measures 5.06% ± 0.32pp, 3.0 SE
