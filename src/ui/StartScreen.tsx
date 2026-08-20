@@ -19,10 +19,10 @@ export function StartScreen() {
         fontFamily: 'var(--font-display)', fontSize: 48, fontWeight: 700,
         color: 'var(--accent)', letterSpacing: '0.05em', textTransform: 'uppercase',
       }}>
-        F1 Strategist
+        PIT WALL
       </h1>
       <p style={{ color: 'var(--text-mid)', fontFamily: 'var(--font-body)', fontSize: 16 }}>
-        Silverpark · 30 Laps · Verstael / Apex Racing
+        Test Session · Voss / Apex Racing
       </p>
       <motion.button
         whileTap={{ scale: 0.96 }}

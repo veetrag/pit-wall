@@ -92,7 +92,7 @@ export function MainMenu() {
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
             style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.32em', marginBottom: 6 }}
           >
-            F1 STRATEGIST
+            RACE STRATEGY
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}
