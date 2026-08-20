@@ -99,3 +99,36 @@ describe('development points', () => {
     expect(s.rivalDevelopment).toEqual({})
   })
 })
+
+describe('development income', () => {
+  beforeEach(() => { useSeasonStore.getState().startNewSeason() })
+
+  function finishRace(position: number, retired = false) {
+    useSeasonStore.getState().recordRaceResult(
+      [{ driverId: 'd_voss', position, points: 0, retired }],
+      { overtakesGained: 0, pitsDone: 1, hadRain: false },
+    )
+  }
+
+  it('pays the flat rate for a win', () => {
+    finishRace(1)
+    expect(useSeasonStore.getState().devPoints).toBe(10)
+  })
+
+  it('pays the same flat rate for a poor finish', () => {
+    // Flat income is deliberate: position-based income compounds an existing
+    // advantage and makes the underdog run impossible. See spec section 2.
+    finishRace(18)
+    expect(useSeasonStore.getState().devPoints).toBe(10)
+  })
+
+  it('pays the same flat rate for a DNF', () => {
+    finishRace(20, true)
+    expect(useSeasonStore.getState().devPoints).toBe(10)
+  })
+
+  it('accumulates unspent points across rounds', () => {
+    finishRace(1); finishRace(5); finishRace(9)
+    expect(useSeasonStore.getState().devPoints).toBe(30)
+  })
+})

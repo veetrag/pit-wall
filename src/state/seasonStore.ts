@@ -214,7 +214,10 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       }
     }
     newStandings.sort((a, b) => b.points - a.points)
-    set({ phase: 'result', standings: newStandings, lastRaceResults: results, lastRaceEvents: events })
+    set({
+      phase: 'result', standings: newStandings, lastRaceResults: results, lastRaceEvents: events,
+      devPoints: get().devPoints + loadGameData().upgrades.income.perRace,
+    })
     void Preferences.set({ key: SAVE_KEY, value: JSON.stringify({ raceIndex, standings: newStandings, playerDriverId }) })
   },
 
