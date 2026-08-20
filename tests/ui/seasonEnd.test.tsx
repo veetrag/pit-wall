@@ -65,7 +65,10 @@ describe('race result — end of season', () => {
     act(() => { button.click() })
 
     const s = useSeasonStore.getState()
-    expect(s.phase).toBe('race_setup')
+    // NEXT RACE now lands on the development screen (the between-races spend
+    // step), which is where RaceSetup is reached from. Still not 'championship',
+    // which is the dead-end this test guards.
+    expect(s.phase).toBe('development')
     expect(s.raceIndex).toBe(1)
   })
 })
@@ -94,7 +97,7 @@ describe('season boundary — twelve rounds', () => {
     // 11 calls from raceIndex 0 land on raceIndex 11 (round 12, the final
     // round) — the season must NOT have ended yet.
     const midway = useSeasonStore.getState()
-    expect(midway.phase).toBe('race_setup')
+    expect(midway.phase).toBe('development')
     expect(midway.raceIndex).toBe(11)
 
     // The 12th call, from the final round, must end the season.

@@ -8,6 +8,7 @@ import { GridStats } from './ui/GridStats'
 import { TeamSelect } from './ui/TeamSelect'
 import { DriverSelect } from './ui/DriverSelect'
 import { RaceSetup } from './ui/RaceSetup'
+import { Development } from './ui/Development'
 import { HowToPlay } from './ui/HowToPlay'
 import { RaceHUD } from './ui/RaceHUD'
 import { RaceResult } from './ui/RaceResult'
@@ -40,6 +41,7 @@ export default function App() {
           {phase === 'grid' && <GridStats key="grid" />}
           {phase === 'team_select' && <TeamSelect key="team_select" />}
           {phase === 'driver_select' && <DriverSelect key="driver_select" />}
+          {phase === 'development' && <Development key="development" />}
           {phase === 'race_setup' && <RaceSetup key="race_setup" />}
           {phase === 'how_to_play' && <HowToPlay key="how_to_play" />}
           {phase === 'settings' && <SettingsScreen key="settings" />}

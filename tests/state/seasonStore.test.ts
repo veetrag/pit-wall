@@ -26,13 +26,13 @@ describe('seasonStore', () => {
     expect(useSeasonStore.getState().playerDriverId).toBe('d_voss')
   })
 
-  it('confirmDriver transitions to race_setup', () => {
+  it('confirmDriver transitions to development (the pre-race spend screen)', () => {
     useSeasonStore.getState().startNewSeason()
     useSeasonStore.getState().selectTeam('apex')
     useSeasonStore.getState().confirmTeam()
     useSeasonStore.getState().selectDriver('d_voss')
     useSeasonStore.getState().confirmDriver()
-    expect(useSeasonStore.getState().phase).toBe('race_setup')
+    expect(useSeasonStore.getState().phase).toBe('development')
   })
 
   it('confirmRaceSetup transitions to racing', () => {
@@ -70,11 +70,11 @@ describe('seasonStore', () => {
     expect(useSeasonStore.getState().phase).toBe('championship')
   })
 
-  it('nextRace before last race increments raceIndex and goes to race_setup', () => {
+  it('nextRace before last race increments raceIndex and goes to development', () => {
     useSeasonStore.setState({ phase: 'result', raceIndex: 2, standings: [], playerDriverId: 'd_ver', lastRaceResults: null })
     useSeasonStore.getState().nextRace()
     expect(useSeasonStore.getState().raceIndex).toBe(3)
-    expect(useSeasonStore.getState().phase).toBe('race_setup')
+    expect(useSeasonStore.getState().phase).toBe('development')
   })
 
   it('playAgain resets to menu', () => {

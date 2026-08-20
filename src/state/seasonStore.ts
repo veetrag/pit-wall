@@ -4,7 +4,7 @@ import { CIRCUIT_ORDER } from './raceStore'
 import type { Compound, PitStop } from '@engine/index'
 import { loadGameData } from '@data/validators'
 
-export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings'
+export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings'
 
 export interface SeasonResult {
   driverId: string
@@ -128,6 +128,7 @@ interface SeasonStore {
   confirmTeam: () => void
   selectDriver: (id: string) => void
   confirmDriver: () => void
+  toRaceSetup: () => void
   confirmRaceSetup: (circuitId?: string, strategy?: PlayerStrategyChoice) => void
   recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | null }[], events: RaceEventSummary) => void
   nextRace: () => void
@@ -214,8 +215,15 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   confirmDriver() {
     if (!get().playerDriverId) return
     const defaultCircuit = CIRCUIT_ORDER[get().raceIndex % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
-    set({ phase: 'race_setup', selectedCircuitId: defaultCircuit })
+    // Round 1 goes through the development screen too, so the player meets it
+    // once before it matters. With 0 DP nothing is affordable and the screen is
+    // a one-tap pass-through, which is cheaper than a special case.
+    set({ phase: 'development', selectedCircuitId: defaultCircuit })
   },
+
+  // The development screen is skippable by design: unspent points bank rather
+  // than expire, so it reads as a decision point and not a toll booth.
+  toRaceSetup() { set({ phase: 'race_setup' }) },
 
   confirmRaceSetup(circuitId, strategy) {
     if (circuitId) set({ selectedCircuitId: circuitId })
@@ -263,7 +271,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       set({ phase: 'championship' })
     } else {
       const nextCircuit = CIRCUIT_ORDER[next % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
-      set({ raceIndex: next, phase: 'race_setup', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit, playerStrategy: null, attemptNonce: 0 })
+      set({ raceIndex: next, phase: 'development', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit, playerStrategy: null, attemptNonce: 0 })
     }
   },
 
