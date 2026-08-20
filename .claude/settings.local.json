@@ -93,7 +93,8 @@
       "Bash(grep -rn \"rivalry\\\\|rivalries\\\\|backstory\\\\|history\" src/)",
       "Bash(python3 -c \"import json; d=json.load\\(open\\('src/data/drivers.json'\\)\\); print\\(len\\(d['drivers']\\)\\); print\\(d['drivers'][0]\\)\")",
       "Bash(python3 -c \"import json; d=json.load\\(open\\('src/data/cars.json'\\)\\); print\\(len\\(d['teams']\\)\\); print\\(d['teams'][0]\\)\")",
-      "Bash(grep -n \"/\\\\* List \\\\*/\\\\|AnimatePresence mode=\\\\\"wait\\\\\"\\\\|drivers.map\\(\\(driver, i\\)\\\\|teams.map\\(\\(team, i\\)\\\\|onClick={\\(\\) => toggle\\(driver.id\\)}\\\\|onClick={\\(\\) => toggle\\(team.id\\)}\" src/ui/GridStats.tsx)"
+      "Bash(grep -n \"/\\\\* List \\\\*/\\\\|AnimatePresence mode=\\\\\"wait\\\\\"\\\\|drivers.map\\(\\(driver, i\\)\\\\|teams.map\\(\\(team, i\\)\\\\|onClick={\\(\\) => toggle\\(driver.id\\)}\\\\|onClick={\\(\\) => toggle\\(team.id\\)}\" src/ui/GridStats.tsx)",
+      "Bash(grep -n \"onClick\\\\|>[A-Z ]\\\\{3,\\\\}<\\\\|label\" src/ui/MainMenu.tsx)"
     ]
   }
 }
