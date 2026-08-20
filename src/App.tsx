@@ -15,6 +15,7 @@ import { Championship } from './ui/Championship'
 import { RaceWatcher } from './ui/RaceWatcher'
 import { SettingsScreen } from './ui/SettingsPanel'
 import { useAndroidBackButton } from './hooks/useAndroidBackButton'
+import { AppErrorBoundary } from './ui/AppErrorBoundary'
 
 export default function App() {
   const phase = useSeasonStore(s => s.phase)
@@ -31,20 +32,22 @@ export default function App() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div style={{ height: '100%', overflow: 'hidden', position: 'relative' }}>
-      <RaceWatcher />
-      <AnimatePresence mode="wait">
-        {phase === 'menu' && <MainMenu key="menu" />}
-        {phase === 'grid' && <GridStats key="grid" />}
-        {phase === 'team_select' && <TeamSelect key="team_select" />}
-        {phase === 'driver_select' && <DriverSelect key="driver_select" />}
-        {phase === 'race_setup' && <RaceSetup key="race_setup" />}
-        {phase === 'how_to_play' && <HowToPlay key="how_to_play" />}
-        {phase === 'settings' && <SettingsScreen key="settings" />}
-        {phase === 'racing' && <RaceHUD key="race" />}
-        {phase === 'result' && <RaceResult key="result" />}
-        {phase === 'championship' && <Championship key="championship" />}
-      </AnimatePresence>
-    </div>
+    <AppErrorBoundary>
+      <div style={{ height: '100%', overflow: 'hidden', position: 'relative' }}>
+        <RaceWatcher />
+        <AnimatePresence mode="wait">
+          {phase === 'menu' && <MainMenu key="menu" />}
+          {phase === 'grid' && <GridStats key="grid" />}
+          {phase === 'team_select' && <TeamSelect key="team_select" />}
+          {phase === 'driver_select' && <DriverSelect key="driver_select" />}
+          {phase === 'race_setup' && <RaceSetup key="race_setup" />}
+          {phase === 'how_to_play' && <HowToPlay key="how_to_play" />}
+          {phase === 'settings' && <SettingsScreen key="settings" />}
+          {phase === 'racing' && <RaceHUD key="race" />}
+          {phase === 'result' && <RaceResult key="result" />}
+          {phase === 'championship' && <Championship key="championship" />}
+        </AnimatePresence>
+      </div>
+    </AppErrorBoundary>
   )
 }

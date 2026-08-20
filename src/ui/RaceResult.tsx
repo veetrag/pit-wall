@@ -237,26 +237,30 @@ export function RaceResult() {
         </motion.button>
       </div>
       <div style={{ padding: '0 16px 12px', borderTop: '1px solid var(--line-hair)', paddingTop: 12, display: 'flex', gap: 10, flexShrink: 0 }}>
+        {/* nextRace() already routes to the championship screen once raceIndex+1
+            reaches TOTAL_RACES. This button used to be disabled precisely when
+            isSeasonEnd, which made it the only caller of the only path to that
+            screen — so the champion reveal was unreachable and a finished season
+            just dead-ended here. */}
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={isSeasonEnd ? undefined : () => { uiTap(); nextRace() }}
-          disabled={isSeasonEnd}
+          onClick={() => { uiTap(); nextRace() }}
           style={{
-            flex: 1, background: isSeasonEnd ? 'var(--bg-panel)' : 'var(--accent)',
-            color: isSeasonEnd ? 'var(--text-dim)' : 'var(--bg-deep)',
-            border: isSeasonEnd ? '1px solid var(--line-hair)' : 'none',
+            flex: 1, background: 'var(--accent)',
+            color: 'var(--bg-deep)',
+            border: 'none',
             borderRadius: 10, padding: '16px 0',
             fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700,
-            letterSpacing: '0.08em', cursor: isSeasonEnd ? 'default' : 'pointer',
+            letterSpacing: '0.08em', cursor: 'pointer',
           }}
         >
-          {isSeasonEnd ? 'SEASON COMPLETE' : 'NEXT RACE →'}
+          {isSeasonEnd ? 'FINAL STANDINGS →' : 'NEXT RACE →'}
         </motion.button>
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={() => { uiTap(); playAgain() }}
           style={{
-            flex: isSeasonEnd ? 1 : 0, minWidth: isSeasonEnd ? 0 : 90,
+            flex: 0, minWidth: 90,
             background: 'transparent', color: 'var(--text-mid)',
             border: '1px solid var(--line-hair)',
             borderRadius: 10, padding: '16px 0',
@@ -264,7 +268,7 @@ export function RaceResult() {
             letterSpacing: '0.08em', cursor: 'pointer',
           }}
         >
-          {isSeasonEnd ? 'NEW SEASON' : 'MENU'}
+          MENU
         </motion.button>
       </div>
     </motion.div>
