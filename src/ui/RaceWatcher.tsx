@@ -16,6 +16,11 @@ export function RaceWatcher() {
   const currentCircuitId = useSeasonStore(s => s.currentCircuitId)
   const recordRaceResult = useSeasonStore(s => s.recordRaceResult)
   const playerStrategy = useSeasonStore(s => s.playerStrategy)
+  // The overlay is injected into raceStore from here rather than read inside it:
+  // raceStore must not import seasonStore as a value (ESM cycle). This component
+  // already subscribes to both stores, so it is the natural seam.
+  const purchasedTiers = useSeasonStore(s => s.purchasedTiers)
+  const rivalDevelopment = useSeasonStore(s => s.rivalDevelopment)
   const setSpeed = useClockStore(s => s.setSpeed)
   const difficulty = useSettingsStore(s => s.difficulty)
 
@@ -24,7 +29,7 @@ export function RaceWatcher() {
   useEffect(() => {
     if (seasonPhase === 'racing' && racePhase === 'idle' && playerDriverId) {
       hasFiredRef.current = false
-      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty, playerStrategy)
+      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty, playerStrategy, { purchasedTiers, rivalDevelopment })
     }
   }, [seasonPhase, racePhase, playerDriverId]) // eslint-disable-line react-hooks/exhaustive-deps
 

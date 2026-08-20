@@ -85,24 +85,6 @@ function accumulateRivalDevelopment(current: Record<string, number>): Record<str
   return next
 }
 
-// Converts a raw accumulated development pool for one team into the effective
-// value of a single facet, given that facet's un-upgraded base rating. The
-// pool is a season-long total meant to be split evenly across three team
-// facets by whichever caller applies it (a future race-setup overlay), so
-// it is divided by 3 here, at the same point that caller would otherwise
-// write pool/3 straight onto a facet.
-//
-// Clamped to 100 HERE, at the point where the effective facet value is
-// produced for consumption (e.g. by a future race-setup overlay), rather than
-// on the raw pool: the pool itself is not a facet and clamping it would
-// silently cap development for every facet the moment any one of them (e.g.
-// a team already near 100 in one area) hit the ceiling. facetToRating9 in
-// engine/lapModel.ts inverts above 100, so an unclamped facet of 101+ would
-// turn a development bonus into a lap-time penalty — exactly backwards.
-export function rivalFacetValue(baseFacet: number, pool: number): number {
-  return Math.min(100, baseFacet + pool / 3)
-}
-
 interface SeasonStore {
   phase: SeasonPhase
   playerDriverId: string | null

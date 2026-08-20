@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useSeasonStore, rivalFacetValue } from '@state/seasonStore'
+import { useSeasonStore } from '@state/seasonStore'
+import { rivalFacetValue } from '@state/upgradeOverlay'
 import { loadGameData } from '@data/validators'
 
 vi.mock('@capacitor/preferences', () => ({

@@ -10,6 +10,7 @@ import type { AlertMessage } from '../ui/HudAlert'
 import { processRadioTick, makeRadioState, type RadioState } from './radioMapper'
 import type { Difficulty } from './settingsStore'
 import type { PlayerStrategyChoice } from './seasonStore'
+import { applyUpgrades, type UpgradeOverlayInput } from './upgradeOverlay'
 
 export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 
@@ -26,7 +27,7 @@ interface RaceStore {
   radioState: RadioState
 
   startRace: () => void
-  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null) => void
+  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
   resetRace: () => void
@@ -66,6 +67,10 @@ function buildConfig(
   circuitId = 'bengaluru',
   difficulty: Difficulty = 'rookie',
   playerStrategy?: PlayerStrategyChoice | null,
+  // Injected, not read from seasonStore: a value import of seasonStore here
+  // would close a real ESM cycle (seasonStore imports CIRCUIT_ORDER from this
+  // module as a value). buildConfig stays a pure function of its arguments.
+  upgrades?: UpgradeOverlayInput | null,
 ): RaceConfig {
   const data = loadGameData()
   const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
@@ -86,12 +91,34 @@ function buildConfig(
     ? { teamId: playerTeamId, startCompound: playerStrategy.startCompound, plannedStops: playerStrategy.plannedStops }
     : undefined
 
+  // Upgrades are applied here and nowhere else: the engine receives ordinary
+  // facet numbers and never learns that progression exists (CLAUDE.md §3).
+  // Run unconditionally even with no overlay, so `config` never holds a live
+  // reference into loadGameData()'s shared cache.
+  const purchasedTiers = upgrades?.purchasedTiers ?? {}
+  const rivalDevelopment = upgrades?.rivalDevelopment ?? {}
+  const teams = applyUpgrades(data.cars.teams, {
+    attributes: data.upgrades.attributes,
+    purchasedTiers,
+    target: 'team',
+    // Car upgrades belong to the chassis, so the player's teammate gets them too.
+    appliesTo: t => t.id === playerTeamId,
+    rivalDevelopment,
+  })
+  const drivers = applyUpgrades(data.drivers.drivers, {
+    attributes: data.upgrades.attributes,
+    purchasedTiers,
+    target: 'driver',
+    // Driver upgrades are personal — the teammate does not get them.
+    appliesTo: d => d.id === playerDriverId,
+  })
+
   return {
     circuit,
     tuning: data.tuning,
     compounds: data.compounds,
-    drivers: data.drivers.drivers,
-    teams: data.cars.teams,
+    drivers,
+    teams,
     strategies,
     playerDriverId,
     seed,
@@ -125,8 +152,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
   },
 
-  startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy) {
-    const config = buildConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy)
+  startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades) {
+    const config = buildConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades)
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
