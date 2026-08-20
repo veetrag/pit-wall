@@ -1,4 +1,4 @@
-import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState } from './types'
+import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound } from './types'
 import type { Rng } from './rng'
 import { createRng, gaussianPair } from './rng'
 import { computeSectorTime } from './lapModel'
@@ -6,38 +6,24 @@ import { generateWeatherTimeline } from './weather'
 import { aiDecision } from './strategy'
 import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, effectiveTyreAge, tyreCliffFraction } from './tyres'
 
-export function initRace(config: RaceConfig): RaceState {
-  const cars: CarState[] = config.drivers.map((driver, i) => {
-    const isPlayer = driver.id === config.playerDriverId
-    const strategy = (isPlayer && config.playerStrategyOverride)
-      ? config.playerStrategyOverride
-      : config.strategies.find(s => s.teamId === driver.teamId) ?? {
-          teamId: driver.teamId, startCompound: 'M' as const, plannedStops: [],
-        }
-    const baseAllocation = config.tyreAllocationBase ?? UNLIMITED_TYRE_ALLOCATION
-    return {
-      driverId: driver.id,
-      teamId: driver.teamId,
-      position: i + 1,
-      raceTime: 0,
-      lap: 0,
-      sector: 0 as SectorIndex,
-      compound: strategy.startCompound,
-      tyreAge: 0,
-      paceMode: 'neutral',
-      pitted: false,
-      pitsDone: 0,
-      strategy,
-      isPlayer,
-      tyreAllocation: consumeTyreSet({ ...baseAllocation }, strategy.startCompound),
-      compoundsUsed: [strategy.startCompound],
-      lapsInDirtyAir: 0,
-      retired: false,
-      retiredLap: null,
-    }
-  })
+// Grid-conditions tyre rule. A team that has not made a deliberate choice fits
+// the compound that matches the weather at lights out. Deliberately simple: no
+// difficulty gating, no forecasting of later laps — just "if it's wet, start on
+// wets". Returns null in the dry so the team's planned compound stands.
+//
+// Without this, every AI car started on its hardcoded dry compound from
+// strategies.json and spent the opening laps eating the wet-crossover penalty,
+// handing a player who fitted wets a race-winning lead on lap 1.
+function gridConditionsCompound(weather: WeatherState): Compound | null {
+  if (weather === 'WET') return 'W'
+  if (weather === 'DAMP') return 'I'
+  return null
+}
 
-  // Weather timeline (separate RNG stream so it doesn't affect main race seed)
+export function initRace(config: RaceConfig): RaceState {
+  // Weather is resolved before the grid is built, because the starting compound
+  // now depends on lap-1 conditions. Safe to reorder: this is a separate RNG
+  // stream, so it consumes nothing from the main race seed.
   const weatherRng = createRng(config.weatherSeed ?? config.seed + 999999)
   const weatherTimeline = generateWeatherTimeline(
     config.circuit.laps,
@@ -46,6 +32,46 @@ export function initRace(config: RaceConfig): RaceState {
     weatherRng,
   )
   const weatherState: WeatherState = weatherTimeline[0] ?? 'DRY'
+  const gridCompound = gridConditionsCompound(weatherState)
+
+  const cars: CarState[] = config.drivers.map((driver, i) => {
+    const isPlayer = driver.id === config.playerDriverId
+    const playerChose = isPlayer && !!config.playerStrategyOverride
+    const baseStrategy = (isPlayer && config.playerStrategyOverride)
+      ? config.playerStrategyOverride
+      : config.strategies.find(s => s.teamId === driver.teamId) ?? {
+          teamId: driver.teamId, startCompound: 'M' as const, plannedStops: [],
+        }
+    // The player's own pick is never overridden -- they chose it in race setup,
+    // and starting on the "wrong" tyre on purpose is a legitimate gamble.
+    const startCompound: Compound = (!playerChose && gridCompound)
+      ? gridCompound
+      : baseStrategy.startCompound
+    const strategy = startCompound === baseStrategy.startCompound
+      ? baseStrategy
+      : { ...baseStrategy, startCompound }
+    const baseAllocation = config.tyreAllocationBase ?? UNLIMITED_TYRE_ALLOCATION
+    return {
+      driverId: driver.id,
+      teamId: driver.teamId,
+      position: i + 1,
+      raceTime: 0,
+      lap: 0,
+      sector: 0 as SectorIndex,
+      compound: startCompound,
+      tyreAge: 0,
+      paceMode: 'neutral',
+      pitted: false,
+      pitsDone: 0,
+      strategy,
+      isPlayer,
+      tyreAllocation: consumeTyreSet({ ...baseAllocation }, startCompound),
+      compoundsUsed: [startCompound],
+      lapsInDirtyAir: 0,
+      retired: false,
+      retiredLap: null,
+    }
+  })
 
   return {
     lap: 0,

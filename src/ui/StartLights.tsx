@@ -255,6 +255,7 @@ export function StartLights() {
   const setSpeed = useClockStore(s => s.setSpeed)
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const { impact } = useHaptics()
+  const config = useRaceStore(s => s.config)
   const [litCount, setLitCount] = useState(0)
   const [lightsOut, setLightsOut] = useState(false)
   const [showGo, setShowGo] = useState(false)
@@ -433,12 +434,15 @@ export function StartLights() {
         animate={{ opacity: 0.4 }}
         transition={{ delay: 0.5 }}
         style={{
-          position: 'absolute', bottom: 40,
+          // Sits above the system nav bar — at a flat 40px it was clipped on a
+          // device with on-screen navigation.
+          position: 'absolute', bottom: 'calc(40px + var(--safe-bottom))',
           fontFamily: 'var(--font-mono)', fontSize: 10,
           color: 'var(--text-dim)', letterSpacing: '0.2em',
+          textAlign: 'center', padding: '0 16px',
         }}
       >
-        CIRCUIT ALBATROSS · LAP 1 OF 30
+        {config ? `${config.circuit.name.toUpperCase()} · LAP 1 OF ${config.circuit.laps}` : ''}
       </motion.div>
     </motion.div>
   )

@@ -14,11 +14,16 @@ import { RaceResult } from './ui/RaceResult'
 import { Championship } from './ui/Championship'
 import { RaceWatcher } from './ui/RaceWatcher'
 import { SettingsScreen } from './ui/SettingsPanel'
+import { useAndroidBackButton } from './hooks/useAndroidBackButton'
 
 export default function App() {
   const phase = useSeasonStore(s => s.phase)
   const loadSettings = useSettingsStore(s => s.loadSettings)
   const loadSeason = useSeasonStore(s => s.loadSeason)
+
+  // Android hardware back button — without this it finishes the activity and
+  // silently destroys an in-progress race.
+  useAndroidBackButton()
 
   useEffect(() => {
     void loadSettings()
