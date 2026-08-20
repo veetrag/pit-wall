@@ -11,7 +11,7 @@
       "rainProbability": 0.25, "weatherBias": "showery",
       "trackPath": "paths/bengaluru.json",
       "characterNote": "Short, tight, technical city circuit. Many laps, hard to pass, driver-dominated.",
-      "funFacts": ["Tightest sequence of corners of any city circuit on the calendar", "Track position is everything — overtaking is rare", "Warm evenings keep tyre temps high"],
+      "funFacts": ["Tightest sequence of corners outside the streets of Harbour Lights", "Track position is everything — overtaking is rare", "Warm evenings keep tyre temps high"],
       "atmosphere": "dusk"
     },
     "monsoon_bay": {

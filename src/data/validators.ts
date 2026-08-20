@@ -117,13 +117,18 @@ const CircuitSchema = z.object({
   overtakingFactor: z.tuple([z.number(), z.number(), z.number()]),
   pitLaneTimeLoss: z.number(),
   rainProbability: z.number().optional(),
-  weatherBias: z.string().optional(),
+  // Narrowed to the six keys `tuning.weather.timeline.intensityBias` actually
+  // defines. As a bare string an unknown value passed validation and then fell
+  // back to 0.2 in generateWeatherTimeline, making the circuit's advertised
+  // rain character silently false with no error anywhere.
+  weatherBias: z.enum(['stable', 'variable', 'wet', 'mixed', 'showery', 'stormy']).optional(),
   trackPath: z.string().optional(),
   characterNote: z.string().optional(),
   location: z.string().optional(),
   flag: z.string().optional(),
   funFacts: z.array(z.string()).optional(),
-  atmosphere: z.string().optional(),
+  // Same failure mode: TrackCanvas silently fell back to the 'day' palette.
+  atmosphere: z.enum(['day', 'dusk', 'night', 'desert_night', 'storm', 'northern_dusk']).optional(),
 })
 const CircuitsWrapperSchema = z.object({ circuits: z.record(z.string(), CircuitSchema) })
 
