@@ -185,9 +185,15 @@ const StrategyDefaultSchema = z.object({
 const StrategiesSchema = z.object({ defaults: z.array(StrategyDefaultSchema) })
 
 export const UpgradeAttributeSchema = z.object({
-  id: z.string(),
+  id: z.enum([
+    'power', 'aero', 'handling', 'reliability',
+    'pace', 'tyreManagement', 'racecraft', 'wetWeather',
+  ]),
   label: z.string(),
-  facet: z.string(),
+  facet: z.enum([
+    'power', 'aero', 'handling', 'reliability',
+    'pace', 'tyreManagement', 'racecraft', 'wetWeather',
+  ]),
   target: z.enum(['team', 'driver']),
   pointsPerTier: z.number().int().positive(),
   unit: z.enum(['laptime', 'failureRisk', 'cliffLaps', 'passChance', 'wetPace']),
