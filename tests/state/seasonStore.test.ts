@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useSeasonStore } from '@state/seasonStore'
+import { useSeasonStore, TOTAL_RACES } from '@state/seasonStore'
 
 describe('seasonStore', () => {
   beforeEach(() => {
@@ -65,7 +65,7 @@ describe('seasonStore', () => {
   })
 
   it('nextRace at last raceIndex transitions to championship', () => {
-    useSeasonStore.setState({ phase: 'result', raceIndex: 7, standings: [], playerDriverId: 'd_ver', lastRaceResults: null })
+    useSeasonStore.setState({ phase: 'result', raceIndex: TOTAL_RACES - 1, standings: [], playerDriverId: 'd_ver', lastRaceResults: null })
     useSeasonStore.getState().nextRace()
     expect(useSeasonStore.getState().phase).toBe('championship')
   })

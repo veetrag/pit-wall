@@ -43,6 +43,7 @@ interface RaceStore {
 export const CIRCUIT_ORDER = [
   'bengaluru', 'veloce', 'sol_desert', 'highland',
   'monsoon_bay', 'grand_savane', 'aurora', 'harbour_lights',
+  'silverpark',
 ] as const
 
 const BRAIN_ORDER: StrategyBrain[] = ['naive', 'smart', 'optimal']

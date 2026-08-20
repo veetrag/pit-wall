@@ -29,7 +29,7 @@ export interface PlayerStrategyChoice {
   plannedStops: PitStop[]
 }
 
-export const TOTAL_RACES = 8
+export const TOTAL_RACES = 9
 const POINTS_TABLE: number[] = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
 
 function pointsFor(position: number): number {

@@ -111,6 +111,27 @@
       "characterNote": "Cool northern circuit, flowing and fast. Lower temps are gentle on tyres but cold tyres are tricky to switch on.",
       "funFacts": ["Coolest track temperatures of the season", "Tyre warm-up is a real challenge here", "Long northern dusk makes for a stunning backdrop"],
       "atmosphere": "northern_dusk"
+    },
+    "silverpark": {
+      "name": "Silverpark GP",
+      "location": "Northamptonshire, England",
+      "flag": "🇬🇧",
+      "laps": 52,
+      "sectorBase": [30.0, 32.0, 27.0],
+      "carSensitivity": [0.34, 0.40, 0.26],
+      "driverSensitivity": [0.30, 0.38, 0.32],
+      "overtakingFactor": [1.1, 0.45, 0.65],
+      "pitLaneTimeLoss": 20.0,
+      "rainProbability": 0.45,
+      "weatherBias": "variable",
+      "trackPath": "paths/silverpark.json",
+      "characterNote": "Fast and flowing, taken almost flat. Rewards aero balance and nerve, and the weather turns without warning.",
+      "funFacts": [
+        "Rain has decided more races here than any other round",
+        "Three long full-throttle sequences reward an aero-strong car",
+        "The final sector is the shortest on the calendar"
+      ],
+      "atmosphere": "day"
     }
   }
 }
