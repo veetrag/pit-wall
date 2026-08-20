@@ -43,4 +43,9 @@ describe('loadGameData', () => {
     expect(keys).toContain('I')
     expect(keys).toContain('W')
   })
+
+  it('loads the mechanicalFailure tuning block', () => {
+    const data = loadGameData()
+    expect(data.tuning.mechanicalFailure.baseChancePerLap).toBeCloseTo(0.008, 5)
+  })
 })

@@ -28,6 +28,7 @@ const TUNING: TuningConstants = {
   },
   tyreFailure: { cliffFractionThreshold: 1.45, chancePerLapOverThreshold: 0.30, maxChancePerLap: 0.50
   },
+  mechanicalFailure: { baseChancePerLap: 0 },
   difficultyProfiles: {
     rookie: { brainCap: 'smart', brainPromote: false, coverReactionScale: 0.6, aiPaceModeAggression: 0.7, pitCrewConsistency: 1.0 },
     pro: { brainCap: 'optimal', brainPromote: true, coverReactionScale: 1.0, aiPaceModeAggression: 1.3, pitCrewConsistency: 1.0 },

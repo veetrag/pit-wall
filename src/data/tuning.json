@@ -41,6 +41,9 @@
     "chancePerLapOverThreshold": 0.30,
     "maxChancePerLap": 0.50
   },
+  "mechanicalFailure": {
+    "baseChancePerLap": 0.008
+  },
   "difficultyProfiles": {
     "rookie": {
       "brainCap": "smart",

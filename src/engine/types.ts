@@ -88,6 +88,12 @@ export interface TuningConstants {
     chancePerLapOverThreshold: number
     maxChancePerLap: number
   }
+  // Per-lap mechanical failure chance at reliability 0, scaled down linearly by
+  // the team's reliability facet. Rolled per sector as chance/3. Solved from the
+  // target DNF bands in the design spec — see docs/superpowers/specs.
+  mechanicalFailure: {
+    baseChancePerLap: number
+  }
   // M5: every difficulty-sensitive lever built across M1-M4, collected into one
   // profile so difficulty is a coordinated curve rather than scattered branches.
   // tyreRules.allocation/mandatoryTwoCompound (M3) stay difficulty-keyed above —

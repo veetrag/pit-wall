@@ -56,6 +56,9 @@ const TuningSchema = z.object({
     chancePerLapOverThreshold: z.number(),
     maxChancePerLap: z.number(),
   }),
+  mechanicalFailure: z.object({
+    baseChancePerLap: z.number(),
+  }),
   difficultyProfiles: z.object({
     rookie: DifficultyProfileSchema,
     pro: DifficultyProfileSchema,
