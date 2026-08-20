@@ -106,29 +106,44 @@ So a fully-specialised season buys **95% of the gap between the worst and best c
 
 **Mechanic:** a per-lap mechanical-failure roll scaled by `reliability`, reusing the `CarState.retired` / `retiredLap` plumbing already built for tyre failure. A retired car freezes and classifies after every finisher, exactly as it does today — no new retirement semantics.
 
-New tuning block:
+New tuning block — **one** constant:
 
 ```
 tuning.mechanicalFailure = {
-  baseChancePerLap: number,    // failure chance per lap at reliability 0
-  reliabilityRelief: number    // fraction of that chance removed at reliability 100
+  baseChancePerLap: 0.008   // failure chance per lap at reliability 0
 }
 ```
 
-Per-lap chance is `baseChancePerLap * (1 - (reliability/100) * reliabilityRelief)`.
+Per-lap chance is `baseChancePerLap * (1 - reliability / 100)`, rolled per sector
+as `chance / 3` to match the existing `tyreFailure` pattern in `race.ts`.
 
-Both constants are **derived from the target bands below, not chosen freely**: pick
-the pair that reproduces the two rates over a full race distance, then lock the
-bands as regression tests. Solving for a 56-lap race gives a starting point of
-`baseChancePerLap` ~0.0045 and `reliabilityRelief` ~0.85, to be confirmed by
-Monte-Carlo rather than trusted arithmetic.
+**Revised from a two-constant form during planning.** The original design proposed
+`base * (1 - (reliability/100) * reliabilityRelief)`. Solving that for the target
+bands below requires `reliabilityRelief = 1.019`, which is unusable — it yields a
+negative failure chance as reliability approaches 100. Pinning relief to 1.0 makes
+it redundant, so it is dropped. The surviving linear form is also the same shape
+as `facetToRating9` used elsewhere in `lapModel.ts`.
 
-**Target bands** (the actual specification; constants serve these):
+`baseChancePerLap: 0.008` was solved from the Halcyon band, then verified across
+the grid (56-lap race):
+
+| Team | `reliability` | DNF rate |
+|---|---|---|
+| Halcyon F1 | 72 | **11.8%** |
+| Terra | 80 | 8.7% |
+| Delta | 89 | 4.9% |
+| Zenith Racing | 94 | **2.7%** |
+| Apex | 96 | 1.8% |
+
+**Target bands** (the specification; the constant serves these):
 
 | Team | `reliability` | Target DNF rate |
 |---|---|---|
 | Halcyon F1 | 72 | ~10–15% of races |
-| Zenith Racing | 94 | ~2% of races |
+| Zenith Racing | 94 | ~2–4% of races |
+
+Rates scale with race length by design — Halcyon runs 7.5% over Veloce's 34 laps
+and 12.8% over Harbour Lights' 60. Tests must therefore pin a lap count.
 
 **Balance risk:** this adds a second source of retirements on top of tyre failure. The existing Monte-Carlo bands in `tests/engine/monteCarlo.test.ts` measured ~0.005 retirements/race under AI management; that figure will rise and the bands need re-validating, not just re-running. If total retirements make the field feel thin, `baseChancePerLap` is the single dial.
 
