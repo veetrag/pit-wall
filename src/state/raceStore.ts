@@ -41,8 +41,11 @@ interface RaceStore {
 }
 
 export const CIRCUIT_ORDER = [
+  // Wet-leaning rounds (rainProbability >= 0.35) sit on the odd rounds only, so
+  // no two back-to-back rounds are both wet-leaning. See the adjacency test in
+  // tests/data/calendar.test.ts.
   'bengaluru', 'veloce', 'silverpark', 'sol_desert',
-  'costa_verde', 'highland', 'grand_savane', 'kaido',
+  'highland', 'costa_verde', 'kaido', 'grand_savane',
   'monsoon_bay', 'altiplano', 'aurora', 'harbour_lights',
 ] as const
 

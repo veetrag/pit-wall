@@ -11,7 +11,7 @@
       "rainProbability": 0.25, "weatherBias": "showery",
       "trackPath": "paths/bengaluru.json",
       "characterNote": "Short, tight, technical city circuit. Many laps, hard to pass, driver-dominated.",
-      "funFacts": ["Tightest sequence of corners on the calendar", "Track position is everything — overtaking is rare", "Warm evenings keep tyre temps high"],
+      "funFacts": ["Tightest sequence of corners of any city circuit on the calendar", "Track position is everything — overtaking is rare", "Warm evenings keep tyre temps high"],
       "atmosphere": "dusk"
     },
     "monsoon_bay": {
@@ -81,7 +81,7 @@
       "rainProbability": 0.40, "weatherBias": "showery",
       "trackPath": "paths/highland.json",
       "characterNote": "Short, fast lap nestled in the mountains. Quick laps mean many of them; elevation and weather add spice.",
-      "funFacts": ["Largest elevation changes on the calendar", "Mountain weather is famously unpredictable", "One of the shortest laps — completed in under 70 seconds"],
+      "funFacts": ["Largest elevation changes on the calendar", "Mountain weather is famously unpredictable", "One of the shortest laps of the season — barely over seventy seconds"],
       "atmosphere": "day"
     },
     "grand_savane": {
@@ -94,8 +94,8 @@
       "pitLaneTimeLoss": 24.0,
       "rainProbability": 0.20, "weatherBias": "stable",
       "trackPath": "paths/grand_savane.json",
-      "characterNote": "Long, flowing high-altitude circuit. Big lap, high pit loss makes the stop decision costly. Balanced challenge.",
-      "funFacts": ["Highest-altitude race — thinner air affects engines", "Long lap rewards a well-balanced car", "Costly pit lane makes every stop a big commitment"],
+      "characterNote": "Long, flowing circuit across open savanna. The biggest lap of the year and the costliest pit lane make every stop a major commitment. Balanced challenge.",
+      "funFacts": ["Longest lap on the calendar", "Long lap rewards a well-balanced car", "Costly pit lane makes every stop a big commitment"],
       "atmosphere": "dusk"
     },
     "aurora": {
@@ -114,7 +114,7 @@
     },
     "silverpark": {
       "name": "Silverpark GP",
-      "location": "Northamptonshire, England",
+      "location": "Lincolnshire, England",
       "flag": "🇬🇧",
       "laps": 52,
       "sectorBase": [30.0, 32.0, 27.0],
@@ -127,15 +127,15 @@
       "trackPath": "paths/silverpark.json",
       "characterNote": "Fast and flowing, taken almost flat. Rewards aero balance and nerve, and the weather turns without warning.",
       "funFacts": [
-        "Rain has decided more races here than any other round",
+        "The only round where the forecast can swing either way right up to the grid",
         "Three long full-throttle sequences reward an aero-strong car",
-        "The final sector is the shortest on the calendar"
+        "The final sector is one long right-hander onto the main straight"
       ],
       "atmosphere": "day"
     },
     "costa_verde": {
       "name": "Costa Verde GP",
-      "location": "Cascais, Portugal",
+      "location": "Viana do Castelo, Portugal",
       "flag": "🇵🇹",
       "laps": 46,
       "sectorBase": [29.0, 31.0, 30.0],
@@ -146,7 +146,7 @@
       "rainProbability": 0.30,
       "weatherBias": "stable",
       "trackPath": "paths/costa_verde.json",
-      "characterNote": "Abrasive coastal asphalt and long loaded corners. Tyres go off here faster than anywhere else — a one-stop is a gamble.",
+      "characterNote": "Abrasive coastal asphalt and long loaded corners. Tyres take a heavier beating here than the lap length suggests — a one-stop is a gamble.",
       "funFacts": [
         "Ocean spray leaves a fine grit on the coastal asphalt",
         "Sea breeze cools the surface through the evening",
@@ -155,7 +155,7 @@
       "atmosphere": "dusk"
     },
     "kaido": {
-      "name": "Kaido Circuit",
+      "name": "Kaido GP",
       "location": "Nagano Prefecture, Japan",
       "flag": "🇯🇵",
       "laps": 50,
@@ -171,7 +171,7 @@
       "funFacts": [
         "Sixteen corners in the middle sector alone, none of them fast",
         "The circuit follows an old mountain pass road",
-        "Mountain weather can change within a single lap"
+        "Barely a hundred metres of full throttle in the entire lap"
       ],
       "atmosphere": "night"
     },
@@ -192,7 +192,7 @@
       "funFacts": [
         "Highest elevation round of the season",
         "Wide, open corners reward a car that can carry speed",
-        "Cooling is marginal — reliability is tested hardest here"
+        "One of the quickest pit lanes on the calendar"
       ],
       "atmosphere": "day"
     }
