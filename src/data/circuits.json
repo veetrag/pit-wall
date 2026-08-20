@@ -133,8 +133,8 @@
       ],
       "atmosphere": "day"
     },
-    "estoril_bay": {
-      "name": "Estoril Bay GP",
+    "costa_verde": {
+      "name": "Costa Verde GP",
       "location": "Cascais, Portugal",
       "flag": "🇵🇹",
       "laps": 46,
@@ -145,10 +145,10 @@
       "pitLaneTimeLoss": 21.0,
       "rainProbability": 0.30,
       "weatherBias": "stable",
-      "trackPath": "paths/estoril_bay.json",
+      "trackPath": "paths/costa_verde.json",
       "characterNote": "Abrasive coastal asphalt and long loaded corners. Tyres go off here faster than anywhere else — a one-stop is a gamble.",
       "funFacts": [
-        "Highest tyre degradation on the calendar",
+        "Ocean spray leaves a fine grit on the coastal asphalt",
         "Sea breeze cools the surface through the evening",
         "Two-stop strategies usually beat a long first stint"
       ],
@@ -170,7 +170,7 @@
       "characterNote": "Relentless mountain esses with no straight worth the name. Passing is nearly impossible outside the streets of Harbour Lights — win it in the pit lane or not at all.",
       "funFacts": [
         "Hardest permanent circuit on the calendar to overtake on",
-        "Track position matters more here than raw pace",
+        "The circuit follows an old mountain pass road",
         "Mountain weather can change within a single lap"
       ],
       "atmosphere": "night"

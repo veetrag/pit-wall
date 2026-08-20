@@ -45,7 +45,7 @@ describe('calendar', () => {
   // Circuits authored by this plan (twelve-race-calendar) are deliberately
   // normalised to sum to ~1.0, unlike the legacy circuits above. Guarded on
   // existence so this doesn't fail before later tasks in the plan land theirs.
-  const PLAN_CIRCUITS = ['silverpark', 'estoril_bay', 'kaido', 'altiplano']
+  const PLAN_CIRCUITS = ['silverpark', 'costa_verde', 'kaido', 'altiplano']
 
   it('normalises sector sensitivities to ~1.0 for plan-authored circuits', () => {
     const { circuits } = loadGameData()
@@ -63,7 +63,7 @@ describe('calendar', () => {
 })
 
 describe('new circuits', () => {
-  const NEW_IDS = ['silverpark', 'estoril_bay', 'kaido', 'altiplano']
+  const NEW_IDS = ['silverpark', 'costa_verde', 'kaido', 'altiplano']
 
   it('defines all four new circuits', () => {
     const { circuits } = loadGameData()
@@ -116,6 +116,13 @@ describe('new circuits', () => {
     }
   })
 
+  // This guards AUTHORED DATA INTENT, not a gameplay property. circuit
+  // overtakingFactor has no consumer today: race.ts:284 takes its per-sector
+  // overtaking difficulty from the global tuning.overtaking.sectorFactor
+  // ([1.0, 0.25, 0.55], identical for every circuit), so Kaido is not in fact
+  // harder to pass on than Veloce in play. Wiring the field is a balance change
+  // owned elsewhere; until then this assertion is the only thing preserving the
+  // intended ordering, so that the intent is what emerges once it is wired.
   it('makes Kaido the hardest non-street circuit to overtake on', () => {
     const { circuits } = loadGameData()
     const total = (id: string) => circuits[id]!.overtakingFactor.reduce((a, b) => a + b, 0)
