@@ -202,6 +202,10 @@ export const UpgradeAttributeSchema = z.object({
 export const UpgradesSchema = z.object({
   income: z.object({ perRace: z.number().int().positive() }),
   tierCosts: z.array(z.number().int().positive()).length(3),
+  rivalDevelopment: z.object({
+    poolPerRace: z.number().positive(),
+    facetSplit: z.number().int().positive(),
+  }),
   attributes: z.array(UpgradeAttributeSchema).length(8),
 })
 

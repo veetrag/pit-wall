@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useSeasonStore, rivalFacetValue } from '@state/seasonStore'
+import { loadGameData } from '@data/validators'
 
 vi.mock('@capacitor/preferences', () => ({
   Preferences: { set: vi.fn(async () => {}), get: vi.fn(async () => ({ value: null })), remove: vi.fn(async () => {}) },
@@ -179,5 +180,16 @@ describe('rival development', () => {
     // sanity: the unclamped version really would have exceeded 100, so this
     // test is actually exercising the clamp and not vacuously passing.
     expect(96 + pool / 3).toBeGreaterThan(100)
+  })
+
+  it('reads pool size and facet split from upgrades.json, not a hardcoded constant', () => {
+    // Pins rivalDevelopment's per-race pool contribution to the JSON's
+    // poolPerRace/facetSplit values, the same way the income test pins
+    // `perRace` — a careless edit to data/upgrades.json (or a regression back
+    // to a hardcoded constant in seasonStore.ts) must fail this loudly.
+    const { poolPerRace, facetSplit } = loadGameData().upgrades.rivalDevelopment
+    finishRace()
+    const apexRate = loadGameData().cars.teams.find(t => t.id === 'apex')!.developmentRate ?? 1.0
+    expect(useSeasonStore.getState().rivalDevelopment['apex']).toBeCloseTo(poolPerRace * apexRate * facetSplit)
   })
 })

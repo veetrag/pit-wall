@@ -58,10 +58,15 @@ export function raceHeadline(pos: number, events: RaceEventSummary): string {
 
 const SAVE_KEY = 'season.v1'
 
-// Facet points a developmentRate-1.0 team gains per race. Sized so that over 12
-// rounds an average team gains ~12 points spread across three facets (~4 each,
-// about 0.07s/lap) — enough to keep the grid moving without out-developing a
-// player who is spending on the same facets.
+// Facet points a developmentRate-1.0 team gains per race, and how many team
+// facets that pool is split across, both live in data/upgrades.json
+// (`rivalDevelopment.poolPerRace` / `.facetSplit`) rather than here — per
+// CLAUDE.md §4/§5 ("the player/designer balances by editing data, not
+// code"), a designer tuning how fast rivals close in on the player must
+// never require a code change. Sized (at the data's current values) so that
+// over 12 rounds an average team gains ~12 points spread across three
+// facets (~4 each, about 0.07s/lap) — enough to keep the grid moving
+// without out-developing a player who is spending on the same facets.
 //
 // developmentRate in cars.json correlates *inversely* with team strength today
 // (apex/meridian, the two strongest grids, sit at 1.0; terra/zenith, the two
@@ -69,14 +74,13 @@ const SAVE_KEY = 'season.v1'
 // assumed. Applying the rate directly is therefore already the intended
 // "weakest team develops fastest" compression, not an inversion that needs
 // correcting.
-const RIVAL_POOL_PER_RACE = 1
-
 function accumulateRivalDevelopment(current: Record<string, number>): Record<string, number> {
-  const teams = loadGameData().cars.teams
+  const { cars, upgrades } = loadGameData()
+  const { poolPerRace, facetSplit } = upgrades.rivalDevelopment
   const next: Record<string, number> = { ...current }
-  for (const team of teams) {
+  for (const team of cars.teams) {
     const rate = team.developmentRate ?? 1.0
-    next[team.id] = (next[team.id] ?? 0) + RIVAL_POOL_PER_RACE * rate * 3
+    next[team.id] = (next[team.id] ?? 0) + poolPerRace * rate * facetSplit
   }
   return next
 }
@@ -236,6 +240,13 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     set({ phase: 'racing', playerStrategy: strategy ?? null })
   },
 
+  // Invariant: must be called at most once per race. There is no idempotency
+  // guard here — a second call for the same race would double-award
+  // devPoints and rivalDevelopment (and double-count standings points, which
+  // predates this feature). Enforcement lives outside the store, in
+  // src/ui/RaceWatcher.tsx's `hasFiredRef` guard. No `phase` check is added
+  // here deliberately: tests call this action directly and rely on being
+  // able to invoke it repeatedly in a single race's worth of assertions.
   recordRaceResult(positions, events) {
     const { standings, raceIndex, playerDriverId } = get()
     const results: SeasonResult[] = positions.map(p => ({

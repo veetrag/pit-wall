@@ -1,6 +1,7 @@
 {
   "income": { "perRace": 10 },
   "tierCosts": [10, 18, 30],
+  "rivalDevelopment": { "poolPerRace": 1, "facetSplit": 3 },
   "attributes": [
     { "id": "power",          "label": "Power Unit",     "facet": "power",          "target": "team",   "pointsPerTier": 5, "unit": "laptime" },
     { "id": "aero",           "label": "Aero Package",   "facet": "aero",           "target": "team",   "pointsPerTier": 3, "unit": "laptime" },
