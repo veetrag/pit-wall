@@ -119,6 +119,22 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         }
       }
     }
+
+    // Mechanical failure risk, independent of tyres: scaled by the team's
+    // reliability facet, which was inert until now despite every team
+    // archetype advertising it ("bulletproof", "a nightmare to keep
+    // running"). Rolled per sector, so the per-lap chance is divided by 3 —
+    // same convention as the tyre-failure roll above.
+    if (!updated.retired) {
+      const team = config.teams.find(t => t.id === car.teamId)
+      if (team) {
+        const mf = config.tuning.mechanicalFailure
+        const perLap = mf.baseChancePerLap * (1 - team.facets.reliability / 100)
+        if (perLap > 0 && rng() < perLap / 3) {
+          updated = { ...updated, retired: true, retiredLap: car.lap }
+        }
+      }
+    }
     return updated
   })
 
