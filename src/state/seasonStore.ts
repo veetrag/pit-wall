@@ -58,6 +58,47 @@ export function raceHeadline(pos: number, events: RaceEventSummary): string {
 
 const SAVE_KEY = 'season.v1'
 
+// Facet points a developmentRate-1.0 team gains per race. Sized so that over 12
+// rounds an average team gains ~12 points spread across three facets (~4 each,
+// about 0.07s/lap) — enough to keep the grid moving without out-developing a
+// player who is spending on the same facets.
+//
+// developmentRate in cars.json correlates *inversely* with team strength today
+// (apex/meridian, the two strongest grids, sit at 1.0; terra/zenith, the two
+// weakest, sit at 1.4/1.2) — confirmed by reading the real file rather than
+// assumed. Applying the rate directly is therefore already the intended
+// "weakest team develops fastest" compression, not an inversion that needs
+// correcting.
+const RIVAL_POOL_PER_RACE = 1
+
+function accumulateRivalDevelopment(current: Record<string, number>): Record<string, number> {
+  const teams = loadGameData().cars.teams
+  const next: Record<string, number> = { ...current }
+  for (const team of teams) {
+    const rate = team.developmentRate ?? 1.0
+    next[team.id] = (next[team.id] ?? 0) + RIVAL_POOL_PER_RACE * rate * 3
+  }
+  return next
+}
+
+// Converts a raw accumulated development pool for one team into the effective
+// value of a single facet, given that facet's un-upgraded base rating. The
+// pool is a season-long total meant to be split evenly across three team
+// facets by whichever caller applies it (a future race-setup overlay), so
+// it is divided by 3 here, at the same point that caller would otherwise
+// write pool/3 straight onto a facet.
+//
+// Clamped to 100 HERE, at the point where the effective facet value is
+// produced for consumption (e.g. by a future race-setup overlay), rather than
+// on the raw pool: the pool itself is not a facet and clamping it would
+// silently cap development for every facet the moment any one of them (e.g.
+// a team already near 100 in one area) hit the ceiling. facetToRating9 in
+// engine/lapModel.ts inverts above 100, so an unclamped facet of 101+ would
+// turn a development bonus into a lap-time penalty — exactly backwards.
+export function rivalFacetValue(baseFacet: number, pool: number): number {
+  return Math.min(100, baseFacet + pool / 3)
+}
+
 interface SeasonStore {
   phase: SeasonPhase
   playerDriverId: string | null
@@ -217,6 +258,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     set({
       phase: 'result', standings: newStandings, lastRaceResults: results, lastRaceEvents: events,
       devPoints: get().devPoints + loadGameData().upgrades.income.perRace,
+      rivalDevelopment: accumulateRivalDevelopment(get().rivalDevelopment),
     })
     void Preferences.set({ key: SAVE_KEY, value: JSON.stringify({ raceIndex, standings: newStandings, playerDriverId }) })
   },

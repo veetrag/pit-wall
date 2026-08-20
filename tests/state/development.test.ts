@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useSeasonStore } from '@state/seasonStore'
+import { useSeasonStore, rivalFacetValue } from '@state/seasonStore'
 
 vi.mock('@capacitor/preferences', () => ({
   Preferences: { set: vi.fn(async () => {}), get: vi.fn(async () => ({ value: null })), remove: vi.fn(async () => {}) },
@@ -105,7 +105,7 @@ describe('development income', () => {
 
   function finishRace(position: number, retired = false) {
     useSeasonStore.getState().recordRaceResult(
-      [{ driverId: 'd_voss', position, points: 0, retired }],
+      [{ driverId: 'd_voss', position, retired }],
       { overtakesGained: 0, pitsDone: 1, hadRain: false },
     )
   }
@@ -130,5 +130,54 @@ describe('development income', () => {
   it('accumulates unspent points across rounds', () => {
     finishRace(1); finishRace(5); finishRace(9)
     expect(useSeasonStore.getState().devPoints).toBe(30)
+  })
+})
+
+describe('rival development', () => {
+  beforeEach(() => { useSeasonStore.getState().startNewSeason() })
+
+  function finishRace() {
+    useSeasonStore.getState().recordRaceResult(
+      [{ driverId: 'd_voss', position: 1, retired: false }],
+      { overtakesGained: 0, pitsDone: 1, hadRain: false },
+    )
+  }
+
+  it('develops rivals in proportion to developmentRate', () => {
+    finishRace()
+    const dev = useSeasonStore.getState().rivalDevelopment
+    // Terra 1.4 develops fastest, Apex 1.0 slowest.
+    expect(dev['terra']!).toBeGreaterThan(dev['apex']!)
+  })
+
+  it('accumulates across the season', () => {
+    finishRace()
+    const afterOne = useSeasonStore.getState().rivalDevelopment['terra']!
+    finishRace()
+    expect(useSeasonStore.getState().rivalDevelopment['terra']!).toBeGreaterThan(afterOne)
+  })
+
+  it('is deterministic — no RNG', () => {
+    finishRace()
+    const first = { ...useSeasonStore.getState().rivalDevelopment }
+    useSeasonStore.getState().startNewSeason()
+    finishRace()
+    expect(useSeasonStore.getState().rivalDevelopment).toEqual(first)
+  })
+
+  it('clamps the effective facet value at 100 even for the strongest team after a full season', () => {
+    // Apex starts near the top of every team facet (power 92, aero 95,
+    // handling 90, reliability 96). A full 12-race season's worth of pooled
+    // development, applied naively on top of those bases, would push aero
+    // and reliability past 100 — which `facetToRating9` would then treat as
+    // a *penalty* instead of a bonus. rivalFacetValue must clamp per-facet.
+    for (let i = 0; i < 12; i++) finishRace()
+    const pool = useSeasonStore.getState().rivalDevelopment['apex']!
+    for (const base of [92, 95, 90, 96]) {
+      expect(rivalFacetValue(base, pool)).toBeLessThanOrEqual(100)
+    }
+    // sanity: the unclamped version really would have exceeded 100, so this
+    // test is actually exercising the clamp and not vacuously passing.
+    expect(96 + pool / 3).toBeGreaterThan(100)
   })
 })
