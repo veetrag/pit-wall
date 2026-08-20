@@ -43,17 +43,17 @@ describe('calendar', () => {
   })
 
   // Circuits authored by this plan (twelve-race-calendar) are deliberately
-  // normalised to sum to ~1.0, unlike the legacy circuits above. Guarded on
-  // existence so this doesn't fail before later tasks in the plan land theirs.
+  // normalised to sum to ~1.0, unlike the legacy circuits above. A missing id
+  // fails loudly rather than skipping the strict assertion.
   const PLAN_CIRCUITS = ['silverpark', 'costa_verde', 'kaido', 'altiplano']
 
   it('normalises sector sensitivities to ~1.0 for plan-authored circuits', () => {
     const { circuits } = loadGameData()
     for (const id of PLAN_CIRCUITS) {
       const c = circuits[id]
-      if (!c) continue
-      const car = c.carSensitivity.reduce((a, b) => a + b, 0)
-      const drv = c.driverSensitivity.reduce((a, b) => a + b, 0)
+      expect(c, `${id} missing from circuits.json`).toBeTruthy()
+      const car = c!.carSensitivity.reduce((a, b) => a + b, 0)
+      const drv = c!.driverSensitivity.reduce((a, b) => a + b, 0)
       expect(car, `${id} carSensitivity`).toBeGreaterThan(0.95)
       expect(car, `${id} carSensitivity`).toBeLessThan(1.05)
       expect(drv, `${id} driverSensitivity`).toBeGreaterThan(0.95)
@@ -141,7 +141,15 @@ describe('new circuits', () => {
     expect(total('kaido')).toBeGreaterThan(total('harbour_lights'))
     for (const id of Object.keys(circuits)) {
       if (id === 'kaido' || id === 'harbour_lights') continue
-      expect(total(id), id).toBeGreaterThan(total('kaido'))
+      expect(
+        total(id),
+        `${id} overtakingFactor total (${total(id)}) must exceed kaido's (${total('kaido')}). ` +
+        'Invariant: harbour_lights is the hardest circuit to overtake on, kaido the second ' +
+        'hardest, and every other circuit is easier than both. If a new circuit is ' +
+        'deliberately harder to pass on than kaido, update this test (and kaido\'s ' +
+        'characterNote, which claims the runner-up spot) rather than raising the new ' +
+        "circuit's numbers to satisfy it.",
+      ).toBeGreaterThan(total('kaido'))
     }
   })
 
@@ -154,13 +162,36 @@ describe('new circuits', () => {
     expect(CIRCUIT_ORDER.length).toBe(12)
   })
 
+  // weatherBias and atmosphere are both z.string().optional() in the schema and
+  // both fall back silently at runtime (weather.ts: intensityBias[bias] ?? 0.2,
+  // TrackCanvas: atmosphere default 'day'), so a typo is invisible without these.
+  it('gives every circuit a weatherBias the weather model knows', () => {
+    const { circuits, tuning } = loadGameData()
+    const legal = Object.keys(tuning.weather.timeline.intensityBias)
+    expect(legal.length, 'intensityBias keys').toBeGreaterThan(0)
+    for (const [id, c] of Object.entries(circuits)) {
+      if (c.weatherBias === undefined) continue
+      expect(legal, `${id} weatherBias`).toContain(c.weatherBias)
+    }
+  })
+
+  it('gives every circuit an atmosphere the canvas knows', () => {
+    const { circuits } = loadGameData()
+    const LEGAL_ATMOSPHERES = ['day', 'dusk', 'night', 'desert_night', 'storm', 'northern_dusk']
+    for (const [id, c] of Object.entries(circuits)) {
+      if (c.atmosphere === undefined) continue
+      expect(LEGAL_ATMOSPHERES, `${id} atmosphere`).toContain(c.atmosphere)
+    }
+  })
+
   it('never schedules two wet-leaning rounds back to back', () => {
     const { circuits } = loadGameData()
+    // Inclusive: kaido is exactly 0.35 and is a wet-leaning round for this rule.
     const RAIN_THRESHOLD = 0.35
     for (let i = 0; i < CIRCUIT_ORDER.length - 1; i++) {
       const a = circuits[CIRCUIT_ORDER[i]!]!
       const b = circuits[CIRCUIT_ORDER[i + 1]!]!
-      const bothWet = (a.rainProbability ?? 0) > RAIN_THRESHOLD && (b.rainProbability ?? 0) > RAIN_THRESHOLD
+      const bothWet = (a.rainProbability ?? 0) >= RAIN_THRESHOLD && (b.rainProbability ?? 0) >= RAIN_THRESHOLD
       expect(bothWet, `${CIRCUIT_ORDER[i]} -> ${CIRCUIT_ORDER[i + 1]}`).toBe(false)
     }
   })
