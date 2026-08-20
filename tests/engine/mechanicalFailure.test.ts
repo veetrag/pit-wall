@@ -66,6 +66,32 @@ describe('mechanical failure', () => {
     expect(state.cars[0]!.retired).toBe(false)
   })
 
+  it('holds the fragile-team DNF band', () => {
+    // Halcyon reliability 72. Band from spec §5; 400 races gives roughly
+    // +/-2pp of Monte-Carlo noise, so the band is deliberately wider than
+    // the measured value.
+    const rate = dnfRate('halcyon', 400)
+    expect(rate).toBeGreaterThan(0.08)
+    expect(rate).toBeLessThan(0.17)
+  })
+
+  it('holds the bulletproof-team DNF band', () => {
+    // Zenith reliability 94 — the archetype promises it finishes races.
+    const rate = dnfRate('zenith', 400)
+    expect(rate).toBeGreaterThan(0.005)
+    expect(rate).toBeLessThan(0.055)
+  })
+
+  it('orders the whole grid by reliability', () => {
+    // The mechanic must be monotonic in reliability, not merely different at
+    // the extremes — otherwise the archetypes still lie in the middle.
+    const halcyon = dnfRate('halcyon', 300)  // 72
+    const delta = dnfRate('delta', 300)      // 89
+    const apex = dnfRate('apex', 300)        // 96
+    expect(halcyon).toBeGreaterThan(delta)
+    expect(delta).toBeGreaterThan(apex)
+  })
+
   it('freezes a mechanically retired car', () => {
     // Force certain failure on the first roll.
     const config = configFor('halcyon', 3)
