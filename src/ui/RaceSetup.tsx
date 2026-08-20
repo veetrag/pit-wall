@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
+import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore } from '@state/seasonStore'
 import type { PlayerStrategyChoice } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
@@ -94,6 +95,19 @@ export function RaceSetup() {
   const currentSeed = useSeasonStore(s => s.currentSeed)
   const defaultIdx = raceIndex % CIRCUIT_ORDER.length
   const [selectedIdx, setSelectedIdx] = useState(defaultIdx)
+  const reducedMotion = useSettingsStore(s => s.reducedMotion)
+  // The circuit strip is a horizontal overflow scroller: at round 12 the active
+  // chip sits off-screen right, so the player sees rounds 1-3 with nothing
+  // apparently selected. Pull it into view on mount and on every round change.
+  const chipStripRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const chip = chipStripRef.current?.querySelector(`[data-circuit-idx="${selectedIdx}"]`)
+    chip?.scrollIntoView({
+      behavior: reducedMotion ? 'auto' : 'smooth',
+      inline: 'center',
+      block: 'nearest',
+    })
+  }, [selectedIdx, reducedMotion])
   const circuitId = CIRCUIT_ORDER[selectedIdx] ?? CIRCUIT_ORDER[0]!
   const circuit = allCircuits[circuitId]!
   const roundNum = raceIndex + 1
@@ -168,7 +182,7 @@ export function RaceSetup() {
         {/* Circuit selector */}
         <div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 8 }}>SELECT CIRCUIT</div>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          <div ref={chipStripRef} style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
             {CIRCUIT_ORDER.map((cId, i) => {
               const c = allCircuits[cId]
               if (!c) return null
@@ -176,6 +190,7 @@ export function RaceSetup() {
               return (
                 <motion.button
                   key={cId}
+                  data-circuit-idx={i}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
                     setSelectedIdx(i)
