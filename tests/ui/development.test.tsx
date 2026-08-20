@@ -66,6 +66,47 @@ describe('Development screen', () => {
     expect(aero.textContent).toMatch(/NEED/i)
   })
 
+  // Fix 2: a tier whose facet is already at its ceiling grants literally
+  // nothing, but "tiers remaining" was the only maxed test, so the row stayed
+  // enabled and sold it at full price. Probed live on Apex: aero T3 for 30 DP
+  // showing "-0.00s/lap", reliability T2 for 18 DP re-advertising a benefit
+  // already fully owned — 78 DP (nearly eight races of income) for nothing.
+  it('refuses to sell a tier that would grant nothing', () => {
+    // aero 95 with facetMax 100 and +3/tier: two tiers reach 100 (95+6=101 ->
+    // 100), so the third tier moves the facet not at all.
+    useSeasonStore.setState({ devPoints: 999, purchasedTiers: { aero: 2 } })
+    render(<Development />)
+    const buy = screen.getByTestId('buy-aero')
+    expect(buy.hasAttribute('disabled')).toBe(true)
+    act(() => { buy.click() })
+    expect(useSeasonStore.getState().purchasedTiers['aero']).toBe(2)
+    expect(useSeasonStore.getState().devPoints).toBe(999)
+  })
+
+  it('distinguishes spent-out from both maxed and unaffordable, without colour', () => {
+    useSeasonStore.setState({ devPoints: 999, purchasedTiers: { aero: 2, power: 3 } })
+    render(<Development />)
+    const spentOut = screen.getByTestId('buy-aero').textContent ?? ''
+    const maxed = screen.getByTestId('buy-power').textContent ?? ''
+    // three distinct wordings, none of them shared
+    expect(spentOut).not.toMatch(/MAX/i)
+    expect(spentOut).not.toMatch(/NEED/i)
+    // and it must not still read as a purchase offer
+    expect(spentOut).not.toMatch(/BUY T/i)
+    expect(maxed).toMatch(/MAX/i)
+    expect(spentOut.trim().length).toBeGreaterThan(0)
+    expect(spentOut).not.toBe(maxed)
+  })
+
+  it('tells a screen reader that a spent-out tier grants nothing', () => {
+    useSeasonStore.setState({ devPoints: 999, purchasedTiers: { aero: 2 } })
+    render(<Development />)
+    const label = screen.getByTestId('buy-aero').getAttribute('aria-label') ?? ''
+    expect(label).toMatch(/no|nothing/i)
+    // and it must NOT read as a purchasable offer
+    expect(label).not.toMatch(/^Buy /)
+  })
+
   it('shows a lap-time consequence rather than a raw facet number', () => {
     useSeasonStore.setState({ devPoints: 999 })
     render(<Development />)

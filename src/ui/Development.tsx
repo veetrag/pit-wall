@@ -91,7 +91,9 @@ function describeConsequence(attr: UpgradeAttribute, before: number, after: numb
       const riskAfter = 1 - after / 100
       if (riskAfter <= 0) return { value: 'No failures', qualifier: 'mechanical DNFs ruled out' }
       const cut = riskBefore > 0 ? (1 - riskAfter / riskBefore) * 100 : 0
-      return { value: `−${Math.round(cut)}%`, qualifier: 'mechanical failure risk' }
+      // Relative, not percentage points — the qualifier's "less likely" is what
+      // stops a reader over-reading it as an absolute cut.
+      return { value: `−${Math.round(cut)}%`, qualifier: 'less likely to suffer a mechanical failure' }
     }
     case 'cliffLaps': {
       const gain = lapsToCliff(after) - lapsToCliff(before)
@@ -103,7 +105,7 @@ function describeConsequence(attr: UpgradeAttribute, before: number, after: numb
       const mBefore = base + before / 100
       const mAfter = base + after / 100
       const gain = mBefore > 0 ? (mAfter / mBefore - 1) * 100 : 0
-      return { value: `+${Math.round(gain)}%`, qualifier: 'chance of completing a pass' }
+      return { value: `+${Math.round(gain)}%`, qualifier: 'more likely to complete a pass' }
     }
     case 'wetPace': {
       // lapModel.ts: spin chance in the wet is scaled by (1 - wetSkillRelief).
@@ -111,7 +113,7 @@ function describeConsequence(attr: UpgradeAttribute, before: number, after: numb
       const rBefore = (before / 100) * max
       const rAfter = (after / 100) * max
       const cut = rBefore < 1 ? (1 - (1 - rAfter) / (1 - rBefore)) * 100 : 0
-      return { value: `−${cut.toFixed(1)}%`, qualifier: 'risk of a spin in the wet' }
+      return { value: `−${cut.toFixed(1)}%`, qualifier: 'less likely to spin in the wet' }
     }
     default: {
       const exhaustive: never = attr.unit
@@ -148,7 +150,9 @@ function TierPips({ owned, accent }: { owned: number; accent: string }) {
               width: 14, height: 5, borderRadius: 3,
               background: isOwned ? accent : 'transparent',
               border: isOwned ? 'none' : `1px solid ${isNext ? 'var(--text-dim)' : 'var(--line-hair)'}`,
-              boxShadow: isOwned ? `0 0 6px ${accent}66` : 'none',
+              // `${accent}66` produced `var(--accent)66`, invalid CSS that the
+              // browser dropped — so this channel was silently absent.
+              boxShadow: isOwned ? `0 0 6px color-mix(in srgb, ${accent} 40%, transparent)` : 'none',
             }}
           />
         )
@@ -159,20 +163,33 @@ function TierPips({ owned, accent }: { owned: number; accent: string }) {
 
 function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, reducedMotion }: RowProps) {
   const maxed = cost === null
+  // Tiers remain, but the facet is already at its ceiling (attr.facetMax, or
+  // the global 100) so the next tier moves nothing. Without this the row sold a
+  // 30 DP package that displayed "−0.00s/lap": technically truthful, a trap in
+  // practice. `before`/`after` come from the same overlay the engine reads, so
+  // this is the real delta the purchase would produce, not an estimate.
+  const spentOut = !maxed && after === before
   const short = cost === null ? 0 : Math.max(0, cost - affordable)
-  const canBuy = !maxed && short === 0
-  const consequence = maxed ? null : describeConsequence(attr, before, after)
+  const canBuy = !maxed && !spentOut && short === 0
+  const consequence = maxed || spentOut ? null : describeConsequence(attr, before, after)
 
-  // Maxed and unaffordable are deliberately different in THREE channels, not
-  // just colour: glyph (✓ vs ✕), wording ("MAX" vs "NEED n"), and the row's
-  // own treatment (a completed row is tinted and loses its accent edge; an
-  // unaffordable one stays live, because it is still a goal).
+  // THREE terminal states, deliberately different in glyph, wording and row
+  // treatment — never in colour alone:
+  //   maxed      ✓ MAX      all tiers owned, row tinted, stops advertising
+  //   spentOut   ⊘ NO GAIN  tiers left but the facet is capped, so nothing to sell
+  //   unaffordable ✕ NEED n  still a goal, so it keeps its consequence line
   const accent = maxed ? 'var(--positive)' : 'var(--accent)'
+  const edge = maxed ? 'var(--positive)'
+    : spentOut ? 'var(--text-mid)'
+      : canBuy ? 'var(--accent)' : 'var(--line-hair)'
 
   const label = maxed
     ? `${attr.label}: fully developed, all ${MAX_TIERS} tiers owned`
-    : `Buy ${attr.label} tier ${owned + 1} of ${MAX_TIERS} for ${cost} development points`
-      + (canBuy ? '' : `. Not affordable, ${short} more points needed`)
+    : spentOut
+      // Must not read as an offer: this tier grants nothing at any price.
+      ? `${attr.label} tier ${owned + 1} is unavailable: the facet has reached its development ceiling, so this tier would grant no improvement`
+      : `Buy ${attr.label} tier ${owned + 1} of ${MAX_TIERS} for ${cost} development points`
+        + (canBuy ? '' : `. Not affordable, ${short} more points needed`)
 
   return (
     <div
@@ -182,7 +199,7 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
         borderRadius: 12,
         background: maxed ? 'color-mix(in srgb, var(--positive) 7%, var(--bg-elevated))' : 'var(--bg-elevated)',
         border: '1px solid var(--line-hair)',
-        borderLeft: `2px solid ${maxed ? 'var(--positive)' : canBuy ? 'var(--accent)' : 'var(--line-hair)'}`,
+        borderLeft: `2px solid ${edge}`,
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -212,10 +229,16 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
                 }}>
                   {consequence.value}
                 </span>
-                <span style={{ color: 'var(--text-dim)' }}>{consequence.qualifier}</span>
+                {/* --text-mid, not --text-dim: this half of the sentence
+                    carries WHAT the gain applies to, and #5C6788 on
+                    --bg-elevated measures 2.87:1 against the AA floor of
+                    4.5 (§6.3). --text-mid measures 6.56:1. */}
+                <span style={{ color: 'var(--text-mid)' }}>{consequence.qualifier}</span>
               </>
             )
-            : <span style={{ color: 'var(--positive)' }}>✓ Fully developed — no further gains</span>}
+            : maxed
+              ? <span style={{ color: 'var(--positive)' }}>✓ Fully developed — no further gains</span>
+              : <span style={{ color: 'var(--text-mid)' }}>⊘ At its ceiling — a further tier would add nothing</span>}
         </div>
       </div>
 
@@ -233,8 +256,9 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
           background: canBuy ? 'var(--accent)' : 'transparent',
           border: maxed
             ? '1px solid var(--positive)'
-            : canBuy ? 'none' : '1px dashed var(--line-hair)',
-          color: canBuy ? 'var(--bg-deep)' : maxed ? 'var(--positive)' : 'var(--text-dim)',
+            : spentOut ? '1px solid var(--line-hair)'
+              : canBuy ? 'none' : '1px dashed var(--line-hair)',
+          color: canBuy ? 'var(--bg-deep)' : maxed ? 'var(--positive)' : 'var(--text-mid)',
           fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 700,
           letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
@@ -242,19 +266,26 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
       >
         {maxed
           ? <span>✓ MAX</span>
-          : canBuy
+          : spentOut
             ? (
               <>
-                <span>{cost} DP</span>
-                <span style={{ fontSize: 8, opacity: 0.7, letterSpacing: '0.1em' }}>BUY T{owned + 1}</span>
+                <span>⊘ CAPPED</span>
+                <span style={{ fontSize: 8, opacity: 0.75, letterSpacing: '0.08em' }}>NO GAIN</span>
               </>
             )
-            : (
-              <>
-                <span>✕ {cost} DP</span>
-                <span style={{ fontSize: 8, letterSpacing: '0.08em', color: 'var(--accent-warm)' }}>NEED {short}</span>
-              </>
-            )}
+            : canBuy
+              ? (
+                <>
+                  <span>{cost} DP</span>
+                  <span style={{ fontSize: 8, opacity: 0.7, letterSpacing: '0.1em' }}>BUY T{owned + 1}</span>
+                </>
+              )
+              : (
+                <>
+                  <span>✕ {cost} DP</span>
+                  <span style={{ fontSize: 8, letterSpacing: '0.08em', color: 'var(--accent-warm)' }}>NEED {short}</span>
+                </>
+              )}
       </motion.button>
     </div>
   )
@@ -407,7 +438,9 @@ export function Development() {
           }}>
             <span>THE ARMS RACE · SEASON TO DATE</span>
             <span style={{ color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
-              {`YOU −${arc.playerGain.toFixed(2)}s`}
+              {/* A signed zero ("−0.00s") reads as a measurement rather than
+                  as "nothing bought yet". */}
+              {arc.playerGain > 0 ? `YOU −${arc.playerGain.toFixed(2)}s` : 'YOU —'}
             </span>
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
@@ -425,14 +458,14 @@ export function Development() {
                 </div>
                 <div style={{
                   fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, marginTop: 2,
-                  color: r.gain > 0 ? 'var(--negative)' : 'var(--text-dim)', fontVariantNumeric: 'tabular-nums',
+                  color: r.gain > 0 ? 'var(--negative)' : 'var(--text-mid)', fontVariantNumeric: 'tabular-nums',
                 }}>
-                  {`−${r.gain.toFixed(2)}s`}
+                  {r.gain > 0 ? `−${r.gain.toFixed(2)}s` : '—'}
                 </div>
               </div>
             ))}
           </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)', marginTop: 7, lineHeight: 1.4 }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-mid)', marginTop: 7, lineHeight: 1.4 }}>
             {arc.anyRival
               ? 'Every team develops between rounds. Lap time you do not buy, someone else does.'
               : 'No rival has developed yet. The gap you build now is the gap you defend later.'}
@@ -448,7 +481,7 @@ export function Development() {
                 {group.caption}
               </span>
               <span style={{ flex: 1, height: 1, background: 'var(--line-hair)' }} />
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: 9.5, color: 'var(--text-dim)' }}>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 9.5, color: 'var(--text-mid)' }}>
                 {group.note}
               </span>
             </div>
@@ -477,8 +510,11 @@ export function Development() {
       {/* Skippable by design: unspent points bank. */}
       <div style={{ padding: '10px 16px 12px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <div style={{
-          fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-dim)',
+          fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-mid)',
           textAlign: 'center', marginBottom: 8, letterSpacing: '0.04em',
+          // This count changes on every purchase, so it gets tabular figures
+          // like every other live number on the screen (§6.1).
+          fontVariantNumeric: 'tabular-nums',
         }}>
           {devPoints > 0
             ? `${devPoints} unspent points carry over to the next round`
