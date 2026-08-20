@@ -5,3 +5,8 @@ android
 *.tsbuildinfo
 vite.config.d.ts
 .claude/worktrees/
+
+# Signing secrets — never commit these
+*.jks
+*.keystore
+keystore.properties
