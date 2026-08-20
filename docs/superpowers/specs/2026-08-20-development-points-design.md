@@ -40,10 +40,11 @@ Two alternatives were considered and rejected:
 |---|---|
 | Season length | **12 races** (up from 8) |
 | DP income | **10 per race, flat** — regardless of finishing position or DNF |
-| Season total | **120 DP** |
-| Tier costs | Mk1 **10** · Mk2 **18** · Mk3 **30** |
-| Cost to max one attribute | **58 DP** |
-| Attributes maxable per season | **~2** |
+| Season total income | **120 DP** |
+| Actually spendable | **110 DP** — income lands *after* a race, spending happens *before* one, so round 12's payment is dead. See §4. |
+| Tier costs | Mk1 **10** · Mk2 **18** · Mk3 **27** |
+| Cost to max one attribute | **55 DP** |
+| Attributes maxable per season | **exactly 2** (110 = 2 × 55, to the point) |
 
 **Income is flat by explicit decision.** Position-based income was rejected because it compounds an existing advantage: strong teams finish higher, earn more, and pull further ahead — the rich get richer, and the underdog run becomes impossible. Performance pressure belongs in the championship standings, not doubled into the development economy.
 
@@ -60,14 +61,20 @@ Only attributes that **measurably change race outcomes** are offered. Measured a
 | `power` / `aero` / `handling` | ~0.27 s/lap, every lap (~5 s/race) | ✅ |
 | `pace` | ~0.45 s/lap across all sectors | ✅ |
 | `reliability` | DNF risk (newly wired, §5) | ✅ |
-| `tyreManagement` | Defers the tyre cliff — strategic value | ✅ |
-| `racecraft` | Overtake probability | ✅ |
-| `wetWeather` | Wet-crossover relief (situational) | ✅ |
+| ~~`tyreManagement`~~ | **+0.0178 s/lap measured — 6.7% of power** | ❌ withdrawn, §4 |
+| ~~`racecraft`~~ | **exactly 0 — engine overtakes never change `raceTime`** | ❌ withdrawn, §4 |
+| ~~`wetWeather`~~ | **~0 — 1 spin event in 72 races** | ❌ withdrawn, §4 |
 | **`pitCrew`** | **0.090 s per stop — ~0.09 s/race** | ❌ |
 | **`consistency`** | **noise sigma −8.3% (sigma is 0.058 s)** | ❌ |
 | `experience` | Nothing — zero engine references | ❌ |
 
 `pitCrew` and `consistency` are excluded because offering them would be a **trap**: they cost the same as `power` and deliver roughly 2% of the benefit. A player who bought them would be strictly worse off with no way to know it.
+
+**Three attributes this table originally approved failed that same test on measurement and have been
+withdrawn** — see §4 for the numbers and the causes. The shop sells five: `power`, `aero`,
+`handling`, `reliability`, `pace`. The lesson is that "is the facet read by the engine?" was the
+wrong screening question; `racecraft` is read every sector and still worth exactly nothing, because
+the *mechanic* it feeds has no outcome.
 
 Making them viable would mean raising `pit.pitCrewMeanRelief` and `noise.consistencyReliefFactor` — a rebalance of the validated sim, which is a separate decision and out of scope here. `experience` is excluded because it is inert in the engine entirely.
 
@@ -86,19 +93,75 @@ Package sizes are therefore tuned per attribute so each tier delivers roughly **
 | `handling` | +6 | 0.089 s/lap |
 | `pace` | +3 | 0.090 s/lap |
 | `reliability` | +5 | see §5 |
-| `tyreManagement` | +5 | strategic (cliff deferral) |
-| `racecraft` | +5 | strategic (pass probability) |
-| `wetWeather` | +6 | situational (wet races only) |
 
-Raw facet numbers ("+3 aero") read as arbitrary, so **the UI shows the consequence, not the stat**: `AERO PACKAGE Mk1 · −0.09s/lap`. This is both better UX and a better fit for the telemetry aesthetic in `CLAUDE.md` §6.1. Attributes whose value is not lap time show their own unit (`−40% failure risk`, `+2 laps before the cliff`).
+Measurement confirmed the normalisation to within 1.5% of analytic, and corrected one
+assumption in the paragraph above: **aero is the weakest of the four, not the dominant one** — its
++3 package under-shoots the ~0.085 target by 10%, where the worry had been that it would over-shoot.
+
+**Three attributes originally listed here have been withdrawn** after measurement
+(`.superpowers/sdd/2026-08-20-development-points-core/task-7-report.md` §Q5). They are not labelled
+as traps for the player to see through; they are not sold:
+
+| Withdrawn | Measured value of a full max-out | Why |
+|---|---|---|
+| `racecraft` | **exactly 0.0000 s/lap** (72 of 72 paired races byte-identical) | `engine/race.ts`'s `resolveOvertakes` swaps two slots in a local array copy and never touches `raceTime`; every downstream consumer re-sorts by `raceTime`, so a pass is reverted before anything reads it. Position is 100% determined by cumulative race time. |
+| `wetWeather` | ~0 | Its only effect is mitigating the wet-compound `spinLoss` roll, and the AI pits onto the right compound promptly: 1 spin event in 72 races. |
+| `tyreManagement` | +0.0178 s/lap | 6.7% of what `power` delivers for the same price — the same category as the deliberately-excluded `pitCrew`, only 3x less bad. |
+
+The shop therefore sells **five** attributes: `power`, `aero`, `handling`, `reliability`, `pace`.
+(The racecraft finding is an engine bug, not a data one, and is being fixed under its own plan; this
+spec only stops charging the player for it.)
+
+Raw facet numbers ("+3 aero") read as arbitrary, so **the UI shows the consequence, not the stat**: `AERO PACKAGE Mk1 · −0.09s/lap`. This is both better UX and a better fit for the telemetry aesthetic in `CLAUDE.md` §6.1. Attributes whose value is not lap time show their own unit (`−40% failure risk`).
 
 All sizes and costs live in a new `src/data/upgrades.json`, validated by zod on load. **No balance numbers in logic** (`CLAUDE.md` §5).
 
-### Ceiling check
+### The economy: 110 spendable, exactly two max-outs
 
-Maxing two pace attributes (`power` +15 and `aero` +9) = **0.508 s/lap**. The entire grid spread — Zenith `power` 66 to Meridian 96, 30 facet points — is **0.535 s/lap**.
+Income is awarded in `recordRaceResult`, i.e. **after** a race, while spending happens on the
+development screen **before** one. The last race's income is therefore never spendable and the real
+budget is `perRace × (TOTAL_RACES − 1)` = **110**, not the 120 a season's income totals.
 
-So a fully-specialised season buys **95% of the gap between the worst and best car on the grid**. A maxed Zenith reaches roughly Apex's *starting* pace — and Apex has been developing meanwhile. That is a genuine fight, not a coronation, and it is the intended ceiling.
+`tierCosts` are `[10, 18, 27]`, so a max-out is **55** and 110 is *exactly* two max-outs. That is
+deliberate: it is the stretch build, it strands nothing, and three max-outs (165) stay far out of
+reach — so "which two of the five do I commit to" is the real decision. (An earlier `[10, 18, 30]`
+summing to 58 reached neither 58+58 nor 58+28+30, both 116, stranding 24 of the 110.)
+
+### Ceiling check — CORRECTED
+
+**The original arithmetic here was wrong, and it was the root cause of the ceiling failing.** It
+priced the 30-point grid spread at the *power-only* coefficient (30 × 0.01782 = 0.535 s/lap) and
+concluded that a maxed build buys "95% of the gap" and "reaches roughly Apex's starting pace".
+
+The real Zenith→Apex gap runs across **all three** car facets and is **1.482 s/lap** at round 1:
+
+| | facet points | s/lap |
+|---|---|---|
+| `power` 66 → 92 | 26 | 0.463 |
+| `aero` 68 → 95 | 27 | 0.722 |
+| `handling` 70 → 90 | 20 | 0.297 |
+| **total** | | **1.482** |
+
+A best-case player build (two max-outs: `power` +15 = 0.267 and `pace` +9 = 0.270) is worth
+**0.537 s/lap**, i.e. **36% of the round-1 deficit to the best car — not 95%.**
+
+**What the ceiling actually is, stated honestly:**
+
+- **A maxed underdog cannot win the championship, and is not close.** Measured over rounds 9–12 on a
+  season-developed grid (160 races per row, competent-player proxy): a maxed Zenith finishes **P15.0
+  with 0.11 points a race**; a maxed Terra **P12.7 with 1.21**; a maxed Apex **P1.7 with 23.9**. The
+  title is Apex's.
+- **What it can achieve is beating the car immediately above it.** The analytic gap from Zenith to
+  Nimbus, the next car up, closes from **0.350 s/lap to 0.048** over a season (86%), and Terra
+  actually goes **0.133 s/lap faster** than a season-developed Nimbus. Against Delta and Halcyon the
+  gap closes from ~0.71 to ~0.44. So the achievable fantasy is **"drag the back of the grid into the
+  midfield and start stealing points"**, not "win the title from P16".
+- Against Apex specifically, the gap closes from **1.482 to 1.180 s/lap** (20%) — visible progress,
+  never a fight.
+
+If a title run from a weak team is wanted, it needs a different lever than package sizes: a smaller
+round-1 grid spread in `cars.json`, or a multi-season career. Sizing the packages large enough to
+close 1.48 s/lap in twelve rounds would make a strong-team season trivial.
 
 ## 5. Reliability, finally wired
 
@@ -152,6 +215,23 @@ and 12.8% over Harbour Lights' 60. Tests must therefore pin a lap count.
 Each race, every AI team gains a facet pool scaled by its existing `developmentRate` (currently unread by any code — `cars.json` has values 1.0–1.4), **distributed evenly** across `power` / `aero` / `handling` — one third each, rather than weighted toward a team's existing strength. Even distribution is chosen so rival development stays legible and does not silently amplify the aero-is-worth-more asymmetry noted in §4.
 
 This makes the data honest: Terra Motorsport (1.4, *"the fastest-developing team on the grid"*) and Zenith (1.2) climb quickly; Apex (1.0) barely moves. **The field compresses over 12 rounds**, which is precisely the underdog arc — the strong cars are the ones with the least headroom.
+
+**Magnitude — the number that decides whether the whole feature works.** `poolPerRace` is **0.36**.
+Each facet gains `poolPerRace × developmentRate × accruals` points, and equal points on
+`power`/`aero`/`handling` are worth `points × (9/100) × deltaPerRating × 3` = `points × 0.0594`
+s/lap (the three car `sectorSplit` weights sum to 1). Eleven accruals precede the final spending
+opportunity, so a rate-1.0 team gains **0.235 s/lap a season**, Terra **0.329**, and the nine-rival
+average is **0.256** — against the **0.537 s/lap** a player buys with their full 110-DP budget. The
+player out-develops the average rival by **2.1×**, so the arms race is a real headwind and not an
+unwinnable one.
+
+This was originally `1`, which gave a rate-1.0 team **0.71 s/lap** and Terra **1.00** — more than the
+player could buy with an entire season's income. Measured consequence: a weak-team player finished
+the season **0.79 positions worse** than they started, i.e. the underdog arc ran backwards. Nothing
+pinned the magnitude, because every test asserted the accrual/application round trip
+(`poolPerRace × rate × facets.length`), an identity true for any value.
+`tests/state/rivalDevelopmentMagnitude.test.ts` now asserts the gain in **seconds** against a band,
+plus the invariant the feature depends on: a full-budget player out-develops the average rival.
 
 Rival development is applied through the same `buildConfig` overlay, from state owned by `seasonStore`. It is deterministic: no RNG, so a given season produces identical rival development every time.
 
