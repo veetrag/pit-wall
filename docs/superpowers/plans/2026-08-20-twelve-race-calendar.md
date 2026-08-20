@@ -164,7 +164,7 @@ with genuine rain risk."
 ### Task 2: Author three new circuits
 
 **Files:**
-- Create: `src/data/paths/estoril_bay.json`
+- Create: `src/data/paths/costa_verde.json`
 - Create: `src/data/paths/kaido.json`
 - Create: `src/data/paths/altiplano.json`
 - Modify: `src/data/circuits.json`
@@ -172,13 +172,13 @@ with genuine rain risk."
 
 **Interfaces:**
 - Consumes: the validation from Task 1
-- Produces: circuit ids `estoril_bay`, `kaido`, `altiplano`
+- Produces: circuit ids `costa_verde`, `kaido`, `altiplano`
 
 **Design intent — fill gaps, do not duplicate.** The existing eight already cover a temple of speed (Veloce), a monsoon track (Monsoon Bay), a desert night race (Sol Desert), and a street circuit (Harbour Lights). These three add character the calendar lacks:
 
 | Circuit | Character | Why it is not a duplicate |
 |---|---|---|
-| **Estoril Bay** | Coastal, medium-speed, high tyre wear | No existing circuit punishes tyre management specifically |
+| **Costa Verde** | Coastal, medium-speed, high tyre wear | No existing circuit punishes tyre management specifically |
 | **Kaido** | Technical mountain esses, very hard to pass | Lowest `overtakingFactor` of any permanent circuit (1.00; only the Harbour Lights street track is lower at 0.65) — makes track position king |
 | **Altiplano** | High altitude, thin air, power-sapping | Only circuit where the power facet matters less than usual |
 
@@ -188,7 +188,7 @@ Append to `tests/data/calendar.test.ts`:
 
 ```ts
 describe('new circuits', () => {
-  const NEW_IDS = ['silverpark', 'estoril_bay', 'kaido', 'altiplano']
+  const NEW_IDS = ['silverpark', 'costa_verde', 'kaido', 'altiplano']
 
   it('defines all four new circuits', () => {
     const { circuits } = loadGameData()
@@ -235,15 +235,15 @@ Each is `{ points, sectorBoundaries, pitEntry, pitExit }` in a ~640×540 space. 
 - 18–28 points, forming a **closed loop** (last point near the first — the renderer tweens along the spline and a gap shows as a jump)
 - `sectorBoundaries`: three indices into `points`, ascending, roughly evenly spaced, matching the `sectorBase` character (Kaido's technical sector should be the longest stretch of points)
 - `pitEntry` / `pitExit`: indices bracketing the start/finish straight, `pitExit` a few points after `pitEntry`
-- Shapes should differ visibly from the existing eight — Kaido tight and serpentine, Altiplano wide and open, Estoril Bay with one long curving straight
+- Shapes should differ visibly from the existing eight — Kaido tight and serpentine, Altiplano wide and open, Costa Verde with one long curving straight
 
 - [ ] **Step 4: Author the three circuit specs**
 
 Add to `src/data/circuits.json`:
 
 ```json
-    "estoril_bay": {
-      "name": "Estoril Bay GP",
+    "costa_verde": {
+      "name": "Costa Verde GP",
       "location": "Cascais, Portugal",
       "flag": "🇵🇹",
       "laps": 46,
@@ -254,7 +254,7 @@ Add to `src/data/circuits.json`:
       "pitLaneTimeLoss": 21.0,
       "rainProbability": 0.30,
       "weatherBias": "stable",
-      "trackPath": "paths/estoril_bay.json",
+      "trackPath": "paths/costa_verde.json",
       "characterNote": "Abrasive coastal asphalt and long loaded corners. Tyres go off here faster than anywhere else — a one-stop is a gamble.",
       "funFacts": [
         "Highest tyre degradation on the calendar",
@@ -318,9 +318,9 @@ Expected: PASS. The Kaido overtaking assertion will fail if any existing circuit
 
 ```bash
 git add src/data/circuits.json src/data/paths/ tests/data/calendar.test.ts
-git commit -m "feat(data): add Estoril Bay, Kaido and Altiplano circuits
+git commit -m "feat(data): add Costa Verde, Kaido and Altiplano circuits
 
-Three circuits chosen to fill gaps rather than duplicate character: Estoril Bay
+Three circuits chosen to fill gaps rather than duplicate character: Costa Verde
 punishes tyre management (nothing else did), Kaido has the lowest overtaking
 factor on the calendar so track position becomes king, and Altiplano
 down-weights S1 car sensitivity so its 'power matters less at altitude' note is
@@ -364,7 +364,7 @@ In `src/state/raceStore.ts` — sequenced so the character of consecutive rounds
 ```ts
 export const CIRCUIT_ORDER = [
   'bengaluru', 'veloce', 'sol_desert', 'silverpark',
-  'highland', 'estoril_bay', 'monsoon_bay', 'altiplano',
+  'highland', 'costa_verde', 'monsoon_bay', 'altiplano',
   'grand_savane', 'kaido', 'aurora', 'harbour_lights',
 ] as const
 ```
@@ -407,7 +407,7 @@ economy the 120 DP runway it is tuned for."
 
 **Placeholder scan:** every circuit spec is complete with real values; no "TBD" fields. The track-path files are the one place where I specify *requirements* (point count, closed loop, boundary placement) rather than literal coordinates — 20-plus hand-authored coordinate pairs per file cannot meaningfully be dictated in advance, and Task 2 Step 3 gives the exact structural constraints plus an existing file to model. Task 1 Step 7 and Task 2's path test catch a malformed result.
 
-**Type consistency:** circuit ids `silverpark`, `estoril_bay`, `kaido`, `altiplano` are spelled identically in the specs, `CIRCUIT_ORDER`, the tests, and the `trackPath` filenames. `TOTAL_RACES` is imported from `@state/seasonStore` and `CIRCUIT_ORDER` from `@state/raceStore` consistently.
+**Type consistency:** circuit ids `silverpark`, `costa_verde`, `kaido`, `altiplano` are spelled identically in the specs, `CIRCUIT_ORDER`, the tests, and the `trackPath` filenames. `TOTAL_RACES` is imported from `@state/seasonStore` and `CIRCUIT_ORDER` from `@state/raceStore` consistently.
 
 **Intermediate state is deliberate:** Task 1 sets `TOTAL_RACES` to 9 so the "one circuit per round" invariant holds at every commit rather than being briefly violated. Task 3 takes it to 12.
 
