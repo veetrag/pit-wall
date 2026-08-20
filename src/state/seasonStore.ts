@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { Preferences } from '@capacitor/preferences'
 import { CIRCUIT_ORDER } from './raceStore'
 import type { Compound, PitStop } from '@engine/index'
+import { loadGameData } from '@data/validators'
 
 export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings'
 
@@ -72,6 +73,16 @@ interface SeasonStore {
   // derives from seed+999999) so a retry isn't a byte-identical replay.
   attemptNonce: number
 
+  // Season-scoped progression. Flat, separately-serialisable shapes so wiring
+  // these into persistence later (deferred item 35) stays small.
+  devPoints: number
+  purchasedTiers: Record<string, number>
+  rivalDevelopment: Record<string, number>
+
+  tierCost: (attributeId: string) => number | null
+  canAfford: (attributeId: string) => boolean
+  purchaseTier: (attributeId: string) => void
+
   currentSeed: () => number
   retryRace: () => void
   currentCircuitId: () => string
@@ -108,6 +119,30 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   selectedTeamId: null,
   playerStrategy: null,
   attemptNonce: 0,
+  devPoints: 0,
+  purchasedTiers: {},
+  rivalDevelopment: {},
+
+  tierCost(attributeId) {
+    const { tierCosts, attributes } = loadGameData().upgrades
+    if (!attributes.some(a => a.id === attributeId)) return null // unknown attribute id
+    const owned = get().purchasedTiers[attributeId] ?? 0
+    return tierCosts[owned] ?? null // null once all three tiers are owned
+  },
+
+  canAfford(attributeId) {
+    const cost = get().tierCost(attributeId)
+    return cost !== null && get().devPoints >= cost
+  },
+
+  purchaseTier(attributeId) {
+    const cost = get().tierCost(attributeId)
+    if (cost === null || get().devPoints < cost) return // maxed, unaffordable, or unknown id
+    set(s => ({
+      devPoints: s.devPoints - cost,
+      purchasedTiers: { ...s.purchasedTiers, [attributeId]: (s.purchasedTiers[attributeId] ?? 0) + 1 },
+    }))
+  },
 
   // 7919 is prime — keeps each attempt's seed stream well-separated from the
   // next round's base seed (raceIndex*1000+42) and from other attempts.
@@ -137,7 +172,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   backToDriverSelect() { set({ phase: 'driver_select' }) },
 
   startNewSeason() {
-    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0 })
+    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {} })
   },
 
   selectTeam(id) { set({ selectedTeamId: id, playerDriverId: null }) },
@@ -195,7 +230,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   },
 
   playAgain() {
-    set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0 })
+    set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {} })
     void Preferences.remove({ key: SAVE_KEY })
   },
 
