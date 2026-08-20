@@ -309,7 +309,7 @@ Kept as a flat, separately-serialisable shape so wiring it into persistence late
 ## 11. Balance risks
 
 1. **Two retirement sources.** Mechanical failure stacks on tyre failure; total DNF rate must be re-validated, not assumed. Single dial: `baseChancePerLap`.
-2. **The 95% ceiling is deliberate but untested in play.** If a maxed underdog feels dominant, lower `pointsPerTier` before touching costs — it keeps the economy's shape intact.
+2. **The ceiling is too low, not too high — measured, not assumed.** §4's original 95% figure was an arithmetic error: it priced the 30-point grid spread at the power-only coefficient (0.535 s/lap) when the real Zenith→Apex gap across all three car facets is 1.482 s/lap. A maxed build closes ~36%. Measured outcome is a maxed underdog at P15 scoring almost nothing, so the live risk is that progression feels futile rather than dominant. If it needs strengthening, raise `pointsPerTier` or narrow the round-1 grid spread; lowering `pointsPerTier` would push it the wrong way.
 3. **Rival development interacts with difficulty.** The `difficultyProfiles` levers already shift AI strategy quality; adding pace development on top may push Pro difficulty past the guardrail margins.
 4. **12 races is 50% more sim time per season.** No performance concern (races are stepped, not batched), but it lengthens playtesting cycles.
 
