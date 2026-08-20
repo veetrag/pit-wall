@@ -132,6 +132,69 @@
         "The final sector is the shortest on the calendar"
       ],
       "atmosphere": "day"
+    },
+    "estoril_bay": {
+      "name": "Estoril Bay GP",
+      "location": "Cascais, Portugal",
+      "flag": "🇵🇹",
+      "laps": 46,
+      "sectorBase": [29.0, 31.0, 30.0],
+      "carSensitivity": [0.30, 0.38, 0.32],
+      "driverSensitivity": [0.28, 0.34, 0.38],
+      "overtakingFactor": [0.95, 0.40, 0.55],
+      "pitLaneTimeLoss": 21.0,
+      "rainProbability": 0.30,
+      "weatherBias": "stable",
+      "trackPath": "paths/estoril_bay.json",
+      "characterNote": "Abrasive coastal asphalt and long loaded corners. Tyres go off here faster than anywhere else — a one-stop is a gamble.",
+      "funFacts": [
+        "Highest tyre degradation on the calendar",
+        "Sea breeze cools the surface through the evening",
+        "Two-stop strategies usually beat a long first stint"
+      ],
+      "atmosphere": "dusk"
+    },
+    "kaido": {
+      "name": "Kaido Circuit",
+      "location": "Nagano Prefecture, Japan",
+      "flag": "🇯🇵",
+      "laps": 50,
+      "sectorBase": [27.0, 36.0, 26.0],
+      "carSensitivity": [0.26, 0.48, 0.26],
+      "driverSensitivity": [0.26, 0.44, 0.30],
+      "overtakingFactor": [0.55, 0.15, 0.30],
+      "pitLaneTimeLoss": 23.0,
+      "rainProbability": 0.35,
+      "weatherBias": "showery",
+      "trackPath": "paths/kaido.json",
+      "characterNote": "Relentless mountain esses with no straight worth the name. Passing is nearly impossible outside the streets of Harbour Lights — win it in the pit lane or not at all.",
+      "funFacts": [
+        "Hardest permanent circuit on the calendar to overtake on",
+        "Track position matters more here than raw pace",
+        "Mountain weather can change within a single lap"
+      ],
+      "atmosphere": "night"
+    },
+    "altiplano": {
+      "name": "Altiplano GP",
+      "location": "Cochabamba, Bolivia",
+      "flag": "🇧🇴",
+      "laps": 42,
+      "sectorBase": [31.0, 30.0, 29.0],
+      "carSensitivity": [0.24, 0.42, 0.34],
+      "driverSensitivity": [0.32, 0.36, 0.32],
+      "overtakingFactor": [1.15, 0.50, 0.60],
+      "pitLaneTimeLoss": 19.0,
+      "rainProbability": 0.15,
+      "weatherBias": "stable",
+      "trackPath": "paths/altiplano.json",
+      "characterNote": "Thin air at altitude robs the engines and blunts the aero. The power advantage the big teams rely on counts for less here.",
+      "funFacts": [
+        "Highest elevation round of the season",
+        "Wide, open corners reward a car that can carry speed",
+        "Cooling is marginal — reliability is tested hardest here"
+      ],
+      "atmosphere": "day"
     }
   }
 }

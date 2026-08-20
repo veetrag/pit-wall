@@ -11,11 +11,14 @@ import pathHighland from '@data/paths/highland.json'
 import pathGrandSavane from '@data/paths/grand_savane.json'
 import pathAurora from '@data/paths/aurora.json'
 import pathSilverpark from '@data/paths/silverpark.json'
+import pathEstorilBay from '@data/paths/estoril_bay.json'
+import pathKaido from '@data/paths/kaido.json'
+import pathAltiplano from '@data/paths/altiplano.json'
 import type { RaceState, RaceConfig, WeatherState } from '@engine/types'
 
 type Point = [number, number]
 
-const CIRCUIT_PATHS: Record<string, { points: number[][]; sectorBoundaries: number[]; pitEntry: number[]; pitExit: number[] }> = {
+export const CIRCUIT_PATHS: Record<string, { points: number[][]; sectorBoundaries: number[]; pitEntry: number[]; pitExit: number[] }> = {
   bengaluru:      pathBengaluru,
   monsoon_bay:    pathMonsoonBay,
   veloce:         pathVeloce,
@@ -25,6 +28,9 @@ const CIRCUIT_PATHS: Record<string, { points: number[][]; sectorBoundaries: numb
   grand_savane:   pathGrandSavane,
   aurora:         pathAurora,
   silverpark:     pathSilverpark,
+  estoril_bay:    pathEstorilBay,
+  kaido:          pathKaido,
+  altiplano:      pathAltiplano,
 }
 
 const TEAM_HEX: Record<string, string> = {
