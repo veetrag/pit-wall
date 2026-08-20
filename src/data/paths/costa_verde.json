@@ -8,7 +8,7 @@
     [116, 172], [104, 250], [106, 340],
     [120, 430]
   ],
-  "sectorBoundaries": [5, 11],
+  "sectorBoundaries": [6, 14],
   "pitEntry": [502, 404],
   "pitExit": [106, 340]
 }

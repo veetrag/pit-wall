@@ -106,12 +106,24 @@ describe('new circuits', () => {
       for (let i = 1; i < pts.length; i++) {
         const a = pts[i - 1]!, b = pts[i]!
         const d = Math.hypot(b[0] - a[0], b[1] - a[1])
-        if (i < pts.length - 1) expect(d, `${id} duplicate point at ${i}`).toBeGreaterThan(0)
+        expect(d, `${id} duplicate point at ${i}`).toBeGreaterThan(0)
         segs.push(d)
       }
-      // no segment wildly longer than its neighbour (renders as a straight-line artefact)
-      for (let i = 1; i < segs.length - 1; i++) {
-        expect(segs[i]! / segs[i - 1]!, `${id} segment jump at ${i}`).toBeLessThan(4)
+      // No segment wildly out of scale with its neighbour, in EITHER direction
+      // (a long one renders as a straight-line artefact, a very short one as a
+      // stall). segs is cyclic -- the last entry is the closing segment back to
+      // the first point -- so every pair including the wrap is compared.
+      //
+      // The wrap pair gets a looser bound: on a real layout it is the short
+      // final corner feeding the long start/finish straight, so a big step is
+      // legitimate there and two incumbents genuinely exceed 4 across it
+      // (harbour_lights 4.45, veloce 4.21). Interior pairs, where a jump is an
+      // authoring mistake rather than a feature, keep the calibrated 4.
+      for (let i = 0; i < segs.length; i++) {
+        const cur = segs[i]!, next = segs[(i + 1) % segs.length]!
+        const limit = i === segs.length - 1 ? 5 : 4
+        expect(cur / next, `${id} segment jump at ${i}`).toBeLessThan(limit)
+        expect(next / cur, `${id} segment jump at ${i}`).toBeLessThan(limit)
       }
     }
   })
