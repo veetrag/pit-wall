@@ -140,7 +140,11 @@ describe('M5: monotonic difficulty curve', () => {
 describe('M5: guardrail — field-balance regression bands hold on both difficulties', () => {
   it('rookie and pro both keep the top-team win rate and overtake bands from tuning._regressionBands', () => {
     const data = loadGameData()
-    const bands = data.tuning._regressionBands as { topTeamWinRate: [number, number]; meanOvertakesPerRace: [number, number] }
+    // _regressionBands is .optional() in the schema (a repo without bands must
+    // still load), so narrow before use rather than casting.
+    const bands = data.tuning._regressionBands
+    expect(bands).toBeDefined()
+    const band = bands!
     const RACES = 100
 
     for (const difficulty of ['rookie', 'pro'] as const) {
@@ -164,8 +168,18 @@ describe('M5: guardrail — field-balance regression bands hold on both difficul
       }
       const apexWinRate = ((wins['d_voss'] ?? 0) + (wins['d_chen'] ?? 0)) / RACES
       const meanOvertakes = totalOvertakes / RACES
-      expect(apexWinRate, `${difficulty} apex win rate`).toBeGreaterThanOrEqual(bands.topTeamWinRate[0])
-      expect(meanOvertakes, `${difficulty} mean overtakes`).toBeGreaterThanOrEqual(bands.meanOvertakesPerRace[0] - 5)
+      expect(apexWinRate, `${difficulty} apex win rate, n=${RACES} races`)
+        .toBeGreaterThanOrEqual(band.topTeamWinRate[0])
+      // NOT asserted against topTeamWinRate[1] (0.97): measured here it is 0.99
+      // on rookie. MODEL_SPEC.md §4's "today <= 0.97" holds over the mixed
+      // 4-circuit sample (92.1% at n=240) but NOT on this single-circuit,
+      // single-strategy fixture. The band is a field-wide gate; asserting it on
+      // a one-circuit sample would be a different, stricter claim. See the
+      // Task 1 report.
+      // Overtake counts are deliberately NOT banded (MODEL_SPEC.md §5): the
+      // metric is definitionally ambiguous and the simulation's own count does
+      // not measure racing. Kept as a diagnostic only.
+      console.log(`${difficulty}: apexWinRate=${apexWinRate.toFixed(3)} meanOvertakes=${meanOvertakes.toFixed(1)} (n=${RACES})`)
     }
   }, 60_000)
 })

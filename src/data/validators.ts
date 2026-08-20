@@ -97,7 +97,18 @@ const TuningSchema = z.object({
       intensityBias: z.record(z.string(), z.number()),
     }),
   }),
-  _regressionBands: z.record(z.string(), z.unknown()).optional(),
+  // Bands and their provenance live in MODEL_SPEC.md §3. Read only by tests —
+  // src/engine/ never touches them (engine/types.ts keeps its own looser
+  // declaration). Stays .optional() so a repo without bands still loads.
+  _regressionBands: z.object({
+    topTeamWinRate: z.tuple([z.number(), z.number()]),
+    minDistinctWinners: z.number().int().positive(),
+    meanAbsPosChange: z.tuple([z.number(), z.number()]),
+    gridFinishSpearman: z.tuple([z.number(), z.number()]),
+    minPaceRankCorrelation: z.number(),
+    mechanicalDnfPerCarRace: z.tuple([z.number(), z.number()]),
+    _note: z.string(),
+  }).optional(),
 }).passthrough()
 
 const CompoundEntrySchema = z.object({

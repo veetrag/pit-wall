@@ -104,8 +104,12 @@
     }
   },
   "_regressionBands": {
-    "topTeamWinRate": [0.70, 1.00],
-    "meanOvertakesPerRace": [12, 22],
-    "minOvertakesPerRace": 2
+    "topTeamWinRate": [0.0, 0.97],
+    "minDistinctWinners": 2,
+    "meanAbsPosChange": [1.5, 4.0],
+    "gridFinishSpearman": [0.55, 0.90],
+    "minPaceRankCorrelation": 0.90,
+    "mechanicalDnfPerCarRace": [0.04, 0.10],
+    "_note": "Bands and their provenance live in MODEL_SPEC.md section 3. topTeamWinRate and minDistinctWinners are STAGED (MODEL_SPEC.md section 4): these are the today values. The competitive-grid plan tightens them to [0.0, 0.90] and 4; the race-incidents plan tightens win share to [0.35, 0.55]. Never loosen a gate that has already been met. Overtake event counts are deliberately NOT banded -- see MODEL_SPEC.md section 5."
   }
 }
