@@ -42,7 +42,7 @@ function AmbientHero() {
 }
 
 const MENU_ITEMS = [
-  { id: 'race',     label: 'NEW SEASON',     sub: '8-race championship',       primary: true  },
+  { id: 'race',     label: 'NEW SEASON',     sub: '12-race championship',       primary: true  },
   { id: 'grid',     label: 'GRID & GARAGE',  sub: 'Browse drivers & teams',     primary: false },
   { id: 'howto',    label: 'HOW TO PLAY',    sub: 'Strategy primer',            primary: false },
   { id: 'settings', label: 'SETTINGS',       sub: 'Sound, haptics, gameplay',   primary: false },

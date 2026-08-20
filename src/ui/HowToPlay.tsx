@@ -32,7 +32,7 @@ const STEPS = [
   {
     icon: '🏆',
     title: 'Championship',
-    body: 'Score points across 8 races. P1 = 25 pts, down to P10 = 1 pt. The season winner is decided on total points — consistency beats single-race heroics.',
+    body: 'Score points across 12 races. P1 = 25 pts, down to P10 = 1 pt. The season winner is decided on total points — consistency beats single-race heroics.',
   },
 ]
 

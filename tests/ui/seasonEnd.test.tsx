@@ -69,3 +69,31 @@ describe('race result — end of season', () => {
     expect(s.raceIndex).toBe(1)
   })
 })
+
+describe('season boundary — twelve rounds', () => {
+  beforeEach(() => { cleanup() })
+
+  // Regression guard for the round count moving 9 -> 12: nextRace() must
+  // still offer a round 11 -> 12 transition (not end the season early) and
+  // must transition to 'championship' at exactly round 12, not before.
+  it('advances through all twelve rounds and reaches championship at exactly round 12', () => {
+    useSeasonStore.setState({
+      phase: 'result', raceIndex: 0, standings: [], playerDriverId: 'd_ver',
+      lastRaceResults: null, lastRaceEvents: null,
+    } as never)
+
+    for (let round = 0; round < TOTAL_RACES - 1; round++) {
+      useSeasonStore.getState().nextRace()
+      const s = useSeasonStore.getState()
+      expect(s.phase, `round ${round + 1}`).toBe('race_setup')
+      expect(s.raceIndex, `round ${round + 1}`).toBe(round + 1)
+    }
+
+    // raceIndex is now TOTAL_RACES - 1 (round 12, the final round) — one more
+    // nextRace() call must end the season, not offer a round 13.
+    expect(useSeasonStore.getState().raceIndex).toBe(TOTAL_RACES - 1)
+    useSeasonStore.setState({ phase: 'result' } as never)
+    useSeasonStore.getState().nextRace()
+    expect(useSeasonStore.getState().phase).toBe('championship')
+  })
+})

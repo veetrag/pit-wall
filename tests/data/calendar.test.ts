@@ -148,4 +148,9 @@ describe('new circuits', () => {
   it('registers a canvas track path for every circuit in the order', () => {
     for (const id of CIRCUIT_ORDER) expect(CIRCUIT_PATHS[id], id).toBeTruthy()
   })
+
+  it('runs a twelve-round championship', () => {
+    expect(TOTAL_RACES).toBe(12)
+    expect(CIRCUIT_ORDER.length).toBe(12)
+  })
 })
