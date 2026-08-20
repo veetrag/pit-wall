@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { applyUpgrades, rivalFacetValue } from '@state/upgradeOverlay'
+import { applyUpgrades, rivalFacetValue, facetCeiling } from '@state/upgradeOverlay'
 import { useRaceStore } from '@state/raceStore'
 import { loadGameData } from '@data/validators'
 
@@ -100,18 +100,62 @@ describe('applyUpgrades', () => {
     }
   })
 
-  it('clamps a full 12-race rival pool for the strongest team', () => {
+  it('keeps a real full-season rival pool clear of the ceiling for the strongest team', () => {
+    // At poolPerRace 0.36 nobody reaches the ceiling any more — Apex's aero, the
+    // highest facet on the grid at 95, ends a season at 99.3. That is the
+    // intended consequence of the cut: before it, four teams were pinned at 100
+    // by round 12 and ~a quarter of all rival development was silently
+    // discarded. This asserts the headroom exists rather than asserting a clamp
+    // that no longer fires at real values (the clamp itself is exercised below
+    // with a deliberately oversized pool).
     const { poolPerRace, facets } = loadGameData().upgrades.rivalDevelopment
     const apex = loadGameData().cars.teams.find(t => t.id === 'apex')!
     const pool = poolPerRace * (apex.developmentRate ?? 1) * facets.length * 12
-    // sanity: unclamped this really would breach 100, so the clamp is exercised
-    expect(apex.facets.aero + pool / facets.length).toBeGreaterThan(100)
     const out = applyUpgrades([{ id: apex.id, facets: { ...apex.facets } }], {
       attributes: ATTRS, purchasedTiers: {}, target: 'team',
       appliesTo: () => false,
       rivalDevelopment: { apex: pool },
     })
-    for (const v of Object.values(out[0]!.facets)) expect(v).toBeLessThanOrEqual(100)
+    for (const v of Object.values(out[0]!.facets)) expect(v).toBeLessThan(100)
+    // ...and development actually happened, so this is not vacuous.
+    expect(out[0]!.facets.power!).toBeGreaterThan(apex.facets.power)
+  })
+
+  it('clamps an oversized rival pool at the ceiling rather than inverting the benefit', () => {
+    // A designer cranking poolPerRace must not be able to push a facet past
+    // 100, where facetToRating9 turns the bonus into a lap-time PENALTY.
+    const { facets } = loadGameData().upgrades.rivalDevelopment
+    const apex = loadGameData().cars.teams.find(t => t.id === 'apex')!
+    const pool = 60 * facets.length
+    expect(apex.facets.aero + pool / facets.length).toBeGreaterThan(100) // sanity
+    const out = applyUpgrades([{ id: apex.id, facets: { ...apex.facets } }], {
+      attributes: ATTRS, purchasedTiers: {}, target: 'team',
+      appliesTo: () => false,
+      rivalDevelopment: { apex: pool },
+    })
+    for (const facet of facets) expect(out[0]!.facets[facet]).toBe(100)
+  })
+
+  it('honours the per-attribute facetMax on the rival path, not just the global bound', () => {
+    // The rival path applies a pool by facet NAME, so it cannot read facetMax
+    // off an attribute the way the player path does — it has to look the ceiling
+    // up. Before this it clamped every facet at the global 100, silently
+    // ignoring a facetMax that exists because 100 removes a whole mechanic
+    // (reliability 100 makes race.ts's `perLap > 0` short-circuit skip the
+    // mechanical-failure roll for every sector of every remaining race).
+    //
+    // `reliability` cannot appear in rivalDevelopment.facets today — the schema
+    // forbids it — so this asserts the lookup directly rather than through a
+    // spread that would make it vacuous.
+    expect(facetCeiling('reliability')).toBe(99)
+    expect(facetCeiling('power')).toBe(100)
+    expect(facetCeiling('notAFacet')).toBe(100)
+    // A pool big enough to breach both ceilings: the named-facet form stops at
+    // 99, the unnamed (global-bound-only) form at 100. If the ceiling were
+    // ignored, both would read 100.
+    expect(rivalFacetValue(96, 300, 'reliability')).toBe(99)
+    expect(rivalFacetValue(96, 300, 'power')).toBe(100)
+    expect(rivalFacetValue(96, 300)).toBe(100)
   })
 
   it('ignores unknown attribute ids and out-of-range tier counts', () => {
@@ -176,7 +220,7 @@ describe('buildConfig overlay wiring', () => {
 
   it('applies driver upgrades only to the player driver, not the teammate', () => {
     store().startSeasonRace('d_voss', 42, 'bengaluru', 'rookie', null, {
-      purchasedTiers: { tyreManagement: 2 }, // +5/tier => +10
+      purchasedTiers: { pace: 2 }, // +3/tier => +6
     })
     const cfg = store().config!
     const raw = loadGameData().drivers.drivers
@@ -184,7 +228,7 @@ describe('buildConfig overlay wiring', () => {
     const chen = cfg.drivers.find(d => d.id === 'd_chen')!
     const rawVoss = raw.find(d => d.id === 'd_voss')!
     const rawChen = raw.find(d => d.id === 'd_chen')!
-    expect(voss.facets.tyreManagement).toBe(Math.min(100, rawVoss.facets.tyreManagement + 10))
+    expect(voss.facets.pace).toBe(Math.min(100, rawVoss.facets.pace + 6))
     expect(chen.facets).toEqual(rawChen.facets)
   })
 

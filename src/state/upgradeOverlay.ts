@@ -17,6 +17,32 @@ function rivalFacets(): readonly string[] {
   return (rivalFacetsCache ??= loadGameData().upgrades.rivalDevelopment.facets)
 }
 
+// facet name -> the per-attribute ceiling declared for it in upgrades.json,
+// beneath the global FACET_MAX. Memoised for the same reason as rivalFacets().
+let facetCeilingCache: Map<string, number> | null = null
+
+/**
+ * The ceiling that applies to `facet`: the per-attribute `facetMax` from
+ * upgrades.json if one is declared, otherwise the global correctness bound.
+ *
+ * Exported because BOTH paths need it. The player path reads it off the
+ * attribute it is applying; the rival path has only a facet *name* (the pool is
+ * spread across `rivalDevelopment.facets`, which are names, not attributes), so
+ * it has to look the ceiling up. Before this existed the rival path clamped at
+ * the global 100 only — so a `facetMax` that exists precisely because 100
+ * removes a mechanic was honoured for the player and silently ignored for the
+ * other nine teams.
+ */
+export function facetCeiling(facet: string): number {
+  if (facetCeilingCache === null) {
+    facetCeilingCache = new Map()
+    for (const attr of loadGameData().upgrades.attributes) {
+      if (attr.facetMax !== undefined) facetCeilingCache.set(attr.facet, attr.facetMax)
+    }
+  }
+  return Math.min(FACET_MAX, facetCeilingCache.get(facet) ?? FACET_MAX)
+}
+
 /**
  * Converts a raw accumulated development pool for one rival team into the
  * effective value of a single facet, given that facet's un-upgraded base.
@@ -30,11 +56,20 @@ function rivalFacets(): readonly string[] {
  * raw pool: the pool is not a facet, and clamping it would cap development for
  * every facet the moment any single one hit the ceiling.
  *
+ * Pass `facet` to have the per-attribute `facetMax` honoured as well as the
+ * global bound; omitting it clamps at the global bound only.
+ *
  * Lives in this pure module rather than in seasonStore so the dependency
  * direction stays state -> pure-computation (CLAUDE.md §3).
  */
-export function rivalFacetValue(baseFacet: number, pool: number, facetCount = rivalFacets().length): number {
-  return Math.min(FACET_MAX, baseFacet + pool / facetCount)
+export function rivalFacetValue(
+  baseFacet: number,
+  pool: number,
+  facet?: string,
+  facetCount = rivalFacets().length,
+): number {
+  const ceiling = facet === undefined ? FACET_MAX : facetCeiling(facet)
+  return Math.min(ceiling, baseFacet + pool / facetCount)
 }
 
 /**
@@ -113,7 +148,7 @@ export function applyUpgrades<T extends FacetEntity>(
         // Per-attribute ceiling beneath the global correctness bound. See
         // UpgradeAttributeSchema.facetMax in data/validators.ts for why
         // reliability must never be allowed to reach exactly 100.
-        const ceiling = Math.min(FACET_MAX, attr.facetMax ?? FACET_MAX)
+        const ceiling = Math.min(FACET_MAX, attr.facetMax ?? facetCeiling(attr.facet))
         facets[attr.facet] = Math.min(ceiling, base + tiers * attr.pointsPerTier)
       }
     } else {
@@ -122,7 +157,7 @@ export function applyUpgrades<T extends FacetEntity>(
         for (const facet of spread) {
           const base = facets[facet]
           if (base === undefined) continue
-          facets[facet] = rivalFacetValue(base, pool, spread.length)
+          facets[facet] = rivalFacetValue(base, pool, facet, spread.length)
         }
       }
     }

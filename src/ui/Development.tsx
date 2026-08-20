@@ -40,7 +40,7 @@ const CAR_FACET_SECTOR: Record<string, 0 | 1 | 2> = { power: 0, aero: 1, handlin
 
 /**
  * Seconds of lap time one point of `facet` is worth. Returns 0 for facets that
- * do not enter the lap-time model at all (reliability, pitCrew, racecraft...).
+ * do not enter the lap-time model at all (reliability, pitCrew...).
  */
 function secondsPerLapPerPoint(facet: string): number {
   const sector = CAR_FACET_SECTOR[facet]
@@ -54,16 +54,6 @@ function secondsPerLapPerPoint(facet: string): number {
     return SKILL_PER_FACET_POINT * TUNING.driverPerformance.deltaPerSkill * split * 3
   }
   return 0
-}
-
-/** Laps a fresh set of the reference compound survives before the cliff. */
-function lapsToCliff(tyreManagement: number): number {
-  // effectiveTyreAge() multiplies real age by this factor, so the real age at
-  // which the tyre *feels* like `cliff` laps old is cliff / factor.
-  const factor = 1 - (tyreManagement / 100) * TUNING.tyreManagement.degReliefFactor
-  const ref = GAME.compounds['M'] ?? GAME.compounds['H']
-  if (!ref || factor <= 0) return 0
-  return ref.cliff / factor
 }
 
 interface Consequence {
@@ -94,26 +84,6 @@ function describeConsequence(attr: UpgradeAttribute, before: number, after: numb
       // Relative, not percentage points — the qualifier's "less likely" is what
       // stops a reader over-reading it as an absolute cut.
       return { value: `−${Math.round(cut)}%`, qualifier: 'less likely to suffer a mechanical failure' }
-    }
-    case 'cliffLaps': {
-      const gain = lapsToCliff(after) - lapsToCliff(before)
-      return { value: `+${gain.toFixed(1)} laps`, qualifier: 'of tyre life before the cliff' }
-    }
-    case 'passChance': {
-      // race.ts: attackMult = attackRacecraftBase + racecraft/100.
-      const base = TUNING.overtaking.attackRacecraftBase
-      const mBefore = base + before / 100
-      const mAfter = base + after / 100
-      const gain = mBefore > 0 ? (mAfter / mBefore - 1) * 100 : 0
-      return { value: `+${Math.round(gain)}%`, qualifier: 'more likely to complete a pass' }
-    }
-    case 'wetPace': {
-      // lapModel.ts: spin chance in the wet is scaled by (1 - wetSkillRelief).
-      const max = TUNING.weather.wetSkillReliefMax
-      const rBefore = (before / 100) * max
-      const rAfter = (after / 100) * max
-      const cut = rBefore < 1 ? (1 - (1 - rAfter) / (1 - rBefore)) * 100 : 0
-      return { value: `−${cut.toFixed(1)}%`, qualifier: 'less likely to spin in the wet' }
     }
     default: {
       const exhaustive: never = attr.unit
@@ -357,6 +327,15 @@ export function Development() {
         return sum + secondsPerLapPerPoint(a.facet) * (pair.before - pair.base)
       }, 0)
 
+    // Tiers bought on attributes that do NOT enter the lap-time model. Without
+    // this, a player whose only purchase was Reliability saw "YOU —" next to
+    // rivals' concrete numbers, which reads as "you have bought nothing" — a
+    // flat misstatement of a real, paid-for gain. `playerGain` can only ever
+    // account for laptime attributes, so the count is what makes the row honest.
+    const otherTiers = UPGRADES.attributes
+      .filter(a => a.unit !== 'laptime')
+      .reduce((n, a) => n + (purchasedTiers[a.id] ?? 0), 0)
+
     const rivals = GAME.cars.teams
       .filter(t => t.id !== playerTeamId)
       .map(team => {
@@ -364,14 +343,31 @@ export function Development() {
         const gain = UPGRADES.rivalDevelopment.facets.reduce((sum, facet) => {
           const base = team.facets[facet as keyof typeof team.facets]
           if (base === undefined) return sum
-          return sum + secondsPerLapPerPoint(facet) * (rivalFacetValue(base, pool) - base)
+          return sum + secondsPerLapPerPoint(facet) * (rivalFacetValue(base, pool, facet) - base)
         }, 0)
         return { id: team.id, name: team.name, color: team.colorPrimary, gain }
       })
       .sort((a, b) => b.gain - a.gain)
 
-    return { playerGain, rivals: rivals.slice(0, 3), anyRival: rivals.some(r => r.gain > 0) }
-  }, [facetPairs, rivalDevelopment, playerTeamId])
+    return { playerGain, otherTiers, rivals: rivals.slice(0, 3), anyRival: rivals.some(r => r.gain > 0) }
+  }, [facetPairs, purchasedTiers, rivalDevelopment, playerTeamId])
+
+  // What the player's side of the arms-race row says. A signed zero ("−0.00s")
+  // reads as a measurement rather than as "nothing bought yet", so a pure
+  // non-laptime spend gets its own wording instead of being rounded away.
+  const playerArc = arc.playerGain > 0
+    ? {
+      text: `YOU \u2212${arc.playerGain.toFixed(2)}s`,
+      label: `You have bought ${arc.playerGain.toFixed(2)} seconds per lap`
+        + (arc.otherTiers > 0 ? `, plus ${arc.otherTiers} upgrade tier${arc.otherTiers === 1 ? '' : 's'} that improve reliability rather than lap time` : ''),
+    }
+    : arc.otherTiers > 0
+      ? {
+        text: `YOU ${arc.otherTiers} UPG`,
+        label: `You have bought ${arc.otherTiers} upgrade tier${arc.otherTiers === 1 ? '' : 's'}. `
+          + 'They improve reliability rather than lap time, so they do not show as a lap-time gain.',
+      }
+      : { text: 'YOU \u2014', label: 'You have not bought any upgrades yet' }
 
   const groups: { caption: string; note: string; target: UpgradeAttribute['target'] }[] = [
     { caption: 'THE CAR', note: 'Shared with your team-mate', target: 'team' },
@@ -437,10 +433,12 @@ export function Development() {
             fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.14em', color: 'var(--text-dim)',
           }}>
             <span>THE ARMS RACE · SEASON TO DATE</span>
-            <span style={{ color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
-              {/* A signed zero ("−0.00s") reads as a measurement rather than
-                  as "nothing bought yet". */}
-              {arc.playerGain > 0 ? `YOU −${arc.playerGain.toFixed(2)}s` : 'YOU —'}
+            <span
+              data-testid="player-arc"
+              aria-label={playerArc.label}
+              style={{ color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}
+            >
+              {playerArc.text}
             </span>
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>

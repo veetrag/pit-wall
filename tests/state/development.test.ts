@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useSeasonStore } from '@state/seasonStore'
+import { useSeasonStore, TOTAL_RACES } from '@state/seasonStore'
 import { rivalFacetValue } from '@state/upgradeOverlay'
 import { loadGameData } from '@data/validators'
 
@@ -29,9 +29,9 @@ describe('development points', () => {
     s().purchaseTier('power')
     expect(s().devPoints).toBe(72)
 
-    expect(s().tierCost('power')).toBe(30)
+    expect(s().tierCost('power')).toBe(27)
     s().purchaseTier('power')
-    expect(s().devPoints).toBe(42)
+    expect(s().devPoints).toBe(45)
     expect(s().purchasedTiers['power']).toBe(3)
   })
 
@@ -73,14 +73,35 @@ describe('development points', () => {
     expect(s().purchasedTiers['doesNotExist']).toBeUndefined()
   })
 
-  it('cannot buy two attributes to max on one season of income', () => {
-    // 12 races x 10 DP = 120 DP; maxing one attribute costs 58.
-    useSeasonStore.setState({ devPoints: 120 })
+  it('spends the real season budget down to exactly zero on two max-outs', () => {
+    // The real budget is 11 x 10 = 110, not 120: income lands in
+    // recordRaceResult AFTER a race, so round 12's payment is never spendable.
+    // 110 must be *exactly* two max-outs — the stretch build — so that no
+    // points are structurally unspendable and no third attribute sneaks in.
+    const budget = 10 * (TOTAL_RACES - 1)
+    useSeasonStore.setState({ devPoints: budget })
     const s = () => useSeasonStore.getState()
-    for (const id of ['power', 'aero']) for (let i = 0; i < 3; i++) s().purchaseTier(id)
-    expect(s().devPoints).toBe(120 - 58 - 58)
-    // ...and a third attribute is then unaffordable, forcing specialisation.
-    expect(s().canAfford('handling')).toBe(false)
+    for (const id of ['power', 'pace']) for (let i = 0; i < 3; i++) s().purchaseTier(id)
+    expect(s().purchasedTiers['power']).toBe(3)
+    expect(s().purchasedTiers['pace']).toBe(3)
+    expect(s().devPoints).toBe(0)
+    // ...and nothing at all is affordable afterwards, so nothing is stranded.
+    for (const id of ['aero', 'handling', 'reliability']) {
+      expect(s().canAfford(id), id).toBe(false)
+    }
+  })
+
+  it('leaves a max-out plus a rung of a second within the same budget', () => {
+    // The alternative shape of the same 110: one attribute maxed (55) and
+    // another taken to Mk2 (10 + 18 = 28) leaves 27 — exactly the price of a
+    // third Mk1 + Mk2 minus one, i.e. the player must still choose. What must
+    // NOT happen is 110 failing to reach any sensible top-end build at all.
+    useSeasonStore.setState({ devPoints: 10 * (TOTAL_RACES - 1) })
+    const s = () => useSeasonStore.getState()
+    for (let i = 0; i < 3; i++) s().purchaseTier('power')
+    for (let i = 0; i < 2; i++) s().purchaseTier('handling')
+    expect(s().devPoints).toBe(110 - 55 - 28)
+    expect(s().canAfford('handling')).toBe(true) // the Mk3 is still in reach
   })
 
   it('clears everything on a new season', () => {
@@ -181,6 +202,14 @@ describe('rival development', () => {
     // sanity: the unclamped version really would have exceeded 100, so this
     // test is actually exercising the clamp and not vacuously passing.
     expect(96 + pool / 3).toBeGreaterThan(100)
+    // And the per-attribute ceiling is honoured on the rival path too, not just
+    // the global bound: reliability's facetMax of 99 exists because exactly 100
+    // makes race.ts's `perLap > 0` short-circuit skip the mechanical-failure
+    // roll for every sector. `reliability` cannot appear in
+    // rivalDevelopment.facets (the schema forbids it), but the clamp must not
+    // depend on that, since pool application is by facet NAME.
+    expect(rivalFacetValue(96, pool, 'reliability')).toBe(99)
+    expect(rivalFacetValue(96, pool, 'power')).toBe(100)
   })
 
   it('reads pool size and facet split from upgrades.json, not a hardcoded constant', () => {

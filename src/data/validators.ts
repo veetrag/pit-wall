@@ -184,19 +184,26 @@ const StrategyDefaultSchema = z.object({
 })
 const StrategiesSchema = z.object({ defaults: z.array(StrategyDefaultSchema) })
 
+// The shop sells FIVE attributes. `racecraft`, `wetWeather` and
+// `tyreManagement` were withdrawn after measurement (task-7-report.md §Q5):
+//   - racecraft is worth EXACTLY zero. engine/race.ts `resolveOvertakes` swaps
+//     two slots in a local array copy and never touches `raceTime`; every
+//     downstream consumer re-sorts by `raceTime`, so an overtake is reverted
+//     before anything reads it. 72 of 72 paired races were byte-identical.
+//   - wetWeather only mitigates the wet-compound `spinLoss` roll, and the AI
+//     pits onto the right compound promptly: 1 spin event in 72 races.
+//   - tyreManagement measured +0.0178 s/lap for a full max-out — 6.7% of what
+//     power delivers for the same price, i.e. a trap by the design's own §3
+//     test, in the same category as the deliberately-excluded `pitCrew`.
+// They are not labelled as traps, they are not sold. The enums below are the
+// gate: re-adding one to upgrades.json now fails at parse time.
 export const UpgradeAttributeSchema = z.object({
-  id: z.enum([
-    'power', 'aero', 'handling', 'reliability',
-    'pace', 'tyreManagement', 'racecraft', 'wetWeather',
-  ]),
+  id: z.enum(['power', 'aero', 'handling', 'reliability', 'pace']),
   label: z.string(),
-  facet: z.enum([
-    'power', 'aero', 'handling', 'reliability',
-    'pace', 'tyreManagement', 'racecraft', 'wetWeather',
-  ]),
+  facet: z.enum(['power', 'aero', 'handling', 'reliability', 'pace']),
   target: z.enum(['team', 'driver']),
   pointsPerTier: z.number().int().positive(),
-  unit: z.enum(['laptime', 'failureRisk', 'cliffLaps', 'passChance', 'wetPace']),
+  unit: z.enum(['laptime', 'failureRisk']),
   // Optional per-attribute ceiling, applied BENEATH upgradeOverlay's global
   // FACET_MAX of 100. Exists because some facets are divisors or scale factors
   // in the engine, where reaching exactly 100 does not merely cap the benefit —
@@ -225,9 +232,18 @@ export const UpgradesSchema = z.object({
     // divided by the hardcoded list's length on application, so raising
     // facetSplit to 4 would not have widened the spread — it would have handed
     // every rival a silent 33% pace buff. One source of truth removes that.
-    facets: z.array(z.enum(['power', 'aero', 'handling', 'reliability', 'pitCrew'])).nonempty(),
+    //
+    // `reliability` is deliberately NOT in this enum. It is not a pace facet at
+    // all, and the rival path would drive it toward the global ceiling of 100 —
+    // where race.ts computes `perLap = baseChancePerLap * (1 - 100/100) = 0` and
+    // its `perLap > 0` short-circuit then skips the mechanical-failure roll for
+    // every sector of every remaining race. Apex's base of 96 reaches exactly
+    // 100 on a full season's pool. That is the same mechanical-immortality bug
+    // `facetMax: 99` fixes on the player path, and a designer must not be able
+    // to reproduce it for the whole AI grid by editing one array.
+    facets: z.array(z.enum(['power', 'aero', 'handling', 'pitCrew'])).nonempty(),
   }),
-  attributes: z.array(UpgradeAttributeSchema).length(8),
+  attributes: z.array(UpgradeAttributeSchema).length(5),
 })
 
 export type Tuning = z.infer<typeof TuningSchema>

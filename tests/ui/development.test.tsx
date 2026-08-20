@@ -135,6 +135,36 @@ describe('Development screen', () => {
     expect(screen.getByTestId('rival-development')).toBeTruthy()
   })
 
+  it('never renders a real spend as nothing', () => {
+    // `arc.playerGain` can only account for laptime attributes, so a player
+    // whose only purchase was Reliability used to see "YOU —" beside rivals'
+    // concrete numbers — which reads as "you have bought nothing" about a real,
+    // paid-for gain. Reliability is one of the five attributes on sale, so this
+    // is a reachable state, not a hypothetical.
+    useSeasonStore.setState({ devPoints: 0, purchasedTiers: { reliability: 2 } })
+    render(<Development />)
+    const arc = screen.getByTestId('player-arc')
+    expect(arc.textContent).not.toContain('—')
+    expect(arc.textContent).toContain('2')
+    expect(arc.getAttribute('aria-label')).toMatch(/2 upgrade tiers/i)
+  })
+
+  it('renders a laptime spend as seconds, and no spend as nothing', () => {
+    useSeasonStore.setState({ devPoints: 0, purchasedTiers: {} })
+    render(<Development />)
+    expect(screen.getByTestId('player-arc').textContent).toContain('\u2014')
+    cleanup()
+
+    useSeasonStore.setState({ devPoints: 0, purchasedTiers: { power: 2 } })
+    render(<Development />)
+    // apex power 92 + 2 tiers of +5 clamps to 100, i.e. +8 points at 0.01782
+    // s/lap each = 0.14s. The exact figure is asserted elsewhere; what matters
+    // here is that it is a seconds reading, not the em dash.
+    const arc = screen.getByTestId('player-arc')
+    expect(arc.textContent).toMatch(/YOU \u22120\.\d\ds/)
+    expect(arc.getAttribute('aria-label')).toMatch(/seconds per lap/i)
+  })
+
   it('skipping banks the points and starts the race', () => {
     useSeasonStore.setState({ devPoints: 40 })
     render(<Development />)

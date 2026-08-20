@@ -63,10 +63,25 @@ const SAVE_KEY = 'season.v1'
 // (`rivalDevelopment.poolPerRace` / `.facets`) rather than here — per
 // CLAUDE.md §4/§5 ("the player/designer balances by editing data, not
 // code"), a designer tuning how fast rivals close in on the player must
-// never require a code change. Sized (at the data's current values) so that
-// over 12 rounds an average team gains ~12 points spread across three
-// facets (~4 each, about 0.07s/lap) — enough to keep the grid moving
-// without out-developing a player who is spending on the same facets.
+// never require a code change.
+//
+// SIZING, derived rather than guessed (and now pinned by a test that asserts
+// SECONDS, not the accrual/application identity — see
+// tests/state/rivalDevelopmentMagnitude.test.ts). Each facet gains
+// `poolPerRace * rate * accruals` points, and one facet point is worth
+// `(9/100) * carPerformance.deltaPerRating * sectorSplit[s] * 3` seconds a lap.
+// The three car sectorSplits sum to 1, so equal points on power/aero/handling
+// are worth `points * (9/100) * 0.22 * 3 = points * 0.0594` s/lap. Eleven
+// accruals precede the last spending opportunity, so at `poolPerRace: 0.36` a
+// rate-1.0 team gains 3.96 points per facet = **0.235 s/lap per season**, and
+// Terra at rate 1.4 gains 0.329.
+//
+// That is the owner's ~0.24 s/lap target, set against the ~0.54 s/lap a player
+// can buy with their real 110-DP budget. The previous value of 1 gave a
+// rate-1.0 team 0.71 s/lap and Terra 1.00 — more than the player could buy
+// with the whole season's income, which inverted the underdog arc the feature
+// exists to create (measured: a Zenith player finished the season 0.79
+// positions WORSE than they started).
 //
 // developmentRate in cars.json correlates *inversely* with team strength today
 // (apex/meridian, the two strongest grids, sit at 1.0; terra/zenith, the two

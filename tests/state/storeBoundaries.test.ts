@@ -23,7 +23,14 @@ describe('raceStore -> seasonStore boundary', () => {
     // is fully erased at compile time; anything else emits a runtime require.
     // `[^']*` deliberately excludes quotes so the match cannot span an earlier
     // import's source string; it still crosses newlines for multi-line braces.
-    const imports = [...text.matchAll(/^import\s+(?:type\s+)?[^']*from\s+'\.\/seasonStore'/gm)].map(m => m[0])
+    // BOTH specifier forms. The relative './seasonStore' is what raceStore.ts
+    // happens to use today, but '@state/seasonStore' is the house style
+    // everywhere else in src/ — and a regex matching only the relative form let
+    // an ADDED aliased value import pass silently, which is the entire failure
+    // this test exists to catch.
+    const imports = [...text.matchAll(
+      /^import\s+(?:type\s+)?[^']*from\s+'(?:\.\/|@state\/)seasonStore'/gm,
+    )].map(m => m[0])
     expect(imports.length).toBeGreaterThan(0) // guard against the regex silently rotting
     const valueImports = imports.filter(i => !/^import\s+type\s/.test(i))
     expect(valueImports, [
