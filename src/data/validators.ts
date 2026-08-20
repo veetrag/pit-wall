@@ -6,6 +6,7 @@ import carsJson from './cars.json'
 import driversJson from './drivers.json'
 import strategiesJson from './strategies.json'
 import rivalriesJson from './rivalries.json'
+import upgradesJson from './upgrades.json'
 
 const DifficultyProfileSchema = z.object({
   brainCap: z.enum(['naive', 'smart', 'optimal']),
@@ -183,6 +184,21 @@ const StrategyDefaultSchema = z.object({
 })
 const StrategiesSchema = z.object({ defaults: z.array(StrategyDefaultSchema) })
 
+export const UpgradeAttributeSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  facet: z.string(),
+  target: z.enum(['team', 'driver']),
+  pointsPerTier: z.number().int().positive(),
+  unit: z.enum(['laptime', 'failureRisk', 'cliffLaps', 'passChance', 'wetPace']),
+})
+
+export const UpgradesSchema = z.object({
+  income: z.object({ perRace: z.number().int().positive() }),
+  tierCosts: z.array(z.number().int().positive()).length(3),
+  attributes: z.array(UpgradeAttributeSchema).length(8),
+})
+
 export type Tuning = z.infer<typeof TuningSchema>
 export type CompoundsWrapper = z.infer<typeof CompoundsWrapperSchema>
 export type CircuitsWrapper = z.infer<typeof CircuitsWrapperSchema>
@@ -191,6 +207,8 @@ export type Drivers = z.infer<typeof DriversSchema>
 export type Strategies = z.infer<typeof StrategiesSchema>
 export type Rivalries = z.infer<typeof RivalriesSchema>
 export type Rivalry = z.infer<typeof RivalrySchema>
+export type UpgradeAttribute = z.infer<typeof UpgradeAttributeSchema>
+export type UpgradesData = z.infer<typeof UpgradesSchema>
 
 export interface GameData {
   tuning: Tuning
@@ -200,6 +218,7 @@ export interface GameData {
   drivers: Drivers
   strategies: Strategies
   rivalries: Rivalry[]
+  upgrades: UpgradesData
 }
 
 export function loadGameData(): GameData {
@@ -210,6 +229,7 @@ export function loadGameData(): GameData {
   const drivers = DriversSchema.parse(driversJson)
   const strategies = StrategiesSchema.parse(strategiesJson)
   const rivalries = RivalriesSchema.parse(rivalriesJson)
+  const upgrades = UpgradesSchema.parse(upgradesJson)
 
   const teamIds = new Set(cars.teams.map(t => t.id))
   for (const d of drivers.drivers) {
@@ -231,5 +251,6 @@ export function loadGameData(): GameData {
     drivers,
     strategies,
     rivalries: rivalries.rivalries,
+    upgrades,
   }
 }
