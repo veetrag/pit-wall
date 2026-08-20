@@ -63,9 +63,41 @@ function teamPaceDeficit(
     + (100 - facets.handling) * per(2)
 }
 
+// Fractional (tie-averaged) ranks, ascending: the smallest value gets rank 1.
+// Needed because `spearman` below is Pearson on its inputs, so any continuous
+// input must be rank-transformed first or the result is sensitive to SPACING,
+// not just ordering.
+//
+// DO NOT "simplify" this away at the paceRankCorrelation call site. That metric
+// correlates car-pace rank against per-team mean finishing position, which is
+// continuous. Without this transform the gate punishes a COMPRESSED grid --
+// exactly what the competitive-grid plan is meant to produce -- because
+// compression multiplies near-ties (solstice and kestrel differ by 0.009 s/lap)
+// and near-ties shrink the spacing the Pearson form keys on. Rank-transforming
+// both sides makes the metric ask the question it is actually for: does pace
+// ORDERING still predict finish ORDERING? That stays robust under compression
+// and still collapses toward 0 if results go random, which is the anti-lottery
+// property the gate exists to protect.
+function rankify(vs: number[]): number[] {
+  const idx = vs.map((v, i) => [v, i] as const).sort((a, b) => a[0] - b[0])
+  const out = new Array<number>(vs.length)
+  let i = 0
+  while (i < idx.length) {
+    let j = i
+    while (j + 1 < idx.length && idx[j + 1]![0] === idx[i]![0]) j++
+    // Average rank over the tied block, 1-based.
+    const avg = (i + j) / 2 + 1
+    for (let k = i; k <= j; k++) out[idx[k]![1]] = avg
+    i = j + 1
+  }
+  return out
+}
+
 function spearman(xs: number[], ys: number[]): number {
-  // Inputs here are already ranks (grid slot, finish position), both dense and
-  // tie-free within a race, so Pearson on the raw values IS Spearman's rho.
+  // Pearson on the inputs given. Callers MUST pass ranks. Grid slot and finish
+  // position are already dense, tie-free ranks within a race, so Pearson on
+  // those raw values IS Spearman's rho; anything continuous goes through
+  // `rankify` first.
   const n = xs.length
   const mx = xs.reduce((a, b) => a + b, 0) / n
   const my = ys.reduce((a, b) => a + b, 0) / n
@@ -185,7 +217,8 @@ export function runRaces(opts: HarnessOptions): Metrics {
     meanAbsPosChange: mean,
     sePosChange: Math.sqrt(variance / n),
     gridFinishSpearman: spearmanSum / races,
-    paceRankCorrelation: spearman(paceRanks, meanFinishes),
+    // Both sides ranks -- see `rankify`. Robust to grid compression by design.
+    paceRankCorrelation: spearman(paceRanks, rankify(meanFinishes)),
     meanOvertakeEvents: overtakeTotal / races,
     minOvertakeEvents: overtakeMin,
     mechanicalDnfPerCarRace: mechanicalDnfs / carRaces,

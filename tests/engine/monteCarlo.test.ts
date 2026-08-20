@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { runRaces } from './monteCarloHarness'
 import { loadGameData } from '@data/validators'
+import { initRace, stepSector } from '@engine/index'
+import { createRng } from '@engine/rng'
 
 // A sample spanning the calendar's real variety rather than one synthetic
 // fixture: a rain-heavy round, a dry desert round, the street circuit, and a
@@ -42,27 +44,38 @@ describe('Monte-Carlo regression', () => {
     const b = bands!
     const n = `n=${m.races} races (${m.races * 20} car-races)`
     expect(Number.isFinite(m.meanAbsPosChange), n).toBe(true)
-    // Measured 2.06 ± 0.038 SE: 14.7 SE above the 1.5 floor, 51 SE below 4.0.
+    // STAGED band (MODEL_SPEC.md §4), not the §3 target of 2.5-4.0: the sim
+    // measures 1.83-2.06 and cannot reach 2.5 without the race-incidents plan.
+    // Measured 2.01 +- 0.052 at n=120: 5.1 SE above the 1.75 floor.
     expect(m.meanAbsPosChange, `${n}, SE=${m.sePosChange.toFixed(3)}`)
       .toBeGreaterThan(b.meanAbsPosChange[0])
     expect(m.meanAbsPosChange, `${n}, SE=${m.sePosChange.toFixed(3)}`)
       .toBeLessThan(b.meanAbsPosChange[1])
-    // Measured 0.834 inside [0.55, 0.90].
+    // STAGED band (MODEL_SPEC.md §4), not the §3 target of 0.60-0.80, for the
+    // same reason. Measured 0.834-0.856 inside [0.78, 0.90].
     expect(m.gridFinishSpearman, n).toBeGreaterThan(b.gridFinishSpearman[0])
     expect(m.gridFinishSpearman, n).toBeLessThan(b.gridFinishSpearman[1])
-    // Measured 0.976: car pace rank still predicts mean finish.
+    // FINAL band, not staged. Measured 0.988: car-pace rank still predicts
+    // finish rank. Both sides are ranks (see `rankify` in the harness), so this
+    // survives grid compression -- it only collapses if results go random.
     expect(m.paceRankCorrelation, n).toBeGreaterThanOrEqual(b.minPaceRankCorrelation)
     // Staged (MODEL_SPEC.md §4): 2 today, 4 after the competitive-grid plan.
     expect(m.distinctWinners, n).toBeGreaterThanOrEqual(b.minDistinctWinners)
   }, 200_000)
 
-  // SKIPPED DELIBERATELY, not broken. MODEL_SPEC.md §3 bands mechanical DNFs at
-  // 6-10% per car-race against a real-F1 figure of 9.8pp, but records that this
-  // simulation measures 5-6% — so the band is ASPIRATIONAL and its owner is the
-  // race-incidents plan (§4), not the competitive-grid plan. The measurement is
-  // live in the harness (Metrics.mechanicalDnfPerCarRace) and logged by the
-  // baseline test above; only the assertion waits. Un-skip when the incidents
-  // plan lands, and do NOT widen the band to make it pass here.
+  // SKIPPED DELIBERATELY, not broken, and it WOULD FAIL if un-skipped today.
+  // MODEL_SPEC.md §3 bands mechanical DNFs at 6-10% per car-race against a
+  // real-F1 figure of 9.8pp; this simulation measures 5.06% +- 0.32pp over 4,800
+  // car-races, which is 3.0 SE BELOW the 6% floor. tuning.json carries that same
+  // unwidened 0.06 floor, so the premise holds against the data file as well as
+  // against §3. The cause is §7's "the simulation has no chaos", so the owner is
+  // the race-incidents plan, not the competitive-grid plan.
+  //
+  // The measurement itself is live (Metrics.mechanicalDnfPerCarRace, logged by
+  // the baseline test above); only the assertion waits. Un-skip when the
+  // incidents plan lands. Do NOT widen the band to make it pass -- an earlier
+  // revision loosened the floor to 0.04, which made the skipped test vacuously
+  // passable and lost the gate in both directions.
   it.skip('mechanical DNF rate is inside its tuning.json band', () => {
     const m = runRaces({ races: 120, circuitIds: SAMPLE })
     const b = loadGameData().tuning._regressionBands!
@@ -70,6 +83,50 @@ describe('Monte-Carlo regression', () => {
     expect(m.mechanicalDnfPerCarRace, n).toBeGreaterThanOrEqual(b.mechanicalDnfPerCarRace[0])
     expect(m.mechanicalDnfPerCarRace, n).toBeLessThanOrEqual(b.mechanicalDnfPerCarRace[1])
   }, 200_000)
+
+  // MODEL_SPEC.md §10.1 says "byte-identical race", which the metric-level check
+  // below does NOT prove: Metrics observes only final positions, winner, overtake
+  // count and DNFs, so a perturbation of lap times or tyre age passes it
+  // undetected (demonstrated in review at 0.0007s of lap time and one lap of tyre
+  // age on every car). This asserts the actual invariant on the full final
+  // RaceState. race.test.ts:136 compares a single field after a single sector, so
+  // nothing else in the repo covers this.
+  it('determinism: byte-identical final RaceState for one seed (MODEL_SPEC §10.1)', () => {
+    const run = (seed: number) => {
+      const data = loadGameData()
+      const circuit = data.circuits['harbour_lights']!
+      const config = {
+        circuit,
+        tuning: data.tuning,
+        compounds: data.compounds,
+        drivers: data.drivers.drivers,
+        teams: data.cars.teams,
+        strategies: data.strategies.defaults.map(s => ({
+          ...s,
+          brain: 'optimal' as const,
+          plannedStops: s.plannedStops.map(st => ({ ...st, lap: Math.round((st.lap / 30) * circuit.laps) })),
+        })),
+        playerDriverId: '__none__',
+        seed,
+        tyreAllocationBase: data.tuning.tyreRules.allocation.pro,
+        mandatoryTwoCompound: data.tuning.tyreRules.mandatoryTwoCompound.pro,
+        coverReactionScale: data.tuning.difficultyProfiles.pro.coverReactionScale,
+        paceModeAggression: data.tuning.difficultyProfiles.pro.aiPaceModeAggression,
+      }
+      let state = initRace(config)
+      const rng = createRng(seed)
+      for (let i = 0; i < circuit.laps * 3; i++) state = stepSector(config, state, rng)
+      return JSON.stringify(state)
+    }
+    const a = run(4242)
+    const b = run(4242)
+    expect(b.length, 'serialised final RaceState, seed 4242, n=1 race').toBe(a.length)
+    expect(b, 'serialised final RaceState, seed 4242, n=1 race').toBe(a)
+    // Negative control: proves the comparison above is actually sensitive to
+    // race content, so it cannot pass by comparing two empty/degenerate
+    // serialisations. MODEL_SPEC.md §10.1 records that 4243 must differ.
+    expect(run(4243), 'serialised final RaceState, seed 4243, n=1 race').not.toBe(a)
+  }, 60_000)
 
   it('determinism: same seed base gives identical metrics', () => {
     const a = runRaces({ races: 30, circuitIds: SAMPLE, seedBase: 4242 })

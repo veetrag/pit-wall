@@ -3,6 +3,11 @@ import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig, StrategyBrain, CircuitSpec } from '@engine/types'
+import { runRaces } from './monteCarloHarness'
+
+// Same four-circuit sample as tests/engine/monteCarlo.test.ts: a rain-heavy
+// round, a dry desert round, the street circuit and a high-speed round.
+const HARNESS_SAMPLE = ['monsoon_bay', 'sol_desert', 'harbour_lights', 'veloce']
 
 // M5: difficulty is now one profile lookup (tuning.difficultyProfiles) instead
 // of scattered if (difficulty === ...) branches. These tests mirror what
@@ -138,48 +143,38 @@ describe('M5: monotonic difficulty curve', () => {
 })
 
 describe('M5: guardrail — field-balance regression bands hold on both difficulties', () => {
-  it('rookie and pro both keep the top-team win rate and overtake bands from tuning._regressionBands', () => {
-    const data = loadGameData()
-    // _regressionBands is .optional() in the schema (a repo without bands must
-    // still load), so narrow before use rather than casting.
-    const bands = data.tuning._regressionBands
+  // Measured through the shared Monte-Carlo harness, not this file's
+  // single-circuit fixture. MODEL_SPEC.md §4 requires a win-share band to be
+  // measured FIELD-WIDE over a pooled multi-circuit sample at a stated
+  // difficulty: the same grid measures 0.99 at rookie on one circuit but
+  // 0.9417 across four, because one circuit means one lap count, one rain
+  // probability and one strategy pattern. Asserting the band on a one-circuit
+  // sample is a different, stricter, and false claim.
+  //
+  // The previous version of this test asserted only `>= topTeamWinRate[0]`,
+  // whose floor is 0.0, and (before removal) an overtake band that
+  // MODEL_SPEC.md §5 says cannot gate anything -- so it had no falsifiable
+  // assertion at all while being named a guardrail.
+  it('rookie and pro both keep the field-wide win-share and distinct-winner bands', () => {
+    const bands = loadGameData().tuning._regressionBands
     expect(bands).toBeDefined()
     const band = bands!
-    const RACES = 100
+    const RACES = 240
 
     for (const difficulty of ['rookie', 'pro'] as const) {
-      const wins: Record<string, number> = {}
-      let totalOvertakes = 0
-      for (let i = 0; i < RACES; i++) {
-        const seed = i * 7 + 13
-        // "none" (not a real driverId) so every car — including apex — is
-        // AI-driven and actually executes its planned pit stops. A real
-        // driverId here would mark that car isPlayer, which skips the
-        // AI decision path entirely (only the interactive player calls
-        // pitNow), leaving it mono-compound and wrongly penalised under
-        // mandatoryTwoCompound — not a real difficulty-curve effect.
-        const config = buildRealConfig(seed, difficulty, 'none')
-        let state = initRace(config)
-        const rng = createRng(seed)
-        for (let s = 0; s < config.circuit.laps * 3; s++) state = stepSector(config, state, rng)
-        const winnerId = state.cars[0]!.driverId
-        wins[winnerId] = (wins[winnerId] ?? 0) + 1
-        totalOvertakes += state.overtakeEvents.length
-      }
-      const apexWinRate = ((wins['d_voss'] ?? 0) + (wins['d_chen'] ?? 0)) / RACES
-      const meanOvertakes = totalOvertakes / RACES
-      expect(apexWinRate, `${difficulty} apex win rate, n=${RACES} races`)
-        .toBeGreaterThanOrEqual(band.topTeamWinRate[0])
-      // NOT asserted against topTeamWinRate[1] (0.97): measured here it is 0.99
-      // on rookie. MODEL_SPEC.md §4's "today <= 0.97" holds over the mixed
-      // 4-circuit sample (92.1% at n=240) but NOT on this single-circuit,
-      // single-strategy fixture. The band is a field-wide gate; asserting it on
-      // a one-circuit sample would be a different, stricter claim. See the
-      // Task 1 report.
-      // Overtake counts are deliberately NOT banded (MODEL_SPEC.md §5): the
-      // metric is definitionally ambiguous and the simulation's own count does
-      // not measure racing. Kept as a diagnostic only.
-      console.log(`${difficulty}: apexWinRate=${apexWinRate.toFixed(3)} meanOvertakes=${meanOvertakes.toFixed(1)} (n=${RACES})`)
+      const m = runRaces({ races: RACES, circuitIds: HARNESS_SAMPLE, difficulty })
+      const n = `${difficulty}, n=${m.races} races over ${HARNESS_SAMPLE.length} circuits`
+      console.log(`${n}: top=${m.topTeamId} share=${m.topTeamShare.toFixed(4)} ` +
+        `winners=${m.distinctWinners} overtakes=${m.meanOvertakeEvents.toFixed(1)}`)
+      // Staged "today" ceiling of 0.97 (MODEL_SPEC.md §4). Measured rookie
+      // 0.9417 / pro 0.9208; SE at n=240 is ~1.5pp, so the tighter of the two
+      // margins (rookie) is ~1.9 SE. Thin but falsifiable, and fixed seeds make
+      // it deterministic. The competitive-grid plan tightens this to 0.90.
+      expect(m.topTeamShare, n).toBeLessThanOrEqual(band.topTeamWinRate[1])
+      expect(m.topTeamShare, n).toBeGreaterThanOrEqual(band.topTeamWinRate[0])
+      // Staged >= 2; measured rookie 6 / pro 5. Tightens to 4 next.
+      expect(m.distinctWinners, n).toBeGreaterThanOrEqual(band.minDistinctWinners)
+      // Overtake counts stay a diagnostic only -- MODEL_SPEC.md §5.
     }
-  }, 60_000)
+  }, 120_000)
 })
