@@ -197,6 +197,20 @@ export const UpgradeAttributeSchema = z.object({
   target: z.enum(['team', 'driver']),
   pointsPerTier: z.number().int().positive(),
   unit: z.enum(['laptime', 'failureRisk', 'cliffLaps', 'passChance', 'wetPace']),
+  // Optional per-attribute ceiling, applied BENEATH upgradeOverlay's global
+  // FACET_MAX of 100. Exists because some facets are divisors or scale factors
+  // in the engine, where reaching exactly 100 does not merely cap the benefit —
+  // it removes a whole mechanic. reliability is the live case: race.ts computes
+  // `perLap = baseChancePerLap * (1 - reliability/100)`, so reliability 100
+  // makes the per-lap mechanical failure chance exactly 0 and the `perLap > 0`
+  // short-circuit then skips the roll for every sector of every remaining race.
+  // Measured before the cap: 3.25% mechanical DNF over 400 fixed-seed races at
+  // reliability 96, 0 of 400 at 100 — 10 DP bought season-long invulnerability.
+  //
+  // A per-attribute ceiling is the right shape rather than lowering
+  // pointsPerTier, which cannot fix it: from Apex's base of 96 any value >= 2
+  // still reaches the ceiling by tier 3 (96 + 3*2 = 102 -> 100).
+  facetMax: z.number().int().positive().max(100).optional(),
 })
 
 export const UpgradesSchema = z.object({

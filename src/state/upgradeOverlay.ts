@@ -110,7 +110,11 @@ export function applyUpgrades<T extends FacetEntity>(
         // Absent facet: never introduce a key the data didn't have — the engine
         // reads facets by name and a phantom key would be silently meaningless.
         if (base === undefined) continue
-        facets[attr.facet] = Math.min(FACET_MAX, base + tiers * attr.pointsPerTier)
+        // Per-attribute ceiling beneath the global correctness bound. See
+        // UpgradeAttributeSchema.facetMax in data/validators.ts for why
+        // reliability must never be allowed to reach exactly 100.
+        const ceiling = Math.min(FACET_MAX, attr.facetMax ?? FACET_MAX)
+        facets[attr.facet] = Math.min(ceiling, base + tiers * attr.pointsPerTier)
       }
     } else {
       const pool = rivalDevelopment?.[entity.id] ?? 0

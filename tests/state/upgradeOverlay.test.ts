@@ -326,3 +326,53 @@ describe('input isolation', () => {
     }
   })
 })
+
+// Fix 1: the reliability immortality hole. At reliability 96 with
+// pointsPerTier 5, one tier clamped the facet to the global FACET_MAX of 100,
+// which made race.ts's `perLap = baseChancePerLap * (1 - reliability/100)`
+// exactly 0. The `perLap > 0` short-circuit then skipped the failure roll for
+// every sector of every remaining race: 10 DP bought season-long mechanical
+// invulnerability for the strongest team on the grid (measured: 3.25%
+// mechanical DNF over 400 fixed-seed races at 96, 0 of 400 at 100).
+//
+// The fix is a per-attribute `facetMax` in upgrades.json, a ceiling BENEATH
+// the global correctness bound. Lowering pointsPerTier cannot fix it: any
+// value >= 2 still reaches 100 by tier 3 (96 + 3*2 = 102 -> 100).
+describe('per-attribute facetMax', () => {
+  it('honours an attribute facetMax below the global 100 bound', () => {
+    const attr = ATTRS.find(a => a.id === 'reliability')!
+    expect(attr.facetMax).toBeDefined()
+    expect(attr.facetMax!).toBeLessThan(100)
+
+    const out = applyUpgrades([ent('apex', { reliability: 96 })], {
+      attributes: ATTRS, purchasedTiers: { reliability: 3 }, target: 'team',
+      appliesTo: () => true,
+    })
+    expect(out[0]!.facets.reliability).toBe(attr.facetMax)
+  })
+
+  it('leaves a fully upgraded Apex with a non-zero per-lap failure chance', () => {
+    const data = loadGameData()
+    const apex = data.cars.teams.find(t => t.id === 'apex')!
+    const out = applyUpgrades([{ id: apex.id, facets: { ...apex.facets } }], {
+      attributes: ATTRS,
+      purchasedTiers: { power: 3, aero: 3, handling: 3, reliability: 3 },
+      target: 'team',
+      appliesTo: () => true,
+    })
+    // Mirrors race.ts:132 exactly. Must stay strictly positive, or the
+    // `perLap > 0` short-circuit makes the car immortal.
+    const perLap = data.tuning.mechanicalFailure.baseChancePerLap * (1 - out[0]!.facets.reliability! / 100)
+    expect(perLap).toBeGreaterThan(0)
+  })
+
+  it('still applies the global bound to attributes with no facetMax', () => {
+    const attr = ATTRS.find(a => a.id === 'power')!
+    expect(attr.facetMax).toBeUndefined()
+    const out = applyUpgrades([ent('apex', { power: 98 })], {
+      attributes: ATTRS, purchasedTiers: { power: 3 }, target: 'team',
+      appliesTo: () => true,
+    })
+    expect(out[0]!.facets.power).toBe(100)
+  })
+})

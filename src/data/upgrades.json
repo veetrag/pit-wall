@@ -6,7 +6,7 @@
     { "id": "power",          "label": "Power Unit",     "facet": "power",          "target": "team",   "pointsPerTier": 5, "unit": "laptime" },
     { "id": "aero",           "label": "Aero Package",   "facet": "aero",           "target": "team",   "pointsPerTier": 3, "unit": "laptime" },
     { "id": "handling",       "label": "Chassis",        "facet": "handling",       "target": "team",   "pointsPerTier": 6, "unit": "laptime" },
-    { "id": "reliability",    "label": "Reliability",    "facet": "reliability",    "target": "team",   "pointsPerTier": 5, "unit": "failureRisk" },
+    { "id": "reliability",    "label": "Reliability",    "facet": "reliability",    "target": "team",   "pointsPerTier": 5, "unit": "failureRisk", "facetMax": 99 },
     { "id": "pace",           "label": "Driver Pace",    "facet": "pace",           "target": "driver", "pointsPerTier": 3, "unit": "laptime" },
     { "id": "tyreManagement", "label": "Tyre Handling",  "facet": "tyreManagement", "target": "driver", "pointsPerTier": 5, "unit": "cliffLaps" },
     { "id": "racecraft",      "label": "Racecraft",      "facet": "racecraft",      "target": "driver", "pointsPerTier": 5, "unit": "passChance" },
