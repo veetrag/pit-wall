@@ -130,13 +130,18 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       const team = config.teams.find(t => t.id === car.teamId)!
       const mf = config.tuning.mechanicalFailure
       const perLap = mf.baseChancePerLap * (1 - team.facets.reliability / 100)
-      // Clamp defensively: reliability above 100 (e.g. from a future upgrade
-      // system stacking on top of a 94-reliability archetype) would
-      // otherwise produce a negative chance and silent invulnerability.
+      // reliability > 100 is unreachable today (cars.json tops out at 96 and
+      // nothing else writes to facets.reliability), so perLap can't go
+      // negative here. If it ever did, `perLap > 0` would read false and the
+      // car would be invulnerable rather than safe — a clamp on `perLap`
+      // couldn't fix that anyway, since clamping a negative chance to zero
+      // *is* the invulnerability. The real guarantee belongs to whatever
+      // writes facets.reliability: the planned upgrade overlay already
+      // clamps the facet at 100 before it reaches here.
       // The `perLap > 0` short-circuit must stay first so a zero-configured
       // fixture (baseChancePerLap 0) never calls rng() at all — that's what
       // keeps it byte-identical to the pre-feature RNG stream.
-      if (perLap > 0 && rng() < Math.max(0, perLap) / 3) {
+      if (perLap > 0 && rng() < perLap / 3) {
         updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'mechanical' }
       }
     }

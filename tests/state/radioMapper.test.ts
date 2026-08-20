@@ -151,3 +151,41 @@ describe('processRadioTick — wet spin alert', () => {
     expect(pushAlert).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('processRadioTick — retirement cause routing', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    fakeClock += 1_000_000
+    vi.setSystemTime(fakeClock)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  // radio.json's 'retired_mechanical' pool is looked up by string key via an
+  // `as Record<string, string[]>` cast, so a typo in the trigger name would
+  // silently resolve to no line at all rather than a type error. This
+  // exercises that lookup end-to-end for a mechanical retirement.
+  it('resolves a mechanical retirement to a non-null line from retired_mechanical', () => {
+    const pushAlert = vi.fn()
+    const radio = makeRadioState()
+    const state = makeState({ cars: [makeCar({ retired: true, retiredCause: 'mechanical' })] })
+    processRadioTick(state, makeConfig(), radio, pushAlert)
+    expect(pushAlert).toHaveBeenCalledTimes(1)
+    const [message, severity] = pushAlert.mock.calls[0]!
+    expect(typeof message).toBe('string')
+    expect((message as string).length).toBeGreaterThan(0)
+    expect(severity).toBe('urgent')
+  })
+
+  it('resolves a tyre retirement to a non-null line from retired', () => {
+    const pushAlert = vi.fn()
+    const radio = makeRadioState()
+    const state = makeState({ cars: [makeCar({ retired: true, retiredCause: 'tyre' })] })
+    processRadioTick(state, makeConfig(), radio, pushAlert)
+    expect(pushAlert).toHaveBeenCalledTimes(1)
+    const [message] = pushAlert.mock.calls[0]!
+    expect(typeof message).toBe('string')
+    expect((message as string).length).toBeGreaterThan(0)
+  })
+})

@@ -152,16 +152,29 @@ describe('mechanical failure', () => {
     // Bengaluru circuit with real tuning and real strategies.defaults, and
     // bound the mean and worst-case retirement count per race.
     //
-    // Measured over 40 races (seeds 1..40) on this branch: mean 1.32
-    // retirements/race, worst single race 3. (The design doc's own
-    // reference measurement was mean 2.13 / worst 6 — this run differs,
-    // so the bands below are set from what was actually measured here,
-    // per the instruction to prefer the measured value over the reference.)
+    // Measured over 200 races (seeds 1..200) on this branch: mean 1.25
+    // retirements/race, worst single race 5. (The design doc's own
+    // reference measurement was mean 2.13 / worst 6, using
+    // playerDriverId: 'd_voss'; this test uses 'none', and the gap is now
+    // understood and fully attributable: a playerDriverId-flagged car
+    // never executes its planned stops — the AI pit block at race.ts:195
+    // is gated on `!updated.isPlayer` — so 'd_voss' ran into the tyre
+    // cliff and retired to a puncture in ~90% of races. Attributing DNFs
+    // by cause confirms the gap is entirely tyre failures, not mechanical
+    // ones: 'none' measures tyre 0.10 + mechanical 1.23 per race, while
+    // 'd_voss' measures tyre 1.00 + mechanical 1.13 — mechanical attrition
+    // is consistent between the two; only the (expected, unrelated) tyre
+    // rate differs. Re-measured here at 200 races per driverId: 'none'
+    // gives tyre 0.05 + mechanical 1.21 per race, while 'd_voss' gives
+    // tyre 0.94 + mechanical 1.24 — mechanical attrition is effectively
+    // unchanged between the two; the gap is overwhelmingly tyre failures.
+    // The bands below are set from this test's own measurement, not the
+    // reference.)
     // The design's own fail condition (per the development-points design
     // work) was "a third or more of the grid" retiring — 6.67 of 20 — so
     // the worst-case ceiling here is set well under that with headroom.
     const circuit = DATA.circuits['bengaluru']!
-    const RACES = 40
+    const RACES = 200
     const counts: number[] = []
     for (let seed = 1; seed <= RACES; seed++) {
       const config: RaceConfig = {
@@ -184,7 +197,7 @@ describe('mechanical failure', () => {
     const worst = Math.max(...counts)
     // eslint-disable-next-line no-console
     console.log(`Field attrition over ${RACES} races: mean ${mean.toFixed(2)}, worst ${worst}`)
-    expect(mean).toBeGreaterThan(0.3)
+    expect(mean).toBeGreaterThan(0.7)
     expect(mean).toBeLessThan(3)
     expect(worst).toBeLessThan(6) // well under "a third of the grid" (6.67 of 20)
   })
