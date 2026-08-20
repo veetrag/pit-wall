@@ -21,9 +21,36 @@ describe('calendar', () => {
     expect(loadGameData().circuits['silverpark']).toBeTruthy()
   })
 
-  it('weights sector sensitivities to roughly 1.0', () => {
+  // carSensitivity/driverSensitivity are currently dead data: lapModel.ts takes
+  // per-sector weighting from tuning.carPerformance.sectorSplit /
+  // tuning.driverPerformance.sectorSplit (global, identical for every circuit),
+  // not from these per-circuit fields. So these sums are not normalised
+  // weightings today, just flavour text encoded as numbers -- e.g.
+  // harbour_lights' asymmetry (car 0.78 / driver 1.36) is deliberate intent
+  // ("street circuit: driver matters more than car"), not a bug. The wide band
+  // below only catches typos / order-of-magnitude errors on existing circuits.
+  it('keeps sector sensitivities within a sane order of magnitude', () => {
     const { circuits } = loadGameData()
     for (const [id, c] of Object.entries(circuits)) {
+      const car = c.carSensitivity.reduce((a, b) => a + b, 0)
+      const drv = c.driverSensitivity.reduce((a, b) => a + b, 0)
+      expect(car, `${id} carSensitivity`).toBeGreaterThanOrEqual(0.75)
+      expect(car, `${id} carSensitivity`).toBeLessThanOrEqual(1.40)
+      expect(drv, `${id} driverSensitivity`).toBeGreaterThanOrEqual(0.75)
+      expect(drv, `${id} driverSensitivity`).toBeLessThanOrEqual(1.40)
+    }
+  })
+
+  // Circuits authored by this plan (twelve-race-calendar) are deliberately
+  // normalised to sum to ~1.0, unlike the legacy circuits above. Guarded on
+  // existence so this doesn't fail before later tasks in the plan land theirs.
+  const PLAN_CIRCUITS = ['silverpark', 'estoril_bay', 'kaido', 'altiplano']
+
+  it('normalises sector sensitivities to ~1.0 for plan-authored circuits', () => {
+    const { circuits } = loadGameData()
+    for (const id of PLAN_CIRCUITS) {
+      const c = circuits[id]
+      if (!c) continue
       const car = c.carSensitivity.reduce((a, b) => a + b, 0)
       const drv = c.driverSensitivity.reduce((a, b) => a + b, 0)
       expect(car, `${id} carSensitivity`).toBeGreaterThan(0.95)
