@@ -163,7 +163,7 @@ function raceRetires(teamId: string, seed: number): boolean {
   let state = initRace(config)
   const rng = createRng(seed)
   const totalSectors = CIRCUIT.laps * 3
-  for (let i = 0; i < totalSectors; i++) state = stepSector(state, config, rng)
+  for (let i = 0; i < totalSectors; i++) state = stepSector(config, state, rng)
   return state.cars[0]!.retired
 }
 
@@ -186,7 +186,7 @@ describe('mechanical failure', () => {
     config.tuning = { ...DATA.tuning, mechanicalFailure: { baseChancePerLap: 0 } }
     let state = initRace(config)
     const rng = createRng(7)
-    for (let i = 0; i < CIRCUIT.laps * 3; i++) state = stepSector(state, config, rng)
+    for (let i = 0; i < CIRCUIT.laps * 3; i++) state = stepSector(config, state, rng)
     expect(state.cars[0]!.retired).toBe(false)
   })
 
@@ -196,13 +196,13 @@ describe('mechanical failure', () => {
     config.tuning = { ...DATA.tuning, mechanicalFailure: { baseChancePerLap: 100 } }
     let state = initRace(config)
     const rng = createRng(3)
-    state = stepSector(state, config, rng)
+    state = stepSector(config, state, rng)
     const car = state.cars[0]!
     expect(car.retired).toBe(true)
     expect(car.retiredLap).not.toBeNull()
 
     const timeAtRetirement = car.raceTime
-    state = stepSector(state, config, rng)
+    state = stepSector(config, state, rng)
     // A frozen car accrues no further race time.
     expect(state.cars[0]!.raceTime).toBe(timeAtRetirement)
   })
