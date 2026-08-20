@@ -76,7 +76,8 @@ export function processRadioTick(
 
   // 0. Retirement (highest priority — the race is over, nothing else matters)
   if (player.retired && !radio.prevRetired) {
-    tryPush('retired', 2, {}, pushAlert)
+    const trigger = player.retiredCause === 'mechanical' ? 'retired_mechanical' : 'retired'
+    tryPush(trigger, 2, {}, pushAlert)
   }
   next.prevRetired = player.retired
   if (player.retired) return next // nothing else is relevant once retired

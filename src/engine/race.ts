@@ -70,6 +70,7 @@ export function initRace(config: RaceConfig): RaceState {
       lapsInDirtyAir: 0,
       retired: false,
       retiredLap: null,
+      retiredCause: null,
     }
   })
 
@@ -115,7 +116,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       if (over > 0) {
         const chance = Math.min(tf.maxChancePerLap, tf.chancePerLapOverThreshold * over) / 3
         if (rng() < chance) {
-          updated = { ...updated, retired: true, retiredLap: car.lap }
+          updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'tyre' }
         }
       }
     }
@@ -126,13 +127,17 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     // running"). Rolled per sector, so the per-lap chance is divided by 3 —
     // same convention as the tyre-failure roll above.
     if (!updated.retired) {
-      const team = config.teams.find(t => t.id === car.teamId)
-      if (team) {
-        const mf = config.tuning.mechanicalFailure
-        const perLap = mf.baseChancePerLap * (1 - team.facets.reliability / 100)
-        if (perLap > 0 && rng() < perLap / 3) {
-          updated = { ...updated, retired: true, retiredLap: car.lap }
-        }
+      const team = config.teams.find(t => t.id === car.teamId)!
+      const mf = config.tuning.mechanicalFailure
+      const perLap = mf.baseChancePerLap * (1 - team.facets.reliability / 100)
+      // Clamp defensively: reliability above 100 (e.g. from a future upgrade
+      // system stacking on top of a 94-reliability archetype) would
+      // otherwise produce a negative chance and silent invulnerability.
+      // The `perLap > 0` short-circuit must stay first so a zero-configured
+      // fixture (baseChancePerLap 0) never calls rng() at all — that's what
+      // keeps it byte-identical to the pre-feature RNG stream.
+      if (perLap > 0 && rng() < Math.max(0, perLap) / 3) {
+        updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'mechanical' }
       }
     }
     return updated

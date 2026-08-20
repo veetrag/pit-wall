@@ -203,6 +203,9 @@ export interface CarState {
   // decisions — and sorts after every classified car in final position.
   retired: boolean
   retiredLap: number | null
+  // Which roll ended the car's race, so the UI can attribute the retirement
+  // correctly instead of assuming it was always a tyre failure.
+  retiredCause: 'tyre' | 'mechanical' | null
 }
 
 export interface SectorResult {

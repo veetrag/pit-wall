@@ -67,7 +67,7 @@ describe('effectiveTyreAge', () => {
       sector: 0, compound: 'M', tyreAge: 10, paceMode: 'neutral', pitted: false,
       pitsDone: 0, strategy: { teamId: 't1', startCompound: 'M', plannedStops: [] },
       isPlayer: false,
-      tyreAllocation: { S: 4, M: 4, H: 4, I: 3, W: 3 }, compoundsUsed: ['M'], lapsInDirtyAir: 0, retired: false, retiredLap: null,
+      tyreAllocation: { S: 4, M: 4, H: 4, I: 3, W: 3 }, compoundsUsed: ['M'], lapsInDirtyAir: 0, retired: false, retiredLap: null, retiredCause: null,
       ...overrides,
     }
   }

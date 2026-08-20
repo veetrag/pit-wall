@@ -33,7 +33,7 @@ export function RaceWatcher() {
       hasFiredRef.current = true
       setSpeed(0)
       const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
-      const positions = sorted.map(car => ({ driverId: car.driverId, position: car.position, retired: car.retired }))
+      const positions = sorted.map(car => ({ driverId: car.driverId, position: car.position, retired: car.retired, retiredCause: car.retiredCause }))
       const player = raceState.cars.find(c => c.isPlayer)
       const events: RaceEventSummary = {
         overtakesGained: raceState.overtakeEvents.filter(e => e.overtakerId === player?.driverId).length,

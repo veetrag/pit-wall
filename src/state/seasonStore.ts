@@ -10,6 +10,7 @@ export interface SeasonResult {
   position: number
   points: number
   retired: boolean
+  retiredCause: 'tyre' | 'mechanical' | null
 }
 
 export interface Standing {
@@ -90,7 +91,7 @@ interface SeasonStore {
   selectDriver: (id: string) => void
   confirmDriver: () => void
   confirmRaceSetup: (circuitId?: string, strategy?: PlayerStrategyChoice) => void
-  recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean }[], events: RaceEventSummary) => void
+  recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | null }[], events: RaceEventSummary) => void
   nextRace: () => void
   playAgain: () => void
   loadSeason: () => Promise<void>
@@ -166,6 +167,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       position: p.position,
       points: p.retired ? 0 : pointsFor(p.position), // a DNF never scores, regardless of classified position
       retired: p.retired ?? false,
+      retiredCause: p.retiredCause ?? null,
     }))
     const newStandings = [...standings]
     for (const r of results) {

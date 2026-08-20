@@ -67,24 +67,23 @@ describe('mechanical failure', () => {
   })
 
   it('holds the fragile-team DNF band', () => {
-    // Halcyon reliability 72. Measured 13.5% at 400 races with fixed seeds
-    // (s + 1), so this is fully deterministic — no Monte-Carlo variance to
-    // budget for. The band is centred on the measurement with ~3-4pp of
-    // headroom for an RNG-stream shift from unrelated future engine changes.
-    const rate = dnfRate('halcyon', 400)
+    // Halcyon reliability 72, spec §5 target 10-15%. Measured 11.9% at 1500
+    // races with fixed seeds (s + 1) — 400 races is only a ~0.8pp-SE
+    // binomial sample and reads high by ~1.6 SE, so the band is set at the
+    // spec's own analytic target rather than the small-sample measurement.
+    const rate = dnfRate('halcyon', 1500)
     expect(rate).toBeGreaterThan(0.09)
-    expect(rate).toBeLessThan(0.18)
+    expect(rate).toBeLessThan(0.15)
   })
 
   it('holds the bulletproof-team DNF band', () => {
-    // Zenith reliability 94. Measured 3.8% at 400 races with fixed seeds
-    // (s + 1) — fully deterministic, no sampling noise. Spec target is
-    // 2-4%, so the ceiling enforces that cap directly (with ~1.2pp of
-    // headroom above the measurement) rather than permitting a regression
-    // past the "bulletproof" archetype's promise.
-    const rate = dnfRate('zenith', 400)
+    // Zenith reliability 94, spec §5 target 2-4%. Measured 2.5% at 1500
+    // races with fixed seeds (s + 1) — the 400-race sample reads 3.75%,
+    // about 1.6 SE high, which would force the ceiling above the spec's own
+    // 4% target. The band is set at the spec's target, not the small sample.
+    const rate = dnfRate('zenith', 1500)
     expect(rate).toBeGreaterThan(0.015)
-    expect(rate).toBeLessThan(0.05)
+    expect(rate).toBeLessThan(0.04)
   })
 
   it('orders the whole grid by reliability', () => {
@@ -95,6 +94,39 @@ describe('mechanical failure', () => {
     const apex = dnfRate('apex', 300)        // 96
     expect(halcyon).toBeGreaterThan(delta)
     expect(delta).toBeGreaterThan(apex)
+  })
+
+  it('sets retiredCause per failure path', () => {
+    // Force a tyre-cliff failure: push cliffFractionThreshold to 0 and
+    // chancePerLapOverThreshold sky-high so the tyre roll fires first, with
+    // mechanical failure disabled so it can't also fire on the same car.
+    const tyreConfig = configFor('halcyon', 3)
+    tyreConfig.tuning = {
+      ...DATA.tuning,
+      mechanicalFailure: { baseChancePerLap: 0 },
+      tyreFailure: { ...DATA.tuning.tyreFailure, cliffFractionThreshold: 0, chancePerLapOverThreshold: 999, maxChancePerLap: 999 },
+    }
+    let tyreState = initRace(tyreConfig)
+    const tyreRng = createRng(3)
+    // tyreAge only increments once a lap completes (every 3rd sector), and
+    // the cliff check needs tyreAge > 0 to clear the (threshold-0) bar, so
+    // step until the car retires rather than assuming it happens on sector 1.
+    for (let i = 0; i < 12 && !tyreState.cars[0]!.retired; i++) {
+      tyreState = stepSector(tyreConfig, tyreState, tyreRng)
+    }
+    expect(tyreState.cars[0]!.retired).toBe(true)
+    expect(tyreState.cars[0]!.retiredCause).toBe('tyre')
+
+    // Force a mechanical failure: base chance 100 guarantees the roll fires;
+    // tyre failure stays at its default (inert threshold) so it can't race
+    // the mechanical roll on the same sector.
+    const mechConfig = configFor('halcyon', 3)
+    mechConfig.tuning = { ...DATA.tuning, mechanicalFailure: { baseChancePerLap: 100 } }
+    let mechState = initRace(mechConfig)
+    const mechRng = createRng(3)
+    mechState = stepSector(mechConfig, mechState, mechRng)
+    expect(mechState.cars[0]!.retired).toBe(true)
+    expect(mechState.cars[0]!.retiredCause).toBe('mechanical')
   })
 
   it('freezes a mechanically retired car', () => {
@@ -112,5 +144,48 @@ describe('mechanical failure', () => {
     state = stepSector(config, state, rng)
     // A frozen car accrues no further race time.
     expect(state.cars[0]!.raceTime).toBe(timeAtRetirement)
+  })
+
+  it('keeps field-wide attrition in band on the full 20-car grid', () => {
+    // Spec §11 risk 1: single-team DNF bands can't catch a mechanic that
+    // thins the *whole* field. Run the real 20-car grid on the real
+    // Bengaluru circuit with real tuning and real strategies.defaults, and
+    // bound the mean and worst-case retirement count per race.
+    //
+    // Measured over 40 races (seeds 1..40) on this branch: mean 1.32
+    // retirements/race, worst single race 3. (The design doc's own
+    // reference measurement was mean 2.13 / worst 6 — this run differs,
+    // so the bands below are set from what was actually measured here,
+    // per the instruction to prefer the measured value over the reference.)
+    // The design's own fail condition (per the development-points design
+    // work) was "a third or more of the grid" retiring — 6.67 of 20 — so
+    // the worst-case ceiling here is set well under that with headroom.
+    const circuit = DATA.circuits['bengaluru']!
+    const RACES = 40
+    const counts: number[] = []
+    for (let seed = 1; seed <= RACES; seed++) {
+      const config: RaceConfig = {
+        circuit,
+        tuning: DATA.tuning,
+        compounds: DATA.compounds,
+        drivers: DATA.drivers.drivers,
+        teams: DATA.cars.teams,
+        strategies: DATA.strategies.defaults,
+        playerDriverId: 'none',
+        seed,
+      }
+      let state = initRace(config)
+      const rng = createRng(seed)
+      const totalSectors = circuit.laps * 3
+      for (let i = 0; i < totalSectors; i++) state = stepSector(config, state, rng)
+      counts.push(state.cars.filter(c => c.retired).length)
+    }
+    const mean = counts.reduce((a, b) => a + b, 0) / RACES
+    const worst = Math.max(...counts)
+    // eslint-disable-next-line no-console
+    console.log(`Field attrition over ${RACES} races: mean ${mean.toFixed(2)}, worst ${worst}`)
+    expect(mean).toBeGreaterThan(0.3)
+    expect(mean).toBeLessThan(3)
+    expect(worst).toBeLessThan(6) // well under "a third of the grid" (6.67 of 20)
   })
 })

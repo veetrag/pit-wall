@@ -47,7 +47,11 @@ export function RaceResult() {
   const podium = sorted.filter(r => r.position <= 3 && !r.retired)
   const isTopThree = !playerResult?.retired && (playerResult?.position ?? 99) <= 3
   const headline = playerResult && lastRaceEvents
-    ? (playerResult.retired ? 'Retired — a puncture ended the race early.' : raceHeadline(playerResult.position, lastRaceEvents))
+    ? (playerResult.retired
+        ? (playerResult.retiredCause === 'mechanical'
+            ? 'Retired — a mechanical failure ended the race early.'
+            : 'Retired — a puncture ended the race early.')
+        : raceHeadline(playerResult.position, lastRaceEvents))
     : null
   const isSeasonEnd = raceIndex >= TOTAL_RACES - 1
 

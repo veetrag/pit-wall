@@ -80,7 +80,7 @@ function makeCar(overrides: Partial<CarState> = {}): CarState {
     sector: 2, compound: 'S', tyreAge: 10, paceMode: 'neutral', pitted: false,
     pitsDone: 0, strategy: { teamId: 't1', startCompound: 'S', plannedStops: [{ lap: 12, compound: 'H' }] },
     isPlayer: false,
-    tyreAllocation: { S: 4, M: 4, H: 4, I: 3, W: 3 }, compoundsUsed: ['S'], lapsInDirtyAir: 0, retired: false, retiredLap: null,
+    tyreAllocation: { S: 4, M: 4, H: 4, I: 3, W: 3 }, compoundsUsed: ['S'], lapsInDirtyAir: 0, retired: false, retiredLap: null, retiredCause: null,
     ...overrides,
   }
 }

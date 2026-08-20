@@ -95,5 +95,11 @@
     "Retire the car. Puncture, nothing we could do.",
     "Stop the car safely. Race over for us.",
     "We've lost it. Bring it home slowly, no rush."
+  ],
+  "retired_mechanical": [
+    "That's it, box now. We're done for today.",
+    "Retire the car. Mechanical failure, nothing we could do.",
+    "Stop the car safely. Race over for us.",
+    "We've lost the engine. Bring it home slowly, no rush."
   ]
 }

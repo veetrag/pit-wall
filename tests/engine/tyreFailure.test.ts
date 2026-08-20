@@ -28,7 +28,7 @@ function makeCar(overrides: Partial<CarState> & { driverId: string; teamId: stri
     isPlayer: true, // no AI auto-pit — isolates the mechanic under test
     tyreAllocation: { S: 99, M: 99, H: 99, I: 99, W: 99 },
     compoundsUsed: ['M'],
-    lapsInDirtyAir: 0, retired: false, retiredLap: null,
+    lapsInDirtyAir: 0, retired: false, retiredLap: null, retiredCause: null,
     ...overrides,
   }
 }
