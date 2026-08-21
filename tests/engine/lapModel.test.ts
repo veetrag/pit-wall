@@ -17,8 +17,8 @@ const TUNING: TuningConstants = {
   fuel: { effectPerLap: 0.035 },
   noise: { sigmaPerSector: 0.08, consistencyReliefFactor: 0.40 },
   trackEvolution: { startDelta: 0.30, decayLaps: 20 },
-  traffic: { gapThreshold: 1.0, penalty: 0.12, trafficCap: 0.70, dirtyAirDegBonus: 0.015, dirtyAirDegCapLaps: 8 },
-  overtaking: { base: 0.22, paceGateMin: 0.05, paceMultiplier: 3.0, sectorFactor: [1.0, 0.25, 0.55], attackRacecraftBase: 0.5, defenceRacecraftFactor: 0.40, tyreFreshnessBonusMax: 0.15, paceModeFactor: 0.5, fightCost: 0.15, factorFloor: 0.35 },
+  traffic: { gapThreshold: 1.0, penalty: 0.12, trafficCap: 0.70, hardCircuitScale: 1.5, dirtyAirDegBonus: 0.015, dirtyAirDegCapLaps: 8 },
+  overtaking: { base: 0.22, paceGateMin: 0.05, paceMultiplier: 3.0, sectorFactor: [1.0, 0.25, 0.55], attackRacecraftBase: 0.5, defenceRacecraftFactor: 0.40, tyreFreshnessBonusMax: 0.15, paceModeFactor: 0.5, fightCost: 0.10, factorFloor: 0.35 },
   pit: { laneTimeLoss: 22.0, stopMean: 2.4, stopSigma: 0.3, pitCrewMeanRelief: 0.6, pitCrewSigmaRelief: 0.5 },
   paceModes: {
     push:     { paceDelta: -0.15, degMultiplier: 1.30 },

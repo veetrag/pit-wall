@@ -21,7 +21,18 @@ export interface TuningConstants {
   fuel: { effectPerLap: number }
   noise: { sigmaPerSector: number; consistencyReliefFactor: number }
   trackEvolution: { startDelta: number; decayLaps: number }
-  traffic: { gapThreshold: number; penalty: number; trafficCap: number; dirtyAirDegBonus: number; dirtyAirDegCapLaps: number }
+  traffic: {
+    gapThreshold: number
+    penalty: number
+    trafficCap: number
+    /** Numerator of the circuit-dependent penalty scale, `hardCircuitScale /
+     *  max(overtakingFactor[sector], factorFloor)`. Scales the penalty's
+     *  MAGNITUDE, not just its cap — capping alone left `penalty / 3` as the
+     *  binding term under the `min`, so the cap never applied. */
+    hardCircuitScale: number
+    dirtyAirDegBonus: number
+    dirtyAirDegCapLaps: number
+  }
   overtaking: {
     base: number
     paceGateMin: number

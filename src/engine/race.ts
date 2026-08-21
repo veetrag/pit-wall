@@ -161,14 +161,19 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     const gap = car.raceTime - ahead.raceTime
     if (gap <= config.tuning.traffic.gapThreshold) {
       const paceAdv = calculatePaceAdvantage(config, car, ahead)
-      const rawPenalty = config.tuning.traffic.penalty / 3
-      // The cap is circuit- and sector-dependent. Dividing by overtakingFactor
-      // means a hard circuit can push the cap ABOVE 1.0, letting a follower
-      // lose MORE than its pace advantage -- which is the first time in this
-      // simulation that track position has defensive value. factorFloor bounds
-      // the divisor so a tiny factor cannot produce an unbounded cap, and
-      // rawPenalty still bounds the absolute per-sector loss regardless.
+      // Both the penalty's MAGNITUDE and its cap are circuit- and
+      // sector-dependent, divided by the same overtakingFactor. Scaling the cap
+      // alone (as this first shipped) does nothing: `penalty / 3` = 0.04 s/sector
+      // is 5-20x smaller than `paceAdv * effectiveCap` at the 0.4 s/lap
+      // advantage the spec targets, so `min` always returned it and the cap
+      // never applied. Scaling the magnitude too is what lets a hard circuit
+      // hold a follower up HARDER rather than merely for longer -- the first
+      // time in this simulation that track position has defensive value.
+      // factorFloor bounds the divisor so a tiny factor cannot make either term
+      // unbounded, and the cap still keeps the loss proportional to the pace
+      // advantage, so cars with nothing to gain are not taxed for following.
       const factor = Math.max(config.circuit.overtakingFactor[sector]!, config.tuning.overtaking.factorFloor)
+      const rawPenalty = (config.tuning.traffic.penalty / 3) * (config.tuning.traffic.hardCircuitScale / factor)
       const effectiveCap = config.tuning.traffic.trafficCap / factor
       const cappedPenalty = Math.min(rawPenalty, paceAdv * effectiveCap)
       return { ...car, raceTime: car.raceTime + cappedPenalty }
@@ -336,12 +341,20 @@ function resolveOvertakes(
     // raceTime. A swap conserves total time (an assignment would gift the
     // overtaker time it never made up on track) and is automatically bounded
     // to <= traffic.gapThreshold, because the pair is only eligible inside
-    // that gap. Both cars also pay fightCost: racing wheel-to-wheel is slower
-    // than clear air, and charging it to both changes no gap while making a
-    // race full of passes genuinely slower. The slot assignment is kept too,
-    // so the returned array stays ordered for the caller.
+    // that gap. The slot assignment is kept too, so the returned array stays
+    // ordered for the caller.
+    //
+    // fightCost is charged to the OVERTAKEN car ONLY. Charging both — as this
+    // first shipped — inverts the value of racecraft: the brain that passes
+    // most is billed most. Measured over 2000 races, the OPTIMAL brain's
+    // finishing-position gain over NAIVE collapsed from 1.59 to 0.13 with a
+    // two-sided charge (0.87 with the swap alone). The asymmetry is also the
+    // physical reading: the attacker has ALREADY paid for the fight through
+    // the traffic penalty it accumulated while following, so billing it again
+    // double-counts, whereas the defender's lost momentum is a genuinely
+    // uncompensated cost.
     const fightCost = config.tuning.overtaking.fightCost
-    result[bestIdx - 1] = { ...behind, raceTime: ahead.raceTime + fightCost }
+    result[bestIdx - 1] = { ...behind, raceTime: ahead.raceTime }
     result[bestIdx] = { ...ahead, raceTime: behind.raceTime + fightCost }
     events.push({ lap, sector, overtakerId: behind.driverId, overtakenId: ahead.driverId })
   }

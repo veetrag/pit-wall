@@ -157,6 +157,11 @@ describe('overtaking: a completed pass survives the next sort', () => {
   }, 60_000)
 
   // A swap conserves total time; an assignment would invent it (spec section 4.1).
+  // The only accounted addition is ONE fightCost, charged to the overtaken car
+  // alone -- charging both inverted the value of racecraft (the brain that
+  // passed most was billed most, collapsing OPTIMAL's gain from 1.59 to 0.13),
+  // and the attacker has already paid through the traffic penalty it
+  // accumulated while following.
   it('an overtake does not create or destroy race time beyond the fight cost', () => {
     const { cfg, before, event } = firstOvertakeTick('veloce', 7)
 
@@ -186,8 +191,9 @@ describe('overtaking: a completed pass survives the next sort', () => {
     expect(
       delta,
       `pass by ${event.overtakerId} moved total race time by ${delta.toFixed(6)}s; ` +
-        `a swap plus fightCost on both cars must move it by exactly ${(2 * fightCost).toFixed(6)}s`,
-    ).toBeCloseTo(2 * fightCost, 6)
+        `a swap plus one fightCost on the overtaken car alone must move it by ` +
+        `exactly ${fightCost.toFixed(6)}s`,
+    ).toBeCloseTo(fightCost, 6)
   }, 60_000)
 })
 

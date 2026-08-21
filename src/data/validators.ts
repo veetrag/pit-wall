@@ -24,6 +24,9 @@ const TuningSchema = z.object({
   trackEvolution: z.object({ startDelta: z.number(), decayLaps: z.number() }),
   traffic: z.object({
     gapThreshold: z.number(), penalty: z.number(), trafficCap: z.number(),
+    // Scales the absolute per-sector penalty by hardCircuitScale / overtakingFactor,
+    // so a hard circuit holds a follower up harder and not merely for longer.
+    hardCircuitScale: z.number(),
     dirtyAirDegBonus: z.number(), dirtyAirDegCapLaps: z.number(),
   }),
   overtaking: z.object({
