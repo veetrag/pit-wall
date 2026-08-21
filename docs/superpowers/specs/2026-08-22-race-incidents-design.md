@@ -143,6 +143,35 @@ machine is in one of two states, and the transitions are:
 4. **Overtaking is disabled.** Correct for real racing under yellow, and it also prevents the
    sector-boundary check from producing nonsense at freshly compressed gaps.
 
+### 5.5 Where each roll is actually invoked — resolving the split
+
+§5.2 says the rolls live in `incidents.ts`, and §5.4 says sector times are scaled while deployed.
+Both touch sector time, which is computed in `lapModel.ts`, not `race.ts`. That could be read two
+ways, so it is settled here explicitly:
+
+- **`incidents.ts` owns the decisions** — pure predicates and magnitudes: does this car err this
+  sector, is the error terminal, how much time does it cost, does this retirement deploy a safety
+  car, how long for, what does compression do to a set of race times.
+- **`race.ts` owns applying them** to `CarState` and `RaceState`, in the per-car map at
+  `race.ts:97-149` where the tyre and mechanical rolls already live. Driver error is applied there,
+  **not** inside `computeSectorTime` — the error's terminal branch retires a car, and `lapModel.ts`
+  returns a `SectorResult` and has no vocabulary for retirement.
+- **The safety car's `paceMultiplier` is the one exception** and is applied in `lapModel.ts`,
+  because it scales the computed sector time rather than adding to it. It reads `safetyCar` from the
+  state already passed to `computeSectorTime` (which today receives `state.weatherState`; it will
+  need the safety car state too). It performs **no `rng()` call**, so it cannot perturb the stream.
+
+Consequence for the error model: the time-loss branch adds to `raceTime` after `computeSectorTime`
+returns, so it does **not** appear in `SectorResult.sectorTime`. If the UI needs to show it, it
+reads the `IncidentEvent` log, not the sector result. An implementer who instead threads the error
+into `computeSectorTime` will find they cannot retire the car from there and will be tempted to
+return a sentinel — do not; the split above exists to prevent exactly that.
+
+**Ordering within the tick is fixed and load-bearing:** tyre failure, then mechanical failure, then
+driver error, then (for any car that retired this tick) the safety car deployment roll. Deployment
+is rolled once per tick at most, even if two cars retire in the same tick, and never while a safety
+car is already active or `maxPerRace` is reached.
+
 ### 5.5 RNG-stream discipline — the constraint that lets this land
 
 Adding `rng()` calls to the hot path shifts the draw sequence, which would move every measured
@@ -202,6 +231,12 @@ constraint of §2.1.
 | `incidents.errorTimeLossMean` | **3.5** | seconds |
 | `incidents.errorTimeLossSigma` | **1.5** | seconds |
 | `incidents.consistencyReliefMax` | **0.35** | a `consistency` 100 driver errs 35% less often |
+
+The error chance is `driverErrorPerLap * (1 - (consistency/100) * consistencyReliefMax) / 3` per
+sector, mirroring the wet spin's `wetSkillReliefMax` shape at `lapModel.ts:69-71`. Relief reduces
+the chance of erring; it does **not** change `terminalFraction` — a mistake, once made, is no less
+likely to end the race for a consistent driver. If that reads wrong on the phone it is a one-line
+tuning change, not a design change.
 
 **Why 0.006 and 0.20 specifically.** These were solved *backwards* from the oracle, not guessed:
 1.4 crashes per race over 20 cars is **7.0pp per car-race**, which is exactly §3's computed real-F1
