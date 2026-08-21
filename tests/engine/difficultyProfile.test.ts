@@ -3,6 +3,11 @@ import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig, StrategyBrain, CircuitSpec } from '@engine/types'
+import { runRaces } from './monteCarloHarness'
+
+// Same four-circuit sample as tests/engine/monteCarlo.test.ts: a rain-heavy
+// round, a dry desert round, the street circuit and a high-speed round.
+const HARNESS_SAMPLE = ['monsoon_bay', 'sol_desert', 'harbour_lights', 'veloce']
 
 // M5: difficulty is now one profile lookup (tuning.difficultyProfiles) instead
 // of scattered if (difficulty === ...) branches. These tests mirror what
@@ -138,34 +143,52 @@ describe('M5: monotonic difficulty curve', () => {
 })
 
 describe('M5: guardrail — field-balance regression bands hold on both difficulties', () => {
-  it('rookie and pro both keep the top-team win rate and overtake bands from tuning._regressionBands', () => {
-    const data = loadGameData()
-    const bands = data.tuning._regressionBands as { topTeamWinRate: [number, number]; meanOvertakesPerRace: [number, number] }
-    const RACES = 100
+  // Measured through the shared Monte-Carlo harness, not this file's
+  // single-circuit fixture. MODEL_SPEC.md §4 requires a win-share band to be
+  // measured FIELD-WIDE over a pooled multi-circuit sample at a stated
+  // difficulty: on the OLD grid the same cars measured 0.99 at rookie on one
+  // circuit but 0.9417 across four, because one circuit means one lap count, one
+  // rain probability and one strategy pattern. Asserting the band on a
+  // one-circuit sample is a different, stricter, and false claim. (Both figures
+  // are pre-competitive-grid, kept as the evidence for that qualification; the
+  // post-change four-circuit values are in the assertion comments below.)
+  //
+  // The previous version of this test asserted only `>= topTeamWinRate[0]` on a
+  // floor of 0.0 -- unfailable -- and (before removal) an overtake band that
+  // MODEL_SPEC.md §5 says cannot gate anything, so it had no falsifiable
+  // assertion at all while being named a guardrail. The floor now carries
+  // MODEL_SPEC.md §3's real-F1-derived 0.35.
+  it('rookie and pro both keep the field-wide win-share and distinct-winner bands', () => {
+    const bands = loadGameData().tuning._regressionBands
+    expect(bands).toBeDefined()
+    const band = bands!
+    const RACES = 240
 
     for (const difficulty of ['rookie', 'pro'] as const) {
-      const wins: Record<string, number> = {}
-      let totalOvertakes = 0
-      for (let i = 0; i < RACES; i++) {
-        const seed = i * 7 + 13
-        // "none" (not a real driverId) so every car — including apex — is
-        // AI-driven and actually executes its planned pit stops. A real
-        // driverId here would mark that car isPlayer, which skips the
-        // AI decision path entirely (only the interactive player calls
-        // pitNow), leaving it mono-compound and wrongly penalised under
-        // mandatoryTwoCompound — not a real difficulty-curve effect.
-        const config = buildRealConfig(seed, difficulty, 'none')
-        let state = initRace(config)
-        const rng = createRng(seed)
-        for (let s = 0; s < config.circuit.laps * 3; s++) state = stepSector(config, state, rng)
-        const winnerId = state.cars[0]!.driverId
-        wins[winnerId] = (wins[winnerId] ?? 0) + 1
-        totalOvertakes += state.overtakeEvents.length
-      }
-      const apexWinRate = ((wins['d_voss'] ?? 0) + (wins['d_chen'] ?? 0)) / RACES
-      const meanOvertakes = totalOvertakes / RACES
-      expect(apexWinRate, `${difficulty} apex win rate`).toBeGreaterThanOrEqual(bands.topTeamWinRate[0])
-      expect(meanOvertakes, `${difficulty} mean overtakes`).toBeGreaterThanOrEqual(bands.meanOvertakesPerRace[0] - 5)
+      const m = runRaces({ races: RACES, circuitIds: HARNESS_SAMPLE, difficulty })
+      const n = `${difficulty}, n=${m.races} races over ${HARNESS_SAMPLE.length} circuits`
+      console.log(`${n}: top=${m.topTeamId} share=${m.topTeamShare.toFixed(4)} ` +
+        `winners=${m.distinctWinners} overtakes=${m.meanOvertakeEvents.toFixed(1)}`)
+      // Ceiling is now the competitive-grid stage's 0.90 (MODEL_SPEC.md §4), and
+      // this is the suite's tightest win-share gate: it asserts the level at BOTH
+      // difficulties. Post-grid measurements on this 4-circuit sample: rookie
+      // 0.7833-0.8792 over six seed bases, pro 0.8208-0.8583. Rookie is the
+      // tighter margin at ~1.4 SE from the ceiling (SE ~1.5pp at n=240); fixed
+      // seeds make it deterministic, so that margin is regression headroom, not
+      // flake risk. The race-incidents plan tightens this to 0.35-0.55.
+      expect(m.topTeamShare, n).toBeLessThanOrEqual(band.topTeamWinRate[1])
+      expect(m.topTeamShare, n).toBeGreaterThanOrEqual(band.topTeamWinRate[0])
+      // Now >= 4 (competitive-grid stage); measured 7-8 at both difficulties.
+      expect(m.distinctWinners, n).toBeGreaterThanOrEqual(band.minDistinctWinners)
+      // rho and |dpos| are asserted at pro in monteCarlo.test.ts; both are
+      // re-asserted here because ROOKIE is the tighter margin against the
+      // narrowed 0.60-0.80 ceiling (rookie 0.785 +- 0.005 vs pro 0.753), and an
+      // untested direction is where a regression hides.
+      expect(m.gridFinishSpearman, n).toBeGreaterThan(band.gridFinishSpearman[0])
+      expect(m.gridFinishSpearman, n).toBeLessThan(band.gridFinishSpearman[1])
+      expect(m.meanAbsPosChange, n).toBeGreaterThan(band.meanAbsPosChange[0])
+      expect(m.meanAbsPosChange, n).toBeLessThan(band.meanAbsPosChange[1])
+      // Overtake counts stay a diagnostic only -- MODEL_SPEC.md §5.
     }
-  }, 60_000)
+  }, 120_000)
 })

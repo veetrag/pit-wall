@@ -12,7 +12,7 @@
       "id": "meridian", "name": "Meridian GP",
       "colorPrimary": "#E8344E", "colorSecondary": "#FFFFFF",
       "archetype": "Close challenger — best engine on the grid",
-      "facets": { "power": 96, "aero": 88, "handling": 86, "reliability": 90, "pitCrew": 88 },
+      "facets": { "power": 98, "aero": 91, "handling": 89, "reliability": 90, "pitCrew": 88 },
       "developmentRate": 1.0, "nationality": "Italian", "flag": "🇮🇹",
       "history": "The engine department has always been the crown jewel — a power unit good enough to paper over whatever the chassis side gets wrong."
     },
@@ -20,7 +20,7 @@
       "id": "vortex", "name": "Vortex Motors",
       "colorPrimary": "#F2C94C", "colorSecondary": "#0A0E1A",
       "archetype": "Aero specialist — flies in S2, weak on straights",
-      "facets": { "power": 78, "aero": 91, "handling": 88, "reliability": 88, "pitCrew": 85 },
+      "facets": { "power": 87, "aero": 95, "handling": 94, "reliability": 88, "pitCrew": 85 },
       "developmentRate": 1.1, "nationality": "German", "flag": "🇩🇪",
       "history": "A wind-tunnel-obsessed operation that will sacrifice top speed for cornering grip every single time, for better and worse."
     },
@@ -28,7 +28,7 @@
       "id": "kestrel", "name": "Kestrel Sport",
       "colorPrimary": "#9B6BFF", "colorSecondary": "#0A0E1A",
       "archetype": "Power team — rockets in S1, struggles in corners",
-      "facets": { "power": 90, "aero": 76, "handling": 80, "reliability": 85, "pitCrew": 82 },
+      "facets": { "power": 96, "aero": 89, "handling": 92, "reliability": 85, "pitCrew": 82 },
       "developmentRate": 1.0, "nationality": "French", "flag": "🇫🇷",
       "history": "Built its identity around raw horsepower after a near-collapse a decade ago; still chasing the handling package to match it."
     },
@@ -36,7 +36,7 @@
       "id": "solstice", "name": "Solstice Racing",
       "colorPrimary": "#FF8A3D", "colorSecondary": "#0A0E1A",
       "archetype": "Solid midfield — fastest pit crew on the grid",
-      "facets": { "power": 82, "aero": 80, "handling": 83, "reliability": 87, "pitCrew": 95 },
+      "facets": { "power": 93, "aero": 91, "handling": 93, "reliability": 87, "pitCrew": 95 },
       "developmentRate": 1.0, "nationality": "American", "flag": "🇺🇸",
       "history": "Runs the tightest pit crew on the grid by design — the team's philosophy is that races are won and lost in 2.4 seconds, not 90 minutes."
     },
@@ -44,7 +44,7 @@
       "id": "delta", "name": "Delta Dynamics",
       "colorPrimary": "#3DDC84", "colorSecondary": "#0A0E1A",
       "archetype": "Balanced midfield — no weakness, no standout",
-      "facets": { "power": 80, "aero": 79, "handling": 81, "reliability": 89, "pitCrew": 80 },
+      "facets": { "power": 92, "aero": 90, "handling": 93, "reliability": 89, "pitCrew": 80 },
       "developmentRate": 1.2, "nationality": "Swiss", "flag": "🇨🇭",
       "history": "The definition of a solid midfield operation — no obvious weakness, no obvious strength, and a development rate that quietly keeps closing the gap."
     },
@@ -52,7 +52,7 @@
       "id": "halcyon", "name": "Halcyon F1",
       "colorPrimary": "#5BC8FF", "colorSecondary": "#0A0E1A",
       "archetype": "Great handling, fragile — mechanical grip but unreliable",
-      "facets": { "power": 76, "aero": 78, "handling": 88, "reliability": 72, "pitCrew": 78 },
+      "facets": { "power": 89, "aero": 92, "handling": 94, "reliability": 72, "pitCrew": 78 },
       "developmentRate": 1.1, "nationality": "Japanese", "flag": "🇯🇵",
       "history": "A small, ambitious team whose cars are a joy to drive and a nightmare to keep running — mechanical grip nobody else has, reliability nobody else would accept."
     },
@@ -60,7 +60,7 @@
       "id": "nimbus", "name": "Nimbus Grand Prix",
       "colorPrimary": "#B0B6C8", "colorSecondary": "#0A0E1A",
       "archetype": "Lower midfield — decent crew keeps them in the fight",
-      "facets": { "power": 74, "aero": 73, "handling": 75, "reliability": 84, "pitCrew": 86 },
+      "facets": { "power": 86, "aero": 84, "handling": 85, "reliability": 84, "pitCrew": 86 },
       "developmentRate": 1.0, "nationality": "Austrian", "flag": "🇦🇹",
       "history": "Punches above its budget through pit-lane execution — a lower-midfield team that treats every strategy call like it's fighting for a podium."
     },
@@ -68,7 +68,7 @@
       "id": "terra", "name": "Terra Motorsport",
       "colorPrimary": "#C97B5A", "colorSecondary": "#0A0E1A",
       "archetype": "Backmarker on the rise — high development potential",
-      "facets": { "power": 70, "aero": 71, "handling": 72, "reliability": 80, "pitCrew": 75 },
+      "facets": { "power": 82, "aero": 84, "handling": 83, "reliability": 80, "pitCrew": 75 },
       "developmentRate": 1.4, "nationality": "Spanish", "flag": "🇪🇸",
       "history": "The fastest-developing team on the grid, climbing the order year over year on a shoestring budget and a point to prove."
     },
@@ -76,7 +76,7 @@
       "id": "zenith", "name": "Zenith Racing",
       "colorPrimary": "#7A8290", "colorSecondary": "#0A0E1A",
       "archetype": "Tail of the field — slow but bulletproof reliability",
-      "facets": { "power": 66, "aero": 68, "handling": 70, "reliability": 94, "pitCrew": 72 },
+      "facets": { "power": 81, "aero": 81, "handling": 83, "reliability": 94, "pitCrew": 72 },
       "developmentRate": 1.2, "nationality": "Indian", "flag": "🇮🇳",
       "history": "Built on bulletproof reliability rather than pace — the team that finishes races other teams don't, even from the back of the field."
     }

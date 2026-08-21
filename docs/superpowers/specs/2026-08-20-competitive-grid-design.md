@@ -86,42 +86,103 @@ character.
 deliberate **0.386 s/lap cliff** to the Nimbus/Terra/Zenith backmarker tier. Top-to-bottom narrows
 from **1.482 to 0.674 s/lap**.
 
-## 5. Expected outcome
+## 5. Measured outcome
 
-Measured over 4,800 races (12 circuits × 2 difficulties, as-shipped weather) with the reliability
-rescale included, so the win share here is **conservative** — dropping the rescale returns the
-DNFs that were beating Voss and should reduce Apex's share by roughly 1.7 points:
+**Measured 2026-08-21 on the landed change**, replacing the predicted figures this section
+previously held. All figures use the real engine with every car AI-managed, fixed seeds.
+Field-wide over **all 12 circuits**, n = 480 races per difficulty:
 
-| team | wins | share | ±SE | mean finish |
-|---|---|---|---|---|
-| apex | 4073 | **84.85%** | 0.52 | 3.69 |
-| meridian | 507 | 10.56% | 0.44 | 5.46 |
-| halcyon | — | 1.71% | — | — |
-| vortex | 76 | 1.58% | 0.18 | 6.76 |
-| solstice | 29 | 0.60% | 0.11 | 10.03 |
-| delta | — | 0.48% | — | — |
-| kestrel | — | 0.17% | — | — |
-| nimbus | — | 0.04% | — | — |
+| team | share (pro) | share (rookie) |
+|---|---|---|
+| apex | **84.58%** ± 1.65 | **88.13%** ± 1.48 |
+| meridian | 9.38% | 7.71% |
+| vortex | 3.33% | 1.04% |
+| halcyon | 1.04% | 1.67% |
+| solstice | 0.63% | 0.21% |
+| delta | 0.63% | 0.63% |
+| kestrel | 0.42% | 0.63% |
+| nimbus / terra / zenith | 0.00% | 0.00% |
 
-**Distinct winners: 3 → 8.** `corr(pace rank, mean finish)` = **0.965**, so competitiveness is
-genuine rather than noise. Stable across difficulty (83.1 vs 83.2) but **not** across weather —
-dry-only cells rise to 89–91%, confirming rain is still carrying much of the variety. That is
-expected and is the incidents plan's problem, not this one's.
+**Distinct winners: 3 → 7–8** (7 at both difficulties over 12 circuits; 7–8 across six independent
+n=240 four-circuit samples). Pooled over six seed bases on the four-circuit gate sample, apex
+measures **83.68%** ± 0.97pp (n = 1440).
 
-## 6. Effect on the Development Points progression
+All three of this plan's gates are met:
 
-Recomputed with the real `applyUpgrades` and an exhaustive 110-DP search. The optimal build is
-power Mk3 + aero Mk1 + handling Mk2, worth **0.526 s/lap**.
+| gate | threshold | measured |
+|---|---|---|
+| top-team win share | ≤ 0.90 | 0.846 pro / 0.881 rookie |
+| distinct winners | ≥ 4 | 7–8 |
+| `corr(pace rank, mean finish)` | ≥ 0.90 | **0.9636** pro / 0.9152–0.9273 rookie |
 
-A maxed Zenith goes from 1.099 to **0.573 s/lap**, i.e. 8th on car pace and **0.148 s/lap behind
-Apex** — where before, a maxed Zenith remained roughly 0.96 s/lap adrift. Mean finish improves from
-P18.54 to **P15.29**, still without a win.
+**Two metrics the plan did not gate moved into their `MODEL_SPEC.md` §3 target bands on their own**,
+which §4 did not predict:
 
-Two honest caveats. Zenith's *drivers* are the grid's two worst (0.87 and 0.96 s/lap deficits), so
-car upgrades close only about a third of its total gap — the rest is the driver, which this plan
-deliberately does not touch. And P15 with no wins remains a thin fantasy; it improves materially
-once the incidents plan lands, because a compressed field plus safety cars is what converts pace
-into results.
+| metric | §3 band | measured pro | measured rookie |
+|---|---|---|---|
+| mean \|grid − finish\| | 2.5 – 4.0 | **2.859** ± 0.029 | 2.582 ± 0.030 |
+| grid↔finish ρ | 0.60 – 0.80 | **0.753** ± 0.005 | 0.785 ± 0.005 |
+
+**Mechanical DNF did not move**, as required — `reliability` is untouched. Pooled over 28,800
+car-races: **4.67%** ± 0.12pp, still 11 SE below §3's 6–10% floor. That gap is the incidents plan's.
+
+**Season points distribution, 40 simulated 12-race seasons at pro, old grid vs new** — the
+compression spreads points measurably rather than by assumption:
+
+| | old | new |
+|---|---|---|
+| top team's share of all points | 0.386 ± 0.003 | **0.318** ± 0.003 |
+| Gini of team points | 0.638 ± 0.002 | **0.538** ± 0.004 |
+| teams scoring at all | 7.55 ± 0.09 | **8.05** ± 0.12 |
+| drivers scoring at all | 14.68 ± 0.14 | **15.55** ± 0.19 |
+| top team's points | 467.3 ± 3.2 | **385.9** ± 4.2 |
+| 10th team's points | 0.00 | 0.03 |
+
+## 6. Effect on the Development Points progression — measured
+
+Recomputed with the real `applyUpgrades` and an exhaustive 110-DP search on the new grid.
+
+**The underdog arc amplified, as predicted.** Early season (no upgrades, no rival development) vs
+late season (optimal 110-DP build, rivals developed), n = 48 races each:
+
+| | early | late | arc |
+|---|---|---|---|
+| zenith mean finish | 17.69 ± 0.22 | **15.83** ± 0.30 | **+1.86** positions (was +1.16) |
+| terra mean finish | 15.69 ± 0.26 | **12.75** ± 0.37 | **+2.94** positions (was +1.21) |
+
+Isolating the two forces: a maxed underdog with rival development *switched off* reaches P12.42
+(zenith) and P9.98 (terra), so upgrades alone are worth +5.27 and +5.71 positions; rival
+development alone costs +0.46 and +1.00. Rival development is a real drag but a minority of the
+effect, and the net arc more than doubled.
+
+**Judgement call for the owner — `rivalDevelopment.poolPerRace` (0.36) does not need changing.** It
+was sized against the old 1.482 s/lap spread and is now a larger *fraction* of the 0.674 s/lap
+spread, which is the reason to check it. Measured, it is still correctly sized: after 11 accruals a
+rival gains 0.235–0.329 s/lap against the player's best 110-DP build of 0.515–0.618 s/lap, and the
+arc it is meant to threaten got better, not worse. Leaving it alone is the recommendation; changing
+it is not this plan's call either way.
+
+**But the front of the grid now wastes most of a max-out to the facet clamp — flagged, not fixed.**
+Raising the front-runners' facets pushed them against `FACET_MAX = 100`. A full 3-tier max-out of
+`power` + `aero` + `handling` is nominally 0.7752 s/lap for 165 DP; measured per team, the share of
+those 42 facet points discarded by the clamp:
+
+| team | waste, full max-out | was |
+|---|---|---|
+| kestrel | 50% | — |
+| meridian | 48% | — |
+| apex / solstice | 45% | 45% / 2% |
+| vortex / delta | 43% | 14% / 0% |
+| halcyon | 40% | — |
+| nimbus | 10% | — |
+| terra / zenith | 2% | 2% |
+
+The clamp is correct and nothing breaks — the *optimal* 110-DP build routes around it, wasting only
+0–15% (apex worst at 15.2%, six teams at 0%). But an unoptimised big spend on a front-running team
+now returns roughly half of its nominal value, and no test covers this: `rivalDevelopmentMagnitude`
+misses it because rival pools are small enough to still fit. This is a downstream design
+consequence of a deliberate change, not a defect, and is recorded here for the owner rather than
+silently absorbed.
 
 ## 7. Testing
 
