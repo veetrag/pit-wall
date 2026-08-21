@@ -35,7 +35,7 @@ export interface ClearingResult {
  * facets, same compound, same age -- so the ONLY asymmetry is pace. That makes
  * "laps to clear" attributable to the overtaking model and nothing else.
  *
- * The advantage is injected through the leader's sectorBase-independent handling
+ * The advantage is injected through the chaser's sectorBase-independent handling
  * facet rather than through tuning, so the pace gap is exact and does not
  * depend on which sector the cars are in.
  */
