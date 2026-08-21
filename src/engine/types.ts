@@ -31,6 +31,12 @@ export interface TuningConstants {
     defenceRacecraftFactor: number
     tyreFreshnessBonusMax: number
     paceModeFactor: number
+    /** Seconds lost by BOTH cars on a completed pass — racing wheel-to-wheel
+     *  is slower than clear air. Charging it to both changes no gap. */
+    fightCost: number
+    /** Lower bound on the circuit overtakingFactor used as the traffic-cap
+     *  divisor, so a tiny factor cannot produce an unbounded cap. */
+    factorFloor: number
   }
   pit: {
     laneTimeLoss: number

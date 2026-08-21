@@ -128,13 +128,13 @@ describe('new circuits', () => {
     }
   })
 
-  // This guards AUTHORED DATA INTENT, not a gameplay property. circuit
-  // overtakingFactor has no consumer today: race.ts:284 takes its per-sector
-  // overtaking difficulty from the global tuning.overtaking.sectorFactor
-  // ([1.0, 0.25, 0.55], identical for every circuit), so Kaido is not in fact
-  // harder to pass on than Veloce in play. Wiring the field is a balance change
-  // owned elsewhere; until then this assertion is the only thing preserving the
-  // intended ordering, so that the intent is what emerges once it is wired.
+  // This guards AUTHORED DATA INTENT, and since the overtaking-race-time work
+  // it also guards a live gameplay property: resolveOvertakes now takes its
+  // per-sector overtaking difficulty from circuit.overtakingFactor (it used to
+  // be shadowed by the global tuning.overtaking.sectorFactor, identical for
+  // every circuit, so Kaido was not in fact harder to pass on than Veloce in
+  // play), and the layer-2 traffic cap divides by the same field. The ordering
+  // asserted here is therefore the ordering the sim now races to.
   it('makes Kaido the hardest non-street circuit to overtake on', () => {
     const { circuits } = loadGameData()
     const total = (id: string) => circuits[id]!.overtakingFactor.reduce((a, b) => a + b, 0)

@@ -13,7 +13,9 @@
     "attackRacecraftBase": 0.5,
     "defenceRacecraftFactor": 0.40,
     "tyreFreshnessBonusMax": 0.16,
-    "paceModeFactor": 0.5
+    "paceModeFactor": 0.5,
+    "fightCost": 0.15,
+    "factorFloor": 0.35
   },
   "pit": {
     "laneTimeLoss": 22.0,

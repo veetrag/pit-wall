@@ -162,7 +162,15 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     if (gap <= config.tuning.traffic.gapThreshold) {
       const paceAdv = calculatePaceAdvantage(config, car, ahead)
       const rawPenalty = config.tuning.traffic.penalty / 3
-      const cappedPenalty = Math.min(rawPenalty, paceAdv * config.tuning.traffic.trafficCap)
+      // The cap is circuit- and sector-dependent. Dividing by overtakingFactor
+      // means a hard circuit can push the cap ABOVE 1.0, letting a follower
+      // lose MORE than its pace advantage -- which is the first time in this
+      // simulation that track position has defensive value. factorFloor bounds
+      // the divisor so a tiny factor cannot produce an unbounded cap, and
+      // rawPenalty still bounds the absolute per-sector loss regardless.
+      const factor = Math.max(config.circuit.overtakingFactor[sector]!, config.tuning.overtaking.factorFloor)
+      const effectiveCap = config.tuning.traffic.trafficCap / factor
+      const cappedPenalty = Math.min(rawPenalty, paceAdv * effectiveCap)
       return { ...car, raceTime: car.raceTime + cappedPenalty }
     }
     return car
@@ -281,7 +289,11 @@ function resolveOvertakes(
 ): CarState[] {
   const sorted = [...cars].sort((a, b) => a.raceTime - b.raceTime)
   const result = [...sorted]
-  const sectorEase = config.tuning.overtaking.sectorFactor[sector]!
+  // Was: config.tuning.overtaking.sectorFactor[sector] -- a global constant
+  // sitting in the exact place the per-circuit field belongs (spec §1.2).
+  // tuning.overtaking.sectorFactor is left in the data file and the type for
+  // now; Task 3 decides whether it is dead and removes it with the evidence.
+  const sectorEase = config.circuit.overtakingFactor[sector]!
 
   // Find the single most eligible pair (smallest gap within threshold, pace advantage > 0)
   // One overtake per sector boundary — the overtaking discipline rule.
@@ -318,8 +330,19 @@ function resolveOvertakes(
   if (bestIdx > 0 && rng() < bestProb) {
     const behind = result[bestIdx]!
     const ahead = result[bestIdx - 1]!
-    result[bestIdx - 1] = behind
-    result[bestIdx] = ahead
+    // Swap raceTime, not just array slots. The slots alone were erased by the
+    // next sort (spec §1.1): the traffic penalty, dirty air, the final
+    // classification and the next tick's resolveOvertakes all re-sort by
+    // raceTime. A swap conserves total time (an assignment would gift the
+    // overtaker time it never made up on track) and is automatically bounded
+    // to <= traffic.gapThreshold, because the pair is only eligible inside
+    // that gap. Both cars also pay fightCost: racing wheel-to-wheel is slower
+    // than clear air, and charging it to both changes no gap while making a
+    // race full of passes genuinely slower. The slot assignment is kept too,
+    // so the returned array stays ordered for the caller.
+    const fightCost = config.tuning.overtaking.fightCost
+    result[bestIdx - 1] = { ...behind, raceTime: ahead.raceTime + fightCost }
+    result[bestIdx] = { ...ahead, raceTime: behind.raceTime + fightCost }
     events.push({ lap, sector, overtakerId: behind.driverId, overtakenId: ahead.driverId })
   }
 

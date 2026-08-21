@@ -33,6 +33,10 @@ const TuningSchema = z.object({
     defenceRacecraftFactor: z.number(),
     tyreFreshnessBonusMax: z.number(),
     paceModeFactor: z.number(),
+    fightCost: z.number(),
+    // .positive() matters: factorFloor is the divisor's lower bound, so a zero
+    // would divide by zero and produce an unbounded traffic cap.
+    factorFloor: z.number().positive(),
   }),
   pit: z.object({
     laneTimeLoss: z.number(), stopMean: z.number(), stopSigma: z.number(),
