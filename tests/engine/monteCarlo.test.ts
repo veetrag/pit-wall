@@ -23,15 +23,17 @@ describe('Monte-Carlo regression', () => {
     // change removes (MODEL_SPEC.md section 4 stages the ceiling to 0.90).
     //
     // Apex must remain the strongest team -- this change re-spaces the grid, it
-    // does not reorder it. The searched grid measured 84.85% +- 0.52 over 4,800
-    // races WITH a reliability rescale that is not being applied here; dropping
-    // it returns the DNFs that were beating Voss, so expect slightly lower.
+    // does not reorder it. Measured post-change: 0.8458 pro / 0.8812 rookie over
+    // all 12 circuits, and 0.8368 +- 0.97pp pooled over six n=240 samples of this
+    // 4-circuit gate sample.
     expect(m.topTeamId, `n=${m.races} races`).toBe('apex')
-    // The > 0.60 floor is deliberate: the pace-rank gate catches an overshoot
-    // into lottery territory, and this catches one that somehow preserves
-    // correlation. SE at n=240 and p=0.85 is 2.3pp, so 0.60 is ~11 SE below.
-    expect(m.topTeamShare, `n=${m.races} races`).toBeGreaterThan(0.60)
-    expect(m.topTeamShare, `n=${m.races} races`).toBeLessThanOrEqual(0.90)
+    // Both ends come from the band file rather than a literal, so this gate cannot
+    // drift from its documented provenance. The floor catches an overshoot into
+    // lottery territory that somehow preserves pace-rank correlation; SE at n=240
+    // and p=0.85 is 2.3pp, so 0.35 sits ~21 SE below.
+    const wb = loadGameData().tuning._regressionBands!.topTeamWinRate
+    expect(m.topTeamShare, `n=${m.races} races`).toBeGreaterThan(wb[0])
+    expect(m.topTeamShare, `n=${m.races} races`).toBeLessThanOrEqual(wb[1])
   }, 300_000)
 
   // Every assertion here is checked against the tuning.json bands rather than
@@ -76,8 +78,8 @@ describe('Monte-Carlo regression', () => {
 
   // SKIPPED DELIBERATELY, not broken, and it WOULD FAIL if un-skipped today.
   // MODEL_SPEC.md §3 bands mechanical DNFs at 6-10% per car-race against a
-  // real-F1 figure of 9.8pp; this simulation measures 5.06% +- 0.32pp over 4,800
-  // car-races, which is 3.0 SE BELOW the 6% floor. tuning.json carries that same
+  // real-F1 figure of 9.8pp; this simulation measures 4.67% +- 0.12pp over 28,800
+  // car-races, which is 11 SE BELOW the 6% floor. tuning.json carries that same
   // unwidened 0.06 floor, so the premise holds against the data file as well as
   // against §3. The cause is §7's "the simulation has no chaos", so the owner is
   // the race-incidents plan, not the competitive-grid plan.
@@ -147,7 +149,7 @@ describe('Monte-Carlo regression', () => {
     expect(c, 'n=30 races per run').not.toEqual(a)
   }, 200_000)
 
-  it('regression bands in tuning.json match what the harness measures', () => {
+  it('regression bands in tuning.json are well-formed and within their MODEL_SPEC limits', () => {
     const bands = loadGameData().tuning._regressionBands
     // _regressionBands is .optional() by design (a repo without bands must still
     // load), so narrow before reading through it.

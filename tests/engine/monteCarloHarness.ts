@@ -18,14 +18,25 @@ export type Metrics = {
   topTeamShare: number
   distinctWinners: number
   meanAbsPosChange: number
+  // Naive SE: sqrt(var / (20 * races)), which treats car-races as independent.
+  // They are not -- finishing positions within a race are a permutation, so
+  // |dpos| values inside one race are negatively coupled and the true SE is
+  // somewhat wider. It is used only to size band margins that sit 20+ SE away,
+  // where the correction cannot change a verdict; do not quote it as a precise
+  // confidence interval.
   sePosChange: number
   gridFinishSpearman: number
   paceRankCorrelation: number
   meanOvertakeEvents: number
   minOvertakeEvents: number
+  // NOTE on convention: meanAbsPosChange and gridFinishSpearman are computed
+  // over the FULL classification including retirements, whereas MODEL_SPEC.md
+  // §3's real-F1 anchors (2.97 and 0.779) are the classified-finishers figures.
+  // Real F1's DNF-inclusive equivalents are 3.70 and 0.628, so this comparison
+  // is mildly conservative on |dpos| and mildly generous on rho.
   // Retirements with retiredCause === 'mechanical', per car-race. Banded in
   // tuning.json as mechanicalDnfPerCarRace; MODEL_SPEC.md §3 bands it 0.06-0.10
-  // against a real-F1 9.8pp, but the sim measures 5-6%, so that band is
+  // against a real-F1 9.8pp, but the sim measures 4.67% +- 0.12pp, so that band is
   // ASPIRATIONAL and owned by the race-incidents plan, not this one.
   mechanicalDnfPerCarRace: number
 }

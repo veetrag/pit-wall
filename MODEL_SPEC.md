@@ -57,7 +57,7 @@ be corrected or must update this document with an argument.
 | Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | **4.67%** ± 0.12 (n = 28,800 car-races) | **6 – 10%** | **Yes** — but not met; assertion skipped, see §4 |
 | Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | **1.00×** (circuits are identical) | **1.5 – 2.5×** | **Yes** |
 | Pit lane time loss | 19.7 – 23.8s (2,106 green-flag stops) | 22.0s | 19.5 – 24.0s | Yes |
-| Recorded overtake events | not computable — see §5 | 46.3 (pre-competitive-grid; not re-measured — see §5, not gateable) | — | **No — diagnostic only** |
+| Recorded overtake events | not computable — see §5 | 46.3 (pre-competitive-grid; the harness still measures and logs it, but §5 forbids gating it, so it was not re-measured for the record) | — | **No — diagnostic only** |
 
 **Two deliberate omissions.**
 
@@ -114,10 +114,12 @@ Each step must be met before the next begins. Do not weaken a gate that has alre
 **How the win-share gate is measured — this qualification is part of the band.** The figures above
 are **field-wide**: pooled over a multi-circuit sample at a single stated difficulty. They are
 **not** per-circuit-per-difficulty ceilings, and asserting them that way is invalid. An earlier
-version of this section stated `≤ 0.97` unconditionally, which is false as written: measured on the
-single-circuit fixture in `tests/engine/difficultyProfile.test.ts`, apex's win rate at **rookie is
-0.99** (n=100), while the same grid measured across a 4-circuit sample at pro is **0.921** ± 1.74pp
-(n=240, `tests/engine/monteCarloHarness.ts`). Single-circuit samples are systematically more
+version of this section stated `≤ 0.97` unconditionally, which is false as written: on the **old**
+grid, measured on a single-circuit fixture, apex's win rate at **rookie was 0.99** (n=100), while
+the same cars measured across a 4-circuit sample at pro were **0.921** ± 1.74pp (n=240,
+`tests/engine/monteCarloHarness.ts`). Both figures are pre-competitive-grid and are kept here only
+as the evidence for the qualification — the current values are in §3. Single-circuit samples are
+systematically more
 deterministic — one circuit means one lap count, one rain probability and one strategy pattern, so
 the disruption that lets a second team win is absent. Any test asserting a win-share band must
 therefore state its sample and difficulty, and must pool at least four circuits.

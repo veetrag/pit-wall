@@ -146,15 +146,18 @@ describe('M5: guardrail — field-balance regression bands hold on both difficul
   // Measured through the shared Monte-Carlo harness, not this file's
   // single-circuit fixture. MODEL_SPEC.md §4 requires a win-share band to be
   // measured FIELD-WIDE over a pooled multi-circuit sample at a stated
-  // difficulty: the same grid measures 0.99 at rookie on one circuit but
-  // 0.9417 across four, because one circuit means one lap count, one rain
-  // probability and one strategy pattern. Asserting the band on a one-circuit
-  // sample is a different, stricter, and false claim.
+  // difficulty: on the OLD grid the same cars measured 0.99 at rookie on one
+  // circuit but 0.9417 across four, because one circuit means one lap count, one
+  // rain probability and one strategy pattern. Asserting the band on a
+  // one-circuit sample is a different, stricter, and false claim. (Both figures
+  // are pre-competitive-grid, kept as the evidence for that qualification; the
+  // post-change four-circuit values are in the assertion comments below.)
   //
-  // The previous version of this test asserted only `>= topTeamWinRate[0]`,
-  // whose floor is 0.0, and (before removal) an overtake band that
-  // MODEL_SPEC.md §5 says cannot gate anything -- so it had no falsifiable
-  // assertion at all while being named a guardrail.
+  // The previous version of this test asserted only `>= topTeamWinRate[0]` on a
+  // floor of 0.0 -- unfailable -- and (before removal) an overtake band that
+  // MODEL_SPEC.md §5 says cannot gate anything, so it had no falsifiable
+  // assertion at all while being named a guardrail. The floor now carries
+  // MODEL_SPEC.md §3's real-F1-derived 0.35.
   it('rookie and pro both keep the field-wide win-share and distinct-winner bands', () => {
     const bands = loadGameData().tuning._regressionBands
     expect(bands).toBeDefined()
@@ -177,6 +180,14 @@ describe('M5: guardrail — field-balance regression bands hold on both difficul
       expect(m.topTeamShare, n).toBeGreaterThanOrEqual(band.topTeamWinRate[0])
       // Now >= 4 (competitive-grid stage); measured 7-8 at both difficulties.
       expect(m.distinctWinners, n).toBeGreaterThanOrEqual(band.minDistinctWinners)
+      // rho and |dpos| are asserted at pro in monteCarlo.test.ts; both are
+      // re-asserted here because ROOKIE is the tighter margin against the
+      // narrowed 0.60-0.80 ceiling (rookie 0.785 +- 0.005 vs pro 0.753), and an
+      // untested direction is where a regression hides.
+      expect(m.gridFinishSpearman, n).toBeGreaterThan(band.gridFinishSpearman[0])
+      expect(m.gridFinishSpearman, n).toBeLessThan(band.gridFinishSpearman[1])
+      expect(m.meanAbsPosChange, n).toBeGreaterThan(band.meanAbsPosChange[0])
+      expect(m.meanAbsPosChange, n).toBeLessThan(band.meanAbsPosChange[1])
       // Overtake counts stay a diagnostic only -- MODEL_SPEC.md §5.
     }
   }, 120_000)
