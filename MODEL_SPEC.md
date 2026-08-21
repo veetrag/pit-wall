@@ -48,16 +48,16 @@ bogus 38% DNF rate. Retirement causes are only computable for 2000–2022.
 These are the acceptance criteria. A change that moves a **gated** metric out of band must either
 be corrected or must update this document with an argument.
 
-| Metric | Real F1 | Sim at 2026-08-20 | Band | Gated? |
+| Metric | Real F1 | Sim at 2026-08-21 (post competitive-grid) | Band | Gated? |
 |---|---|---|---|---|
-| Mean \|grid − finish\| | **2.97** ± 0.04 classified (2011–25); 3.70 with DNFs | **1.88** | **2.5 – 4.0** (staged, §4) | **Yes — primary** |
-| Top-team win share | median **58.6%**; min 35.0% (2012); max 95.5% (2023) | **95.1%** ± 0.22 | **0.35 – 0.55** target; staged (§4) | **Yes** |
-| Distinct winners / season | median **3**, range 2–6 | **3** (2 with rain off) | **≥ 4** | **Yes** |
-| Grid↔finish Spearman ρ | **0.779** ± 0.009 classified; 0.628 with DNFs | **0.857** | **0.60 – 0.80** (staged, §4) | **Yes** |
-| Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | 5 – 6% | **6 – 10%** | **Yes** — but not met; assertion skipped, see §4 |
+| Mean \|grid − finish\| | **2.97** ± 0.04 classified (2011–25); 3.70 with DNFs | **2.859** ± 0.029 pro; 2.582 rookie | **2.5 – 4.0** (staged, §4) | **Yes — primary** |
+| Top-team win share | median **58.6%**; min 35.0% (2012); max 95.5% (2023) | **84.6%** ± 1.65 pro; 88.1% ± 1.48 rookie (all 12 circuits) | **0.35 – 0.55** target; staged (§4) | **Yes** |
+| Distinct winners / season | median **3**, range 2–6 | **7–8** | **≥ 4** | **Yes** |
+| Grid↔finish Spearman ρ | **0.779** ± 0.009 classified; 0.628 with DNFs | **0.753** ± 0.005 pro; 0.785 ± 0.005 rookie | **0.60 – 0.80** (staged, §4) | **Yes** |
+| Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | **4.67%** ± 0.12 (n = 28,800 car-races) | **6 – 10%** | **Yes** — but not met; assertion skipped, see §4 |
 | Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | **1.00×** (circuits are identical) | **1.5 – 2.5×** | **Yes** |
 | Pit lane time loss | 19.7 – 23.8s (2,106 green-flag stops) | 22.0s | 19.5 – 24.0s | Yes |
-| Recorded overtake events | not computable — see §5 | 46.3 | — | **No — diagnostic only** |
+| Recorded overtake events | not computable — see §5 | 46.3 (pre-competitive-grid; not re-measured — see §5, not gateable) | — | **No — diagnostic only** |
 
 **Two deliberate omissions.**
 
@@ -78,7 +78,7 @@ therefore tighten as the work lands. The values in `tuning.json._regressionBands
 | After | Top-team win share | Distinct winners | Mean \|grid−finish\| | Grid↔finish ρ |
 |---|---|---|---|---|
 | Pre-competitive-grid | ≤ 0.97 (behaviour then) | ≥ 2 | **1.75 – 4.0** | **0.78 – 0.90** |
-| The competitive-grid plan (landed) | **≤ 0.90** | **≥ 4** | 1.75 – 4.0 | **0.60 – 0.80** (the §3 target, reached early — see below) |
+| The competitive-grid plan (**landed, met**) | **≤ 0.90** — measured **0.846** pro / **0.881** rookie, 12 circuits | **≥ 4** — measured **7–8** | 1.75 – 4.0 — measured 2.859 / 2.582 | **0.60 – 0.80** (the §3 target, reached early — see below); measured **0.753** / **0.785** |
 | The race-incidents plan | **0.35 – 0.55** | ≥ 4 | **2.5 – 4.0** (the §3 target) | 0.60 – 0.80 |
 
 **Why \|Δpos\| and ρ were staged rather than simply banded at their §3 values.** Before the
@@ -106,8 +106,8 @@ genuine *regression* in churn pass CI while still violating this oracle, which i
 turns into no gate at all. A band may only ever be advanced to its §3 target, never past it.
 
 Not staged, and not to be widened: `minPaceRankCorrelation` (0.90, met) and
-`mechanicalDnfPerCarRace` (§3's 0.06–0.10, **not** met — the sim measures 5.06% ± 0.32pp, 3.0 SE
-below the floor). The DNF assertion is committed skipped, owned by the race-incidents plan.
+`mechanicalDnfPerCarRace` (§3's 0.06–0.10, **not** met — the sim measures **4.67% ± 0.12pp** pooled over 28,800
+car-races, 11 SE below the floor). The DNF assertion is committed skipped, owned by the race-incidents plan.
 
 Each step must be met before the next begins. Do not weaken a gate that has already been met.
 
@@ -184,6 +184,13 @@ raising `noise.sigmaPerSector` is not** — reaching the band that way needs 0.8
 ±2.4 s/lap of unexplained swing), which destroys legibility. And race length is the wrong lever in
 the wrong direction: a pace advantage grows as L while noise grows as √L, so *shorter* races are
 more deterministic.
+
+**Post-competitive-grid: the plateau held, and it is now the binding constraint.** The numbers
+in this section were measured on the old 1.482 s/lap spread; the competitive-grid change narrowed
+it to 0.674 s/lap and landed at **84.6%** (pro, 12 circuits) — consistent with the predicted 81.5%
+floor plus the residual driver spread this plan deliberately left alone. The table's shape is
+therefore unrevised and still correct: the remaining 0.846 → 0.35–0.55 distance is **not** reachable
+by any further `cars.json` edit, and belongs entirely to the race-incidents plan.
 
 ## 8. Dead data — fields with no consumer in `src/`
 

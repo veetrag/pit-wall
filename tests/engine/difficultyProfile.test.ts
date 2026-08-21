@@ -166,13 +166,16 @@ describe('M5: guardrail — field-balance regression bands hold on both difficul
       const n = `${difficulty}, n=${m.races} races over ${HARNESS_SAMPLE.length} circuits`
       console.log(`${n}: top=${m.topTeamId} share=${m.topTeamShare.toFixed(4)} ` +
         `winners=${m.distinctWinners} overtakes=${m.meanOvertakeEvents.toFixed(1)}`)
-      // Staged "today" ceiling of 0.97 (MODEL_SPEC.md §4). Measured rookie
-      // 0.9417 / pro 0.9208; SE at n=240 is ~1.5pp, so the tighter of the two
-      // margins (rookie) is ~1.9 SE. Thin but falsifiable, and fixed seeds make
-      // it deterministic. The competitive-grid plan tightens this to 0.90.
+      // Ceiling is now the competitive-grid stage's 0.90 (MODEL_SPEC.md §4), and
+      // this is the suite's tightest win-share gate: it asserts the level at BOTH
+      // difficulties. Post-grid measurements on this 4-circuit sample: rookie
+      // 0.7833-0.8792 over six seed bases, pro 0.8208-0.8583. Rookie is the
+      // tighter margin at ~1.4 SE from the ceiling (SE ~1.5pp at n=240); fixed
+      // seeds make it deterministic, so that margin is regression headroom, not
+      // flake risk. The race-incidents plan tightens this to 0.35-0.55.
       expect(m.topTeamShare, n).toBeLessThanOrEqual(band.topTeamWinRate[1])
       expect(m.topTeamShare, n).toBeGreaterThanOrEqual(band.topTeamWinRate[0])
-      // Staged >= 2; measured rookie 6 / pro 5. Tightens to 4 next.
+      // Now >= 4 (competitive-grid stage); measured 7-8 at both difficulties.
       expect(m.distinctWinners, n).toBeGreaterThanOrEqual(band.minDistinctWinners)
       // Overtake counts stay a diagnostic only -- MODEL_SPEC.md §5.
     }
