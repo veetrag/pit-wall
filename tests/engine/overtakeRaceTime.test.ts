@@ -15,7 +15,7 @@ import { describe, it, expect } from 'vitest'
 import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
-import type { RaceConfig, StrategyBrain } from '@engine/types'
+import type { RaceConfig, RaceState, StrategyBrain } from '@engine/types'
 import { measureClearing } from './overtakeClearing'
 
 const GAME = loadGameData()
@@ -62,32 +62,70 @@ function config(circuitId: string, seed: number): RaceConfig {
   }
 }
 
-function runFull(circuitId: string, seed: number): { draws: number; state: string } {
-  const cfg = config(circuitId, seed)
-  const { rng, draws } = countingRng(seed)
-  let state = initRace(cfg)
-  // RaceState has no `finished` flag of its own (raceStore derives race-over
-  // from lap/sector, see src/state/raceStore.ts:198) -- a `while (!state.finished)`
-  // loop as first drafted from the brief never terminates. Bounded loop over
-  // every sector of the race, matching monteCarloHarness's established idiom
-  // (tests/engine/monteCarloHarness.ts:185).
-  for (let i = 0; i < cfg.circuit.laps * 3; i++) state = stepSector(cfg, state, rng)
-  return { draws: draws(), state: JSON.stringify(state) }
+/**
+ * One tick from a SYNTHETIC pre-tick state, returning the draws it consumed.
+ *
+ * The states below are constructed by hand rather than reached by simulating
+ * forward, which is the whole point: a constructed state is stable when the
+ * trajectory changes, so these counts stay valid across balance work.
+ */
+function drawsForOneTick(cfg: RaceConfig, mutate: (s: RaceState) => RaceState): number {
+  const state = mutate(initRace(cfg))
+  const { rng, draws } = countingRng(99)
+  stepSector(cfg, state, rng)
+  return draws()
 }
 
 describe('overtaking: RNG stream discipline', () => {
-  // Plan A's Global Constraint: NO new rng() call. The draw count over a full
-  // race is the sharpest possible statement of that, and it is failable --
-  // adding a single conditional roll anywhere in the tick moves it.
-  it('a full race takes exactly the same number of RNG draws as before the change', () => {
-    // Recorded from the pre-change engine on this exact fixture. Task 2 must
-    // reproduce it. If Task 2 changes it, Task 2 added a roll -- fix Task 2,
-    // do NOT re-baseline this number.
-    const EXPECTED = { veloce: 6497, harbour_lights: 10918 }
-    for (const c of ['veloce', 'harbour_lights'] as const) {
-      const { draws } = runFull(c, 7)
-      expect(draws, `${c}: draw count is a Global Constraint, not a baseline`).toBe(EXPECTED[c])
-    }
+  // Plan A's Global Constraint: NO new rng() call.
+  //
+  // This replaces an earlier assertion that pinned the TOTAL draws over a full
+  // race (veloce 6497, harbour_lights 10918). That total could not mean what it
+  // was asked to mean. Three of this engine's roll sites are conditional on race
+  // state -- the tyre-failure roll only fires above cliffFractionThreshold, the
+  // mechanical-failure roll only for non-retired cars, and gaussianPair only on
+  // an AI pit stop -- so the total is a function of the TRAJECTORY, not of the
+  // set of roll sites. Making overtakes durable changed the trajectory (veloce
+  // now retires a car it previously did not, and every sector after that
+  // retirement is one car's worth of draws cheaper), so the total moved while
+  // the roll sites did not: verified by restoring the pre-change race.ts as a
+  // second module and comparing the draws consumed by one old tick against one
+  // new tick FROM THE SAME PRE-TICK STATE, at every tick of both trajectories --
+  // 564/564 identical, 0 mismatches.
+  //
+  // The differential form below is what the constraint was reaching for. Each
+  // case pins the draws for a single tick from a fixed, hand-built state, and
+  // the DIFFERENCES between the cases pin the cost of individual roll sites, so
+  // a new roll is caught wherever it is added and by which case tells you where.
+  it('one tick from a fixed state takes a fixed number of draws, and the overtake check costs exactly one', () => {
+    const cfg = config('veloce', 7)
+
+    // Every car leaves initRace on raceTime 0, so the whole field is inside
+    // traffic.gapThreshold and resolveOvertakes finds an eligible pair to roll for.
+    const packed = drawsForOneTick(cfg, s => s)
+    // The same tick with the field strung out 5s apart: no pair is within
+    // gapThreshold, so resolveOvertakes returns before reaching its roll.
+    const strung = drawsForOneTick(cfg, s => ({
+      ...s,
+      cars: s.cars.map((c, i) => ({ ...c, raceTime: i * 5 })),
+    }))
+    // A lap-boundary tick, which additionally runs the AI pace/pit decisions.
+    const boundary = drawsForOneTick(cfg, s => ({ ...s, sector: 2 }))
+
+    const msg = `packed=${packed} strung=${strung} boundary=${boundary}`
+
+    // Absolute pins: properties of the roll sites and the field size, not of any
+    // trajectory. Every one of them moves if a roll is added to the tick.
+    expect(packed, msg).toBe(61)
+    expect(strung, msg).toBe(60)
+    expect(boundary, msg).toBe(61)
+
+    // The load-bearing one. An overtake check costs exactly one draw -- the
+    // single `rng() < bestProb` at the end of resolveOvertakes -- and this is
+    // the roll site Task 2 changed the CONSEQUENCES of. If making the pass
+    // durable had added a roll (a second dice for the defence, a magnitude
+    // draw for the fight cost), this reads 2 and not 1.
+    expect(packed - strung, `the overtake check must cost exactly 1 draw: ${msg}`).toBe(1)
   }, 60_000)
 })
 

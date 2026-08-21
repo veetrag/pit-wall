@@ -1,7 +1,7 @@
-import { initRace, stepSector } from '@engine/index'
+import { initRace, stepSector, computeSectorTime } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
-import type { RaceConfig, StrategyBrain, CarState } from '@engine/types'
+import type { RaceConfig, StrategyBrain, CarState, SectorIndex } from '@engine/types'
 
 const GAME = loadGameData()
 
@@ -13,6 +13,27 @@ export interface ClearingOptions {
   advantage: number
   /** Give up after this many laps and record a failure. */
   patienceLaps?: number
+  /**
+   * Seconds the chaser starts BEHIND the leader. Must be non-zero: `initRace`
+   * gives every car `raceTime: 0`, so a zero gap does not start the chaser
+   * "directly behind the leader" (as this instrument's docstring long claimed)
+   * -- it starts them dead level, and the traffic penalty then falls on
+   * whichever car the first sector's noise happens to put second. Measured, a
+   * level start makes the whole result a coin flip decided in the opening
+   * sector: the easy-vs-hard failure-rate difference is 0.017, and even with
+   * overtaking made outright IMPOSSIBLE the ceiling is 0.033. Nothing about
+   * being stuck is observable. Starting 0.3s back instead yields 0.500 with a
+   * 0.700 ceiling.
+   *
+   * Default 0.3 is derived, not fitted: per-sector gap noise between these two
+   * cars has sd 0.070s (sigmaPerSector 0.08, relieved by d_voss's consistency
+   * 95), so 0.3s is 4.3 sigma -- noise alone cannot flip the order in the
+   * opening sector -- while staying inside traffic.gapThreshold (1.0s), so the
+   * pair begins in the traffic-penalty and overtake-eligible zone that is the
+   * whole subject of the measurement. It is also not knife-edge: 0.5s gives
+   * 0.517 and 0.8s gives 0.683.
+   */
+  startGap?: number
 }
 
 export interface ClearingResult {
@@ -44,26 +65,96 @@ export function measureClearing(opts: ClearingOptions): ClearingResult {
   // patienceLaps whose zero-advantage failure rate still exceeds 0.8 (see
   // task-1-report.md for the full sweep at 10/15/20/25 -- 20 sits exactly at
   // the 0.8 boundary, not above it, so 15 is the largest that clears it).
-  const { circuitId, seeds, advantage, patienceLaps = 15 } = opts
+  const { circuitId, seeds, advantage, patienceLaps = 15, startGap = 0.3 } = opts
   const circuit = GAME.circuits[circuitId]
   if (!circuit) throw new Error(`unknown circuit ${circuitId}`)
 
-  // Two identical cars. The chaser's handling facet is raised so it is exactly
-  // `advantage` s/lap faster: from lapModel, one facet point on `handling` is
-  // worth (9/100) * deltaPerRating * sectorSplit[2] * 3 s/lap.
+  // Two identical cars, the chaser exactly `advantage` s/lap faster -- spread
+  // UNIFORMLY across the lap, one third of it in each sector.
+  //
+  // This must be spread, not injected into one facet. lapModel.ts:27 picks the
+  // car's governing facet per sector -- `[power, aero, handling][sector]` -- so
+  // raising `handling` alone (as this instrument originally did, despite its
+  // docstring claiming the opposite) gave the chaser its whole advantage in
+  // sector 3 and nothing in sectors 1 and 2. A traced trial showed exactly
+  // that: +0.37s per S3, +-0.02s per S1/S2. That is a fundamentally different
+  // physical thing from being faster everywhere, and it broke the measurement
+  // in two ways: no per-sector traffic penalty can resist a single-sector
+  // burst that large, and on Harbour Lights the burst landed in the sector
+  // with the LOWEST overtakingFactor, so the chaser cleared by pace in the
+  // one place it should have been most stuck.
+  //
+  // A facet point is worth a different amount in each sector, because
+  // carPerformance.sectorSplit differs, so each facet's points are computed
+  // independently to make all three sector contributions equal.
   const { deltaPerRating, sectorSplit } = GAME.tuning.carPerformance
-  const perPoint = (9 / 100) * deltaPerRating * sectorSplit[2]! * 3
+  const perSector = advantage / 3
+  const pointsFor = (sector: 0 | 1 | 2): number =>
+    perSector / ((9 / 100) * deltaPerRating * sectorSplit[sector]! * 3)
   const baseTeam = GAME.cars.teams[0]!
   const baseDriver = GAME.drivers.drivers[0]!
 
   const teams = [
     { ...baseTeam, id: 'leader' },
-    { ...baseTeam, id: 'chaser', facets: { ...baseTeam.facets, handling: baseTeam.facets.handling + advantage / perPoint } },
+    {
+      ...baseTeam,
+      id: 'chaser',
+      facets: {
+        ...baseTeam.facets,
+        power: baseTeam.facets.power + pointsFor(0),
+        aero: baseTeam.facets.aero + pointsFor(1),
+        handling: baseTeam.facets.handling + pointsFor(2),
+      },
+    },
   ]
   const drivers = [
     { ...baseDriver, id: 'lead_d', teamId: 'leader' },
     { ...baseDriver, id: 'chase_d', teamId: 'chaser' },
   ]
+
+  // Drift guard: verify THROUGH THE ENGINE that the injection really is
+  // `advantage` s/lap, spread evenly. This deliberately does not re-derive the
+  // facet arithmetic (that would be a tautology -- it would only restate
+  // pointsFor). It calls the real computeSectorTime with noise switched off and
+  // measures the leader-minus-chaser delta the lap model actually produces. It
+  // therefore fails if lapModel's facet-to-sector mapping, sectorSplit, or
+  // deltaPerRating ever change under this instrument -- which is exactly the
+  // silent drift that made the original single-facet injection wrong for as
+  // long as it was.
+  {
+    const silent: RaceConfig = {
+      circuit, tuning: { ...GAME.tuning, noise: { ...GAME.tuning.noise, sigmaPerSector: 0 } },
+      compounds: GAME.compounds, drivers, teams,
+      strategies: [], playerDriverId: '__none__', seed: 1,
+      tyreAllocationBase: GAME.tuning.tyreRules.allocation.pro,
+      mandatoryTwoCompound: false,
+      coverReactionScale: GAME.tuning.difficultyProfiles.pro.coverReactionScale,
+      paceModeAggression: GAME.tuning.difficultyProfiles.pro.aiPaceModeAggression,
+    }
+    const probe = (driverId: string, teamId: string, sector: SectorIndex): number => {
+      const car = { ...initRace({ ...silent, strategies: [] }).cars[0]!, driverId, teamId }
+      return computeSectorTime(silent, car, sector, createRng(1), 'DRY').sectorTime
+    }
+    const perSectorDelta = ([0, 1, 2] as SectorIndex[]).map(
+      sec => probe('lead_d', 'leader', sec) - probe('chase_d', 'chaser', sec),
+    )
+    const total = perSectorDelta.reduce((a, b) => a + b, 0)
+    if (Math.abs(total - advantage) > 1e-6) {
+      throw new Error(
+        `measureClearing injection drifted: engine reports ${total.toFixed(6)} s/lap, ` +
+        `asked for ${advantage.toFixed(6)} (per sector ${perSectorDelta.map(d => d.toFixed(4)).join(', ')})`,
+      )
+    }
+    for (const d of perSectorDelta) {
+      if (Math.abs(d - advantage / 3) > 1e-6) {
+        throw new Error(
+          `measureClearing injection is not uniform across sectors: ` +
+          `${perSectorDelta.map(x => x.toFixed(4)).join(', ')} (each must be ${(advantage / 3).toFixed(4)}). ` +
+          'A single-sector burst is a different physical thing and cannot be resisted by a per-sector penalty.',
+        )
+      }
+    }
+  }
 
   const clearedLaps: number[] = []
   let failures = 0
@@ -86,6 +177,14 @@ export function measureClearing(opts: ClearingOptions): ClearingResult {
     }
     const rng = createRng(seed)
     let state = initRace(cfg)
+    // Put the chaser startGap seconds back. See ClearingOptions.startGap: every
+    // car leaves initRace on raceTime 0, so without this the two start level
+    // and the measurement is decided by opening-sector noise.
+    state = {
+      ...state,
+      cars: state.cars.map((c: CarState) =>
+        c.driverId === 'chase_d' ? { ...c, raceTime: c.raceTime + startGap } : c),
+    }
     const startLap = state.lap
     let cleared = false
 
