@@ -65,6 +65,18 @@ export function measureClearing(opts: ClearingOptions): ClearingResult {
   // patienceLaps whose zero-advantage failure rate still exceeds 0.8 (see
   // task-1-report.md for the full sweep at 10/15/20/25 -- 20 sits exactly at
   // the 0.8 boundary, not above it, so 15 is the largest that clears it).
+  // startGap = 0.3 is derived, not fitted. initRace puts every car on
+  // raceTime 0, so a zero gap starts the pair DEAD LEVEL and the traffic
+  // penalty falls on whichever car opening-sector noise puts second -- the
+  // measurement becomes a coin flip settled in the first sector or two
+  // (easy-vs-hard difference 0.017, and a ceiling of 0.033 even with
+  // overtaking made outright impossible). 0.3s is 4.3 sigma of the per-sector
+  // gap noise between these two cars (sd 0.070s: sigmaPerSector 0.08 relieved
+  // by d_voss's consistency 95), so noise alone cannot flip the order in the
+  // opening sector, while staying inside traffic.gapThreshold (1.0s) so the
+  // pair begins inside the penalty-and-overtake-eligible zone that is the
+  // whole subject of the measurement. Not knife-edge: 0.3 -> 0.500, 0.5 ->
+  // 0.517, 0.8 -> 0.683, all consistent. Full derivation in ClearingOptions.
   const { circuitId, seeds, advantage, patienceLaps = 15, startGap = 0.3 } = opts
   const circuit = GAME.circuits[circuitId]
   if (!circuit) throw new Error(`unknown circuit ${circuitId}`)

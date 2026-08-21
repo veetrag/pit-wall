@@ -194,6 +194,41 @@ floor plus the residual driver spread this plan deliberately left alone. The tab
 therefore unrevised and still correct: the remaining 0.846 → 0.35–0.55 distance is **not** reachable
 by any further `cars.json` edit, and belongs entirely to the race-incidents plan.
 
+**The circuit traffic penalty inflates on easy circuits without ever binding — and that is the
+resolution, not a defect to tune away.** The layer-2 traffic penalty is scaled per circuit and
+per sector by `traffic.hardCircuitScale / max(circuit.overtakingFactor[sector], overtaking.factorFloor)`,
+which is what gives track position defensive value: a hard circuit holds a follower up *harder*,
+not merely for longer. Scaling only the *cap* does nothing — `traffic.penalty / 3` is 5–20× smaller
+than `paceAdv * effectiveCap` at the advantages that matter, so `Math.min` always returned the flat
+penalty and the cap never applied.
+
+The measured limitation: **no value of `hardCircuitScale` both differentiates circuits and holds
+Veloce near its original 0.040 s/sector.** Differentiation needs ≥2.0; Veloce stays within ~15% of
+0.040 only at ≤0.7, where the easy-vs-hard failure-rate difference is 0.000. At the shipped 2.5,
+Veloce's per-sector penalty runs 1.9× / 4.2× / 3.6× its old flat value.
+
+That reads alarming and is not, because the behaviour is right even though the constant inflates:
+
+| `hardCircuitScale` | 1.0 | 1.5 | 2.0 | **2.5** | 3.0 | 4.0 |
+|---|---|---|---|---|---|---|
+| Veloce failure rate | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 |
+| Harbour Lights failure rate | 0.000 | 0.050 | 0.317 | **0.500** | 0.500 | 0.500 |
+
+**Veloce's failure rate is 0.000 at every scale tested, including 4.0** — the easy circuit never
+actually blocks anybody. `paceAdv * effectiveCap` caps the penalty where the pace advantage is
+real, so on an easy circuit the larger raw number never binds; it only binds where
+`overtakingFactor` is low, which is precisely where it should. The absolute constant is therefore
+the wrong thing to read: **judge this mechanism by failure rate per circuit, not by
+seconds-per-sector.** 2.5 is chosen because the effect saturates there (3.0 and 4.0 buy nothing)
+and it clears the differentiation bar by 3.8 SE, where 2.0 clears it by only 1.1 SE.
+
+Two corollaries for anyone tuning this. Raising `traffic.penalty` is **not** the equivalent lever —
+it lifts every circuit together and leaves the differentiation flat. And the measurement itself is
+only trustworthy with a non-zero start gap and an advantage spread evenly across all three sectors:
+`initRace` puts every car on `raceTime` 0, and `lapModel` gives each sector a single governing car
+facet, so a level start or a single-facet advantage measures opening-sector noise rather than
+overtaking (both produced a ceiling of 0.033 or less, *below* the bar being asserted).
+
 ## 8. Dead data — fields with no consumer in `src/`
 
 Nine fields are validated, authored with plausible per-circuit values, and read by nothing. They

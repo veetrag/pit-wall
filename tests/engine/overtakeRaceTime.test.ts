@@ -137,8 +137,16 @@ describe('overtaking: the clearing instrument is trustworthy', () => {
     expect(r.failureRate, `n=${r.trials}, SE=${r.seFailureRate.toFixed(3)}`).toBeGreaterThan(0.8)
   }, 120_000)
 
+  // 0.8 s/lap, not the 2.0 this bracket originally used. Once measureClearing
+  // was fixed to spread the advantage evenly across the lap (it used to dump it
+  // all into sector 3), 2.0 s/lap became ~0.67 s per sector -- enough to open
+  // clear air inside the FIRST lap, so the bracket cleared in 0 laps and had
+  // stopped exercising the multi-lap behaviour it exists to test. 0.8 s/lap is
+  // still overwhelming against the 0.3s start gap and the traffic penalty, but
+  // takes a few laps to convert, so the median-laps assertion below is once
+  // again measuring something.
   it('a car with an overwhelming advantage clears quickly', () => {
-    const r = measureClearing({ circuitId: 'veloce', seeds: SEEDS, advantage: 2.0 })
+    const r = measureClearing({ circuitId: 'veloce', seeds: SEEDS, advantage: 0.8 })
     expect(r.failureRate, `n=${r.trials}, SE=${r.seFailureRate.toFixed(3)}`).toBeLessThan(0.1)
     expect(r.medianLapsToClear, `n=${r.trials}`).toBeLessThan(4)
   }, 120_000)
