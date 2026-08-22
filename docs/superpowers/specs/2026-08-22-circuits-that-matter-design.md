@@ -137,13 +137,28 @@ reporting a real behavioural change, not a stream artefact. **This is a strong i
 `lapModel.ts` replaces the global `sectorSplit` with the circuit's per-sector sensitivity, used
 **raw** per §3. Both are already `[number, number, number]` per circuit.
 
-Because the sums differ (0.83–1.00), the *total* car and driver spread becomes circuit-dependent.
-Expected and intended. Consequences to measure rather than assume:
+Because the sums differ, the *total* car and driver spread becomes circuit-dependent. Expected and
+intended.
 
-- Win share becomes circuit-dependent — high-sensitivity circuits favour Apex, low-sensitivity ones
-  compress the field.
-- The field-wide figure is a **weighted mean across the 12**, so it may move from 84.6% in either
-  direction. Any move must be reported, and the bands re-measured across all 12 circuits.
+**Measured 2026-08-23, replacing this section's predictions.** First a correction to the sums quoted
+here: they are **not** 0.83–1.00. No circuit sums to 0.83, and the true ranges are `carSensitivity`
+**0.78–1.05** and `driverSensitivity` **1.00–1.36**. The prediction was wrong on both ends; it does
+not change the raw-values ruling in §3, and if anything strengthens it, since the real spread is
+wider than the one the ruling was made against.
+
+- Win share did become circuit-dependent, and more sharply than "favours Apex" anticipated. Apex
+  (aero 95, power 92) and Meridian (power 98, aero 91) are one facet point apart and differ only in
+  *where* the strength sits, so once circuits weighted power, aero and handling differently, which of
+  the two wins became a property of the circuit. **Meridian owns Veloce outright at 69.5%**; Kaido is
+  Vortex's best circuit at 31.5%. Apex still leads the calendar by **+25.1pp ± 2.9** and wins 11 of
+  the 12 singly.
+- The field-wide figure moved **down**: top-team win share is **56.67% / 59.17%** pro over all 12 at
+  n=720 (two seed bases), against 65.0% before. Every other band held — distinct winners 7,
+  `paceRankCorrelation` unmoved at 0.9636 pro / 0.9152 rookie, |Δpos| 2.84–2.86 pro, ρ 0.750–0.756
+  pro. **No band was widened**; the full re-measurement is `MODEL_SPEC.md` §3 and §4.
+- One consequence not predicted here: the Monte-Carlo gate's team-identity assertion had to move from
+  a 4-circuit sample to the whole calendar, because the sample contains Veloce and at n=240 the
+  Apex–Meridian margin was 1.3 SE — the gate was measuring sampling power, not the grid.
 
 ### 5.2 `pitLaneTimeLoss`
 
@@ -157,12 +172,46 @@ below 19.7s. The band's measurement must therefore be redefined as the **field-w
 12 circuits** (which is 21.0, inside the band), and `MODEL_SPEC.md` §3 updated to say so
 explicitly. This is a clarification of what the band measures, not a loosening of it.
 
+**Done as specified, 2026-08-23.** The calendar mean is **exactly 21.00s**, inside 19.5–24.0. One
+correction to the count above: **three** circuits fall below the floor, not two — Veloce 18.0,
+Harbour Lights 19.0 and **Altiplano 19.0**. Neither the data nor the band's endpoints changed. A
+spread gate (max − min ≥ 4.0s) sits beside the mean so the calendar cannot be quietly flattened back
+toward a single value, which is the failure mode the mean alone would not catch. The wiring turned out
+to need **five** call sites, not the four this spec assumed: `race.ts`, `projection.ts`,
+`raceStore.ts` (×2) and `PitTimer.tsx`.
+
 ### 5.3 The differentiation proof
 
 The test that matters: **Aurora and Kaido must no longer be bit-identical.** Today they are, over
 400 seeds. Assert they diverge, and assert the per-circuit |Δpos| ratio (max/min across the 12)
 lands in §3's **1.5–2.5×**. That ratio is the single number that says circuits matter, and it is
 currently exactly 1.00×.
+
+**Measured 2026-08-23. The divergence landed; the ratio target did not.**
+
+The divergence is proved, and it needed more care than this section assumed. Aurora and Kaido are
+both `showery`, and `rainProbability: 0` does **not** force dry weather — `weather.ts:28` rolls
+DRY→DAMP every lap off `weatherBias`, independently of the rain gate — so that pair read a clean 0 and
+concealed a confounder. Four circuit fields have to be held equal for a differentiation test to be
+failable at all (`overtakingFactor`, `sectorBase`, `weatherBias`, `pitLaneTimeLoss`), each with a
+measured pre-wiring flip count; the headline pair is now harbour_lights vs grand_savane with the bias
+pinned. Aurora/Kaido are kept for continuity with the oracle's §8.
+
+The ratio reached **1.377 ± 0.030** — up from exactly 1.00×, so roughly 70% of the distance to the
+band, but **4.1 SE below the 1.5 floor. The target is unmet, and is recorded unmet rather than
+tuned away**, per §7's report-don't-edit rule: the calendar data is the owner's. Two structural
+causes, both owner decisions to change:
+
+1. The sensitivity spread is narrow by construction — a ~35% spread in the weight cannot produce a
+   150% spread in the outcome.
+2. `overtaking.factorFloor` (0.35) clips `overtakingFactor` in 2 of 3 sectors at precisely
+   harbour_lights and kaido, the two circuits at the **top** of the range, so the ceiling of the
+   ratio is held down by a balance constant the owner elected to keep.
+
+The shipped gate is a **fixed pair** (harbour_lights ÷ grand_savane > 1.15, measured 1.2968 ± 0.0451
+pro), not the max/min this section proposed: a max-over-12 is an extremum whose endpoints changed
+identity across seed bases, and gating one would repeat a defect this project has already removed
+once.
 
 ## 6. Testing
 

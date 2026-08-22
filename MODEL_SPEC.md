@@ -51,16 +51,16 @@ bogus 38% DNF rate. Retirement causes are only computable for 2000–2022.
 These are the acceptance criteria. A change that moves a **gated** metric out of band must either
 be corrected or must update this document with an argument.
 
-| Metric | Real F1 | Sim at 2026-08-22 (post overtaking-race-time) | Band | Gated? |
+| Metric | Real F1 | Sim at 2026-08-23 (post circuit-sensitivity) | Band | Gated? |
 |---|---|---|---|---|
-| Mean \|grid − finish\| | **2.97** ± 0.04 classified (2011–25); 3.70 with DNFs | **2.9896** ± 0.043 pro / 2.7671 ± 0.041 rookie (4-circuit gated sample, n=240); **2.8140** ± 0.029 pro / 2.5812 ± 0.028 rookie (all 12 circuits) | **2.5 – 4.0** — the §3 target, **advanced** §4 | **Yes — primary** |
-| Top-team win share | median **58.6%**; min 35.0% (2012); max 95.5% (2023) | **57.9%** ± 3.2 pro / 60.8% ± 3.2 rookie (4-circuit gated sample, n=240); **65.0%** ± 2.2 pro / 71.9% ± 2.1 rookie (all 12 circuits) | **0.35 – 0.55** target; staged at **≤ 0.90** (§4) | **Yes** |
-| Distinct winners / season | median **3**, range 2–6 | **8** pro / 7 rookie (4-circuit, n=240); **7** both difficulties (all 12) | **≥ 4** | **Yes** |
-| Grid↔finish Spearman ρ | **0.779** ± 0.009 classified; 0.628 with DNFs | **0.7336** pro / 0.7617 rookie (4-circuit, n=240); **0.7579** pro / 0.7862 rookie (all 12) | **0.60 – 0.80** (the §3 target, reached early — §4) | **Yes** |
-| Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | **5.33%** pro / 5.56% rookie (4-circuit, n=240); **4.73%** / 4.99% (all 12). Historical pooled figure **4.67%** ± 0.12 (n = 28,800 car-races) | **6 – 10%** | **Yes** — but not met; assertion skipped, see §4 |
-| Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | no longer 1.00× — circuits are no longer identical (§8), but this ratio was not re-measured by the overtaking work; the differentiation that *was* measured is the per-circuit clearing-failure rate in §9 | **1.5 – 2.5×** | **No — not currently asserted.** No test in the suite computes this ratio; `monteCarloHarness` does not break \|Δpos\| out per circuit. Owned by `docs/superpowers/plans/2026-08-22-circuit-sensitivity-wiring.md`, which is to measure it and add the gate. It was previously marked "Yes" here with no assertion anywhere — a row claiming a gate that does not exist is worse than an ungated row |
-| Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9636** pro / 0.9152 rookie (4-circuit, n=240); 0.9636 / 0.9152–0.9394 (all 12) | **≥ 0.90** — final, never to be widened | **Yes** |
-| Pit lane time loss | 19.7 – 23.8s (2,106 green-flag stops) | 22.0s | 19.5 – 24.0s | Yes |
+| Mean \|grid − finish\| | **2.97** ± 0.04 classified (2011–25); 3.70 with DNFs | all 12 circuits, n=720, two seed bases: **2.8633 / 2.8371** ± 0.024 pro, **2.6183 / 2.5814** ± 0.023 rookie | **2.5 – 4.0** — the §3 target, **advanced** §4 | **Yes — primary** |
+| Top-team win share | median **58.6%**; min 35.0% (2012); max 95.5% (2023) | all 12, n=720, two seed bases: **56.67% / 59.17%** pro, **64.17% / 60.00%** rookie (SE 1.8pp). Was 65.0% pro before the sensitivities were wired | **0.35 – 0.55** target; staged at **≤ 0.90** (§4). Pro now sits ~2–4pp above the *final* 0.55 ceiling; closing that remains the **race-incidents plan's** job | **Yes** |
+| Distinct winners / season | median **3**, range 2–6 | **7** on all four all-12 n=720 samples, both difficulties | **≥ 4** | **Yes** |
+| Grid↔finish Spearman ρ | **0.779** ± 0.009 classified; 0.628 with DNFs | all 12, n=720: **0.7495 / 0.7557** pro, **0.7773 / 0.7874** rookie | **0.60 – 0.80** (the §3 target, reached early — §4) | **Yes** — but **watch the ceiling**: rookie's 0.7874 leaves 0.0126 of headroom against an observed between-sample spread of 0.010. Anything that further rewards grid position will breach 0.80 on rookie first |
+| Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | all 12, n=720: **4.51% / 4.86%** pro, **5.06% / 4.72%** rookie. Historical pooled figure **4.67%** ± 0.12 (n = 28,800 car-races) — unmoved by this plan | **6 – 10%** | **Yes** — but not met; assertion skipped, see §4 |
+| Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | **max/min 1.377 ± 0.030** over the 12 at pro, n=200 each — up from exactly **1.00×** before the circuit-sensitivity plan, and **4.1 SE below the 1.5 floor**. Per-circuit, sorted: grand_savane 2.591, altiplano 2.639, sol_desert 2.651, veloce 2.718, silverpark 2.744, highland 2.815, costa_verde 2.835, aurora 2.897, monsoon_bay 3.033, bengaluru 3.045, kaido 3.455, harbour_lights 3.568 | **1.5 – 2.5×** — **NOT MET** | **Yes**, but on a *fixed pair*, not on max/min. `tests/engine/circuitDifferentiation.test.ts` gates harbour_lights ÷ grand_savane at **> 1.15** (measured 1.2968 ± 0.0451 pro, 1.3786 ± 0.0816 rookie, over six n=120 seed bases). A max-over-12 is an extremum — biased upward, and its endpoints changed identity across seed bases — so gating it would repeat the `worst`-based defect removed from `mechanicalFailure`. The 1.5 target is committed **unmet and un-weakened**; the two structural causes are recorded in that test and in §7 |
+| Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9636** pro / **0.9152** rookie, identical on both all-12 n=720 seed bases. Unmoved by the sensitivity wiring, which is the reassuring result: compressing the car spread per circuit did **not** push results toward randomness | **≥ 0.90** — final, never to be widened | **Yes** |
+| Pit lane time loss, **calendar mean** | 19.7 – 23.8s (2,106 green-flag stops) — a population mean **across circuits** | **21.00s** exactly; per-circuit range **18.0 – 24.0s**, with three members below the band floor: veloce 18.0, harbour_lights 19.0, altiplano 19.0 | 19.5 – 24.0s, **on the mean** | **Yes.** The metric is the mean across the calendar, because that is the quantity the real-world figure was always derived from — real pit lanes do vary below 19.7s, and a per-circuit reading was never what the band measured. **This is a clarification of the metric, not a loosening of the band: both endpoints are untouched.** It is not precedent for widening a band to fit data — widening 19.5 to 18.0 would have been that, and was rejected. A spread gate (≥ 4.0s) sits beside it so the calendar cannot be flattened back |
 | Recorded overtake events | not computable — see §5 | **33.3** pro / 33.1 rookie (4-circuit, n=240); 36.7 / 36.8 (all 12). Was 46.3 before overtaking became durable. §5 forbids gating it; it is a **calibration anchor only** | — | **No — diagnostic only** |
 | Clearing failure rate, hardest circuit (Harbour Lights, 0.4 s/lap adv) | no published data (§6) | **0.450** ± 0.045 (n=120); 0.550 ± 0.045 on a disjoint seed stream | design target **0.60 – 0.75** (spec §6.1) — **not met**; gated at **> 0.30** | **Yes**, at the reduced bar; the real target is committed **skipped** |
 | Clearing failure rate, median circuit | no published data (§6) | **0.008** ± 0.008 (n=120) | design target **0.15 – 0.25** (spec §6.1) — **not met**, and not reachable by any constant (§7) | **No** — committed skipped |
@@ -88,6 +88,7 @@ therefore tighten as the work lands. The values in `tuning.json._regressionBands
 | Pre-competitive-grid | ≤ 0.97 (behaviour then) | ≥ 2 | **1.75 – 4.0** | **0.78 – 0.90** |
 | The competitive-grid plan (**landed, met**) | **≤ 0.90** — measured **0.846** pro / **0.881** rookie, 12 circuits | **≥ 4** — measured **7–8** | 1.75 – 4.0 — measured 2.859 / 2.582 | **0.60 – 0.80** (the §3 target, reached early — see below); measured **0.753** / **0.785** |
 | The overtaking-race-time plan (**landed, met**) | ≤ 0.90 — measured **0.579** (4-circuit, n=240) / **0.650** (all 12), pro | ≥ 4 — measured **8** / 7 | **2.5 – 4.0** — **advanced to the §3 target** on measurement; 2.9896 ± 0.043 gated sample, 8 SE over the floor | 0.60 – 0.80 — measured **0.734** / 0.758 |
+| The circuit-sensitivity plan (**landed, met**) | ≤ 0.90 — measured **0.567 / 0.592** pro, **0.642 / 0.600** rookie (all 12, n=720) | ≥ 4 — measured **7**, both difficulties | 2.5 – 4.0 (already advanced) — measured **2.863 / 2.837** pro, **2.618 / 2.581** rookie | 0.60 – 0.80 — measured **0.750 / 0.756** pro, **0.777 / 0.787** rookie |
 | The race-incidents plan | **0.35 – 0.55** | ≥ 4 | 2.5 – 4.0 (already advanced) | 0.60 – 0.80 |
 
 **Why \|Δpos\| and ρ were staged rather than simply banded at their §3 values.** Before the
@@ -116,6 +117,16 @@ to the target and not past it, per the rule below; and **rookie over all 12 circ
 2.5812 ± 0.028**, only 2.9 naive SE above the floor, so a future rookie assertion must
 re-measure rather than inherit this band — `monteCarloHarness`'s SE is known to understate
 (positions within a race are a permutation, so they are negatively coupled).
+
+**That rookie caveat has since improved, and no band moved (2026-08-23, circuit-sensitivity plan).**
+Re-measured over all 12 circuits at n=720 on two seed bases: pro **2.8633 / 2.8371** ± 0.024, rookie
+**2.6183 / 2.5814** ± 0.023. Rookie's margin over the 2.5 floor is therefore now **3.6 SE** at its
+worst sample, up from 2.9. No band was advanced by this plan, and none needed to be: `meanAbsPosChange`
+and `gridFinishSpearman` were already at their §3 targets, `minPaceRankCorrelation` and
+`mechanicalDnfPerCarRace` are final, and `topTeamWinRate`'s remaining step — the 0.55 ceiling — stays
+with the race-incidents plan, since pro measures 0.567–0.592 and is still 2–4pp above it. **Nothing
+was widened to accommodate a measurement**, which was the live risk in a plan whose whole effect is to
+change how much the car matters.
 
 Beyond these two, the staged bands **must not be loosened**: a \|Δpos\| floor of 1.5 would let a
 genuine *regression* in churn pass CI while still violating this oracle, which is how a staged gate
@@ -429,11 +440,8 @@ at n=240, the Apex–Meridian margin is ~6 pp against an SE on the difference of
 was measuring sampling power rather than the grid. The reasoning is recorded in full in
 `tests/engine/monteCarlo.test.ts`.
 
-> **§3's "Sim at" column is stale as of this section.** Its all-12 top-team figure reads 65.0 %,
-> measured *before* these three fields were wired; the 56.5–59.2 % above supersedes it. The full
-> re-measurement across every gated metric and both difficulties is the circuit-sensitivity plan's
-> final task and had not run when this was written. Trust this section's numbers over §3's until
-> §3 carries a date later than 2026-08-23.
+§3's "Sim at" column and §4's staging table were both re-measured against this wiring on
+2026-08-23 and agree with the figures above.
 
 ### Still dead — five fields
 
