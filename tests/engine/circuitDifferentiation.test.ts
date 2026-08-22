@@ -57,14 +57,30 @@ function raceFingerprint(circuit: CircuitSpec, seed: number): string {
 /**
  * A circuit with everything that is NOT sensitivity neutralised.
  *
- * `rainProbability: 0` is not sufficient on its own to force dry weather, and
- * this was measured, not assumed: generateWeatherTimeline (weather.ts:28) rolls
- * DRY -> DAMP every lap at `intensityBias[weatherBias] / minDuration`, so a
- * `showery` circuit (bias 0.30) and a `stable` one (0.05) diverge even with the
- * rain roll disabled. harbour_lights is showery and grand_savane is stable, so
- * without pinning the bias the headline test below passed before the wiring --
- * on weather, not on sensitivity. Pinning both makes the weather timeline
- * bit-identical across circuits at a given seed.
+ * FOUR circuit fields can make two circuits race differently for reasons that
+ * have nothing to do with sensitivity. All four must be controlled, or a
+ * differentiation test passes without the sensitivity wiring doing anything.
+ * Each was measured on seeds 1-5 BEFORE the wiring, not assumed:
+ *
+ *   overtakingFactor  flips 5 of 5 on its own (race.ts:183 and :316)
+ *   sectorBase        flips 3 of 5 on its own (lapModel.ts:20)
+ *   weatherBias       flips seeds on its own -- see below
+ *   pitLaneTimeLoss   flips 0 -- still dead, and owned by Task 2
+ *
+ * The first, second and fourth are held equal in `seedsDiffering`, since they
+ * are wired features of the circuit under test. The third is neutralised here,
+ * since it is a measurement control.
+ *
+ * `rainProbability: 0` IS NOT SUFFICIENT to force dry weather, which is the
+ * trap. generateWeatherTimeline (src/engine/weather.ts:28) rolls DRY -> DAMP
+ * every lap at `intensityBias[weatherBias] / minDuration`, entirely
+ * independently of the rain roll that rainProbability gates. So a `showery`
+ * circuit (bias 0.30) and a `stable` one (0.05) still diverge with rain
+ * "off" -- harbour_lights is showery and grand_savane is stable, and that alone
+ * made the headline test below pass before the wiring existed. Pinning the bias
+ * as well makes the weather timeline bit-identical across circuits at a given
+ * seed. Aurora and Kaido are both showery, which is why that pair read a clean
+ * 0 and hid this.
  */
 function prepare(circuitId: string, overrides: Partial<CircuitSpec> = {}): CircuitSpec {
   return {
@@ -90,7 +106,8 @@ function prepare(circuitId: string, overrides: Partial<CircuitSpec> = {}): Circu
  *   - `sectorBase` (wired at lapModel.ts:20, and always was) flips 3 on its own.
  *   - `pitLaneTimeLoss` flips 0 -- still dead, and owned by Task 2.
  *   - `weatherBias` flips seeds too, even at rainProbability 0. Neutralised in
- *     `prepare` rather than here, since it is a control, not a wired feature.
+ *     `prepare` rather than here, since it is a control, not a wired feature --
+ *     see that docstring, which is the authority on all four confounders.
  *
  * So the unconditioned test passed BEFORE and AFTER the change it exists to
  * guard, i.e. it could not fail. A test that cannot distinguish its own subject
