@@ -56,9 +56,17 @@ export interface ClearingResult {
  * facets, same compound, same age -- so the ONLY asymmetry is pace. That makes
  * "laps to clear" attributable to the overtaking model and nothing else.
  *
- * The advantage is injected through the chaser's sectorBase-independent handling
- * facet rather than through tuning, so the pace gap is exact and does not
- * depend on which sector the cars are in.
+ * The advantage is injected through the chaser's car facets rather than through
+ * tuning, so the pace gap is exact. It is spread across ALL THREE of power,
+ * aero and handling, one third of the advantage per sector, because lapModel
+ * gives each sector a single governing facet (`[power, aero, handling][sector]`)
+ * -- see the comment on the facet arithmetic below. An earlier version of this
+ * instrument raised `handling` alone and claimed, right here, that the gap did
+ * not depend on which sector the cars were in; it put the entire advantage into
+ * sector 3, which is a different physical thing and broke the measurement.
+ *
+ * The chaser also starts `startGap` seconds BEHIND rather than level; see
+ * ClearingOptions.startGap for why that is not optional either.
  */
 export function measureClearing(opts: ClearingOptions): ClearingResult {
   // Default chosen empirically: under the clear-air definition, the largest

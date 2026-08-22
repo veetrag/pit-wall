@@ -209,18 +209,28 @@ Veloce's per-sector penalty runs 1.9× / 4.2× / 3.6× its old flat value.
 
 That reads alarming and is not, because the behaviour is right even though the constant inflates:
 
+Failure rate = the fraction of trials where a car 0.4 s/lap faster never reached clear air within
+15 laps. n=60 trials per cell, so the resolution is 1/60 = 0.017 and the binomial SE at p≈0 is
+0.000-0.028:
+
 | `hardCircuitScale` | 1.0 | 1.5 | 2.0 | **2.5** | 3.0 | 4.0 |
 |---|---|---|---|---|---|---|
 | Veloce failure rate | 0.000 | 0.000 | 0.000 | **0.000** | 0.000 | 0.000 |
 | Harbour Lights failure rate | 0.000 | 0.050 | 0.317 | **0.500** | 0.500 | 0.500 |
 
-**Veloce's failure rate is 0.000 at every scale tested, including 4.0** — the easy circuit never
-actually blocks anybody. `paceAdv * effectiveCap` caps the penalty where the pace advantage is
-real, so on an easy circuit the larger raw number never binds; it only binds where
-`overtakingFactor` is low, which is precisely where it should. The absolute constant is therefore
-the wrong thing to read: **judge this mechanism by failure rate per circuit, not by
-seconds-per-sector.** 2.5 is chosen because the effect saturates there (3.0 and 4.0 buy nothing)
-and it clears the differentiation bar by 3.8 SE, where 2.0 clears it by only 1.1 SE.
+**No Veloce blocking was observed at any scale tested, including 4.0** — 0/60 trials at each cell.
+That is a reading on the metric's floor, not a proof of zero: 0/60 is consistent with a true rate
+up to ~0.049 at 95% confidence, so the honest claim is that if the easy circuit blocks anyone it
+does so rarely enough to be invisible at this sample size, not that it never does. The mechanism
+that explains it is that `paceAdv * effectiveCap` caps the penalty where the pace advantage is
+real, so on an easy circuit the larger raw number is rarely the binding term; it binds where
+`overtakingFactor` is low, which is where it should. Two limits on how far this table can be
+pushed: Harbour Lights saturating at exactly 0.500 across 2.5/3.0/4.0 is likely the same
+instrument ceiling seen from the other side, and both columns are near an end of the scale — so
+read the table as *ordering* evidence, not as calibrated rates. The takeaway stands regardless:
+**judge this mechanism by failure rate per circuit, not by seconds-per-sector.** 2.5 is chosen
+because the effect saturates there (3.0 and 4.0 buy nothing) and it clears the differentiation bar
+by 3.8 SE, where 2.0 clears it by only 1.1 SE.
 
 Two corollaries for anyone tuning this. Raising `traffic.penalty` is **not** the equivalent lever —
 it lifts every circuit together and leaves the differentiation flat. And the measurement itself is

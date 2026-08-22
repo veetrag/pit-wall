@@ -42,11 +42,17 @@ export interface TuningConstants {
     defenceRacecraftFactor: number
     tyreFreshnessBonusMax: number
     paceModeFactor: number
-    /** Seconds lost by BOTH cars on a completed pass — racing wheel-to-wheel
-     *  is slower than clear air. Charging it to both changes no gap. */
+    /** Seconds added to the OVERTAKEN car alone on a completed pass — its lost
+     *  momentum is a genuinely uncompensated cost, whereas the attacker has
+     *  already paid through the traffic penalty it accumulated while following.
+     *  Charged to both cars it inverted the value of racecraft: the brain that
+     *  passed most was billed most (MODEL_SPEC.md §9). */
     fightCost: number
-    /** Lower bound on the circuit overtakingFactor used as the traffic-cap
-     *  divisor, so a tiny factor cannot produce an unbounded cap. */
+    /** Lower bound on the circuit overtakingFactor where it is used as a
+     *  divisor, so a tiny factor cannot make either term unbounded. It bounds
+     *  BOTH divisors: the traffic penalty's magnitude
+     *  (`hardCircuitScale / factor`, the term that actually binds) and its cap
+     *  (`trafficCap / factor`). */
     factorFloor: number
   }
   pit: {

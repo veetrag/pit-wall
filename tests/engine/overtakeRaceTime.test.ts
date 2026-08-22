@@ -1,15 +1,34 @@
-// Pre-change baseline (measureClearing, advantage: 0.4, seeds 1000 + i*17 for
-// i in [0, 40), clear-air "cleared" definition, default patienceLaps=15),
-// recorded before Task 2 touches resolveOvertakes:
+// Clearing baseline, PRE- and POST-Task-2, both measured under the SAME fixed
+// instrument so the pair is directly comparable. measureClearing, advantage 0.4,
+// seeds 1000 + i*17 for i in [0, 40), clear-air "cleared" definition,
+// patienceLaps 15, startGap 0.3, advantage spread evenly across all three
+// sectors.
 //
-//   veloce:          failureRate=0  medianLapsToClear=3     meanLapsToClear=3.025
-//   bengaluru:       failureRate=0  medianLapsToClear=3     meanLapsToClear=3.05
-//   harbour_lights:  failureRate=0  medianLapsToClear=3     meanLapsToClear=3.05
+// The pre-change column was re-measured by checking out 47ea4a0's race.ts (the
+// commit before this task) against the CURRENT instrument. The original numbers
+// recorded here (veloce 3.025, bengaluru 3.05, harbour_lights 3.05) were taken
+// with the broken instrument -- handling-only injection, startGap 0 -- and are
+// deliberately gone: comparing them with anything measured later would read the
+// instrument fix as a balance effect.
 //
-// All three are near-identical today, because overtakingFactor is shadowed
-// (§1.2 of the spec) -- circuit identity should have zero effect on clearing
-// behaviour pre-change. Task 3 should see these numbers diverge by circuit
-// once the shadowing is fixed.
+//                    pre-change (47ea4a0)          post-change (this task)
+//   veloce:          fail=0.000 med=3 mean=3.350   fail=0.000 med=2 mean=2.225
+//   bengaluru:       fail=0.000 med=3 mean=3.375   fail=0.075 med=2 mean=2.243
+//   harbour_lights:  fail=0.000 med=3 mean=3.375   fail=0.375 med=1 mean=1.920
+//
+// Two things to read carefully before using these:
+//
+// 1. Pre-change, the three circuits are indistinguishable (means within 0.025
+//    laps) because circuit.overtakingFactor was SHADOWED by a global constant
+//    (§1.2). Post-change they separate in the authored difficulty order. That
+//    separation is the point of the change, not noise.
+//
+// 2. meanLapsToClear is CONDITIONAL on clearing, so it must be read together
+//    with failureRate and never alone. Harbour Lights' mean falls (3.375 ->
+//    1.920) while its failure rate rises (0.000 -> 0.375): the trials that
+//    clear now clear faster, because a durable pass converts immediately
+//    instead of being erased by the next sort, while 37.5% never clear at all.
+//    Reading the mean by itself would say Harbour Lights got EASIER.
 
 import { describe, it, expect } from 'vitest'
 import { initRace, stepSector } from '@engine/index'

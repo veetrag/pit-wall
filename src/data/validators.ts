@@ -26,7 +26,12 @@ const TuningSchema = z.object({
     gapThreshold: z.number(), penalty: z.number(), trafficCap: z.number(),
     // Scales the absolute per-sector penalty by hardCircuitScale / overtakingFactor,
     // so a hard circuit holds a follower up harder and not merely for longer.
-    hardCircuitScale: z.number(),
+    // .positive() for the same reason factorFloor has it, and more urgently:
+    // zero silently switches the traffic penalty (and with it dirty air) off
+    // entirely, and a negative value turns the penalty into a BONUS for
+    // following. Both fail silently and plausibly, which is worse than the
+    // divide-by-zero factorFloor's guard prevents.
+    hardCircuitScale: z.number().positive(),
     dirtyAirDegBonus: z.number(), dirtyAirDegCapLaps: z.number(),
   }),
   overtaking: z.object({
