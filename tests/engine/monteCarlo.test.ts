@@ -22,11 +22,8 @@ describe('Monte-Carlo regression', () => {
     // on the old 1.482 s/lap grid -- exactly the behaviour the competitive-grid
     // change removes (MODEL_SPEC.md section 4 stages the ceiling to 0.90).
     //
-    // Apex must remain the strongest team -- this change re-spaces the grid, it
-    // does not reorder it. Measured post-change: 0.8458 pro / 0.8812 rookie over
-    // all 12 circuits, and 0.8368 +- 0.97pp pooled over six n=240 samples of this
-    // 4-circuit gate sample.
-    expect(m.topTeamId, `n=${m.races} races`).toBe('apex')
+    // Team identity is NOT asserted here. It moved to its own test below, on the
+    // full calendar -- see that test for why this sample cannot carry it.
     // Both ends come from the band file rather than a literal, so this gate cannot
     // drift from its documented provenance. The floor catches an overshoot into
     // lottery territory that somehow preserves pace-rank correlation; SE at n=240
@@ -35,6 +32,45 @@ describe('Monte-Carlo regression', () => {
     expect(m.topTeamShare, `n=${m.races} races`).toBeGreaterThan(wb[0])
     expect(m.topTeamShare, `n=${m.races} races`).toBeLessThanOrEqual(wb[1])
   }, 300_000)
+
+  // Apex must remain the strongest team: the changes to date re-space the grid
+  // and give circuits their own character, but they do not reorder the pecking
+  // order. This is asserted over the WHOLE calendar, not over SAMPLE, and that
+  // is a deliberate correction rather than a convenience.
+  //
+  // Apex (power 92 / aero 95 / handling 90, sum 277) and Meridian (98/91/89,
+  // sum 278) are a facet-point apart, differing only in WHERE the strength
+  // sits. Once carSensitivity made circuits weight power, aero and handling
+  // differently, which of the two comes out ahead became a property of the
+  // circuit mix -- and Meridian owns Veloce outright (69.5% of 200 races), a
+  // member of the 4-circuit SAMPLE. So on SAMPLE at n=240 the apex-meridian
+  // margin is ~6pp against an SE on the difference of ~4.5pp: 1.3 SE, a coin
+  // flip. The gate was failing on sampling power, not on a regression.
+  //
+  // Measured over all 12 circuits at n=720, three independent seed bases:
+  //   1000: apex 56.7%  meridian 33.1%   (+23.6pp)
+  //   5000: apex 59.2%  meridian 30.8%   (+28.4pp)
+  //   9000: apex 56.5%  meridian 33.3%   (+23.2pp)
+  // Mean margin +25.1pp, sd 2.9pp, so ~14 SE clear of a tie. Apex also wins 11
+  // of the 12 circuits taken singly (Veloce is the exception; Kaido is the
+  // closest, apex 42.5% to vortex 31.5%) -- which is the sensitivity feature
+  // working, not eroding.
+  it('apex remains the strongest team over the full calendar', () => {
+    const circuitIds = Object.keys(loadGameData().circuits)
+    expect(circuitIds.length).toBe(12)
+    const m = runRaces({ races: 720, circuitIds })
+    const share = m.winShareByTeam
+    const ranked = Object.entries(share).sort((a, b) => b[1] - a[1])
+    const [second] = ranked.filter(([t]) => t !== 'apex')
+    // eslint-disable-next-line no-console
+    console.log(`Full calendar n=${m.races}: ` +
+      ranked.slice(0, 4).map(([t, s]) => `${t} ${(s * 100).toFixed(1)}%`).join('  '))
+    expect(m.topTeamId, `n=${m.races} races over all 12 circuits`).toBe('apex')
+    // FAILS IF the margin collapses to under a third of the measured 25.1pp --
+    // i.e. a change that genuinely reorders the top of the grid, rather than one
+    // that reshuffles which circuits favour whom.
+    expect(share['apex']! - second![1], `apex over ${second![0]}`).toBeGreaterThan(0.08)
+  }, 600_000)
 
   // Every assertion here is checked against the tuning.json bands rather than
   // against a mathematically-always-true limit. The earlier version asserted
