@@ -27,13 +27,22 @@ export function computeSectorTime(
   // --- Car delta: per-sector from matching facet (S1←power, S2←aero, S3←handling) ---
   const governingFacet = [tf.power, tf.aero, tf.handling][sector]!
   const carRating = facetToRating9(governingFacet)
-  const weight = tuning.carPerformance.sectorSplit[sector]!
+  // Per-circuit sensitivity, used RAW (spec §3, the owner's decision, and §5.1).
+  // The vectors do NOT all sum to 1 -- car spans 0.78 (harbour_lights) to 1.05
+  // (grand_savane), driver 1.00 to 1.36 (harbour_lights) -- so a circuit changes
+  // HOW MUCH the car and driver matter, not merely which sector they matter in.
+  // That is what makes MODEL_SPEC.md §3's per-circuit |dpos| ratio band of
+  // 1.5-2.5x reachable from the 1.00x the calendar measured while these fields
+  // were dead. Do not normalise them.
+  // Was: tuning.carPerformance.sectorSplit[sector].
+  const weight = circuit.carSensitivity[sector]!
   const carDelta = carRating * tuning.carPerformance.deltaPerRating * weight * 3
 
   // --- Driver delta: from pace facet ---
   // Rescale 0-9 to 0-10 to match the driverPerformance.deltaPerSkill tuning constant
   const driverSkill = facetToRating9(df.pace) / 9 * 10
-  const driverWeight = tuning.driverPerformance.sectorSplit[sector]!
+  // Was: tuning.driverPerformance.sectorSplit[sector]. See the note above.
+  const driverWeight = circuit.driverSensitivity[sector]!
   const driverDelta = driverSkill * tuning.driverPerformance.deltaPerSkill * driverWeight * 3
 
   // --- Tyre delta: effAge defers the cliff for good tyre managers on CONSERVE,

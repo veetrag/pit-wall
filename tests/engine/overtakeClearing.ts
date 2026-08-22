@@ -104,13 +104,24 @@ export function measureClearing(opts: ClearingOptions): ClearingResult {
   // with the LOWEST overtakingFactor, so the chaser cleared by pace in the
   // one place it should have been most stuck.
   //
-  // A facet point is worth a different amount in each sector, because
-  // carPerformance.sectorSplit differs, so each facet's points are computed
-  // independently to make all three sector contributions equal.
-  const { deltaPerRating, sectorSplit } = GAME.tuning.carPerformance
+  // A facet point is worth a different amount in each sector, so each facet's
+  // points are computed independently to make all three sector contributions
+  // equal.
+  //
+  // The weight is `circuit.carSensitivity`, NOT the global
+  // tuning.carPerformance.sectorSplit this used to read. lapModel.ts now takes
+  // the per-circuit field, so inverting the global here under-injected on
+  // circuits weighted below it and over-injected above it -- and, because the
+  // sensitivity vectors do not all sum to 1, the TOTAL drifted too, not just
+  // its distribution. The drift guard below caught it on four cases at once
+  // (harbour_lights asked 0.400 and got 0.335, veloce asked 0.800 and got
+  // 0.860), which is what that guard is for. This inversion must track
+  // lapModel's car-delta arithmetic exactly; if that changes again, change it
+  // here as well.
+  const { deltaPerRating } = GAME.tuning.carPerformance
   const perSector = advantage / 3
   const pointsFor = (sector: 0 | 1 | 2): number =>
-    perSector / ((9 / 100) * deltaPerRating * sectorSplit[sector]! * 3)
+    perSector / ((9 / 100) * deltaPerRating * circuit.carSensitivity[sector]! * 3)
   const baseTeam = GAME.cars.teams[0]!
   const baseDriver = GAME.drivers.drivers[0]!
 
