@@ -48,10 +48,32 @@ export interface TuningConstants {
      *  passed most was billed most (MODEL_SPEC.md §9). */
     fightCost: number
     /** Lower bound on the circuit overtakingFactor where it is used as a
-     *  divisor, so a tiny factor cannot make either term unbounded. It bounds
-     *  BOTH divisors: the traffic penalty's magnitude
+     *  divisor. It bounds BOTH divisors: the traffic penalty's magnitude
      *  (`hardCircuitScale / factor`, the term that actually binds) and its cap
-     *  (`trafficCap / factor`). */
+     *  (`trafficCap / factor`).
+     *
+     *  **This is a BALANCE constant, not only a divide-by-zero guard, and at
+     *  the shipped 0.35 it CLIPS REAL CIRCUITS.** Sectors clipped (factor <
+     *  0.35), from circuits.json:
+     *
+     *  - `harbour_lights` `[0.35, 0.10, 0.20]` — **2 of 3** (S2, S3)
+     *  - `kaido` `[0.55, 0.15, 0.30]` — **2 of 3** (S2, S3)
+     *  - `bengaluru` `[0.60, 0.30, 0.40]` — 1 of 3 (S2)
+     *  - `monsoon_bay` `[0.90, 0.30, 0.55]` — 1 of 3 (S2)
+     *
+     *  Consequences a reader tuning this must know: in those clipped sectors the
+     *  penalty is a flat `hardCircuitScale / 0.35` = 7.14×, so harbour_lights
+     *  and kaido are *identical* to each other in S2 and S3 and harbour_lights'
+     *  authored intent (S2 3.5× harder to pass in than S1) is erased there. The
+     *  hard-end differentiation the gates assert therefore comes from
+     *  `sectorEase` in `resolveOvertakes`, which reads the **unclipped**
+     *  `circuit.overtakingFactor`, not from the penalty. The floor is also a
+     *  plausible contributor to `hardCircuitScale`'s saturation at 2.5.
+     *
+     *  Kept at 0.35 on measurement, not by default — see MODEL_SPEC.md §7 for
+     *  the 0.35/0.20/0.10/0.05 sweep, what lowering it buys (harbour_lights
+     *  enters spec §6.1's target band) and what it costs (the OPTIMAL-brain
+     *  gate collapses to zero). Upper-bounded at 0.35 in validators.ts. */
     factorFloor: number
   }
   pit: {

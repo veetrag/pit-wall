@@ -58,13 +58,13 @@ be corrected or must update this document with an argument.
 | Distinct winners / season | median **3**, range 2–6 | **8** pro / 7 rookie (4-circuit, n=240); **7** both difficulties (all 12) | **≥ 4** | **Yes** |
 | Grid↔finish Spearman ρ | **0.779** ± 0.009 classified; 0.628 with DNFs | **0.7336** pro / 0.7617 rookie (4-circuit, n=240); **0.7579** pro / 0.7862 rookie (all 12) | **0.60 – 0.80** (the §3 target, reached early — §4) | **Yes** |
 | Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | **5.33%** pro / 5.56% rookie (4-circuit, n=240); **4.73%** / 4.99% (all 12). Historical pooled figure **4.67%** ± 0.12 (n = 28,800 car-races) | **6 – 10%** | **Yes** — but not met; assertion skipped, see §4 |
-| Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | no longer 1.00× — circuits are no longer identical (§8), but this ratio was not re-measured by the overtaking work; the differentiation that *was* measured is the per-circuit clearing-failure rate in §9 | **1.5 – 2.5×** | **Yes** |
+| Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | no longer 1.00× — circuits are no longer identical (§8), but this ratio was not re-measured by the overtaking work; the differentiation that *was* measured is the per-circuit clearing-failure rate in §9 | **1.5 – 2.5×** | **No — not currently asserted.** No test in the suite computes this ratio; `monteCarloHarness` does not break \|Δpos\| out per circuit. Owned by `docs/superpowers/plans/2026-08-22-circuit-sensitivity-wiring.md`, which is to measure it and add the gate. It was previously marked "Yes" here with no assertion anywhere — a row claiming a gate that does not exist is worse than an ungated row |
 | Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9636** pro / 0.9152 rookie (4-circuit, n=240); 0.9636 / 0.9152–0.9394 (all 12) | **≥ 0.90** — final, never to be widened | **Yes** |
 | Pit lane time loss | 19.7 – 23.8s (2,106 green-flag stops) | 22.0s | 19.5 – 24.0s | Yes |
 | Recorded overtake events | not computable — see §5 | **33.3** pro / 33.1 rookie (4-circuit, n=240); 36.7 / 36.8 (all 12). Was 46.3 before overtaking became durable. §5 forbids gating it; it is a **calibration anchor only** | — | **No — diagnostic only** |
 | Clearing failure rate, hardest circuit (Harbour Lights, 0.4 s/lap adv) | no published data (§6) | **0.450** ± 0.045 (n=120); 0.550 ± 0.045 on a disjoint seed stream | design target **0.60 – 0.75** (spec §6.1) — **not met**; gated at **> 0.30** | **Yes**, at the reduced bar; the real target is committed **skipped** |
 | Clearing failure rate, median circuit | no published data (§6) | **0.008** ± 0.008 (n=120) | design target **0.15 – 0.25** (spec §6.1) — **not met**, and not reachable by any constant (§7) | **No** — committed skipped |
-| Laps to clear, 0.3–0.5 s/lap advantage | no published data (§6) | median **2** at every advantage in the bracket and every `overtaking.base` in [0, 0.45] | design target **3 – 8** (spec §6.1) — **not met**; partly a metric artefact (§9) | **No** — committed skipped |
+| Laps to clear, 0.3–0.5 s/lap advantage | no published data (§6) | median **2** on the median circuit at every advantage in the bracket and every `overtaking.base` in [0, 0.45]. **Not "every circuit":** harbour_lights measures median **1** at 0.4 and 0.5 s/lap advantage (n=120) — the median is taken over the trials that cleared, and on harbour_lights those convert immediately while 45% never clear at all, so a *lower* median there means a *harder* circuit; see the `meanLapsToClear`-is-conditional warning in §9.3 | design target **3 – 8** (spec §6.1) — **not met**; partly a metric artefact (§9) | **No** — committed skipped |
 | Hard-vs-easy clearing differentiation | — | pooled hard **0.236** ± 0.022 vs pooled easy **0.003** ± 0.003 (n=360 each), difference **0.233** ± 0.022 | **> 0.10** | **Yes** — 6.0 SE of margin |
 
 **Two deliberate omissions.**
@@ -249,13 +249,80 @@ up to ~0.049 at 95% confidence, so the honest claim is that if the easy circuit 
 does so rarely enough to be invisible at this sample size, not that it never does. The mechanism
 that explains it is that `paceAdv * effectiveCap` caps the penalty where the pace advantage is
 real, so on an easy circuit the larger raw number is rarely the binding term; it binds where
-`overtakingFactor` is low, which is where it should. Two limits on how far this table can be
+`overtakingFactor` is low, which is where it should — with the important qualification that **below
+`overtaking.factorFloor` (0.35) it binds *identically* no matter how much lower the factor goes**, so
+the differentiation this mechanism provides saturates at the hard end of the calendar. That is the
+subject of the next subsection, and it is a plausible contributing cause of the `hardCircuitScale`
+saturation this table reports. Two limits on how far this table can be
 pushed: Harbour Lights saturating at exactly 0.500 across 2.5/3.0/4.0 is likely the same
 instrument ceiling seen from the other side, and both columns are near an end of the scale — so
 read the table as *ordering* evidence, not as calibrated rates. The takeaway stands regardless:
 **judge this mechanism by failure rate per circuit, not by seconds-per-sector.** 2.5 is chosen
 because the effect saturates there (3.0 and 4.0 buy nothing) and it clears the differentiation bar
 by 3.8 SE, where 2.0 clears it by only 1.1 SE.
+
+### `overtaking.factorFloor` is a balance constant that clips real circuits — measured, and kept
+
+`factorFloor: 0.35` is named and was originally documented as a divide-by-zero guard. It is not only
+that. It is the lower bound on the divisor in the expression above, and at 0.35 it clips:
+
+| circuit | `overtakingFactor` | sectors clipped | penalty scale `2.5 / max(f, 0.35)` |
+|---|---|---|---|
+| harbour_lights | `[0.35, 0.10, 0.20]` | **2 of 3** | 7.14 / **7.14** / **7.14** |
+| kaido | `[0.55, 0.15, 0.30]` | **2 of 3** | 4.55 / **7.14** / **7.14** |
+| bengaluru | `[0.60, 0.30, 0.40]` | 1 of 3 | 4.17 / **7.14** / 6.25 |
+| monsoon_bay | `[0.90, 0.30, 0.55]` | 1 of 3 | 2.78 / **7.14** / 4.55 |
+
+So for the traffic penalty **harbour_lights and kaido are identical to each other in S2 and S3**, and
+harbour_lights' authored intent (S2 3.5× harder to pass in than S1) is erased — a flat 0.286 s/sector
+across the whole lap. The mechanism saturates on exactly the circuits it exists to differentiate;
+what still separates them is `sectorEase` in `resolveOvertakes`, which reads the **unclipped** factor.
+
+**Swept before deciding.** `measureClearing`, advantage 0.4, n=120 (seeds `500 + 13i`), patience 15,
+startGap 0.3. `meanLapsToClear` is conditional on clearing and is reported beside every rate:
+
+| `factorFloor` | veloce | harbour_lights | kaido | easy−hard (veloce−harbour) | harbour−kaido separation |
+|---|---|---|---|---|---|
+| **0.35 (shipped)** | 0.0000 ± 0.000, med 2, mean 2.042 | 0.4500 ± 0.0454, med 1, mean 1.697 | 0.1917 ± 0.0359, med 2, mean 2.031 | 0.450 | **0.258** ± 0.058 |
+| 0.20 | 0.0000 ± 0.000, med 2, mean 2.042 | 0.6000 ± 0.0447, med 1, mean 2.625 | 0.2833 ± 0.0411, med 1, mean 2.488 | 0.600 | **0.317** ± 0.061 |
+| 0.10 | 0.0000 ± 0.000, med 2, mean 2.042 | 0.6750 ± 0.0428, med 2, mean 2.923 | 0.3917 ± 0.0446, med 2, mean 3.000 | 0.675 | **0.283** ± 0.062 |
+| 0.05 | identical to 0.10 to every digit | identical | identical | 0.675 | 0.283 |
+
+0.05 and 0.10 are bit-identical because **0.10 is the calendar's minimum `overtakingFactor`**
+(harbour_lights S2), so any floor at or below 0.10 clips nothing and the constant becomes a true
+guard. That makes 0.10 the interesting candidate, not 0.05.
+
+**Decision: kept at 0.35.** The evidence, stated in full because the choice is close:
+
+- **The separation the finding is actually about barely moves.** Harbour-vs-kaido is 0.258 ± 0.058 at
+  0.35, 0.317 ± 0.061 at 0.20 and 0.283 ± 0.062 at 0.10. The best swept value is **1.0 SE** better
+  than the shipped one. There is no measured differentiation win to buy here — the clipping is real
+  but unclipping it does not separate the two hardest circuits meaningfully further, because
+  `sectorEase` is already doing that work on the unclipped factor.
+- **What lowering it *does* buy, and it is real:** harbour_lights' clearing failure rate rises
+  0.450 → 0.675 ± 0.043 at floor 0.10, which lands **inside spec §6.1's 60–75% target band** — a
+  target §7 above records as missed and unreachable by `overtaking.base`. Its median laps also rise
+  1 → 2 with the conditional mean 1.697 → 2.923, i.e. the trials that clear stop converting
+  instantly. Easy circuits are untouched: veloce stays at 0.0000 at every floor, and the median
+  circuit stays at the metric's floor (0.000–0.008 over all 12 circuits at floor 0.10), so the other
+  two §6.1 targets remain missed either way.
+- **Why that was not taken: it turns a shipped gate red, and the gate is not stale.** At floor 0.20
+  *or* 0.10 the OPTIMAL-brain gate in `tests/engine/strategy.test.ts` measures
+  **gain 0.013 ± 0.043** — statistically indistinguishable from zero — against its 0.05 bar, down
+  from 0.163 ± 0.043. (0.20 and 0.10 give the *same* figure because that test's synthetic circuit has
+  `overtakingFactor [1.0, 0.25, 0.55]`: S2's 0.25 is clipped at 0.35 and unclipped at either lower
+  floor, so its penalty grows the same 7.14 → 10.0 in both.) The mechanism is §9.4's: a brain that
+  pits into traffic suffers the traffic, and this one does not yet price it. Adopting a lower floor
+  therefore means lowering that gate a second time to fit a balance change — exactly the move this
+  branch exists to stop.
+- **Escalated, not silently closed** (CLAUDE.md §8): trading harbour_lights into its §6.1 band
+  against the OPTIMAL gate is a game-feel call for the owner. The numbers above are the whole input.
+  The path that costs nothing is teaching the OPTIMAL brain about traffic first (§9.4's "separate,
+  later work"), after which floor 0.10 becomes free.
+
+`factorFloor` is upper-bounded at **0.35** in `validators.ts` — the smallest per-circuit *maximum*
+`overtakingFactor` on the calendar, which is harbour_lights'. Above that, some circuit has all three
+sectors clipped and the per-circuit mechanism is silently off there.
 
 Two corollaries for anyone tuning this. Raising `traffic.penalty` is **not** the equivalent lever —
 it lifts every circuit together and leaves the differentiation flat. And the measurement itself is
@@ -411,7 +478,9 @@ Three edits in `src/engine/race.ts`:
    by `traffic.hardCircuitScale / max(circuit.overtakingFactor[sector], overtaking.factorFloor)`.
    Scaling only the *cap*, as originally designed, does nothing: `traffic.penalty / 3` is 5–20×
    smaller than `paceAdv × effectiveCap` at the advantages that matter, so `Math.min` always returned
-   the flat penalty. See §7 for the measured limitation this carries.
+   the flat penalty. See §7 for the two measured limitations this carries: `hardCircuitScale` cannot
+   both differentiate and hold Veloce's absolute penalty, and `factorFloor` clips 2 of 3 sectors at
+   both of the hardest circuits, so the penalty does not differentiate *between* them at all.
 3. **Circuits differ.** `sectorEase` reads `circuit.overtakingFactor` rather than the global
    constant that shadowed it (§8).
 
@@ -421,22 +490,34 @@ Three edits in `src/engine/race.ts`:
 
 Measured with `measureClearing`: two otherwise-identical cars, the chaser 0.4 s/lap faster spread
 evenly across all three sectors, starting 0.3s back; "cleared" means ahead on `raceTime` **and** more
-than `traffic.gapThreshold` (1.0s) of clear air; 15 laps of patience. Both columns are measured under
-the **same fixed instrument**, so they are directly comparable — the pre-change column was taken by
-checking out the previous `race.ts` against the current instrument, because the figures originally
-recorded for it were taken with a broken one.
+than `traffic.gapThreshold` (1.0s) of clear air; 15 laps of patience.
 
-| | pre-change | post-change | `overtakingFactor` mean |
-|---|---|---|---|
-| Veloce | fail 0.000, mean 3.350 laps | fail **0.000**, mean 2.042 | 0.867 |
-| Bengaluru | fail 0.000, mean 3.375 | fail **0.067**, mean 1.839 | 0.433 |
-| Kaido | (indistinguishable) | fail **0.192**, mean 2.031 | 0.333 |
-| Harbour Lights | fail 0.000, mean 3.375 | fail **0.450**, mean 1.697 | 0.217 |
+**The before/after table below is a *matched* comparison: both columns are n=40 on the same seed
+stream (seeds `1000 + 17i`, `i` in [0, 40)) under the same fixed instrument.** The pre-change column
+was taken by checking out `47ea4a0`'s `race.ts` against the current instrument, because the figures
+originally recorded for it were taken with a broken one. An earlier version of this table paired the
+n=40 pre-change column against the n=120 post-change column (seeds `500 + 13i`) while claiming
+comparability; the two samples are disjoint, so the numbers did not reconcile with the ones in
+`tests/engine/overtakeRaceTime.test.ts`'s header. The matched n=40 post-change figures are the ones
+below, re-verified at HEAD; the n=120 column beside them is a *separate, larger* sample on a
+different seed stream and is labelled as such.
+
+| | pre-change, n=40 (seeds 1000+17i) | post-change, n=40 (same seeds) | post-change, n=120 (seeds 500+13i) | `overtakingFactor` mean |
+|---|---|---|---|---|
+| Veloce | fail 0.000, med 3, mean 3.350 | fail **0.000**, med 2, mean 2.225 | fail 0.000, mean 2.042 | 0.867 |
+| Bengaluru | fail 0.000, med 3, mean 3.375 | fail **0.075** ± 0.042, med 2, mean 2.243 | fail 0.067, mean 2.288 | 0.433 |
+| Kaido | (indistinguishable) | fail **0.200** ± 0.063, med 2, mean 1.969 | fail 0.192, mean 2.031 | 0.333 |
+| Harbour Lights | fail 0.000, med 3, mean 3.375 | fail **0.375** ± 0.077, med 1, mean 1.920 | fail 0.450 ± 0.045, med 1, mean 1.697 | 0.217 |
+
+The two post-change samples agree within ~1 SE on every circuit, which is why the conclusion is the
+same either way — but only the first two columns are a matched pair, and only they should be
+differenced.
 
 **`meanLapsToClear` is conditional on clearing and must never be read alone.** Harbour Lights' mean
-*fell* while its failure rate *rose* to 0.450, because the trials that clear now convert immediately
-— a durable pass is not erased by the next sort — while 45% never clear at all. Read by itself the
-mean says the circuit got easier. Always quote it beside the failure rate.
+*fell* (3.375 → 1.920 on the matched pair) while its failure rate *rose* (0.000 → 0.375), because the
+trials that clear now convert immediately — a durable pass is not erased by the next sort — while
+37.5% never clear at all. Read by itself the mean says the circuit got easier. Always quote it beside
+the failure rate.
 
 Pre-change the circuits were **indistinguishable**: three circuits with `overtakingFactor` spanning
 0.217 to 0.867 measured within 0.025 laps of each other, which is the direct evidence for §8's

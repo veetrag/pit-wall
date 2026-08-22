@@ -40,10 +40,32 @@ const TuningSchema = z.object({
     defenceRacecraftFactor: z.number(),
     tyreFreshnessBonusMax: z.number(),
     paceModeFactor: z.number(),
-    fightCost: z.number(),
-    // .positive() matters: factorFloor is the divisor's lower bound, so a zero
-    // would divide by zero and produce an unbounded traffic cap.
-    factorFloor: z.number().positive(),
+    // .nonnegative(), not .positive(): 0 is a legitimate value (the
+    // decomposition in MODEL_SPEC §9.4 prices the mechanism at 0), but a
+    // NEGATIVE fightCost silently rewards being overtaken -- the overtaken car
+    // would be handed time on a completed pass -- and would pass every gate on
+    // this branch, since none of them price the defender's loss directly.
+    fightCost: z.number().nonnegative(),
+    // factorFloor is a BALANCE constant with a guard's name; both bounds matter.
+    //
+    // .positive(): it is the divisor's lower bound, so a zero divides by zero
+    // and produces an unbounded penalty and cap.
+    //
+    // .max(0.35): above the SMALLEST per-circuit MAXIMUM overtakingFactor on
+    // the calendar, the floor clips every sector of some circuit and the
+    // per-circuit mechanism is silently switched off there. That smallest
+    // maximum is harbour_lights' 0.35 (its factors are [0.35, 0.10, 0.20]),
+    // computed from circuits.json, so 0.35 is the largest value at which any
+    // circuit still varies sector-to-sector -- and the shipped value sits
+    // exactly on it. Anything higher makes harbour_lights uniform, and the two
+    // per-circuit clearing gates in tests/engine/overtakeRaceTime.test.ts would
+    // go red with no obvious cause.
+    //
+    // At the shipped 0.35 the floor already CLIPS REAL CIRCUITS -- 2 of 3
+    // sectors at harbour_lights and kaido, 1 of 3 at bengaluru and monsoon_bay.
+    // See src/engine/types.ts and MODEL_SPEC.md §7 for the sweep that kept it
+    // there anyway.
+    factorFloor: z.number().positive().max(0.35),
   }),
   pit: z.object({
     laneTimeLoss: z.number(), stopMean: z.number(), stopSigma: z.number(),

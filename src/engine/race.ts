@@ -172,6 +172,14 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       // factorFloor bounds the divisor so a tiny factor cannot make either term
       // unbounded, and the cap still keeps the loss proportional to the pace
       // advantage, so cars with nothing to gain are not taxed for following.
+      //
+      // factorFloor is NOT only a guard: at the shipped 0.35 it CLIPS 2 of 3
+      // sectors at harbour_lights and kaido and 1 of 3 at bengaluru and
+      // monsoon_bay, so in those sectors this penalty is a flat 7.14x and the
+      // two hardest circuits are identical to each other. What still separates
+      // them is `sectorEase` in resolveOvertakes, which reads the UNCLIPPED
+      // factor. Full clipping table on TuningConstants.overtaking.factorFloor
+      // in types.ts; the sweep that kept it at 0.35 is in MODEL_SPEC.md §7.
       const factor = Math.max(config.circuit.overtakingFactor[sector]!, config.tuning.overtaking.factorFloor)
       const rawPenalty = (config.tuning.traffic.penalty / 3) * (config.tuning.traffic.hardCircuitScale / factor)
       const effectiveCap = config.tuning.traffic.trafficCap / factor
@@ -348,8 +356,19 @@ function resolveOvertakes(
     // raceTime. A swap conserves total time (an assignment would gift the
     // overtaker time it never made up on track) and is automatically bounded
     // to <= traffic.gapThreshold, because the pair is only eligible inside
-    // that gap. The slot assignment is kept too, so the returned array stays
-    // ordered for the caller.
+    // that gap.
+    //
+    // The two slot writes below are VESTIGIAL and their order means nothing.
+    // An earlier version of this comment claimed the slot assignment kept "the
+    // returned array ordered for the caller"; it does not. Slot bestIdx
+    // receives `behind.raceTime + fightCost`, which exceeds slot bestIdx+1's
+    // time whenever the next car back is within fightCost (0.10s), so the
+    // returned array can be off by one adjacent pair. It is harmless because
+    // every consumer re-sorts by raceTime (dirty air and the final
+    // classification in stepSector, and the next tick's resolveOvertakes), but
+    // a stated invariant the code does not hold is how the original cosmetic-
+    // swap bug survived review in the first place. Do not rely on the order;
+    // the raceTime updates are the whole mechanism.
     //
     // fightCost is charged to the OVERTAKEN car ONLY. Charging both — as this
     // first shipped — inverts the value of racecraft: the brain that passes
