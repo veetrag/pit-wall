@@ -295,9 +295,16 @@ function resolveOvertakes(
   const sorted = [...cars].sort((a, b) => a.raceTime - b.raceTime)
   const result = [...sorted]
   // Was: config.tuning.overtaking.sectorFactor[sector] -- a global constant
-  // sitting in the exact place the per-circuit field belongs (spec §1.2).
-  // tuning.overtaking.sectorFactor is left in the data file and the type for
-  // now; Task 3 decides whether it is dead and removes it with the evidence.
+  // [1.0, 0.25, 0.55] sitting in the exact place the per-circuit field belongs,
+  // which is why every circuit on the calendar raced identically (spec §1.2).
+  // That key has since been deleted from tuning.json, validators.ts and
+  // types.ts: this line was its only consumer, so it is dead data now.
+  //
+  // Note what the switch did and did not change. The 12-circuit MEAN of
+  // circuit.overtakingFactor is 0.6055 against the old global mean of 0.6000 --
+  // a 0.9% difference -- so the switch moved the SPREAD (0.217 at Harbour
+  // Lights to 0.867 at Veloce) and not the average. overtaking.base therefore
+  // did not need re-centring for it; see MODEL_SPEC.md §7.
   const sectorEase = config.circuit.overtakingFactor[sector]!
 
   // Find the single most eligible pair (smallest gap within threshold, pace advantage > 0)

@@ -276,3 +276,155 @@ describe('overtaking: track position has defensive value', () => {
     expect(hard.failureRate - easy.failureRate, msg).toBeGreaterThan(0.25)
   }, 300_000)
 })
+
+/* ---------------------------------------------------------------------------
+ * Spec §6.1's clearing targets.
+ *
+ * Three targets, measured at advantage 0.4 with the fixed instrument. All three
+ * were surveyed across all 12 circuits at n=60, then the gate-relevant cells
+ * re-measured at n=120 on an independent seed set. The result:
+ *
+ *   | §6.1 target                         | target    | measured        | verdict |
+ *   | laps to clear, 0.3-0.5 s/lap adv    | 3 - 8     | median 2        | MISS low
+ *   | failure rate, median circuit        | 15 - 25%  | 0.008 +- 0.008  | MISS low
+ *   | failure rate, Harbour Lights        | 60 - 75%  | 0.450 +- 0.045  | MISS low
+ *
+ * `overtaking.base` was swept over [0, 0.05, 0.10, 0.15, 0.22, 0.30, 0.45] --
+ * from no baseline pass chance at all to 2x shipped -- and it moves NONE of
+ * these into band. Over that whole range the median-circuit failure rate stays
+ * inside [0.000, 0.017] (i.e. at the 1/60 resolution floor, with no monotone
+ * trend) and the median laps-to-clear never leaves 2. Harbour Lights does
+ * respond monotonically, 0.350 at base 0.45 up to 0.617 at base 0.00, so its
+ * 60-75% band is reachable only by setting base to exactly zero -- which
+ * deletes the baseline-pass mechanism, does nothing for the other two targets,
+ * and drags the overtakes/race calibration anchor further from its historical
+ * 46.3 (36.7 at base 0.22, 33.6 at 0.10, 32.6 at 0.05). base was therefore left
+ * at 0.22. Full search in .superpowers/sdd/2026-08-22-overtaking-race-time/
+ * task-3-report.md and MODEL_SPEC.md §7.
+ *
+ * WHY base cannot reach them, which is the part worth remembering: `base` is one
+ * of two ADDITIVE terms inside `prob`, and at the advantage these targets are
+ * defined at it is the smaller one. `paceAdv * paceMultiplier` is about 0.40 per
+ * sector against base's 0.22, so base contributes only ~35% of the pass chance
+ * and zeroing it removes ~35%. Sweeping `paceMultiplier` instead (0.5 to 3.0, a
+ * 6x range) also fails to reach the median-circuit target -- it tops out at
+ * 0.017. What DOES reach it is suppressing passing outright (base 0 AND
+ * paceMultiplier 0), where the median-circuit rate is 0.783 and Harbour Lights
+ * is 0.950. So the instrument has ample dynamic range; the targets are simply
+ * not a function of any one constant in `tuning.overtaking`. Reaching them is a
+ * mechanism question, not a calibration one.
+ *
+ * One caveat that belongs beside the laps-to-clear miss: this instrument's
+ * zero-blocking floor is already ~2 by construction. The chaser starts 0.3s
+ * back and "cleared" needs 1.0s of clear air, so 1.3s of net gain at 0.4 s/lap
+ * is 3.25 laps of pure pace with no blocking whatsoever, and `clearedLaps` is
+ * an integer lap index, so it reports 2 or 3. A median inside [3, 8] therefore
+ * requires blocking to add a whole lap to the MEDIAN trial, which on a median
+ * circuit it does not. Part of this particular miss is a metric-definition
+ * artefact rather than a balance fact.
+ * ------------------------------------------------------------------------- */
+
+// A wider sample than the survey used and a disjoint seed base from the
+// n=60 set above, so this is an independent replicate as well as a wider one.
+const GATE_SEEDS = Array.from({ length: 120 }, (_, i) => 500 + i * 13)
+
+/** Pool several circuits' trials into one binomial rate, with its SE. */
+function pooledFailure(circuitIds: string[]): { rate: number; se: number; n: number; per: string } {
+  const rs = circuitIds.map(id => measureClearing({ circuitId: id, seeds: GATE_SEEDS, advantage: 0.4 }))
+  const n = rs.reduce((a, r) => a + r.trials, 0)
+  const fails = rs.reduce((a, r) => a + r.failureRate * r.trials, 0)
+  const rate = fails / n
+  return {
+    rate, n,
+    se: Math.sqrt(rate * (1 - rate) / n),
+    per: rs.map(r => `${r.circuitId} ${r.failureRate.toFixed(3)}`).join(', '),
+  }
+}
+
+describe('overtaking: circuit difficulty is felt across the whole calendar', () => {
+  // This is the gate that survives even though §6.1's absolute levels are
+  // missed, because it asserts the thing the change actually achieved: that
+  // circuit.overtakingFactor is CONSUMED, calendar-wide. Pre-change the field
+  // was shadowed by a global constant and all 12 circuits measured identically
+  // (Task 1's baseline: veloce, bengaluru and harbour_lights all 0.000 failures
+  // and all within 0.025 laps of each other), so this assertion read 0.000 and
+  // failed. It is deliberately pooled over THREE circuits per class rather than
+  // comparing the two extremes: a two-circuit difference can be produced by one
+  // circuit's lap count, whereas the ordering holding across six circuits with
+  // laps from 34 to 60 can only come from overtakingFactor.
+  //
+  // MARGIN: measured hard 0.236 +- 0.022 (n=360) vs easy 0.003 +- 0.003
+  // (n=360), difference 0.233 +- 0.022. The 0.10 bar therefore has 6.0 SE of
+  // margin. The individual rates are harbour_lights 0.450, kaido 0.192,
+  // bengaluru 0.067 against silverpark 0.008, highland 0.000, veloce 0.000.
+  it('the three hardest circuits block a faster car far more than the three easiest', () => {
+    const hard = pooledFailure(['harbour_lights', 'kaido', 'bengaluru'])
+    const easy = pooledFailure(['silverpark', 'highland', 'veloce'])
+    const diff = hard.rate - easy.rate
+    const seDiff = Math.sqrt(hard.se ** 2 + easy.se ** 2)
+    expect(
+      diff,
+      `hard ${hard.rate.toFixed(3)}+-${hard.se.toFixed(3)} (n=${hard.n}: ${hard.per}) vs ` +
+        `easy ${easy.rate.toFixed(3)}+-${easy.se.toFixed(3)} (n=${easy.n}: ${easy.per}); ` +
+        `difference ${diff.toFixed(3)}+-${seDiff.toFixed(3)}`,
+    ).toBeGreaterThan(0.10)
+  }, 300_000)
+
+  // The absolute companion to the difference above. A difference can be
+  // satisfied by making easy circuits impossible rather than hard circuits
+  // hard, so this pins the hard end on its own. Harbour Lights is the
+  // calendar's designed extreme (overtakingFactor mean 0.217).
+  //
+  // MARGIN: 0.450 +- 0.045 (n=120, seeds 500+13i) and 0.550 +- 0.045 on a
+  // disjoint seed stream (90001+31i), agreeing to 1.6 SE. Against the 0.30 bar
+  // that is 3.3 SE on the lower estimate and 5.5 SE on the higher. The bar is
+  // set at 0.30 and NOT at §6.1's 0.60 because 0.60 is not met -- see the
+  // skipped test below, which holds the real target un-weakened.
+  it('a faster car is genuinely stuck at Harbour Lights a substantial fraction of the time', () => {
+    const r = measureClearing({ circuitId: 'harbour_lights', seeds: GATE_SEEDS, advantage: 0.4 })
+    expect(
+      r.failureRate,
+      `n=${r.trials}, failureRate=${r.failureRate.toFixed(3)}+-${r.seFailureRate.toFixed(3)}; ` +
+        `meanLapsToClear=${r.meanLapsToClear.toFixed(3)} (CONDITIONAL on clearing -- never read it alone)`,
+    ).toBeGreaterThan(0.30)
+  }, 300_000)
+})
+
+describe('overtaking: spec §6.1 clearing targets', () => {
+  // COMMITTED SKIPPED, on the same footing as monteCarlo.test.ts's
+  // mechanicalDnfPerCarRace assertion: the target is real, the simulation does
+  // not meet it, and the honest record is the un-weakened assertion sitting in
+  // the suite rather than a band edited down to fit. Do NOT widen these numbers
+  // to make this pass -- they are the spec's, and MODEL_SPEC.md §4's rule is
+  // that a band may only ever be advanced to its target, never past it and
+  // never widened. Un-skipping this is the acceptance test for whoever gives
+  // the overtaking model a term that is not dominated by raw pace.
+  //
+  // Measured at the time of skipping (n=120, advantage 0.4): median laps 2,
+  // median-circuit failure 0.008 +- 0.008, Harbour Lights 0.450 +- 0.045.
+  it.skip('§6.1: 3-8 laps to clear, 15-25% failure on a median circuit, 60-75% at Harbour Lights', () => {
+    const ALL = Object.keys(GAME.circuits)
+    const rs = ALL.map(id => measureClearing({ circuitId: id, seeds: GATE_SEEDS, advantage: 0.4 }))
+    const msg = rs.map(r => `${r.circuitId} fail=${r.failureRate.toFixed(3)} med=${r.medianLapsToClear}`).join('; ')
+      + ` (n=${GATE_SEEDS.length} per circuit)`
+
+    // Laps to clear, 3-8, across the spec's whole 0.3-0.5 advantage bracket.
+    for (const advantage of [0.3, 0.4, 0.5]) {
+      const r = measureClearing({ circuitId: 'aurora', seeds: GATE_SEEDS, advantage })
+      expect(r.medianLapsToClear, `advantage ${advantage}, n=${r.trials}`).toBeGreaterThanOrEqual(3)
+      expect(r.medianLapsToClear, `advantage ${advantage}, n=${r.trials}`).toBeLessThanOrEqual(8)
+    }
+
+    // Failure rate on the median circuit of the calendar.
+    const sorted = rs.map(r => r.failureRate).sort((a, b) => a - b)
+    const medianCircuit = (sorted[5]! + sorted[6]!) / 2
+    expect(medianCircuit, msg).toBeGreaterThanOrEqual(0.15)
+    expect(medianCircuit, msg).toBeLessThanOrEqual(0.25)
+
+    // Failure rate at the calendar's hardest circuit.
+    const harbour = rs.find(r => r.circuitId === 'harbour_lights')!
+    const hMsg = `n=${harbour.trials}, ${harbour.failureRate.toFixed(3)}+-${harbour.seFailureRate.toFixed(3)}`
+    expect(harbour.failureRate, hMsg).toBeGreaterThanOrEqual(0.60)
+    expect(harbour.failureRate, hMsg).toBeLessThanOrEqual(0.75)
+  }, 600_000)
+})

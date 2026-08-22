@@ -131,7 +131,8 @@ describe('new circuits', () => {
   // This guards AUTHORED DATA INTENT, and since the overtaking-race-time work
   // it also guards a live gameplay property: resolveOvertakes now takes its
   // per-sector overtaking difficulty from circuit.overtakingFactor (it used to
-  // be shadowed by the global tuning.overtaking.sectorFactor, identical for
+  // be shadowed by the global tuning.overtaking.sectorFactor -- now deleted as
+  // dead data, since resolveOvertakes was its only consumer -- identical for
   // every circuit, so Kaido was not in fact harder to pass on than Veloce in
   // play), and the layer-2 traffic cap divides by the same field. The ordering
   // asserted here is therefore the ordering the sim now races to.

@@ -36,7 +36,6 @@ const TuningSchema = z.object({
   }),
   overtaking: z.object({
     base: z.number(), paceGateMin: z.number(), paceMultiplier: z.number(),
-    sectorFactor: z.tuple([z.number(), z.number(), z.number()]),
     attackRacecraftBase: z.number(),
     defenceRacecraftFactor: z.number(),
     tyreFreshnessBonusMax: z.number(),

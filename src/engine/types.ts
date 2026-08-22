@@ -37,7 +37,6 @@ export interface TuningConstants {
     base: number
     paceGateMin: number
     paceMultiplier: number
-    sectorFactor: [number, number, number]
     attackRacecraftBase: number
     defenceRacecraftFactor: number
     tyreFreshnessBonusMax: number
