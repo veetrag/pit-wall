@@ -400,19 +400,51 @@ It has **two** consumers in `src/engine/race.ts`, both added by the overtaking-r
 the global constant became dead in turn and has been **deleted** from `tuning.json`,
 `validators.ts` and `types.ts`. Grep-verified: no consumer remains anywhere in `src/` or `tests/`.
 
-### Still dead — eight fields
+### No longer dead — the three circuit fields, wired 2026-08-23
+
+The circuit-sensitivity plan wired the last three dead *circuit* fields. Each global that had been
+standing in its slot became dead in turn and was **deleted** from `tuning.json`, `validators.ts`
+and `types.ts`, rather than left as a live-looking constant nothing reads.
+
+| Field | Now read at | The global it replaced |
+|---|---|---|
+| `circuit.carSensitivity` | `lapModel.ts` — per-sector weight on the car-performance delta, used **raw** rather than normalised, so a circuit compresses or amplifies the whole car spread (measured sums 0.78–1.05) | `tuning.carPerformance.sectorSplit`, deleted |
+| `circuit.driverSensitivity` | `lapModel.ts` — the same, for the driver delta (measured sums 1.00–1.36) | `tuning.driverPerformance.sectorSplit`, deleted |
+| `circuit.pitLaneTimeLoss` | five call sites, moved in lockstep: `race.ts` applies the stop, `projection.ts` prices the "if you pit now" overlay, `raceStore.ts` (×2) drives the player's stop and decides when they are still in the lane, and `PitTimer.tsx` displays the duration. Circuits specify 18.0–24.0 s against the old flat 22.0 | `tuning.pit.laneTimeLoss`, deleted |
+
+The lockstep on `pitLaneTimeLoss` is load-bearing: had `projection.ts` and `race.ts` disagreed, the
+projection overlay would have lied to the player by 2–4 s — the exact magnitude that decides an
+undercut — and lied silently. `tests/engine/circuitDifferentiation.test.ts` asserts the two agree
+**exactly**, not approximately, at both extremes of the range.
+
+What this cost, and it is the point rather than a side effect: top-team win share is now **56.7 /
+59.2 / 56.5 %** over the full calendar at n=720 across three independent seed bases, against a
+pre-overtaking 84.6 %. Apex still leads by **+25.1 pp ± 2.9** over Meridian and wins 11 of the 12
+circuits singly — but *which* circuits favour whom is now a property of the circuit, because Apex
+(aero 95, power 92) and Meridian (power 98, aero 91) are one facet point apart and the sensitivities
+decide where that point lands. Meridian owns Veloce outright at 69.5 %; Kaido is Vortex's best
+circuit at 31.5 %. This is the feature, and it is why the Monte-Carlo gate's team-identity
+assertion had to move from a 4-circuit sample to the whole calendar: on a sample containing Veloce,
+at n=240, the Apex–Meridian margin is ~6 pp against an SE on the difference of ~4.5 pp, so the gate
+was measuring sampling power rather than the grid. The reasoning is recorded in full in
+`tests/engine/monteCarlo.test.ts`.
+
+> **§3's "Sim at" column is stale as of this section.** Its all-12 top-team figure reads 65.0 %,
+> measured *before* these three fields were wired; the 56.5–59.2 % above supersedes it. The full
+> re-measurement across every gated metric and both difficulties is the circuit-sensitivity plan's
+> final task and had not run when this was written. Trust this section's numbers over §3's until
+> §3 carries a date later than 2026-08-23.
+
+### Still dead — five fields
 
 | Field | Where the behaviour actually comes from | Owner |
 |---|---|---|
-| `circuit.carSensitivity` | global `tuning.carPerformance.sectorSplit` | unassigned |
-| `circuit.driverSensitivity` | global `tuning.driverPerformance.sectorSplit` | unassigned |
-| `circuit.pitLaneTimeLoss` | global `tuning.pit.laneTimeLoss` | unassigned |
 | path `sectorBoundaries`, `pitEntry`, `pitExit` | unread. They appear in `TrackCanvas.tsx:21`'s type for the canvas-local `CIRCUIT_PATHS` table but are never read from it, so pit entry and exit are still never drawn | unassigned |
 | `tuning.incidents.dnfPerLap`, `driverErrorPerLap` | unread; no consumer exists | **the race-incidents plan** ("Plan B") |
 | `team.developmentRate` | read by `src/state/seasonStore.ts` (the progression system) only, never by the engine | by design |
 
-Grep-verified 2026-08-22: the first three and the two `incidents` keys have **zero** references
-anywhere in `src/` outside `validators.ts` and `types.ts`.
+Grep-verified 2026-08-23: the two `incidents` keys have **zero** references anywhere in `src/`
+outside `validators.ts` and `types.ts`.
 
 **`circuit.sectorBase` remains the subtler case.** It *is* read — by `lapModel.ts:20` and, for
 display only, by `TrackCanvas.tsx:192` — but as a common additive offset applied to every car it
@@ -428,10 +460,10 @@ re-derives the old conclusion from the old data.
 
 | Claim, as it used to read | Status now |
 |---|---|
-| "Scrambling all four dead circuit fields yields byte-identical races." | **False for `overtakingFactor`**; still true for the other three (`carSensitivity`, `driverSensitivity`, `pitLaneTimeLoss`), which have no consumer. |
+| "Scrambling all four dead circuit fields yields byte-identical races." | **False for all four.** It went false for `overtakingFactor` first, then for `carSensitivity`, `driverSensitivity` and `pitLaneTimeLoss` when the circuit-sensitivity plan wired them (see above). No circuit field is scramble-invariant any more. |
 | "Aurora and Kaido — same 50 laps, different `sectorBase`, `overtakingFactor` and `pitLaneTimeLoss` — produce bit-identical results on every metric across 400 seeds." | **False.** They differ measurably, and by design: at a 0.4 s/lap advantage the clearing failure rate is Aurora **0.008 ± 0.008** against Kaido **0.192 ± 0.036** (n=120 each). That pair was the cleanest possible demonstration of the defect and is now the cleanest demonstration of the fix. |
 | "Swapping `sectorBase` yields identical results." | **Still true** (see above). |
-| "The only per-circuit inputs that change racing today are `laps` and `rainProbability`/`weatherBias`." | **Superseded.** `overtakingFactor` now changes racing too, calendar-wide: pooled over the three hardest circuits the clearing failure rate is **0.236 ± 0.022** against **0.003 ± 0.003** over the three easiest (n=360 each). |
+| "The only per-circuit inputs that change racing today are `laps` and `rainProbability`/`weatherBias`." | **Superseded twice over.** `carSensitivity`, `driverSensitivity` and `pitLaneTimeLoss` all change racing as well, calendar-wide.  Also: `overtakingFactor` now changes racing too, calendar-wide: pooled over the three hardest circuits the clearing failure rate is **0.236 ± 0.022** against **0.003 ± 0.003** over the three easiest (n=360 each). |
 
 ## 9. Overtaking was decorative — what was wrong, and what it costs now
 
