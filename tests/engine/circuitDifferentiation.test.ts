@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { initRace, stepSector } from '@engine/index'
+import { projectPitNow } from '@engine/projection'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
+import { useRaceStore } from '@state/raceStore'
 import type { RaceConfig, StrategyBrain, CircuitSpec } from '@engine/types'
 
 const GAME = loadGameData()
@@ -23,8 +25,8 @@ const SEEDS = [1, 2, 3, 4, 5]
  * state differ, which would let the differentiation test below pass without
  * the sensitivity fields working at all.
  */
-function raceFingerprint(circuit: CircuitSpec, seed: number): string {
-  const cfg: RaceConfig = {
+function buildConfig(circuit: CircuitSpec, seed: number): RaceConfig {
+  return {
     circuit,
     tuning: GAME.tuning,
     compounds: GAME.compounds,
@@ -45,6 +47,10 @@ function raceFingerprint(circuit: CircuitSpec, seed: number): string {
     coverReactionScale: GAME.tuning.difficultyProfiles.pro.coverReactionScale,
     paceModeAggression: GAME.tuning.difficultyProfiles.pro.aiPaceModeAggression,
   }
+}
+
+function raceFingerprint(circuit: CircuitSpec, seed: number): string {
+  const cfg = buildConfig(circuit, seed)
   const rng = createRng(seed)
   let state = initRace(cfg)
   // Bounded, per tests/engine/monteCarloHarness.ts:185. RaceState has NO
@@ -65,7 +71,9 @@ function raceFingerprint(circuit: CircuitSpec, seed: number): string {
  *   overtakingFactor  flips 5 of 5 on its own (race.ts:183 and :316)
  *   sectorBase        flips 3 of 5 on its own (lapModel.ts:20)
  *   weatherBias       flips seeds on its own -- see below
- *   pitLaneTimeLoss   flips 0 -- still dead, and owned by Task 2
+ *   pitLaneTimeLoss   now wired (Task 2): see the "pit lane loss comes from
+ *                     the circuit" describe block below for the measured
+ *                     difference and the projection-vs-race agreement check
  *
  * The first, second and fourth are held equal in `seedsDiffering`, since they
  * are wired features of the circuit under test. The third is neutralised here,
@@ -104,7 +112,9 @@ function prepare(circuitId: string, overrides: Partial<CircuitSpec> = {}): Circu
  *   - `overtakingFactor` (wired by the preceding overtaking plan, race.ts:183
  *     and :316) flips all 5 seeds on its own.
  *   - `sectorBase` (wired at lapModel.ts:20, and always was) flips 3 on its own.
- *   - `pitLaneTimeLoss` flips 0 -- still dead, and owned by Task 2.
+ *   - `pitLaneTimeLoss` is held equal here (via `alreadyWired`) because it is
+ *     now a wired feature of the circuit under test, same as the other two --
+ *     see the "pit lane loss comes from the circuit" describe block below.
  *   - `weatherBias` flips seeds too, even at rainProbability 0. Neutralised in
  *     `prepare` rather than here, since it is a control, not a wired feature --
  *     see that docstring, which is the authority on all four confounders.
@@ -176,4 +186,132 @@ describe('circuits: sensitivity fields differentiate the calendar', () => {
       'same circuit, same seed, twice',
     ).toBe(0)
   }, 120_000)
+})
+
+describe('circuits: pit lane loss comes from the circuit', () => {
+  // pit.laneTimeLoss (22.0) was global while circuits specify 18.0-24.0.
+  //
+  // Isolation: both configs are built from `veloce` -- identical sectorBase,
+  // overtakingFactor, sensitivity, everything -- except one has grand_savane's
+  // pitLaneTimeLoss grafted on. aiDecision (src/engine/strategy.ts) never reads
+  // pitLaneTimeLoss, so up to and including the sector in which the FIRST pit
+  // stop of the race happens, runs A and B are byte-identical -- same
+  // decisions, same rng draws. That sector is measured and then the comparison
+  // stops, deliberately, before the changed raceTime can feed back into any
+  // car's later pit/overtake decisions and contaminate the reading (measured:
+  // letting the whole 40-lap race run before comparing pit counts produces
+  // wildly different counts per car, e.g. 0 vs 3, because a pit stop shifts
+  // track position, which is an input to the AI's own decisions).
+  it('a stop at Veloce costs measurably less than at Grand Savane', () => {
+    const veloceLoss = GAME.circuits['veloce']!.pitLaneTimeLoss
+    const grandSavaneLoss = GAME.circuits['grand_savane']!.pitLaneTimeLoss
+    const expectedDiff = grandSavaneLoss - veloceLoss // 6.0
+
+    const circuitA = prepare('veloce')
+    const circuitB = prepare('veloce', { pitLaneTimeLoss: grandSavaneLoss })
+
+    const firstStopDiffs: number[] = []
+    for (const seed of SEEDS) {
+      const cfgA = buildConfig(circuitA, seed)
+      const cfgB = buildConfig(circuitB, seed)
+      const rngA = createRng(seed)
+      const rngB = createRng(seed)
+      let stateA = initRace(cfgA)
+      let stateB = initRace(cfgB)
+      for (let i = 0; i < NORMALISED_LAPS * 3; i++) {
+        const prevPits = new Map(stateA.cars.map(c => [c.driverId, c.pitsDone]))
+        stateA = stepSector(cfgA, stateA, rngA)
+        stateB = stepSector(cfgB, stateB, rngB)
+        const pittedCar = stateA.cars.find(c => c.pitsDone > (prevPits.get(c.driverId) ?? 0))
+        if (pittedCar) {
+          const carB = stateB.cars.find(c => c.driverId === pittedCar.driverId)!
+          firstStopDiffs.push(carB.raceTime - pittedCar.raceTime)
+          break // stop before any later sector's decisions can diverge
+        }
+      }
+    }
+
+    const n = firstStopDiffs.length
+    const mean = firstStopDiffs.reduce((a, b) => a + b, 0) / n
+    expect(n, 'at least one seed must produce a pit stop within the normalised race').toBeGreaterThan(0)
+    expect(
+      mean,
+      `veloce (${veloceLoss}) vs grand_savane (${grandSavaneLoss}), n=${n} first-stop seeds, expected +${expectedDiff}`,
+    ).toBeCloseTo(expectedDiff, 1) // within 0.05 of 6.0, well inside the +-1.0 budget
+    expect(Math.abs(mean - expectedDiff)).toBeLessThanOrEqual(1.0)
+  }, 60_000)
+
+  // The important one: the projection must agree with reality, or the
+  // centrepiece interaction lies to the player. Noise (stopSigma) and the
+  // fast-forward horizon are both zeroed so the only quantity left in either
+  // computation is pitLaneTimeLoss + stopMean -- the exact, not approximate,
+  // comparison the brief calls for.
+  it('the projection prices a stop with the same lane loss the race charges', () => {
+    for (const circuitId of ['veloce', 'grand_savane'] as const) {
+      useRaceStore.setState({
+        phase: 'idle', config: null, raceState: null, rng: null,
+        projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0,
+      })
+      // d_voss starts on pole -- no "ahead" car, and the "behind" gap gets
+      // clipped to 0 by projection.ts's Math.max(0, ...) once a ~20s stop
+      // dwarfs the grid gap, which erases the signal this test needs. Grid
+      // into a mid-pack driver instead, so there is a genuine car ahead and
+      // the raw (unclipped) rejoinGap can be used to recover the stop cost.
+      useRaceStore.getState().startSeasonRace('d_voss', 42, circuitId, 'pro')
+      const gridOrder = [...useRaceStore.getState().raceState!.cars].sort((a, b) => a.position - b.position)
+      const midPackDriverId = gridOrder[10]!.driverId
+      useRaceStore.setState({
+        phase: 'idle', config: null, raceState: null, rng: null,
+        projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0,
+      })
+      useRaceStore.getState().startSeasonRace(midPackDriverId, 42, circuitId, 'pro')
+
+      const liveConfig = useRaceStore.getState().config!
+      const zeroNoiseConfig: RaceConfig = {
+        ...liveConfig,
+        tuning: {
+          ...liveConfig.tuning,
+          pit: { ...liveConfig.tuning.pit, stopSigma: 0 },
+          projection: { ...liveConfig.tuning.projection, horizonLaps: 0 },
+        },
+      }
+      useRaceStore.setState({ config: zeroNoiseConfig })
+
+      const raceState = useRaceStore.getState().raceState!
+      const player = raceState.cars.find(c => c.driverId === zeroNoiseConfig.playerDriverId)!
+      const sortedBefore = [...raceState.cars].sort((a, b) => a.position - b.position)
+      const aheadBefore = sortedBefore[player.position - 2] ?? null
+      const behindBefore = sortedBefore[player.position] ?? null
+      const before = player.raceTime
+
+      // What race.ts's player-pit path (raceStore.pitNow) actually charges.
+      useRaceStore.getState().pitNow('H')
+      const after = useRaceStore.getState().raceState!.cars.find(c => c.driverId === zeroNoiseConfig.playerDriverId)!.raceTime
+      const actualStopTime = after - before
+
+      // What projection.ts prices for the same stop from the same pre-pit
+      // state (horizonLaps 0, so neither neighbour's raceTime has moved).
+      // Recover the player's post-stop raceTime from whichever neighbour
+      // gap projection.ts reports -- it only reports a gap to whichever
+      // neighbour exists, and the player here starts on pole (no "ahead" car).
+      const projected = projectPitNow(zeroNoiseConfig, raceState, 'H', 12345)
+      let projectedStopTime: number
+      if (aheadBefore) {
+        projectedStopTime = projected.rejoinGap + aheadBefore.raceTime - before
+      } else if (behindBefore) {
+        projectedStopTime = behindBefore.raceTime - projected.rejoinGapBehind - before
+      } else {
+        throw new Error('fixture must have at least one other car to measure a gap against')
+      }
+
+      expect(
+        projectedStopTime,
+        `${circuitId}: projection must price the stop identically to the race`,
+      ).toBeCloseTo(actualStopTime, 9)
+      expect(
+        actualStopTime,
+        `${circuitId}: deterministic stop cost is pitLaneTimeLoss + stopMean`,
+      ).toBeCloseTo(GAME.circuits[circuitId]!.pitLaneTimeLoss + zeroNoiseConfig.tuning.pit.stopMean, 9)
+    }
+  }, 60_000)
 })

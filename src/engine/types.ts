@@ -77,7 +77,6 @@ export interface TuningConstants {
     factorFloor: number
   }
   pit: {
-    laneTimeLoss: number
     stopMean: number
     stopSigma: number
     pitCrewMeanRelief: number

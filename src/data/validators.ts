@@ -68,7 +68,7 @@ const TuningSchema = z.object({
     factorFloor: z.number().positive().max(0.35),
   }),
   pit: z.object({
-    laneTimeLoss: z.number(), stopMean: z.number(), stopSigma: z.number(),
+    stopMean: z.number(), stopSigma: z.number(),
     pitCrewMeanRelief: z.number(), pitCrewSigmaRelief: z.number(),
   }),
   paceModes: z.object({

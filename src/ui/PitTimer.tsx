@@ -20,7 +20,7 @@ export function PitTimer() {
 
   if (!visible || !config) return null
 
-  const stopDuration = config.tuning.pit.laneTimeLoss + config.tuning.pit.stopMean
+  const stopDuration = config.circuit.pitLaneTimeLoss + config.tuning.pit.stopMean
 
   return (
     <AnimatePresence>

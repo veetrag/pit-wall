@@ -198,7 +198,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const finished = nextState.lap >= nextState.totalLaps && nextState.sector === 0
 
     const playerNow = nextState.cars.find(c => c.isPlayer)?.raceTime ?? 0
-    const stillInPit = playerInPit && playerNow < pitEndTime + config.tuning.pit.laneTimeLoss
+    const stillInPit = playerInPit && playerNow < pitEndTime + config.circuit.pitLaneTimeLoss
 
     const nextRadio = processRadioTick(nextState, config, radioState, (msg, severity) => {
       const id = `alert-${++alertCounter}`
@@ -224,8 +224,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       return
     }
 
-    const { laneTimeLoss, stopMean, stopSigma } = config.tuning.pit
-    const stopTime = laneTimeLoss + stopMean + (rng() - 0.5) * 2 * stopSigma
+    const { stopMean, stopSigma } = config.tuning.pit
+    const stopTime = config.circuit.pitLaneTimeLoss + stopMean + (rng() - 0.5) * 2 * stopSigma
 
     const updatedCars = raceState.cars.map(car => {
       if (!car.isPlayer) return car

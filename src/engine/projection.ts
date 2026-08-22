@@ -27,7 +27,7 @@ export function projectPitNow(
 
   // Apply pit stop to player car in the clone
   const rngForStop = createRng(seed)
-  const stopTime = config.tuning.pit.laneTimeLoss +
+  const stopTime = config.circuit.pitLaneTimeLoss +
     config.tuning.pit.stopMean +
     (rngForStop() - 0.5) * 2 * config.tuning.pit.stopSigma
 

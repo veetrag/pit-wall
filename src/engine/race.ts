@@ -230,7 +230,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
           const crewFactor = team.facets.pitCrew / 100
           const effectiveStopMean = config.tuning.pit.stopMean - crewFactor * config.tuning.pit.pitCrewMeanRelief
           const effectiveStopSigma = config.tuning.pit.stopSigma * (1 - crewFactor * config.tuning.pit.pitCrewSigmaRelief)
-          const stopTime = config.tuning.pit.laneTimeLoss +
+          const stopTime = config.circuit.pitLaneTimeLoss +
             effectiveStopMean +
             stopNoise * effectiveStopSigma
           updated = {
