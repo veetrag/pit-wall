@@ -240,33 +240,95 @@ function runFullRace(config: RaceConfig): RaceState {
 }
 
 describe('strategy value validation', () => {
-  it('SMART finishes ≥1.5 positions ahead of NAIVE over 2000 races', () => {
-    const RACES = 2000
-    const posSum: Record<Brain, number> = { naive: 0, smart: 0, optimal: 0 }
+  // Paired per-race gains, so the gates below can be stated against a real
+  // standard error rather than a bare point estimate. The pairing matters: all
+  // three brains race each other in the same race, so seed-to-seed variation in
+  // how hard the race was cancels out of the difference.
+  function measureGains(races: number, firstSeed = 1) {
     const brainToDriver: Record<Brain, string> = { naive: 'd0', smart: 'd1', optimal: 'd2' }
+    const posSum: Record<Brain, number> = { naive: 0, smart: 0, optimal: 0 }
+    const diffSum: Record<'smart' | 'optimal', number> = { smart: 0, optimal: 0 }
+    const diffSumSq: Record<'smart' | 'optimal', number> = { smart: 0, optimal: 0 }
 
-    for (let seed = 1; seed <= RACES; seed++) {
+    for (let seed = firstSeed; seed < firstSeed + races; seed++) {
       const config = makeValidationConfig(seed)
       const final = runFullRace(config)
-      for (const brain of ['naive', 'smart', 'optimal'] as Brain[]) {
-        const driverId = brainToDriver[brain]
-        const car = final.cars.find(c => c.driverId === driverId)
-        if (car) posSum[brain] += car.position
+      const pos = (brain: Brain): number =>
+        final.cars.find(c => c.driverId === brainToDriver[brain])?.position ?? NaN
+      const naive = pos('naive')
+      for (const brain of ['naive', 'smart', 'optimal'] as Brain[]) posSum[brain] += pos(brain)
+      for (const brain of ['smart', 'optimal'] as const) {
+        const d = naive - pos(brain) // positive = brain finished ahead of naive
+        diffSum[brain] += d
+        diffSumSq[brain] += d * d
       }
     }
 
-    const avgNaive   = posSum.naive   / RACES
-    const avgSmart   = posSum.smart   / RACES
-    const avgOptimal = posSum.optimal / RACES
+    const stats = (brain: 'smart' | 'optimal') => {
+      const mean = diffSum[brain] / races
+      const variance = Math.max(0, diffSumSq[brain] / races - mean * mean)
+      return { gain: mean, se: Math.sqrt(variance / races) }
+    }
+    return {
+      avg: {
+        naive: posSum.naive / races,
+        smart: posSum.smart / races,
+        optimal: posSum.optimal / races,
+      },
+      smart: stats('smart'),
+      optimal: stats('optimal'),
+    }
+  }
 
-    const smartGain   = avgNaive - avgSmart    // positive = better finishing position
-    const optimalGain = avgNaive - avgOptimal
+  it('SMART and OPTIMAL both finish ahead of NAIVE over 8000 races', () => {
+    // 8000, not the original 2000: OPTIMAL's gain is now small enough that its
+    // standard error is what decides whether a gate on it can mean anything.
+    // 2000 races give SE 0.086, so no positive gate sits a safe distance under
+    // the measurement; 8000 give SE 0.043 for ~4s of runtime, which is what
+    // makes the 0.05 gate below defensible instead of decorative.
+    const RACES = 8000
+    const m = measureGains(RACES)
 
-    console.log(`[strategy-value] NAIVE avg=${avgNaive.toFixed(2)}  SMART avg=${avgSmart.toFixed(2)}  OPTIMAL avg=${avgOptimal.toFixed(2)}`)
-    console.log(`[strategy-value] SMART gain=${smartGain.toFixed(2)}  OPTIMAL gain=${optimalGain.toFixed(2)}`)
+    console.log(`[strategy-value] NAIVE avg=${m.avg.naive.toFixed(2)}  SMART avg=${m.avg.smart.toFixed(2)}  OPTIMAL avg=${m.avg.optimal.toFixed(2)}`)
+    console.log(`[strategy-value] SMART gain=${m.smart.gain.toFixed(3)}+-${m.smart.se.toFixed(3)}  OPTIMAL gain=${m.optimal.gain.toFixed(3)}+-${m.optimal.se.toFixed(3)}`)
 
-    expect(smartGain).toBeGreaterThanOrEqual(1.5)
-    // OPTIMAL uses a tighter cliff threshold and surgical undercut, should match or beat SMART
-    expect(optimalGain).toBeGreaterThanOrEqual(1.5)
-  }, 120_000) // 2 min timeout — 2000 full races
+    expect(m.smart.gain, `n=${RACES}, SE=${m.smart.se.toFixed(3)}`).toBeGreaterThanOrEqual(1.5)
+
+    // OPTIMAL's gate was 1.5 and is now 0.05. It was lowered on evidence, and
+    // this comment exists so that anyone who finds 0.05 suspiciously low can
+    // check that evidence rather than assume the gate was bent to make a red
+    // test green.
+    //
+    // The old 1.5 was set against a measured 1.59, and that 1.59 depended on a
+    // defect. resolveOvertakes used to swap two slots in a local array copy and
+    // never touch raceTime, so every pass it logged was erased by the next sort
+    // (MODEL_SPEC.md section 9). Track position was therefore FREE: OPTIMAL's
+    // whole edge is a surgical undercut that rejoins behind cars and drives back
+    // through them, and in a world where passing costs nothing that edge is pure
+    // raceTime with no toll. The gate was certifying the defect, not the brain.
+    //
+    // Measured decomposition of the 1.59, each step 2000 races:
+    //   1.59  pre-change (overtaking cosmetic)
+    //   0.87  passes made durable (raceTime swap), no fight cost
+    //   0.19  + fightCost charged to the overtaken car only
+    //   0.17  + the traffic penalty scaled per circuit (hardCircuitScale 2.5)
+    // SMART is unaffected across all four (3.89 -> 3.60), which is the evidence
+    // that this is specific to a brain whose edge was positional rather than a
+    // general dilution of strategy value.
+    //
+    // 0.05 is set from the measurement's SPREAD, not from a point estimate.
+    // Paired, n=8000: 0.163 +- 0.043 on seeds 1-8000, and 0.228 +- 0.043 on an
+    // independent replicate block (seeds 100001+), which agree to 1.1 SE. The
+    // gate sits 2.6 SE below the lower of the two and 4.1 SE below the higher,
+    // and it still fails outright if OPTIMAL ever stops beating NAIVE. At the
+    // original n=2000 the SE was 0.086 and no positive gate had that margin --
+    // which is why the race count went up rather than the gate going to zero.
+    //
+    // A known limitation, and an explicit owner decision: 0.17 positions is a
+    // WEAK result for a brain called OPTIMAL, and this gate accepts it. It is the
+    // honest number in a world where track position finally costs something.
+    // Teaching the brain to price traffic -- to prefer a rejoin into clear air
+    // over a nominally faster one into a queue -- is separate, later work.
+    expect(m.optimal.gain, `n=${RACES}, SE=${m.optimal.se.toFixed(3)}`).toBeGreaterThanOrEqual(0.05)
+  }, 300_000) // 8000 full races x 3 brains
 })

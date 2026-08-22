@@ -283,6 +283,31 @@ same sector.
 Measured cost of all this blocking: **0.58s per car per entire race** (worst ever 5.9s), against
 roughly 24.4s for a pit stop. Blocking is effectively free.
 
+**One of the numbers this defect inflated: the OPTIMAL brain's measured strategic value.**
+`tests/engine/strategy.test.ts` gated OPTIMAL at **≥1.5 finishing positions** ahead of NAIVE,
+against a measured **1.59** — and that figure was earned in a world where track position was free.
+OPTIMAL's edge is a surgical undercut that rejoins *behind* cars and drives back through them, so
+when a pass costs nothing, that edge is pure `raceTime` with no toll to pay. The gate was
+certifying the defect rather than the brain. Measured decomposition, 2000 races per step:
+
+| configuration | OPTIMAL gain | SMART gain |
+|---|---|---|
+| pre-change (overtaking cosmetic) | **1.59** | 3.89 |
+| passes made durable (`raceTime` swap), no fight cost | 0.87 | 3.69 |
+| + `fightCost` on the overtaken car only | 0.19 | 3.59 |
+| + traffic penalty scaled per circuit (`hardCircuitScale` 2.5) | **0.17** | 3.60 |
+
+SMART is unaffected across every step (3.89 → 3.60), which is the evidence that this is specific to
+a brain whose advantage was *positional* rather than a general dilution of strategy value. The gate
+was lowered to **0.05** on this evidence, with the race count raised 2000 → 8000 so the standard
+error (0.086 → 0.043) could support a gate at all: measured 0.163 ± 0.043, replicating at
+0.228 ± 0.043, so the gate sits 2.6 SE under the lower estimate.
+
+**Recorded as a known limitation, not a success:** 0.17 positions is a weak result for a brain named
+OPTIMAL, and lowering the gate accepts it. The owner's decision is that this is the honest number
+now that track position costs something, and that teaching the brain to price traffic — to prefer a
+rejoin into clear air over a nominally faster one into a queue — is separate, later work.
+
 ## 10. Invariants that must never break
 
 Unlike the bands, these are not negotiable and are not subject to rebalancing.
