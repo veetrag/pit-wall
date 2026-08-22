@@ -58,8 +58,8 @@ be corrected or must update this document with an argument.
 | Distinct winners / season | median **3**, range 2–6 | **7** on all four all-12 n=720 samples, both difficulties | **≥ 4** | **Yes** |
 | Grid↔finish Spearman ρ | **0.779** ± 0.009 classified; 0.628 with DNFs | all 12, n=720: **0.7495 / 0.7557** pro, **0.7773 / 0.7874** rookie | **0.60 – 0.80** (the §3 target, reached early — §4) | **Yes** — but **watch the ceiling**: rookie's 0.7874 leaves 0.0126 of headroom against an observed between-sample spread of 0.010. Anything that further rewards grid position will breach 0.80 on rookie first |
 | Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | all 12, n=720: **4.51% / 4.86%** pro, **5.06% / 4.72%** rookie. Historical pooled figure **4.67%** ± 0.12 (n = 28,800 car-races) — unmoved by this plan | **6 – 10%** | **Yes** — but not met; assertion skipped, see §4 |
-| Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | **max/min 1.377 ± 0.030** over the 12 at pro, n=200 each — up from exactly **1.00×** before the circuit-sensitivity plan, and **4.1 SE below the 1.5 floor**. Per-circuit, sorted: grand_savane 2.591, altiplano 2.639, sol_desert 2.651, veloce 2.718, silverpark 2.744, highland 2.815, costa_verde 2.835, aurora 2.897, monsoon_bay 3.033, bengaluru 3.045, kaido 3.455, harbour_lights 3.568 | **1.5 – 2.5×** — **NOT MET** | **Yes**, but on a *fixed pair*, not on max/min. `tests/engine/circuitDifferentiation.test.ts` gates harbour_lights ÷ grand_savane at **> 1.15** (measured 1.2968 ± 0.0451 pro, 1.3786 ± 0.0816 rookie, over six n=120 seed bases). A max-over-12 is an extremum — biased upward, and its endpoints changed identity across seed bases — so gating it would repeat the `worst`-based defect removed from `mechanicalFailure`. The 1.5 target is committed **unmet and un-weakened**; the two structural causes are recorded in that test and in §7 |
-| Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9636** pro / **0.9152** rookie, identical on both all-12 n=720 seed bases. Unmoved by the sensitivity wiring, which is the reassuring result: compressing the car spread per circuit did **not** push results toward randomness | **≥ 0.90** — final, never to be widened | **Yes** |
+| Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | **1.3454** mean over four seed bases (1.3066–1.3769, pro, n=200 per circuit) — **below the 1.5 floor, and the circuit-sensitivity plan moved it DOWN.** Reverting only the two `lapModel.ts` lines that plan changed measures **1.5238** (1.4952–1.5523) on the same seeds: inside the band. Per-circuit, wired, sorted: grand_savane 2.591, altiplano 2.639, sol_desert 2.651, veloce 2.718, silverpark 2.744, highland 2.815, costa_verde 2.835, aurora 2.897, monsoon_bay 3.033, bengaluru 3.045, kaido 3.455, harbour_lights 3.568 | **1.5 – 2.5×** — **NOT MET, and regressed** | **Yes**, but on a *fixed pair* and for a narrower purpose than the band. `tests/engine/circuitDifferentiation.test.ts` gates harbour_lights ÷ grand_savane at **> 1.15** (measured 1.2968 ± 0.0451 pro over six n=120 seed bases) as a floor against the calendar flattening. That gate **cannot** fail on a renormalising of the sensitivities — verified by mutation, which passes at 1.44 — so the wiring itself is guarded by the fingerprint pairs in that file, not by this ratio. See §7 and §4 for the mechanism |
+| Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9636** pro / **0.9152** rookie, identical on both all-12 n=720 seed bases. **Read it narrowly.** The reference pace ranking is computed from the *global* `sectorSplit`, not from `circuit.carSensitivity`, so it is circuit-blind and disagrees with the engine's own per-circuit order on 9 of 12 circuits. An unmoved value therefore shows results are still tied to car quality **in general** — the lottery failure mode is absent — and is **not** evidence that per-circuit weighting left pace ordering untouched, which an earlier version of this row wrongly inferred. See `tests/engine/monteCarloHarness.ts` | **≥ 0.90** — final, never to be widened | **Yes** |
 | Pit lane time loss, **calendar mean** | 19.7 – 23.8s (2,106 green-flag stops) — a population mean **across circuits** | **21.00s** exactly; per-circuit range **18.0 – 24.0s**, with three members below the band floor: veloce 18.0, harbour_lights 19.0, altiplano 19.0 | 19.5 – 24.0s, **on the mean** | **Yes.** The metric is the mean across the calendar, because that is the quantity the real-world figure was always derived from — real pit lanes do vary below 19.7s, and a per-circuit reading was never what the band measured. **This is a clarification of the metric, not a loosening of the band: both endpoints are untouched.** It is not precedent for widening a band to fit data — widening 19.5 to 18.0 would have been that, and was rejected. A spread gate (≥ 4.0s) sits beside it so the calendar cannot be flattened back |
 | Recorded overtake events | not computable — see §5 | **33.3** pro / 33.1 rookie (4-circuit, n=240); 36.7 / 36.8 (all 12). Was 46.3 before overtaking became durable. §5 forbids gating it; it is a **calibration anchor only** | — | **No — diagnostic only** |
 | Clearing failure rate, hardest circuit (Harbour Lights, 0.4 s/lap adv) | no published data (§6) | **0.450** ± 0.045 (n=120); 0.550 ± 0.045 on a disjoint seed stream | design target **0.60 – 0.75** (spec §6.1) — **not met**; gated at **> 0.30** | **Yes**, at the reduced bar; the real target is committed **skipped** |
@@ -88,7 +88,7 @@ therefore tighten as the work lands. The values in `tuning.json._regressionBands
 | Pre-competitive-grid | ≤ 0.97 (behaviour then) | ≥ 2 | **1.75 – 4.0** | **0.78 – 0.90** |
 | The competitive-grid plan (**landed, met**) | **≤ 0.90** — measured **0.846** pro / **0.881** rookie, 12 circuits | **≥ 4** — measured **7–8** | 1.75 – 4.0 — measured 2.859 / 2.582 | **0.60 – 0.80** (the §3 target, reached early — see below); measured **0.753** / **0.785** |
 | The overtaking-race-time plan (**landed, met**) | ≤ 0.90 — measured **0.579** (4-circuit, n=240) / **0.650** (all 12), pro | ≥ 4 — measured **8** / 7 | **2.5 – 4.0** — **advanced to the §3 target** on measurement; 2.9896 ± 0.043 gated sample, 8 SE over the floor | 0.60 – 0.80 — measured **0.734** / 0.758 |
-| The circuit-sensitivity plan (**landed, met**) | ≤ 0.90 — measured **0.567 / 0.592** pro, **0.642 / 0.600** rookie (all 12, n=720) | ≥ 4 — measured **7**, both difficulties | 2.5 – 4.0 (already advanced) — measured **2.863 / 2.837** pro, **2.618 / 2.581** rookie | 0.60 – 0.80 — measured **0.750 / 0.756** pro, **0.777 / 0.787** rookie |
+| The circuit-sensitivity plan (**landed; every *banded* metric met — but see the \|Δpos\|-ratio regression below**) | ≤ 0.90 — measured **0.567 / 0.592** pro, **0.642 / 0.600** rookie (all 12, n=720) | ≥ 4 — measured **7**, both difficulties | 2.5 – 4.0 (already advanced) — measured **2.863 / 2.837** pro, **2.618 / 2.581** rookie | 0.60 – 0.80 — measured **0.750 / 0.756** pro, **0.777 / 0.787** rookie |
 | The race-incidents plan | **0.35 – 0.55** | ≥ 4 | 2.5 – 4.0 (already advanced) | 0.60 – 0.80 |
 
 **Why \|Δpos\| and ρ were staged rather than simply banded at their §3 values.** Before the
@@ -127,6 +127,31 @@ and `gridFinishSpearman` were already at their §3 targets, `minPaceRankCorrelat
 with the race-incidents plan, since pro measures 0.567–0.592 and is still 2–4pp above it. **Nothing
 was widened to accommodate a measurement**, which was the live risk in a plan whose whole effect is to
 change how much the car matters.
+
+**The one metric that plan moved the wrong way, and it is that plan's own headline (2026-08-23).** The
+per-circuit \|Δpos\| ratio in §3 fell from **1.5238** to **1.3454** — from inside the 1.5–2.5 band to
+below its floor — measured by reverting only the two `lapModel.ts` lines the plan changed and re-running
+the identical sweep on four seed bases. It is **not** a band that was widened or a gate that was
+weakened; it is an ungated §3 target the work intended to advance and instead set back, recorded here
+rather than smoothed over.
+
+The mechanism is a finding for the calendar's owner, not a defect in the code. `harbour_lights` is the
+most position-shuffling circuit and is authored with the **lowest** `carSensitivity` of the 12 (sum
+0.78) and the **highest** `driverSensitivity` (1.36). That is realistic — a street circuit is where the
+driver matters — but driver skill also helps set the grid, so amplifying the driver by 36% makes the
+result *more* grid-ordered: harbour_lights' own \|Δpos\| fell 3.770 → 3.567, while the old floor
+circuit (veloce, 1.00/1.00) rose. The sensitivities as authored **anti-correlate with position churn**
+and squeeze the range from both ends. Closing the gap is therefore not a matter of widening the spread
+in the direction it already runs: it needs the spread re-authored so high-churn circuits carry high car
+sensitivity, or `overtaking.factorFloor` lowered (§7). Both are owner decisions.
+
+**A correction on the record, because it is the more instructive half.** The first version of this
+section, and of §3's row, claimed the ratio rose "from exactly 1.00×". It did not. 1.00× predates the
+overtaking-race-time plan, which made `overtakingFactor` live and had already carried the ratio to
+~1.52 on its own — and §3's row said so explicitly, in the words "not re-measured by the overtaking
+work". That warning was **deleted and replaced with a number nobody had measured**, turning a −0.18
+regression into a claimed +0.38 improvement. The lesson is narrow and worth keeping: a metric marked
+"not re-measured" is not a baseline, and inheriting one is how an oracle acquires a false number.
 
 Beyond these two, the staged bands **must not be loosened**: a \|Δpos\| floor of 1.5 would let a
 genuine *regression* in churn pass CI while still violating this oracle, which is how a staged gate
@@ -413,14 +438,21 @@ the global constant became dead in turn and has been **deleted** from `tuning.js
 
 ### No longer dead — the three circuit fields, wired 2026-08-23
 
-The circuit-sensitivity plan wired the last three dead *circuit* fields. Each global that had been
-standing in its slot became dead in turn and was **deleted** from `tuning.json`, `validators.ts`
-and `types.ts`, rather than left as a live-looking constant nothing reads.
+The circuit-sensitivity plan wired the last three dead *circuit* fields.
+
+One global was displaced entirely and **was** deleted: `tuning.pit.laneTimeLoss`, gone from
+`tuning.json`, `validators.ts` and `types.ts`, since nothing read it afterwards. **The other two were
+not, and an earlier version of this section wrongly said they were.** `tuning.carPerformance.sectorSplit`
+and `tuning.driverPerformance.sectorSplit` are still present in all three files — correctly, because
+they still have live consumers outside the engine: `src/ui/Development.tsx:48,53` and
+`src/state/seasonStore.ts:72-73` price development points off them. They are no longer the *engine's*
+weighting, and that split is itself a defect worth naming (below), but they are not dead constants and
+deleting them would break the upgrade shop.
 
 | Field | Now read at | The global it replaced |
 |---|---|---|
-| `circuit.carSensitivity` | `lapModel.ts` — per-sector weight on the car-performance delta, used **raw** rather than normalised, so a circuit compresses or amplifies the whole car spread (measured sums 0.78–1.05) | `tuning.carPerformance.sectorSplit`, deleted |
-| `circuit.driverSensitivity` | `lapModel.ts` — the same, for the driver delta (measured sums 1.00–1.36) | `tuning.driverPerformance.sectorSplit`, deleted |
+| `circuit.carSensitivity` | `lapModel.ts` — per-sector weight on the car-performance delta, used **raw** rather than normalised, so a circuit compresses or amplifies the whole car spread (measured sums 0.78–1.05) | `tuning.carPerformance.sectorSplit` — still live, but only for the upgrade shop's pricing |
+| `circuit.driverSensitivity` | `lapModel.ts` — the same, for the driver delta (measured sums 1.00–1.36) | `tuning.driverPerformance.sectorSplit` — same |
 | `circuit.pitLaneTimeLoss` | five call sites, moved in lockstep: `race.ts` applies the stop, `projection.ts` prices the "if you pit now" overlay, `raceStore.ts` (×2) drives the player's stop and decides when they are still in the lane, and `PitTimer.tsx` displays the duration. Circuits specify 18.0–24.0 s against the old flat 22.0 | `tuning.pit.laneTimeLoss`, deleted |
 
 The lockstep on `pitLaneTimeLoss` is load-bearing: had `projection.ts` and `race.ts` disagreed, the
@@ -431,7 +463,8 @@ undercut — and lied silently. `tests/engine/circuitDifferentiation.test.ts` as
 What this cost, and it is the point rather than a side effect: top-team win share is now **56.7 /
 59.2 / 56.5 %** over the full calendar at n=720 across three independent seed bases, against a
 pre-overtaking 84.6 %. Apex still leads by **+25.1 pp ± 2.9** over Meridian and wins 11 of the 12
-circuits singly — but *which* circuits favour whom is now a property of the circuit, because Apex
+circuits singly (+25.1 pp mean margin over three n=720 seed bases, ~7 SE on the margin's own
+sampling error) — but *which* circuits favour whom is now a property of the circuit, because Apex
 (aero 95, power 92) and Meridian (power 98, aero 91) are one facet point apart and the sensitivities
 decide where that point lands. Meridian owns Veloce outright at 69.5 %; Kaido is Vortex's best
 circuit at 31.5 %. This is the feature, and it is why the Monte-Carlo gate's team-identity
@@ -443,7 +476,24 @@ was measuring sampling power rather than the grid. The reasoning is recorded in 
 §3's "Sim at" column and §4's staging table were both re-measured against this wiring on
 2026-08-23 and agree with the figures above.
 
-### Still dead — five fields
+### The upgrade shop now prices against a weighting the engine does not use
+
+Wiring the sensitivities split the engine's arithmetic from the progression system's. The engine weights
+a facet point by `circuit.carSensitivity[sector]`; `src/ui/Development.tsx:48,53` and
+`src/state/seasonStore.ts:72-73` still weight it by the global `sectorSplit`. So the "+0.0Ns/lap" figure
+the shop shows the player is a **season-average rate, not the rate at any circuit**.
+
+The magnitude is not negligible, and on the driver path the error is one-sided. The global driver vector
+sums to exactly 1.00 while `driverSensitivity` sums 1.00–1.36, so the shop **understates a driver upgrade
+by up to 36%** — worst at harbour_lights — and never overstates it. Car upgrades are misstated in both
+directions (`carSensitivity` sums 0.78–1.05).
+
+Recorded rather than changed, deliberately: a season-long purchase priced at a season-average rate is
+defensible, and re-pricing it per circuit is a game-feel decision for the owner, not a correctness fix.
+What is *not* defensible is that it became an implicit design choice with nothing documenting it. It is
+documented now.
+
+### Still dead — six fields
 
 | Field | Where the behaviour actually comes from | Owner |
 |---|---|---|

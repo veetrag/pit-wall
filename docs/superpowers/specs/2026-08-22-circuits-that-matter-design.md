@@ -197,16 +197,25 @@ failable at all (`overtakingFactor`, `sectorBase`, `weatherBias`, `pitLaneTimeLo
 measured pre-wiring flip count; the headline pair is now harbour_lights vs grand_savane with the bias
 pinned. Aurora/Kaido are kept for continuity with the oracle's §8.
 
-The ratio reached **1.377 ± 0.030** — up from exactly 1.00×, so roughly 70% of the distance to the
-band, but **4.1 SE below the 1.5 floor. The target is unmet, and is recorded unmet rather than
-tuned away**, per §7's report-don't-edit rule: the calendar data is the owner's. Two structural
-causes, both owner decisions to change:
+**The ratio moved the wrong way.** Measured 1.3454 (mean of four seed bases, pro, n=200 per circuit)
+against **1.5238** for the same sweep with only the two wired `lapModel.ts` lines reverted — so the
+wiring pushed it from just inside the 1.5 floor to clearly below it. The "up from exactly 1.00×"
+claim that first stood here was a pre-Plan-A figure inherited without re-measurement; 1.00× predates
+the overtaking work, which had already carried the ratio to ~1.52 by making `overtakingFactor` live.
+**Recorded as a regression rather than tuned away**, per §7's report-don't-edit rule: the calendar
+data is the owner's.
 
-1. The sensitivity spread is narrow by construction — a ~35% spread in the weight cannot produce a
-   150% spread in the outcome.
-2. `overtaking.factorFloor` (0.35) clips `overtakingFactor` in 2 of 3 sectors at precisely
-   harbour_lights and kaido, the two circuits at the **top** of the range, so the ceiling of the
-   ratio is held down by a balance constant the owner elected to keep.
+The cause is that the sensitivities as authored **anti-correlate with position churn**. `harbour_lights`
+is the most position-shuffling circuit and carries the *lowest* `carSensitivity` (0.78) and the
+*highest* `driverSensitivity` (1.36) — realistic for a street circuit, but driver skill also helps set
+the grid, so amplifying the driver makes results *more* grid-ordered: harbour_lights' own |Δpos| fell
+3.770 → 3.567 while the old floor circuit (veloce, 1.00/1.00) rose. The range is squeezed from both
+ends. `overtaking.factorFloor` (0.35) compounds it by clipping `overtakingFactor` in 2 of 3 sectors at
+exactly harbour_lights and kaido, the two circuits at the top of the range.
+
+So closing the gap is **not** a matter of widening the spread in the direction it already runs. It
+needs the spread re-authored so high-churn circuits carry high car sensitivity, or `factorFloor`
+lowered. Both are owner decisions, and this is the main open question the plan leaves behind.
 
 The shipped gate is a **fixed pair** (harbour_lights ÷ grand_savane > 1.15, measured 1.2968 ± 0.0451
 pro), not the max/min this section proposed: a max-over-12 is an extremum whose endpoints changed

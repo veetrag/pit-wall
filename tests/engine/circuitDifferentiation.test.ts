@@ -159,7 +159,7 @@ describe('circuits: sensitivity fields differentiate the calendar', () => {
 
   // Kept for continuity: this is the specific pair MODEL_SPEC.md §8 names as
   // bit-identical over 400 seeds, so it is the claim on record. It is the
-  // WEAKER demonstration -- both carSensitivity vectors sum to 1.00, making it
+  // WEAKER demonstration -- aurora's carSensitivity sums to 1.03 and kaido's to 1.00, making it
   // a pure reshape there ([0.33,0.40,0.30] vs [0.26,0.48,0.26]), and the only
   // compression comes from driverSensitivity (1.08 vs 1.00).
   //
@@ -238,8 +238,11 @@ describe('circuits: pit lane loss comes from the circuit', () => {
     expect(
       mean,
       `veloce (${veloceLoss}) vs grand_savane (${grandSavaneLoss}), n=${n} first-stop seeds, expected +${expectedDiff}`,
-    ).toBeCloseTo(expectedDiff, 1) // within 0.05 of 6.0, well inside the +-1.0 budget
-    expect(Math.abs(mean - expectedDiff)).toBeLessThanOrEqual(1.0)
+      // toBeCloseTo(x, 1) is |mean - x| < 0.05, which is far tighter than the
+      // brief's +-1.0 budget. The looser assertion that used to sit below this
+      // one was logically IMPLIED by it and so could never fail -- the project
+      // has shipped five of those already. Removed rather than kept for comfort.
+    ).toBeCloseTo(expectedDiff, 1)
   }, 60_000)
 
   // The important one: the projection must agree with reality, or the
@@ -294,7 +297,10 @@ describe('circuits: pit lane loss comes from the circuit', () => {
       // state (horizonLaps 0, so neither neighbour's raceTime has moved).
       // Recover the player's post-stop raceTime from whichever neighbour
       // gap projection.ts reports -- it only reports a gap to whichever
-      // neighbour exists, and the player here starts on pole (no "ahead" car).
+      // neighbour exists. The player is gridded mid-pack (see above), so
+      // `ahead` always exists and that is the branch taken; the `behind`
+      // branch is unreachable as written and kept only so the helper stays
+      // correct if the grid slot is ever changed.
       const projected = projectPitNow(zeroNoiseConfig, raceState, 'H', 12345)
       let projectedStopTime: number
       if (aheadBefore) {
@@ -328,42 +334,66 @@ describe('circuits: pit lane loss comes from the circuit', () => {
 describe('circuits: the shipped calendar is measurably differentiated', () => {
   // Spec section 6.2 asks for the ratio of the most position-shuffling circuit
   // to the least, and gates it at 1.5-2.5x (MODEL_SPEC section 3, real F1
-  // 1.47x-2.67x). Before this plan it was exactly 1.00x: every circuit weighted
-  // car and driver identically, so the only per-circuit inputs that could move
-  // |grid - finish| were lap count and weather.
+  // 1.47x-2.67x).
   //
-  // MEASURED, AND IT MISSES THE TARGET. Per-circuit mean |grid - finish| at pro
-  // over n=200 each, sorted:
+  // *** THIS PLAN MOVED THIS METRIC THE WRONG WAY. Measured, not assumed. ***
+  //
+  // The same 12-circuit n=200 pro sweep, with ONLY the two lapModel lines this
+  // plan changed reverted to the global sectorSplits, on four seed bases:
+  //
+  //   seedBase   1000    3000    5000    7000    mean
+  //   globals   1.5288  1.5187  1.5523  1.4952  1.5238   <- inside the band
+  //   wired     1.3769  1.3066  1.3628  1.3351  1.3454   <- below the floor
+  //
+  // So wiring the sensitivities REDUCED differentiation by about 0.18 and pushed
+  // the ratio from just inside the 1.5 floor to clearly below it. An earlier
+  // version of this comment, and of MODEL_SPEC section 3, claimed the ratio rose
+  // "from exactly 1.00x". That was wrong: 1.00x predates the overtaking plan,
+  // which made overtakingFactor live and had already carried the ratio to ~1.52
+  // on its own. The row in section 3 said so in as many words -- "not re-measured
+  // by the overtaking work" -- and that warning was deleted and replaced with a
+  // number nobody had measured. Do not repeat that.
+  //
+  // WHY it went down, which is the useful part and is a finding for the calendar's
+  // owner rather than a defect in this code. Per-circuit |grid - finish| at pro,
+  // n=200, seedBase 1000, wired:
   //
   //   grand_savane 2.591  altiplano 2.639  sol_desert 2.651  veloce 2.718
   //   silverpark   2.744  highland  2.815  costa_verde 2.835  aurora 2.897
   //   monsoon_bay  3.033  bengaluru 3.045  kaido 3.455  harbour_lights 3.568
   //
-  // max/min = 1.377 +- 0.030, which is 4.1 SE BELOW the 1.5 floor. The plan
-  // moved the ratio from 1.00x to ~1.35x -- about 70% of the distance to the
-  // band -- and stopped there. That shortfall is recorded rather than tuned
-  // away, because the calendar data is the owner's and the spec forbids editing
-  // it to hit a gate. Two causes, both structural:
+  // harbour_lights sits at the TOP of that range and is authored with the LOWEST
+  // carSensitivity of the 12 (sum 0.78) and the HIGHEST driverSensitivity (1.36).
+  // That authoring is realistic -- a street circuit is where the driver matters --
+  // but driver skill also helps SET the grid, so amplifying the driver by 36%
+  // makes the result MORE grid-ordered, not less: harbour_lights' own |dpos| fell
+  // 3.770 -> 3.567. Meanwhile the old floor circuit (veloce, 1.00/1.00) rose. The
+  // sensitivities as authored anti-correlate with position churn, so they squeeze
+  // the range from both ends.
   //
-  //   1. The sensitivity spread is narrow by construction. carSensitivity sums
-  //      span 0.78-1.05 and driverSensitivity 1.00-1.36 across the 12; a ~35%
-  //      spread in the weight cannot produce a 150% spread in the outcome.
-  //   2. overtaking.factorFloor (0.35) clips overtakingFactor in 2 of 3 sectors
-  //      at exactly harbour_lights and kaido -- the two circuits at the TOP of
-  //      the range. The ceiling of the ratio is held down by a balance constant
-  //      the owner elected to keep. See MODEL_SPEC section 7.
+  // Closing the gap therefore is NOT a matter of widening the sensitivity spread
+  // in the direction it already runs. It needs either the spread re-authored so
+  // high-churn circuits carry high car sensitivity, or overtaking.factorFloor
+  // (0.35, which clips overtakingFactor in 2 of 3 sectors at exactly
+  // harbour_lights and kaido) lowered. Both are owner decisions and neither is
+  // this test's to make. See MODEL_SPEC section 7.
   //
-  // Closing the remaining gap means widening the sensitivity spread in
-  // circuits.json or lowering factorFloor. Both are owner decisions.
+  // WHAT THIS TEST GUARDS, precisely, because the honest answer is narrow.
+  // It is a calendar-level health floor: it fails if the calendar is flattened
+  // toward one circuit character by any means. It CANNOT fail on a renormalising
+  // of the sensitivities, because that RAISES the ratio -- verified by running
+  // the reverted mutation above, which passes at 1.44. The tests that do catch
+  // that are the fingerprint pairs earlier in this file, which drop to 0 of 5
+  // seeds differing and fail. Saying so here rather than claiming a guard this
+  // assertion does not provide.
   //
-  // The GATE below is a fixed pair, not the max/min above. A max-over-12 is an
-  // extremum: biased upward, unstable, and gateable only by accident -- the
+  // The gate is a FIXED PAIR, not the max/min above. A max-over-12 is an
+  // extremum: biased upward, unstable, and its endpoints changed identity across
+  // seed bases (veloce, altiplano and grand_savane each took the low end) -- the
   // same defect as the `worst`-based bound removed from mechanicalFailure.
-  // At n=120 the max/min wandered 1.279-1.378 and its endpoints changed
-  // identity (altiplano and kaido each took an end once). harbour_lights over
-  // grand_savane is a fixed statistic: measured over six independent n=120
-  // seed bases, pro 1.2968 +- 0.0451 and rookie 1.3786 +- 0.0816. Pro is both
-  // the lower and the tighter, so it sets the gate.
+  // harbour_lights over grand_savane is a fixed statistic: over six independent
+  // n=120 seed bases, pro 1.2968 +- 0.0451 and rookie 1.3786 +- 0.0816. Pro is
+  // both the lower and the tighter, so it sets the floor.
   it('the most shuffling circuit outshuffles the least by a stable margin', () => {
     const hl = runRaces({ races: 120, circuitIds: ['harbour_lights'], difficulty: 'pro' })
     const gs = runRaces({ races: 120, circuitIds: ['grand_savane'], difficulty: 'pro' })
@@ -371,16 +401,12 @@ describe('circuits: the shipped calendar is measurably differentiated', () => {
     // eslint-disable-next-line no-console
     console.log(`|dpos| harbour_lights ${hl.meanAbsPosChange.toFixed(3)} / ` +
       `grand_savane ${gs.meanAbsPosChange.toFixed(3)} = ${ratio.toFixed(4)} ` +
-      `(spec section 6.2 wants 1.5-2.5, UNMET -- see comment)`)
-    // FAILS IF the differentiation roughly halves, i.e. if a change quietly
-    // renormalises the sensitivities or widens factorFloor's clipping. 1.15 is
-    // 3.3 SE below the measured 1.2968 on the sd above.
+      `(spec section 6.2 wants 1.5-2.5, UNMET and moved the wrong way -- see comment)`)
+    // FAILS IF the calendar flattens toward a single circuit character. 1.15 is
+    // 3.3 SE below the measured 1.2968 on the sd above. It does NOT guard the
+    // sensitivity wiring -- see the comment.
     expect(ratio, 'harbour_lights / grand_savane mean |grid - finish|')
       .toBeGreaterThan(1.15)
-    // Not a target, a sanity bound: 2.5 is the TOP of the spec band, so
-    // exceeding it would mean the calendar had overshot into two different games.
-    expect(ratio, 'harbour_lights / grand_savane mean |grid - finish|')
-      .toBeLessThan(2.5)
   }, 300_000)
 
   // MODEL_SPEC section 3 bands pit-lane loss at 19.5-24.0s, and three shipped

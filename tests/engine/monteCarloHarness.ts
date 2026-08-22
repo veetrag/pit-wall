@@ -59,10 +59,23 @@ function applyBrainProfile(baseBrain: StrategyBrain, profile: DifficultyProfile)
   return BRAIN_ORDER[Math.min(promotedIdx, capIdx)]!
 }
 
-// Per-point s/lap cost of a car facet, derived from the engine's own arithmetic:
-// facetToRating9 gives (100 - facet) * 9/100, then carDelta multiplies by
-// deltaPerRating * sectorSplit[s] * 3. A car facet governs exactly one sector:
-// power -> S1, aero -> S2, handling -> S3 (see src/engine/lapModel.ts:28-31).
+// Per-point s/lap cost of a car facet: facetToRating9 gives (100 - facet) * 9/100,
+// then carDelta multiplies by deltaPerRating * weight * 3. A car facet governs
+// exactly one sector: power -> S1, aero -> S2, handling -> S3.
+//
+// IMPORTANT, and no longer "the engine's own arithmetic": since 2026-08-23 lapModel
+// takes `weight` from circuit.carSensitivity[sector], NOT from the global
+// carPerformance.sectorSplit this function is passed. So this is a CIRCUIT-BLIND
+// PROXY for pace order, and it disagrees with the engine: on the shipped calendar
+// meridian is the fastest car on 8 of 12 circuits and apex on only 3, while this
+// proxy always ranks apex first.
+//
+// That is tolerable for what paceRankCorrelation is for -- a single fixed reference
+// ordering, applied identically to every race, is enough to detect results
+// decoupling from car quality altogether (the lottery failure mode). It is NOT
+// evidence about per-circuit pace order, and a stable paceRankCorrelation must not
+// be read as evidence that per-circuit weighting left pace ordering untouched.
+// See MODEL_SPEC.md section 3's note on this row.
 function teamPaceDeficit(
   facets: { power: number; aero: number; handling: number },
   deltaPerRating: number,

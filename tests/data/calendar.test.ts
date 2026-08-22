@@ -22,14 +22,21 @@ describe('calendar', () => {
     expect(loadGameData().circuits['silverpark']).toBeTruthy()
   })
 
-  // carSensitivity/driverSensitivity are currently dead data: lapModel.ts takes
-  // per-sector weighting from tuning.carPerformance.sectorSplit /
-  // tuning.driverPerformance.sectorSplit (global, identical for every circuit),
-  // not from these per-circuit fields. So these sums are not normalised
-  // weightings today, just flavour text encoded as numbers -- e.g.
+  // carSensitivity/driverSensitivity are LIVE as of 2026-08-23: lapModel.ts reads
+  // them per circuit, RAW, in place of the global sectorSplits it used to read.
+  // (This comment previously said the opposite -- "dead data ... just flavour text
+  // encoded as numbers" -- and every clause of it was falsified by that wiring.)
+  //
+  // Because they are used raw and are NOT normalised, the sums matter: they set how
+  // much the car and driver matter at all on a circuit, not merely which sector.
   // harbour_lights' asymmetry (car 0.78 / driver 1.36) is deliberate intent
-  // ("street circuit: driver matters more than car"), not a bug. The wide band
-  // below only catches typos / order-of-magnitude errors on existing circuits.
+  // ("street circuit: driver matters more than car") and now has teeth -- see
+  // MODEL_SPEC.md section 4, where it turns out to be why the per-circuit |dpos|
+  // ratio went DOWN when these were wired.
+  //
+  // The wide band below is a typo / order-of-magnitude guard on the data only. It
+  // is deliberately not a balance gate: the behavioural gates live in
+  // tests/engine/circuitDifferentiation.test.ts.
   it('keeps sector sensitivities within a sane order of magnitude', () => {
     const { circuits } = loadGameData()
     for (const [id, c] of Object.entries(circuits)) {

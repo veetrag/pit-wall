@@ -43,15 +43,22 @@ describe('Monte-Carlo regression', () => {
   // sits. Once carSensitivity made circuits weight power, aero and handling
   // differently, which of the two comes out ahead became a property of the
   // circuit mix -- and Meridian owns Veloce outright (69.5% of 200 races), a
-  // member of the 4-circuit SAMPLE. So on SAMPLE at n=240 the apex-meridian
-  // margin is ~6pp against an SE on the difference of ~4.5pp: 1.3 SE, a coin
-  // flip. The gate was failing on sampling power, not on a regression.
+  // member of the 4-circuit SAMPLE. So on SAMPLE at n=240 the lead changes hands
+  // with the seed base: meridian by 1.3pp at 1000 (the seed the gate ran on),
+  // apex by 5.4pp at 3000, apex by 3.3pp at 5000 -- against an SE on the
+  // difference of ~4.5pp, i.e. well under 1 SE either way. A coin flip. The gate
+  // was failing on sampling power, not on a regression.
   //
   // Measured over all 12 circuits at n=720, three independent seed bases:
   //   1000: apex 56.7%  meridian 33.1%   (+23.6pp)
   //   5000: apex 59.2%  meridian 30.8%   (+28.4pp)
   //   9000: apex 56.5%  meridian 33.3%   (+23.2pp)
-  // Mean margin +25.1pp, sd 2.9pp, so ~14 SE clear of a tie. Apex also wins 11
+  // Mean margin +25.1pp, sd 2.9pp across those three samples. On the margin's own
+  // sampling error -- a paired multinomial at n=720, SE ~3.4pp -- that is ~7.3 SE
+  // clear of a tie. (An earlier version of this comment said ~14 SE, which divided
+  // the 3-sample sd by sqrt(3) and then applied it to a single-sample gate: the
+  // wrong denominator. The conclusion is unchanged; the stated margin was inflated
+  // about twofold, and is corrected rather than quietly dropped.) Apex also wins 11
   // of the 12 circuits taken singly (Veloce is the exception; Kaido is the
   // closest, apex 42.5% to vortex 31.5%) -- which is the sensitivity feature
   // working, not eroding.
@@ -228,14 +235,29 @@ describe('competitive grid', () => {
       .toBeGreaterThanOrEqual(0.90)
   }, 300_000)
 
-  it('preserves the shipped team ordinal ranking', () => {
+  // WHAT THIS GUARDS, AND WHAT IT NO LONGER GUARDS. This ranks teams by the GLOBAL
+  // carPerformance.sectorSplit, which since 2026-08-23 is not the weighting lapModel
+  // uses -- it reads circuit.carSensitivity instead. Computed per circuit from the
+  // engine's real arithmetic, meridian is the fastest car on 8 of the 12 circuits,
+  // vortex on 1, and apex on only 3. So the ordinal below holds on NO circuit, and
+  // the comment that used to sit here -- "a future edit must not silently reorder
+  // the grid" -- claimed a guard this test cannot provide.
+  //
+  // It is kept, renamed, and re-scoped to what it actually checks: that cars.json's
+  // facet DATA still describes the intended pecking order. That is a real thing to
+  // protect (it is what the season, the shop and the fiction are built on) and this
+  // is a cheap, exact check on it. The behavioural question -- who actually wins --
+  // is gated by 'apex remains the strongest team over the full calendar' above,
+  // which measures the engine rather than a proxy.
+  it('preserves the shipped team ordinal ranking in cars.json', () => {
     const { cars, tuning } = loadGameData()
     const per = (i: number) => (9 / 100) * tuning.carPerformance.deltaPerRating * tuning.carPerformance.sectorSplit[i]! * 3
     const pace = (f: { power: number; aero: number; handling: number }) =>
       (100 - f.power) * per(0) + (100 - f.aero) * per(1) + (100 - f.handling) * per(2)
     const order = [...cars.teams].sort((a, b) => pace(a.facets) - pace(b.facets)).map(t => t.id)
-    // Shipped order, measured before the change. A future edit must not silently
-    // reorder the grid -- only re-space it.
+    // Shipped order. An edit to cars.json must not silently reorder the intended
+    // pecking order -- only re-space it. This is a data assertion, not a
+    // behavioural one; see the note above.
     expect(order).toEqual([
       'apex', 'meridian', 'vortex', 'solstice', 'kestrel',
       'halcyon', 'delta', 'nimbus', 'terra', 'zenith',
