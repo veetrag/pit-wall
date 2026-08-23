@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { Preferences } from '@capacitor/preferences'
 import { CIRCUIT_ORDER } from './raceStore'
 import type { Compound, PitStop } from '@engine/index'
 import { loadGameData } from '@data/validators'
@@ -56,7 +55,6 @@ export function raceHeadline(pos: number, events: RaceEventSummary): string {
   return `Tough race. P${pos} — more to come.`
 }
 
-const SAVE_KEY = 'season.v1'
 
 // Facet points a developmentRate-1.0 team gains per race, and how many team
 // facets that pool is split across, both live in data/upgrades.json
@@ -148,7 +146,6 @@ interface SeasonStore {
   recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | null }[], events: RaceEventSummary) => void
   nextRace: () => void
   playAgain: () => void
-  loadSeason: () => Promise<void>
 }
 
 export const useSeasonStore = create<SeasonStore>((set, get) => ({
@@ -253,7 +250,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   // here deliberately: tests call this action directly and rely on being
   // able to invoke it repeatedly in a single race's worth of assertions.
   recordRaceResult(positions, events) {
-    const { standings, raceIndex, playerDriverId } = get()
+    const { standings } = get()
     const results: SeasonResult[] = positions.map(p => ({
       driverId: p.driverId,
       position: p.position,
@@ -276,7 +273,6 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       devPoints: get().devPoints + loadGameData().upgrades.income.perRace,
       rivalDevelopment: accumulateRivalDevelopment(get().rivalDevelopment),
     })
-    void Preferences.set({ key: SAVE_KEY, value: JSON.stringify({ raceIndex, standings: newStandings, playerDriverId }) })
   },
 
   nextRace() {
@@ -292,19 +288,5 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   playAgain() {
     set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {} })
-    void Preferences.remove({ key: SAVE_KEY })
-  },
-
-  async loadSeason() {
-    try {
-      const { value } = await Preferences.get({ key: SAVE_KEY })
-      if (!value) return
-      const saved = JSON.parse(value) as { raceIndex: number; standings: Standing[]; playerDriverId: string }
-      if (typeof saved.raceIndex === 'number' && Array.isArray(saved.standings)) {
-        set({ raceIndex: saved.raceIndex, standings: saved.standings, playerDriverId: saved.playerDriverId ?? null })
-      }
-    } catch {
-      void Preferences.remove({ key: SAVE_KEY })
-    }
   },
 }))

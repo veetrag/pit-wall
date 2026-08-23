@@ -21,7 +21,6 @@ import { AppErrorBoundary } from './ui/AppErrorBoundary'
 export default function App() {
   const phase = useSeasonStore(s => s.phase)
   const loadSettings = useSettingsStore(s => s.loadSettings)
-  const loadSeason = useSeasonStore(s => s.loadSeason)
 
   // Android hardware back button — without this it finishes the activity and
   // silently destroys an in-progress race.
@@ -29,7 +28,6 @@ export default function App() {
 
   useEffect(() => {
     void loadSettings()
-    void loadSeason()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
