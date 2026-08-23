@@ -9,3 +9,7 @@ vite.config.d.ts
 *.jks
 *.keystore
 keystore.properties
+
+# Build outputs — rebuild with `cd android && ./gradlew bundleRelease`
+store/*.aab
+store/*.apk

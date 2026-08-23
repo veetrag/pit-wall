@@ -140,7 +140,7 @@ export function MainMenu() {
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
         style={{ textAlign: 'center', paddingBottom: 16, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.12em' }}
       >
-        v0.1 ALPHA · PIT WALL
+        PIT WALL · v1.0
       </motion.div>
     </motion.div>
   )

@@ -5,7 +5,12 @@
   --line-hair:    #2A3350;
   --text-hi:      #F2F5FF;
   --text-mid:     #9AA7C7;
-  --text-dim:     #5C6788;
+  /* #5C6788 measured 2.81-3.44:1 against our panels -- below WCAG AA's 4.5:1
+     for the 9-12px text this token is used at almost everywhere. Same hue
+     and saturation, lightened to clear AA against the lightest surface it
+     sits on (--bg-elevated, 4.53:1) while staying visibly dimmer than
+     --text-mid (1.45:1 apart) so the hi/mid/dim hierarchy still reads. */
+  --text-dim:     #7E89A8;
   --accent:       #00E5D0;
   --accent-warm:  #FF4D5E;
   --accent-violet: #9B8CFF;
