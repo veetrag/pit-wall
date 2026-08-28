@@ -1059,24 +1059,35 @@ Use `carsAfterSc` in place of `updatedCars` from here on in the function.
 
 - [ ] **Step 4: Expire the safety car on the lap boundary**
 
-Find where `stepSector` advances the lap (`sector === 2` → lap + 1) and decrement there:
+`race.ts:197-198` already computes both variables you need:
 
 ```ts
-  // Tick the safety car down once per LAP, not per sector.
-  if (safetyCar !== null && nextSector === 0) {
-    const remaining = safetyCar.lapsRemaining - 1
+  const nextSector = ((sector + 1) % 3) as SectorIndex
+  const lapCompleted = sector === 2
+```
+
+Use `lapCompleted` — it is equivalent to `nextSector === 0` and matches the surrounding style. Place
+the decrement **after** that line and **before** the `return` at `:283`:
+
+```ts
+  // Tick the safety car down once per LAP, not per sector -- durationLapsMin/Max
+  // are laps. Decrementing per sector would make a "3 lap" safety car last one.
+  let scAfterTick = safetyCar
+  if (scAfterTick !== null && lapCompleted) {
+    const remaining = scAfterTick.lapsRemaining - 1
     if (remaining <= 0) {
-      safetyCar = null
+      scAfterTick = null
       newIncidents.push({
         lap: state.lap, sector, kind: 'safety_car_ended', driverId: null, timeLoss: null,
       })
     } else {
-      safetyCar = { ...safetyCar, lapsRemaining: remaining }
+      scAfterTick = { ...scAfterTick, lapsRemaining: remaining }
     }
   }
 ```
 
-Adapt `nextSector` to whatever the function actually calls it. Return `safetyCar` in the new `RaceState`.
+Then return `safetyCar: scAfterTick` in the `RaceState` literal at `:283`, alongside
+`incidents: newIncidents`.
 
 - [ ] **Step 5: Disable overtaking under yellow, and discount the pit loss**
 
