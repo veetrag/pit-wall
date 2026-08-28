@@ -92,7 +92,26 @@ export interface TuningConstants {
     minRemainingLaps: number
   }
   projection: { horizonLaps: number; useOvertakeRolls: boolean; netEstimateHorizonLaps: number }
-  incidents: { dnfPerLap: number; driverErrorPerLap: number }
+  incidents: {
+    // dnfPerLap is dead: no consumer in src/engine/. Kept because removing it
+    // is outside the race-incidents plan's scope.
+    dnfPerLap: number
+    driverErrorPerLap: number
+    terminalFraction: number
+    errorTimeLossMean: number
+    errorTimeLossSigma: number
+    consistencyReliefMax: number
+    safetyCar: {
+      crashDeployChance: number
+      mechanicalDeployChance: number
+      gapCompression: number
+      paceMultiplier: number
+      laneTimeLossUnderSc: number
+      durationLapsMin: number
+      durationLapsMax: number
+      maxPerRace: number
+    }
+  }
   weather: {
     crossoverPenalty: Record<string, Record<string, number>>
     wetDegMultiplier: Record<string, Record<string, number>>

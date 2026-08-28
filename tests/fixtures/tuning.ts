@@ -58,7 +58,17 @@ export function makeTuning(overrides: DeepPartial<TuningConstants> = {}): Tuning
  */
 export function makeDeterministicTuning(overrides: DeepPartial<TuningConstants> = {}): TuningConstants {
   return makeTuning(deepMerge({
-    incidents: { dnfPerLap: 0, driverErrorPerLap: 0 },
+    incidents: {
+      dnfPerLap: 0,
+      driverErrorPerLap: 0,
+      // Zeroing the two deploy chances is what keeps the safety car out of
+      // these tests, and it must be done HERE rather than via maxPerRace: 0.
+      // The deployment roll is guarded on the deploy chance (see
+      // incidents.ts), so a zero chance draws no rng() at all; a zero
+      // maxPerRace checked after the roll would still consume a draw and
+      // shift the stream for every existing test.
+      safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0 },
+    },
     mechanicalFailure: { baseChancePerLap: 0 },
   }, overrides) as DeepPartial<TuningConstants>)
 }

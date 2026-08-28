@@ -68,7 +68,24 @@
     "minRemainingLaps": 6
   },
   "projection": { "horizonLaps": 4, "useOvertakeRolls": false, "netEstimateHorizonLaps": 12 },
-  "incidents": { "dnfPerLap": 0.0, "driverErrorPerLap": 0.0 },
+  "incidents": {
+    "dnfPerLap": 0.0,
+    "driverErrorPerLap": 0.0,
+    "terminalFraction": 0.20,
+    "errorTimeLossMean": 3.5,
+    "errorTimeLossSigma": 1.5,
+    "consistencyReliefMax": 0.35,
+    "safetyCar": {
+      "crashDeployChance": 0.0,
+      "mechanicalDeployChance": 0.0,
+      "gapCompression": 0.35,
+      "paceMultiplier": 1.45,
+      "laneTimeLossUnderSc": 10.0,
+      "durationLapsMin": 3,
+      "durationLapsMax": 5,
+      "maxPerRace": 2
+    }
+  },
   "weather": {
     "crossoverPenalty": {
       "dry":   { "DRY": 0.0, "DAMP": 3.5, "WET": 9.0 },
