@@ -286,6 +286,12 @@ export interface OvertakeEvent {
   overtakenId: string
 }
 
+export interface SafetyCarState {
+  deployedLap: number
+  lapsRemaining: number
+  cause: 'crash' | 'mechanical'
+}
+
 export interface WeatherForecast {
   currentState: WeatherState
   lap1: WeatherState
