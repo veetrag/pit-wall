@@ -267,7 +267,7 @@ export interface CarState {
   retiredLap: number | null
   // Which roll ended the car's race, so the UI can attribute the retirement
   // correctly instead of assuming it was always a tyre failure.
-  retiredCause: 'tyre' | 'mechanical' | null
+  retiredCause: 'tyre' | 'mechanical' | 'crash' | null
 }
 
 export interface SectorResult {
@@ -284,6 +284,22 @@ export interface OvertakeEvent {
   sector: SectorIndex
   overtakerId: string
   overtakenId: string
+}
+
+export type IncidentKind =
+  | 'driver_error'
+  | 'crash'
+  | 'safety_car_deployed'
+  | 'safety_car_ended'
+
+export interface IncidentEvent {
+  lap: number
+  sector: SectorIndex
+  kind: IncidentKind
+  /** null for safety-car events, which belong to the race rather than a car. */
+  driverId: string | null
+  /** Seconds, for 'driver_error' only; null otherwise. */
+  timeLoss: number | null
 }
 
 export interface SafetyCarState {
@@ -306,6 +322,14 @@ export interface RaceState {
   cars: CarState[]
   sectorResults: SectorResult[]
   overtakeEvents: OvertakeEvent[]
+  /**
+   * Lives on RaceState rather than in the Zustand store deliberately, and it is
+   * load-bearing: projection.ts clones RaceState and fast-forwards it, so with
+   * safetyCar here the "if you pit now" overlay prices a stop under yellow
+   * correctly with no changes to projection.ts at all.
+   */
+  safetyCar: SafetyCarState | null
+  incidents: IncidentEvent[]
   trackEvolutionLaps: number
   rngState: number
   weatherTimeline: WeatherState[]

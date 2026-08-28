@@ -3,6 +3,17 @@ import { motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
 
+// Keyed rather than a ternary chain on purpose. This used to read
+// `retiredCause === 'mechanical' ? 'mechanical failure' : 'tyre failure'`,
+// which silently mislabelled anything that was neither -- and once the
+// race-incidents work added 'crash', every crash was reported to the player as
+// a tyre failure. A Record<> makes a new cause a COMPILE error here instead.
+const RETIREMENT_CAUSE_TEXT: Record<'tyre' | 'mechanical' | 'crash', string> = {
+  tyre: 'tyre failure',
+  mechanical: 'mechanical failure',
+  crash: 'crash',
+}
+
 const COMPOUND_COLORS: Record<string, string> = {
   S: '#E8344E',
   M: '#F2C94C',
@@ -165,7 +176,7 @@ export function TelemetryZone() {
             DNF
           </div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
-            Retired on lap {player.retiredLap ?? '—'} — {player.retiredCause === 'mechanical' ? 'mechanical failure' : 'tyre failure'}
+            Retired on lap {player.retiredLap ?? '—'} — {RETIREMENT_CAUSE_TEXT[player.retiredCause ?? 'tyre']}
           </div>
         </div>
       </div>

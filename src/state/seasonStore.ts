@@ -10,7 +10,7 @@ export interface SeasonResult {
   position: number
   points: number
   retired: boolean
-  retiredCause: 'tyre' | 'mechanical' | null
+  retiredCause: 'tyre' | 'mechanical' | 'crash' | null
 }
 
 export interface Standing {
@@ -143,7 +143,7 @@ interface SeasonStore {
   confirmDriver: () => void
   toRaceSetup: () => void
   confirmRaceSetup: (circuitId?: string, strategy?: PlayerStrategyChoice) => void
-  recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | null }[], events: RaceEventSummary) => void
+  recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | 'crash' | null }[], events: RaceEventSummary) => void
   nextRace: () => void
   playAgain: () => void
 }

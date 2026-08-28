@@ -18,6 +18,7 @@ export type {
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
   TyreAllocation, DifficultyProfile, WeatherState, WeatherForecast, SafetyCarState,
+  IncidentEvent, IncidentKind,
 } from './types'
 export type { ProjectionResult } from './projection'
 export type { Rng } from './rng'

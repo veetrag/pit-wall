@@ -120,7 +120,7 @@ function makeCarAt(overrides: Partial<CarState> & { driverId: string; teamId: st
 
 function makeRaceEndState(cars: CarState[]): RaceState {
   return {
-    lap: 29, sector: 2, totalLaps: 30, cars, sectorResults: [], overtakeEvents: [],
+    lap: 29, sector: 2, totalLaps: 30, cars, sectorResults: [], overtakeEvents: [], safetyCar: null, incidents: [],
     trackEvolutionLaps: 29, rngState: 1,
     weatherTimeline: Array(30).fill('DRY'), weatherState: 'DRY',
   }
@@ -163,7 +163,8 @@ describe('M3: mandatory two-compound rule', () => {
     const makeWetOkState = (): RaceState => ({
       lap: 29, sector: 2, totalLaps: 30,
       cars: [makeCarAt({ driverId: 'wetok', teamId: 'wetok', compoundsUsed: ['M', 'I'], compound: 'I' })],
-      sectorResults: [], overtakeEvents: [], trackEvolutionLaps: 29, rngState: 1,
+      sectorResults: [], overtakeEvents: [], safetyCar: null, incidents: [],
+      trackEvolutionLaps: 29, rngState: 1,
       weatherTimeline: Array(30).fill('DAMP'), weatherState: 'DAMP',
     })
 

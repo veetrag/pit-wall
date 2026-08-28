@@ -45,7 +45,9 @@ function makeCar(overrides: Partial<CarState> = {}): CarState {
 function makeState(overrides: Partial<RaceState> = {}): RaceState {
   return {
     lap: 10, sector: 2, totalLaps: 30, cars: [], sectorResults: [],
-    overtakeEvents: [], trackEvolutionLaps: 10, rngState: 1,
+    overtakeEvents: [],
+    safetyCar: null,
+    incidents: [], trackEvolutionLaps: 10, rngState: 1,
     weatherTimeline: Array(30).fill('DRY') as import('@engine/types').WeatherState[],
     weatherState: 'DRY' as import('@engine/types').WeatherState,
     ...overrides,

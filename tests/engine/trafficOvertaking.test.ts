@@ -61,7 +61,7 @@ function makeCar(overrides: Partial<CarState> & { driverId: string; teamId: stri
 
 function makeState(cars: CarState[]): RaceState {
   return {
-    lap: 10, sector: 1, totalLaps: 30, cars, sectorResults: [], overtakeEvents: [],
+    lap: 10, sector: 1, totalLaps: 30, cars, sectorResults: [], overtakeEvents: [], safetyCar: null, incidents: [],
     trackEvolutionLaps: 10, rngState: 1,
     weatherTimeline: Array(30).fill('DRY'), weatherState: 'DRY',
   }

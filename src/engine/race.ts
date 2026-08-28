@@ -1,10 +1,11 @@
-import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound } from './types'
+import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound, IncidentEvent } from './types'
 import type { Rng } from './rng'
 import { createRng, gaussianPair } from './rng'
 import { computeSectorTime } from './lapModel'
 import { generateWeatherTimeline } from './weather'
 import { aiDecision } from './strategy'
 import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, effectiveTyreAge, tyreCliffFraction } from './tyres'
+import { rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss } from './incidents'
 
 // Grid-conditions tyre rule. A team that has not made a deliberate choice fits
 // the compound that matches the weather at lights out. Deliberately simple: no
@@ -81,6 +82,8 @@ export function initRace(config: RaceConfig): RaceState {
     cars,
     sectorResults: [],
     overtakeEvents: [],
+    safetyCar: null,
+    incidents: [],
     trackEvolutionLaps: 0,
     rngState: config.seed,
     weatherTimeline,
@@ -92,6 +95,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const sector = state.sector as SectorIndex
   const newSectorResults = [...state.sectorResults]
   const newOvertakeEvents: OvertakeEvent[] = [...state.overtakeEvents]
+  const newIncidents: IncidentEvent[] = [...state.incidents]
 
   // 1. Compute sector time for each car. Retired cars are frozen entirely —
   // no more sector time, no more sim work happens to them.
@@ -143,6 +147,33 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       // keeps it byte-identical to the pre-feature RNG stream.
       if (perLap > 0 && rng() < perLap / 3) {
         updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'mechanical' }
+      }
+    }
+
+    // Driver error. Ordering within this tick is fixed and load-bearing
+    // (spec 5.5): tyre failure, then mechanical, then driver error, then --
+    // outside this map -- the safety-car deployment roll for anything that
+    // retired. Applied HERE rather than inside computeSectorTime because the
+    // terminal branch retires the car, and lapModel.ts returns a SectorResult
+    // with no vocabulary for retirement.
+    //
+    // Consequence: the time loss is added to raceTime AFTER computeSectorTime
+    // has returned, so it does NOT appear in SectorResult.sectorTime. A UI that
+    // needs to show it reads the IncidentEvent log instead.
+    if (!updated.retired) {
+      if (rollDriverError(driver.facets.consistency, config.tuning, rng)) {
+        if (rollErrorIsTerminal(config.tuning, rng)) {
+          updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'crash' }
+          newIncidents.push({
+            lap: car.lap, sector, kind: 'crash', driverId: car.driverId, timeLoss: null,
+          })
+        } else {
+          const loss = rollErrorTimeLoss(config.tuning, rng)
+          updated = { ...updated, raceTime: updated.raceTime + loss }
+          newIncidents.push({
+            lap: car.lap, sector, kind: 'driver_error', driverId: car.driverId, timeLoss: loss,
+          })
+        }
       }
     }
     return updated
@@ -288,6 +319,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     cars: positioned,
     sectorResults: newSectorResults,
     overtakeEvents: newOvertakeEvents,
+    incidents: newIncidents,
     weatherState: newWeatherState,
   }
 }

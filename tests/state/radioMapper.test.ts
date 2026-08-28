@@ -49,7 +49,9 @@ function makeSpinResult(overrides: Partial<SectorResult> = {}): SectorResult {
 function makeState(overrides: Partial<RaceState> = {}): RaceState {
   return {
     lap: 5, sector: 0, totalLaps: 30, cars: [makeCar()], sectorResults: [],
-    overtakeEvents: [], trackEvolutionLaps: 5, rngState: 1,
+    overtakeEvents: [],
+    safetyCar: null,
+    incidents: [], trackEvolutionLaps: 5, rngState: 1,
     weatherTimeline: Array(30).fill('WET'), weatherState: 'WET',
     ...overrides,
   }

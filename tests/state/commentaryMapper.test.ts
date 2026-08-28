@@ -29,7 +29,7 @@ function makeConfig(drivers: { id: string; code: string }[]): RaceConfig {
 
 function makeState(cars: CarState[], overrides: Partial<RaceState> = {}): RaceState {
   return {
-    lap: 5, sector: 0, totalLaps: 30, cars, sectorResults: [], overtakeEvents: [],
+    lap: 5, sector: 0, totalLaps: 30, cars, sectorResults: [], overtakeEvents: [], safetyCar: null, incidents: [],
     trackEvolutionLaps: 5, rngState: 1,
     weatherTimeline: Array(30).fill('DRY'), weatherState: 'DRY',
     ...overrides,

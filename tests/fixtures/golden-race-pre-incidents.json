@@ -27653,6 +27653,8 @@
       "overtakenId": "d_tan"
     }
   ],
+  "safetyCar": null,
+  "incidents": [],
   "trackEvolutionLaps": 56,
   "rngState": 424242,
   "weatherTimeline": [
