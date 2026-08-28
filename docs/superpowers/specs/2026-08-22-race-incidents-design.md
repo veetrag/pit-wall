@@ -1,8 +1,29 @@
 # Race Incidents — design
 
-**Date:** 2026-08-22
+**Date:** 2026-08-22. **Amended 2026-08-24** — see the amendment note below.
 **Oracle:** `MODEL_SPEC.md` — read §3, §4 and §7 before starting
-**Predecessor:** `docs/superpowers/specs/2026-08-20-competitive-grid-design.md` (landed, `dba84e8`)
+**Predecessor:** `docs/superpowers/specs/2026-08-20-competitive-grid-design.md` (landed, `dba84e8`),
+then `2026-08-22-circuits-that-matter-design.md` (both its plans landed, `9f7e7a9`)
+
+> ## Amendment, 2026-08-24 — read this before §1
+>
+> This spec was written against an **84.6%** top-team win share. Two plans have landed since
+> (overtaking-race-time and circuit-sensitivity), and the measured figure is now **56.7 / 59.2%
+> pro**. Every baseline number below has been re-derived; §1, §2, §2.1, §7.1, §8.2, §10 and §11
+> carry the corrections inline.
+>
+> **Two things changed materially, and one number was simply wrong.**
+>
+> 1. **This plan no longer owns a 30pp gap — it owns about 2–4pp.** §2's claim that it "owns the
+>    whole remaining distance" was true when written and is now false.
+> 2. **The risk has flipped from undershoot to overshoot.** §2.1 was written to stop an implementer
+>    cranking magnitudes *upward* to reach the band. The live risk is now the opposite: real-F1
+>    incident rates may push win share *below* the 0.35 floor. §2.1 is restated symmetrically.
+> 3. **§7.1's `driverErrorPerLap` was wrong by 1.75×.** Every *consequence* it states (~0.35 errors
+>    per car-race, ~7 field-wide, ~1.4 crashes, 7.0pp) is correct and mutually consistent — and
+>    §7.3's safety-car rate was correctly derived from them. Only the per-lap value itself did not
+>    produce them: it omitted the consistency relief and assumed ~55 laps against a calendar mean of
+>    46.67. Corrected to **0.0105**. §7.3 re-derives unchanged at 0.62/race.
 **Scope:** `src/engine/` gains a new module and new rolls; `src/data/tuning.json` gains an
 incidents block; `src/ui/` gains five surfaces. Split into **two plans** — engine first, UI second.
 
@@ -19,35 +40,64 @@ near-deterministic, and the competitive-grid plan proved the limit of fixing tha
 it narrowed the spread from 1.482 to 0.674 s/lap and reached **84.6%** top-team win share against
 §7's predicted 81.5% floor for any `cars.json`-only change.
 
-Current state, measured post-grid over all 12 circuits (n = 480 per difficulty):
+Current state — **re-measured 2026-08-24** over all 12 circuits, n = 720 per difficulty, two
+independent seed bases (the post-grid figures this spec originally quoted are struck through):
 
-- Apex **84.58%** pro / 88.13% rookie, against §3's 0.35–0.55 target.
-- Mechanical DNF **4.67%** ± 0.12pp over 28,800 car-races, against §3's 6–10%. The assertion for
-  this band is **committed skipped**; this plan un-skips it.
-- Crashes: **zero**, against real F1's 7.0pp of accidents per car-race.
-- Safety cars: **zero**.
+- Apex ~~84.58% pro / 88.13% rookie~~ → **56.67 / 59.17% pro**, **64.17 / 60.00% rookie**, against
+  §3's 0.35–0.55 target. The overtaking and circuit-sensitivity plans closed most of this gap.
+- Mechanical DNF ~~4.67%~~ → **4.51 / 4.86% pro, 5.06 / 4.72% rookie**, against §3's 6–10%. The
+  assertion for this band is **committed skipped**; this plan un-skips it.
+- Crashes: **zero**, against real F1's 7.0pp of accidents per car-race. *Unchanged — no plan since
+  has added a crash mechanic.*
+- Safety cars: **zero**. *Unchanged.*
+
+The two structural claims in the paragraph above this list still hold: pace edges are still
+multi-sigma, and §7's plateau argument against further `cars.json` edits is untouched by either
+landed plan.
 
 ## 2. Goal
 
 Per the owner's decision, carried from the competitive-grid brainstorm: top-team win share
 **0.35–0.55** with **at least four** distinct winners.
 
-**This plan owns the whole remaining distance**, because §7 establishes that no further `cars.json`
-edit can close it — the sensitivity curve is a plateau, and 81.5% is its floor.
+~~**This plan owns the whole remaining distance**~~ — **no longer true (amended 2026-08-24).** When
+this was written the gap was 84.6% → 0.55, roughly 30pp, and §7's plateau argument meant no
+`cars.json` edit could close it. The overtaking-race-time and circuit-sensitivity plans then closed
+it by other means, to **56.7 / 59.2% pro**. What remains is **about 2–4pp**, and the distinct-winners
+target (≥ 4) is **already met at 7**.
+
+So this plan's job has changed from *closing the gap* to **crossing the last few points without
+overshooting, while adding the chaos §7 asks for on its own merits.** The realism case for incidents
+is undiminished — the sim still has zero crashes against real F1's 7.0pp, and zero safety cars — but
+it is no longer load-bearing for the win-share band.
 
 ### 2.1 The stopping rule — this binds the implementer
 
-The owner chose the **grounded** setting of every lever (§4). Those choices may not reach
-0.35–0.55, and the honest estimate at design time is **0.60–0.70**.
+The owner chose the **grounded** setting of every lever (§4).
 
-If the measured win share lands above 0.55 with believable magnitudes, **report the number and the
-reason. Do not crank compression, error rates or DNF rates until the band goes green.** A band
-bought that way fails `minPaceRankCorrelation ≥ 0.90` in any case — that gate exists precisely to
-catch a target met by noise rather than by competitiveness. A well-argued 0.65 is a better
-deliverable than a 0.45 that makes every third race a lottery.
+**Amended 2026-08-24 — this rule now binds in both directions.** As written it guarded one failure
+mode: cranking magnitudes upward to force the band green. From 56.7% that is no longer the likely
+failure. The re-derived estimate is **0.40–0.50** — *inside* the band — and the live risk is
+**overshooting below the 0.35 floor**, because the magnitudes in §7 are anchored to real F1
+(7.0pp accidents, 6–10% mechanical DNF) rather than chosen to land the band.
 
-The band is therefore recorded as this plan's **target**, and `MODEL_SPEC.md` §4's staging table is
-updated with the measured value and an argument, exactly as §3 requires of any missed band.
+Both directions are therefore forbidden as tuning moves:
+
+- **Do not raise** compression, error rates or DNF rates to pull win share down into the band. A band
+  bought that way fails `minPaceRankCorrelation ≥ 0.90` anyway — that gate exists precisely to catch
+  a target met by noise rather than by competitiveness.
+- **Do not lower** them to pull win share back up into the band either. §7's values are derived from
+  real-F1 rates, and quietly shaving them to protect a win-share number would be fitting the physics
+  to the scoreboard.
+
+**If real-F1-accurate incident rates put win share outside 0.35–0.55, that is a genuine finding and
+the two goals are in conflict — report it with the numbers and let the owner choose.** A well-argued
+0.32 with honest accident rates is a better deliverable than a 0.45 bought by understating crashes.
+The one exception: if `paceRankCorrelation` drops below 0.90, that is not a finding to report but a
+defect to fix — it means results have stopped tracking pace, which no realism argument justifies.
+
+The band is recorded as this plan's **target**, and `MODEL_SPEC.md` §4's staging table is updated
+with the measured value and an argument, exactly as §3 requires of any missed band.
 
 ## 3. What this plan is not
 
@@ -226,7 +276,7 @@ constraint of §2.1.
 
 | Key | Value | Consequence |
 |---|---|---|
-| `incidents.driverErrorPerLap` | **0.006** | ~0.35 errors per car-race; ~7 per race field-wide |
+| `incidents.driverErrorPerLap` | **0.0105** (was 0.006 — see below) | ~0.35 errors per car-race; ~7 per race field-wide |
 | `incidents.terminalFraction` | **0.20** | ~5.6 time-loss errors and ~1.4 crashes per race |
 | `incidents.errorTimeLossMean` | **3.5** | seconds |
 | `incidents.errorTimeLossSigma` | **1.5** | seconds |
@@ -238,17 +288,41 @@ the chance of erring; it does **not** change `terminalFraction` — a mistake, o
 likely to end the race for a consistent driver. If that reads wrong on the phone it is a one-line
 tuning change, not a design change.
 
-**Why 0.006 and 0.20 specifically.** These were solved *backwards* from the oracle, not guessed:
+**Why 0.0105 and 0.20 specifically.** These were solved *backwards* from the oracle, not guessed:
 1.4 crashes per race over 20 cars is **7.0pp per car-race**, which is exactly §3's computed real-F1
 accident share (2014–22). Any implementer changing one of these two numbers must recheck that
 identity.
+
+> **Correction, 2026-08-24.** The identity above is right and the consequences column is right; the
+> per-lap value was not. **0.006 produces 3.99pp, not 7.0pp** — off by 1.75×. Two compounding
+> mistakes: it omitted the `consistencyReliefMax` factor (mean relief over the 20 shipped drivers is
+> **0.7121**, since mean `consistency` is 82.25), and it assumed ~55 laps against a calendar mean of
+> **46.67**. Solving forwards with both:
+>
+> ```
+> errors per car-race = driverErrorPerLap x meanRelief x meanLaps
+>                     = 0.0105 x 0.7121 x 46.67  = 0.349      (spec's stated ~0.35)
+> field-wide per race = 0.349 x 20              = 6.98       (spec's stated ~7)
+> crashes per race    = 6.98 x 0.20             = 1.396      (spec's stated ~1.4)
+> per car-race        = 1.396 / 20              = 6.98pp     (spec's stated 7.0pp)
+> ```
+>
+> So **`driverErrorPerLap` = 0.0105**, and every other figure in this section stands as written.
+> §7.3's safety-car rate was derived from 1.4 crashes/race — the *correct* consequence — so it also
+> stands; see the re-derivation there. This is exactly the recheck the paragraph above demands, and
+> it is why that instruction is in the spec.
 
 ### 7.2 Mechanical DNF
 
 `mechanicalFailure.baseChancePerLap`: **0.008 → 0.014**.
 
 No new mechanism — the existing roll at `race.ts:137-147` is correct and stays as it is. 0.014
-takes the measured 4.67% to approximately **8%**, the middle of §3's 6–10% band. Combined with
+takes the measured 4.67% to approximately **8%**, the middle of §3's 6–10% band.
+
+> **Verified 2026-08-24.** Solving `1 - exp(-baseChancePerLap x (1 - reliability/100) x meanLaps)`
+> over the 10 shipped teams at the 46.67-lap calendar mean: **0.008 → 4.89%** (matching the measured
+> 4.51–5.06%, which validates the model) and **0.014 → 8.36%**, i.e. 1.67 mechanical retirements per
+> race field-wide. Mid-band as claimed. This value needs no change. Combined with
 ~7pp of crashes that gives ~15% total DNF against real F1's 18.4%, with tyre failures accounting
 for part of the remainder.
 
@@ -272,6 +346,12 @@ explicitly, and `cars.json` does not change in this plan.
 inside the owner's ~0.6–0.7 choice. An implementer changing any of the four inputs must recompute
 this and confirm the measured rate still lands in 0.5–0.8.
 
+> **Re-derived 2026-08-24, unchanged.** With §7.1 corrected to 0.0105 and §7.2 verified, the two
+> inputs are **1.396 crashes** and **1.67 mechanical retirements** per race:
+> `1.396 x 0.30 + 1.67 x 0.12 = 0.419 + 0.200 =` **0.619 per race**. Still inside the owner's
+> ~0.6–0.7. Note this section was already consistent with the *intended* crash count, which is why
+> correcting §7.1 fixed the spec's internal arithmetic rather than breaking it.
+
 ## 8. Testing
 
 ### 8.1 The three defences against the RNG-stream change
@@ -290,14 +370,16 @@ this and confirm the measured rate still lands in 0.5–0.8.
 
 ### 8.2 Bands this plan is accountable for
 
+Current column re-measured 2026-08-24 (all 12 circuits, n=720, pro unless noted).
+
 | Metric | Current | Target | Source |
 |---|---|---|---|
-| Top-team win share | 0.846 | **0.35–0.55** | §3; subject to §2.1's stopping rule |
-| Distinct winners | 7–8 | ≥ 4 (already met — must not regress) | §3 |
-| Mechanical DNF / car-race | 4.67% | **6–10%** — this **un-skips** the committed-skipped test | §3 |
-| Mean \|grid − finish\| | 2.859 | advance the staged band to **2.5–4.0** | §4 |
-| Grid↔finish ρ | 0.753 | stay inside 0.60–0.80 | §3 |
-| `paceRankCorrelation` | 0.9636 | **≥ 0.90** — the anti-lottery gate | §3 |
+| Top-team win share | ~~0.846~~ **0.567 / 0.592** | **0.35–0.55** | §3; subject to §2.1's two-way stopping rule |
+| Distinct winners | ~~7–8~~ **7** | ≥ 4 (already met — must not regress) | §3 |
+| Mechanical DNF / car-race | ~~4.67%~~ **4.51 / 4.86%** | **6–10%** — this **un-skips** the committed-skipped test | §3 |
+| Mean \|grid − finish\| | ~~2.859~~ **2.863 / 2.837** | band **already advanced** to 2.5–4.0 by the overtaking plan; stay inside it | §4 |
+| Grid↔finish ρ | ~~0.753~~ **0.750 / 0.756** pro, **0.777 / 0.787** rookie | stay inside 0.60–0.80 — **rookie has only 0.0126 of ceiling headroom**, watch it | §3 |
+| `paceRankCorrelation` | **0.9636** pro / 0.9152 rookie | **≥ 0.90** — the anti-lottery gate | §3 |
 | Safety cars / race | 0 | **0.5–0.8** | §4's owner decision |
 | Crashes / car-race | 0 | **6–8pp** | §3's 7.0pp accident share |
 
@@ -332,7 +414,7 @@ accessibility.
 | Risk | Mitigation |
 |---|---|
 | The RNG-stream change silently moves every measured number | §8.1's zero-config byte-identity test, built first |
-| Win share does not reach 0.35–0.55 | §2.1's stopping rule — report, do not crank |
+| ~~Win share does not reach 0.35–0.55~~ **Win share overshoots *below* 0.35** (amended: from 56.7% the undershoot risk is largely gone) | §2.1's stopping rule, which now binds in **both** directions — report, do not crank *or* shave |
 | The band is met by turning races into a lottery | `paceRankCorrelation ≥ 0.90`, which already caught this class of failure once |
 | Compression makes a dominant leader's loss feel arbitrary | The owner chose ×0.35 partial specifically to soften this; the banner and commentary make the cause legible |
 | A safety car makes the projection overlay wrong | §5.3 — `safetyCar` on `RaceState` means `projection.ts` gets it for free; a test asserts the projection prices a stop under yellow correctly |
@@ -341,11 +423,14 @@ accessibility.
 
 ## 11. Follow-on work, in order
 
-1. **Overtaking converts to race time** — `resolveOvertakes` (`race.ts:279-327`) swaps two slots in
-   a local array copy and never touches `raceTime`, so every consumer re-sorts it away. Gate per
-   circuit by `overtakingFactor`. Target: a car 0.3–0.5 s/lap faster needs 3–8 laps to clear,
-   failing 15–25% of the time and 60–75% on the hardest circuit.
-2. **Wire the dead circuit fields** — `carSensitivity`, `driverSensitivity`, `pitLaneTimeLoss`, so
-   the 12 circuits stop being provably interchangeable (Aurora and Kaido are bit-identical over 400
-   seeds).
+1. ~~**Overtaking converts to race time**~~ — **LANDED 2026-08-23.** Overtakes now durably swap
+   `raceTime`, gated per circuit by `overtakingFactor`. The clearing targets were **not** met and are
+   committed skipped and un-weakened; see `MODEL_SPEC.md` §9.
+2. ~~**Wire the dead circuit fields**~~ — **LANDED 2026-08-23.** `carSensitivity`,
+   `driverSensitivity` and `pitLaneTimeLoss` are all consumed. One negative result on the record: the
+   per-circuit \|Δpos\| ratio *fell* from 1.52 to 1.35 against a 1.5–2.5 target, because the shipped
+   sensitivities anti-correlate with position churn (`MODEL_SPEC.md` §4). **Still open, and not this
+   plan's to fix.**
 3. **Red flags**, deliberately excluded here (§3).
+4. **Lapping / un-lapping**, so safety-car compression stops pulling a two-lap-down car unfairly
+   close (§3's documented simplification).
