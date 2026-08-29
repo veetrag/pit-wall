@@ -135,9 +135,18 @@ describe('overtaking: RNG stream discipline', () => {
 
     // Absolute pins: properties of the roll sites and the field size, not of any
     // trajectory. Every one of them moves if a roll is added to the tick.
-    expect(packed, msg).toBe(61)
-    expect(strung, msg).toBe(60)
-    expect(boundary, msg).toBe(61)
+    //
+    // REBASELINED 2026-08-29 by the race-incidents plan, 61/60/61 -> 81/80/81.
+    // The delta is EXACTLY +20 on all three cases, which is one driver-error
+    // roll per car on a 20-car field and nothing else -- so this rebaseline is
+    // itself an assertion about the new mechanism rather than a capitulation to
+    // it. Had a car actually erred on this tick the delta would be +21 (the
+    // terminal check) or +23 (terminal check plus gaussianPair's two draws for
+    // the time-loss magnitude); it is +20, so none did, which is consistent
+    // with a 0.0105/lap rate over a single sector.
+    expect(packed, msg).toBe(81)
+    expect(strung, msg).toBe(80)
+    expect(boundary, msg).toBe(81)
 
     // The load-bearing one. An overtake check costs exactly one draw -- the
     // single `rng() < bestProb` at the end of resolveOvertakes -- and this is

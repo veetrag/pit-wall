@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
+import { makeDeterministicTuning } from '../fixtures/tuning'
 import type { RaceConfig } from '@engine/types'
 
 const GOLDEN_PATH = 'tests/fixtures/golden-race-pre-incidents.json'
@@ -23,6 +24,13 @@ const GOLDEN_PATH = 'tests/fixtures/golden-race-pre-incidents.json'
  * DO NOT re-capture the fixture to make it pass. Re-capturing is how a stream
  * shift gets laundered into a "new baseline".
  *
+ * NOW THAT THE SHIPPED RATES ARE NON-ZERO, this pins the GUARANTEE rather than
+ * the shipped config: a race with the three switches explicitly zeroed must
+ * still reproduce the golden pre-incidents race. That is the property every
+ * makeDeterministicTuning-based test in the suite rests on, and it is the
+ * reason those tests did not all need rebaselining when incidents went live.
+ * The fixture itself is unchanged.
+ *
  * (One re-capture IS legitimate, and only one: when RaceState gains the
  * `safetyCar` and `incidents` fields, its serialised SHAPE changes. That
  * re-capture must add exactly two lines -- `"safetyCar": null` and
@@ -40,7 +48,8 @@ describe('byte-identity with incidents disabled', () => {
     const circuit = DATA.circuits['bengaluru']!
     const config: RaceConfig = {
       circuit,
-      tuning: DATA.tuning,
+      // Explicitly zeroed, not DATA.tuning: the shipped rates are live now.
+      tuning: makeDeterministicTuning({ mechanicalFailure: { baseChancePerLap: 0.008 } }),
       compounds: DATA.compounds,
       drivers: DATA.drivers.drivers,
       teams: DATA.cars.teams,

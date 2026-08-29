@@ -314,7 +314,7 @@ identity.
 
 ### 7.2 Mechanical DNF
 
-`mechanicalFailure.baseChancePerLap`: **0.008 → 0.014**.
+`mechanicalFailure.baseChancePerLap`: **0.008 → 0.014** — ~~superseded~~, shipped at **0.012**; see the note below.
 
 No new mechanism — the existing roll at `race.ts:137-147` is correct and stays as it is. 0.014
 takes the measured 4.67% to approximately **8%**, the middle of §3's 6–10% band.
@@ -322,7 +322,15 @@ takes the measured 4.67% to approximately **8%**, the middle of §3's 6–10% ba
 > **Verified 2026-08-24.** Solving `1 - exp(-baseChancePerLap x (1 - reliability/100) x meanLaps)`
 > over the 10 shipped teams at the 46.67-lap calendar mean: **0.008 → 4.89%** (matching the measured
 > 4.51–5.06%, which validates the model) and **0.014 → 8.36%**, i.e. 1.67 mechanical retirements per
-> race field-wide. Mid-band as claimed. This value needs no change. Combined with
+> race field-wide. Mid-band as claimed.
+>
+> **SUPERSEDED 2026-08-29 — the value shipped is 0.012, not 0.014.** 0.014 meets the field-wide band
+> but breaks the *reliability* spec's per-team targets: Halcyon (reliability 72) retires from ~19.5%
+> of races against a 10–15% target. The conflict turned out to be partly an artifact of measurement:
+> `mechanicalFailure.test.ts` measured its per-team bands on a **56-lap** circuit while §3's band is
+> calendar-wide (46.67 mean), overstating the per-team figures by ~20%. Measured on a representative
+> **47 laps**, 0.012 satisfies all three at once — Halcyon 14.5%, Zenith 3.3%, field-wide 7.04–7.42%
+> (measured, all 12 circuits, n=720, both difficulties). Owner's call, taken 2026-08-29. Combined with
 ~7pp of crashes that gives ~15% total DNF against real F1's 18.4%, with tyre failures accounting
 for part of the remainder.
 
@@ -370,7 +378,40 @@ this and confirm the measured rate still lands in 0.5–0.8.
 
 ### 8.2 Bands this plan is accountable for
 
-Current column re-measured 2026-08-24 (all 12 circuits, n=720, pro unless noted).
+**OUTCOME, measured 2026-08-29 (all 12 circuits, n=720, both difficulties, two seed bases).**
+Seven of eight targets met. The eighth — top-team win share — was missed and **did not move at
+all**, and per §2.1 the magnitudes were not adjusted in either direction to chase it.
+
+| Metric | Before | After | Target | Verdict |
+|---|---|---|---|---|
+| Mechanical DNF / car-race | 4.51–5.06% | **7.04–7.42%** | 6–10% | **MET** — assertion un-skipped |
+| Crashes / car-race | 0 | **6.32–6.54pp** | 6–8pp | **MET** |
+| Safety cars / race | 0 | **0.518–0.553** | 0.5–0.8 | **MET** |
+| Distinct winners | 7 | **7** | ≥ 4 | met, unmoved |
+| Mean \|Δpos\| | 2.86 | **3.58–3.62** pro | in 2.5–4.0 | met, nearer the ceiling |
+| Grid↔finish ρ | 0.75–0.79 | **0.63–0.65** | in 0.60–0.80 | met; ceiling worry resolved |
+| `paceRankCorrelation` | 0.9636 | **0.9879** | ≥ 0.90 | met, and it rose |
+| **Top-team win share** | 56.7–59.2% | **56.8–58.8%** | 0.35–0.55 | **MISSED** |
+| Driver errors / race | 0 | **5.08–5.28** | — | diagnostic |
+
+**Why the miss, and why it is not a tuning failure.** §2 predicted 0.40–0.50 and was wrong, for a
+reason neither this spec nor `MODEL_SPEC.md` §7 anticipated: **win-share concentration is a
+DRIVER-pace effect, and incidents are driver-agnostic.** `d_voss` alone wins **55.0%** of races
+(n=600, all 12 circuits) and two drivers take **86.2%** of all wins. `drivers.json` has a pace cliff
+at the top — 96, 94, then 90, 86, 85 — and Voss pairs the highest pace with the best car. Removing
+~15% of his races through DNFs does not change who is fastest in the other 85%. Two-car absorption
+is minor by comparison (34 of Apex's 338 wins came after losing its other car).
+
+So the remaining distance is reachable by neither `cars.json` (§7's plateau) nor incident rates
+(measured). It lives in **`drivers.json`'s top-end pace spread or in driver-car pairing** — which
+§3 of this spec explicitly placed out of scope, and which carries an owner decision: a flatter
+driver spread makes the championship closer and an elite driver mean less.
+
+`topTeamWinRate`'s ceiling was therefore left staged at **0.90** and NOT advanced to 0.55.
+
+---
+
+Original targets table (current column as of 2026-08-24):
 
 | Metric | Current | Target | Source |
 |---|---|---|---|

@@ -3,6 +3,7 @@ import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig, RaceState, CarState, CircuitSpec } from '@engine/types'
+import { zeroIncidents } from '../fixtures/tuning'
 
 // M4: track position & traffic — pace mode must convert into real overtake
 // probability, worn tyres must be genuinely passable, and equal pace/tyres
@@ -15,7 +16,13 @@ const REFERENCE_CIRCUIT: CircuitSpec = {
   pitLaneTimeLoss: 22.0, rainProbability: 0.0, weatherBias: 'stable',
 }
 
-const TUNING_FIXTURE = loadGameData().tuning
+// Incidents zeroed: this file measures overtaking, and a safety car DISABLES
+// overtaking outright, so a deployment mid-measurement would silently remove
+// the thing under test rather than merely add noise to it.
+const TUNING_FIXTURE = {
+  ...loadGameData().tuning,
+  incidents: zeroIncidents(loadGameData().tuning.incidents),
+}
 const COMPOUNDS_FIXTURE = loadGameData().compounds
 
 // Two identical cars/drivers/teams so car/driver pace-advantage terms are

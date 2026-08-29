@@ -3,6 +3,7 @@ import { initRace, stepSector, computeSectorTime } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig, RaceState, CarState, CircuitSpec } from '@engine/types'
+import { zeroIncidents } from '../fixtures/tuning'
 
 // Feedback: wrong-compound-for-weather penalties were too weak, and there
 // was no real consequence for running tyres far past the cliff — an
@@ -46,7 +47,9 @@ function makeSingleCarConfig(): RaceConfig {
   const teamFacets = { power: 70, aero: 70, handling: 70, reliability: 99, pitCrew: 70 }
   return {
     circuit: REFERENCE_CIRCUIT,
-    tuning: DATA.tuning,
+    // Incidents zeroed: a driver-error crash would be counted by the
+    // "retires within a few laps" assertions below as if the tyre had failed.
+    tuning: { ...DATA.tuning, incidents: zeroIncidents(DATA.tuning.incidents) },
     compounds: DATA.compounds,
     drivers: [{ id: 'lone', name: 'Lone', code: 'LON', teamId: 'lone', facets }],
     teams: [{ id: 'lone', name: 'Lone', colorPrimary: '#fff', colorSecondary: '#000', facets: teamFacets }],
@@ -122,7 +125,7 @@ describe('tyre failure: well-managed tyres rarely trigger it', () => {
       const seed = i * 7 + 13
       const config: RaceConfig = {
         circuit: REFERENCE_CIRCUIT,
-        tuning: data.tuning,
+        tuning: { ...data.tuning, incidents: zeroIncidents(data.tuning.incidents) },
         compounds: data.compounds,
         drivers: data.drivers.drivers,
         teams: data.cars.teams,
@@ -133,7 +136,13 @@ describe('tyre failure: well-managed tyres rarely trigger it', () => {
       let state = initRace(config)
       const rng = createRng(seed)
       for (let s = 0; s < config.circuit.laps * 3; s++) state = stepSector(config, state, rng)
-      totalRetirements += state.cars.filter(c => c.retired).length
+      // Tyre cause only. This counted every retirement until the
+      // race-incidents plan raised mechanicalFailure.baseChancePerLap
+      // 0.008 -> 0.012, at which point mechanical DNFs alone pushed the mean to
+      // 1.25 against this test's 1.0 ceiling -- a tyre test failing on a
+      // mechanical constant. Incidents are zeroed in the config above; naming
+      // the cause here makes it immune to the mechanical rate too.
+      totalRetirements += state.cars.filter(c => c.retiredCause === 'tyre').length
     }
 
     expect(totalRetirements / RACES).toBeLessThan(1.0)

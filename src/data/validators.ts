@@ -160,6 +160,8 @@ const TuningSchema = z.object({
     gridFinishSpearman: z.tuple([z.number(), z.number()]),
     minPaceRankCorrelation: z.number(),
     mechanicalDnfPerCarRace: z.tuple([z.number(), z.number()]),
+    crashesPerCarRace: z.tuple([z.number(), z.number()]),
+    safetyCarsPerRace: z.tuple([z.number(), z.number()]),
     _note: z.string(),
   }).optional(),
 }).passthrough()

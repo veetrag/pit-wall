@@ -77,6 +77,11 @@ describe('loadGameData', () => {
 
   it('loads the mechanicalFailure tuning block', () => {
     const data = loadGameData()
-    expect(data.tuning.mechanicalFailure.baseChancePerLap).toBeCloseTo(0.008, 5)
+    // 0.008 -> 0.012 by the race-incidents plan, which takes the field-wide
+    // mechanical DNF rate into MODEL_SPEC section 3's 6-10% band (measured
+    // 7.04-7.42%) and un-skips its assertion. The spec proposed 0.014; 0.012
+    // was chosen instead because it satisfies the reliability spec's per-team
+    // DNF targets at the same time -- see tests/engine/mechanicalFailure.ts.
+    expect(data.tuning.mechanicalFailure.baseChancePerLap).toBeCloseTo(0.012, 5)
   })
 })

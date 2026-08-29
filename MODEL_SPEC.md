@@ -51,15 +51,18 @@ bogus 38% DNF rate. Retirement causes are only computable for 2000–2022.
 These are the acceptance criteria. A change that moves a **gated** metric out of band must either
 be corrected or must update this document with an argument.
 
-| Metric | Real F1 | Sim at 2026-08-23 (post circuit-sensitivity) | Band | Gated? |
+| Metric | Real F1 | Sim at 2026-08-29 (post race-incidents) | Band | Gated? |
 |---|---|---|---|---|
-| Mean \|grid − finish\| | **2.97** ± 0.04 classified (2011–25); 3.70 with DNFs | all 12 circuits, n=720, two seed bases: **2.8633 / 2.8371** ± 0.024 pro, **2.6183 / 2.5814** ± 0.023 rookie | **2.5 – 4.0** — the §3 target, **advanced** §4 | **Yes — primary** |
-| Top-team win share | median **58.6%**; min 35.0% (2012); max 95.5% (2023) | all 12, n=720, two seed bases: **56.67% / 59.17%** pro, **64.17% / 60.00%** rookie (SE 1.8pp). Was 65.0% pro before the sensitivities were wired | **0.35 – 0.55** target; staged at **≤ 0.90** (§4). Pro now sits ~2–4pp above the *final* 0.55 ceiling; closing that remains the **race-incidents plan's** job | **Yes** |
-| Distinct winners / season | median **3**, range 2–6 | **7** on all four all-12 n=720 samples, both difficulties | **≥ 4** | **Yes** |
-| Grid↔finish Spearman ρ | **0.779** ± 0.009 classified; 0.628 with DNFs | all 12, n=720: **0.7495 / 0.7557** pro, **0.7773 / 0.7874** rookie | **0.60 – 0.80** (the §3 target, reached early — §4) | **Yes** — but **watch the ceiling**: rookie's 0.7874 leaves 0.0126 of headroom against an observed between-sample spread of 0.010. Anything that further rewards grid position will breach 0.80 on rookie first |
-| Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | all 12, n=720: **4.51% / 4.86%** pro, **5.06% / 4.72%** rookie. Historical pooled figure **4.67%** ± 0.12 (n = 28,800 car-races) — unmoved by this plan | **6 – 10%** | **Yes** — but not met; assertion skipped, see §4 |
+| Mean \|grid − finish\| | **2.97** ± 0.04 classified (2011–25); 3.70 with DNFs | all 12, n=720, two seed bases: **3.6190 / 3.5838** ± 0.028 pro, **3.4361 / 3.4343** ± 0.028 rookie. Incidents raised it from 2.86 | **2.5 – 4.0** | **Yes — primary.** Now nearer the 4.0 CEILING than the floor; anything further raising churn should re-measure |
+| Top-team win share | median **58.6%**; min 35.0% (2012); max 95.5% (2023) | all 12, n=720, two seed bases: **58.75% / 56.81%** pro, **57.64% / 61.67%** rookie (SE 1.8pp) | **0.35 – 0.55** target; staged at **≤ 0.90** (§4) | **Yes**, at the staged ceiling. **The 0.35–0.55 target is NOT met and race incidents did not move it** (56.7–59.2% → 56.8–58.8%). Ceiling deliberately left at 0.90 rather than tightened. See §7's falsification note: the concentration is a driver-pace effect, not a chaos deficit |
+| Distinct winners / season | median **3**, range 2–6 | **7** on all four all-12 n=720 samples, both difficulties — unmoved by incidents | **≥ 4** | **Yes** |
+| Grid↔finish Spearman ρ | **0.779** ± 0.009 classified; 0.628 with DNFs | all 12, n=720: **0.6277 / 0.6359** pro, **0.6540 / 0.6508** rookie | **0.60 – 0.80** | **Yes.** Incidents moved this from 0.75–0.79 down to 0.62–0.65, which **resolves the ceiling worry the previous revision flagged** and creates a mild FLOOR one instead: rookie's 0.6393 leaves 0.039 above 0.60. Note it moved further from real F1's 0.779 classified but closer to its 0.628 DNF-inclusive figure, which is the fairer comparison now that DNFs are realistic |
+| Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | all 12, n=720: **7.174% / 7.056%** pro, **7.417% / 7.042%** rookie, after `mechanicalFailure.baseChancePerLap` 0.008 → 0.012 | **6 – 10%** | **Yes — MET, and the assertion is UN-SKIPPED** (2026-08-29) against the same unwidened band |
+| **Crashes / car-race** | **7.0pp** accident share (2014–22), computed in §3's own derivation | all 12, n=720: **6.535 / 6.451pp** pro, **6.319 / 6.507pp** rookie | **5 – 9pp** | **Yes — MET.** Solved backwards from the 7.0pp target via `driverErrorPerLap` 0.0105 and `terminalFraction` 0.20; moving either without rechecking that identity breaks this gate |
+| **Safety cars / race** | ~0.6–0.7 (the owner's stated choice) | all 12, n=720: **0.551 / 0.535** pro, **0.518 / 0.553** rookie | **0.4 – 0.9** | **Yes — MET.** Band is wider than the crash band on purpose: this rate is a product of four inputs and inherits all their variance |
+| Driver errors / race | not separately published | all 12, n=720: **5.18 / 5.24** pro, **5.08 / 5.28** rookie (field-wide, non-terminal plus terminal) | — | **No — diagnostic.** The gated consequence is the crash rate above |
 | Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | **1.3454** mean over four seed bases (1.3066–1.3769, pro, n=200 per circuit) — **below the 1.5 floor, and the circuit-sensitivity plan moved it DOWN.** Reverting only the two `lapModel.ts` lines that plan changed measures **1.5238** (1.4952–1.5523) on the same seeds: inside the band. Per-circuit, wired, sorted: grand_savane 2.591, altiplano 2.639, sol_desert 2.651, veloce 2.718, silverpark 2.744, highland 2.815, costa_verde 2.835, aurora 2.897, monsoon_bay 3.033, bengaluru 3.045, kaido 3.455, harbour_lights 3.568 | **1.5 – 2.5×** — **NOT MET, and regressed** | **Yes**, but on a *fixed pair* and for a narrower purpose than the band. `tests/engine/circuitDifferentiation.test.ts` gates harbour_lights ÷ grand_savane at **> 1.15** (measured 1.2968 ± 0.0451 pro over six n=120 seed bases) as a floor against the calendar flattening. That gate **cannot** fail on a renormalising of the sensitivities — verified by mutation, which passes at 1.44 — so the wiring itself is guarded by the fingerprint pairs in that file, not by this ratio. See §7 and §4 for the mechanism |
-| Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9636** pro / **0.9152** rookie, identical on both all-12 n=720 seed bases. **Read it narrowly.** The reference pace ranking is computed from the *global* `sectorSplit`, not from `circuit.carSensitivity`, so it is circuit-blind and disagrees with the engine's own per-circuit order on 9 of 12 circuits. An unmoved value therefore shows results are still tied to car quality **in general** — the lottery failure mode is absent — and is **not** evidence that per-circuit weighting left pace ordering untouched, which an earlier version of this row wrongly inferred. See `tests/engine/monteCarloHarness.ts` | **≥ 0.90** — final, never to be widened | **Yes** |
+| Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9879** pro / **0.9152–0.9394** rookie post-incidents — it went UP, from 0.9636 / 0.9152. Chaos removed cars without decoupling results from pace, which is the reassuring result and the opposite of the lottery this gate exists to catch. **Read it narrowly.** The reference pace ranking is computed from the *global* `sectorSplit`, not from `circuit.carSensitivity`, so it is circuit-blind and disagrees with the engine's own per-circuit order on 9 of 12 circuits. An unmoved value therefore shows results are still tied to car quality **in general** — the lottery failure mode is absent — and is **not** evidence that per-circuit weighting left pace ordering untouched, which an earlier version of this row wrongly inferred. See `tests/engine/monteCarloHarness.ts` | **≥ 0.90** — final, never to be widened | **Yes** |
 | Pit lane time loss, **calendar mean** | 19.7 – 23.8s (2,106 green-flag stops) — a population mean **across circuits** | **21.00s** exactly; per-circuit range **18.0 – 24.0s**, with three members below the band floor: veloce 18.0, harbour_lights 19.0, altiplano 19.0 | 19.5 – 24.0s, **on the mean** | **Yes.** The metric is the mean across the calendar, because that is the quantity the real-world figure was always derived from — real pit lanes do vary below 19.7s, and a per-circuit reading was never what the band measured. **This is a clarification of the metric, not a loosening of the band: both endpoints are untouched.** It is not precedent for widening a band to fit data — widening 19.5 to 18.0 would have been that, and was rejected. A spread gate (≥ 4.0s) sits beside it so the calendar cannot be flattened back |
 | Recorded overtake events | not computable — see §5 | **33.3** pro / 33.1 rookie (4-circuit, n=240); 36.7 / 36.8 (all 12). Was 46.3 before overtaking became durable. §5 forbids gating it; it is a **calibration anchor only** | — | **No — diagnostic only** |
 | Clearing failure rate, hardest circuit (Harbour Lights, 0.4 s/lap adv) | no published data (§6) | **0.450** ± 0.045 (n=120); 0.550 ± 0.045 on a disjoint seed stream | design target **0.60 – 0.75** (spec §6.1) — **not met**; gated at **> 0.30** | **Yes**, at the reduced bar; the real target is committed **skipped** |
@@ -89,7 +92,7 @@ therefore tighten as the work lands. The values in `tuning.json._regressionBands
 | The competitive-grid plan (**landed, met**) | **≤ 0.90** — measured **0.846** pro / **0.881** rookie, 12 circuits | **≥ 4** — measured **7–8** | 1.75 – 4.0 — measured 2.859 / 2.582 | **0.60 – 0.80** (the §3 target, reached early — see below); measured **0.753** / **0.785** |
 | The overtaking-race-time plan (**landed, met**) | ≤ 0.90 — measured **0.579** (4-circuit, n=240) / **0.650** (all 12), pro | ≥ 4 — measured **8** / 7 | **2.5 – 4.0** — **advanced to the §3 target** on measurement; 2.9896 ± 0.043 gated sample, 8 SE over the floor | 0.60 – 0.80 — measured **0.734** / 0.758 |
 | The circuit-sensitivity plan (**landed; every *banded* metric met — but see the \|Δpos\|-ratio regression below**) | ≤ 0.90 — measured **0.567 / 0.592** pro, **0.642 / 0.600** rookie (all 12, n=720) | ≥ 4 — measured **7**, both difficulties | 2.5 – 4.0 (already advanced) — measured **2.863 / 2.837** pro, **2.618 / 2.581** rookie | 0.60 – 0.80 — measured **0.750 / 0.756** pro, **0.777 / 0.787** rookie |
-| The race-incidents plan | **0.35 – 0.55** | ≥ 4 | 2.5 – 4.0 (already advanced) | 0.60 – 0.80 |
+| The race-incidents plan (**landed 2026-08-29; win share NOT met, every other band met**) | target **0.35 – 0.55** — measured **0.588 / 0.568** pro, **0.576 / 0.617** rookie. **Ceiling left at 0.90, deliberately not tightened** | ≥ 4 — measured **7** | 2.5 – 4.0 — measured **3.619 / 3.584** pro, **3.436 / 3.434** rookie (up from 2.86) | 0.60 – 0.80 — measured **0.628 / 0.636** pro, **0.654 / 0.651** rookie (down from 0.75–0.79) |
 
 **Why \|Δpos\| and ρ were staged rather than simply banded at their §3 values.** Before the
 competitive-grid change the simulation measured \|Δpos\| **1.83 – 2.06** and ρ **0.834 – 0.856**
@@ -117,6 +120,50 @@ to the target and not past it, per the rule below; and **rookie over all 12 circ
 2.5812 ± 0.028**, only 2.9 naive SE above the floor, so a future rookie assertion must
 re-measure rather than inherit this band — `monteCarloHarness`'s SE is known to understate
 (positions within a race are a permutation, so they are negatively coupled).
+
+**The race-incidents plan missed the win-share band, and this is the argument §3 requires
+(2026-08-29).**
+
+Every band this plan owned except one is met, and the one it missed it did not move at all:
+
+| Band | Before | After | Verdict |
+|---|---|---|---|
+| Mechanical DNF / car-race | 4.51–5.06% | **7.04–7.42%** | **MET** — assertion un-skipped |
+| Crashes / car-race | 0 | **6.32–6.54pp** | **MET** vs a 7.0pp real-F1 anchor |
+| Safety cars / race | 0 | **0.518–0.553** | **MET** |
+| Distinct winners | 7 | 7 | met, unmoved |
+| Mean \|Δpos\| | 2.86 | **3.43–3.62** | in band, now nearer the ceiling |
+| Grid↔finish ρ | 0.75–0.79 | **0.63–0.65** | in band; ceiling worry resolved |
+| `paceRankCorrelation` | 0.9636 | **0.9879** | met, and it went **up** |
+| **Top-team win share** | 56.7–59.2% | **56.8–58.8%** | **MISSED (target 0.35–0.55)** |
+
+**One magnitude did move, and for a reason unrelated to win share.** The spec proposed
+`mechanicalFailure.baseChancePerLap` 0.008 → **0.014**; the value shipped is **0.012**. At 0.014 the
+field-wide band is met (8.03–8.34%) but the *reliability* spec's per-team targets are not: the
+fragile team (Halcyon, reliability 72) retires from ~19.5% of races against a 10–15% target. The two
+specs looked irreconcilable until the cause was found — `tests/engine/mechanicalFailure.test.ts`
+measured its per-team bands on a **56-lap** reference circuit while §3's band is calendar-wide (46.67
+mean), and DNF probability goes as `1 - exp(-rate × laps)`, so the per-team figures were overstated
+by ~20%. Measuring on a representative **47 laps**, `0.012` satisfies all three simultaneously:
+Halcyon 14.5%, Zenith 3.3%, field-wide 7.04–7.42%. A per-team band is a claim about a typical race
+and must be measured on a typical race length.
+
+**The incident magnitudes were not touched to chase win share, in either direction**, per the spec's §2.1: they are
+anchored to real F1 (7.0pp accidents, 6–10% mechanical DNF), and both raising them to force the band
+and shaving them to protect a number are named there as the same defect. `paceRankCorrelation` rising
+to 0.9879 is the evidence that nothing was bought with noise.
+
+**Why chaos could not move it** — the finding, stated in full in §7: win-share concentration is a
+**driver**-pace effect and incidents are driver-agnostic. `d_voss` alone wins **55.0%** of races and
+two drivers take **86.2%**; `drivers.json` has a pace cliff at the top (96, 94, then 90, 86, 85), and
+removing ~15% of the fastest pairing's races through DNFs does not change who is fastest in the
+other 85%.
+
+**So `topTeamWinRate`'s ceiling stays staged at 0.90 and is NOT advanced to 0.55.** Advancing it
+would red the suite on a target no landed mechanism can reach. The remaining distance belongs to
+`drivers.json`'s top-end spread or to driver-car pairing — explicitly out of scope for all three
+plans so far, and carrying an owner-facing trade-off: a flatter driver spread makes the
+championship closer and an elite driver mean less.
 
 **That rookie caveat has since improved, and no band moved (2026-08-23, circuit-sensitivity plan).**
 Re-measured over all 12 circuits at n=720 on two seed bases: pro **2.8633 / 2.8371** ± 0.024, rookie
@@ -238,22 +285,53 @@ asymptotes near **81%**. The decomposition: shipped 96.0% → equal cars, shippe
 `cars.json`-only change**; car and driver spread contribute about equally and reinforce, because
 Apex has both the best car and the best driver.
 
-**The simulation has no chaos.** `tuning.incidents.dnfPerLap` and `driverErrorPerLap` are both
-`0.0` **and have no consumer in `src/engine/`**. There is no safety car, no red flag, no
-first-lap incident and no dry-weather driver error. The only stochastic disruption is wet-weather
-spins — which is why, with rain disabled, only **two** teams ever win. In real F1 a 0.2 s/lap edge
-is not decisive precisely because of the chaos this model lacks. **Adding it is the correct lever;
-raising `noise.sigmaPerSector` is not** — reaching the band that way needs 0.8 (a 10× increase,
-±2.4 s/lap of unexplained swing), which destroys legibility. And race length is the wrong lever in
-the wrong direction: a pace advantage grows as L while noise grows as √L, so *shorter* races are
-more deterministic.
+**~~The simulation has no chaos.~~ FALSIFIED 2026-08-29 by the race-incidents plan.** Recorded
+rather than deleted, in the style §8 and §9 already use, because the reasoning that followed from it
+was sound and its *conclusion* turned out to be wrong in an instructive way.
+
+It claimed: `tuning.incidents.dnfPerLap` and `driverErrorPerLap` are both `0.0` with no consumer in
+`src/engine/`; there is no safety car, no first-lap incident, no dry-weather driver error; the only
+stochastic disruption is wet-weather spins, which is why with rain disabled only **two** teams ever
+win. In real F1 a 0.2 s/lap edge is not decisive precisely because of the chaos this model lacks.
+**Adding it is the correct lever; raising `noise.sigmaPerSector` is not** — reaching the band that
+way needs 0.8 (a 10× increase, ±2.4 s/lap of unexplained swing), which destroys legibility. And race
+length is the wrong lever in the wrong direction: a pace advantage grows as L while noise grows as
+√L, so *shorter* races are more deterministic.
+
+**What is true now.** Driver error, crashes and safety cars are all implemented and live
+(`src/engine/incidents.ts`, `tuning.incidents`). Measured over all 12 circuits, n=720, both
+difficulties, two seed bases: **6.32–6.54pp crashes per car-race** (§3's real-F1 accident share is
+7.0pp), **0.518–0.553 safety cars per race**, **5.08–5.28 driver errors per race**, and mechanical
+DNFs raised into band at **7.04–7.42%**.
+
+**What is still true — and this is the correction worth keeping.** The rejection of
+`noise.sigmaPerSector` stands. But the claim that chaos was *the* lever for win share does **not**:
+adding real-F1-accurate chaos moved top-team win share from 56.7–59.2% to **56.8–58.8% pro**, i.e.
+**not at all**. The reason is structural and was not anticipated anywhere in this document:
+
+> **Win-share concentration is a DRIVER-pace effect, and incidents are driver-agnostic.**
+> `d_voss` alone wins **55.0%** of races (n=600, all 12 circuits); `d_rossi` wins 31.2%; together
+> two drivers take **86.2%** of all wins. `drivers.json`'s pace distribution has a cliff at the
+> top — 96, 94, then 90, 86, 85 — and Voss pairs the single highest pace with the best car.
+> Removing ~15% of his races through DNFs does not change who is fastest in the other 85%, so a
+> team-and-driver-agnostic mechanism cannot compress it. Two-car absorption is a minor factor by
+> comparison (34 of Apex's 338 wins came after losing its other car).
+
+So the remaining 57.5% → 0.35–0.55 distance is reachable by neither `cars.json` (§7's plateau) nor
+incident rates (measured above). It lives in **`drivers.json`'s top-end pace spread**, or in how
+drivers are paired to cars — both of which the competitive-grid, circuits-that-matter and
+race-incidents specs each explicitly declared out of scope. That is now the open question, and it
+has an owner-facing decision in it: compressing the driver spread makes the grid closer but makes
+an elite driver mean less.
 
 **Post-competitive-grid: the plateau held, and it is now the binding constraint.** The numbers
 in this section were measured on the old 1.482 s/lap spread; the competitive-grid change narrowed
 it to 0.674 s/lap and landed at **84.6%** (pro, 12 circuits) — consistent with the predicted 81.5%
 floor plus the residual driver spread this plan deliberately left alone. The table's shape is
-therefore unrevised and still correct: the remaining 0.846 → 0.35–0.55 distance is **not** reachable
-by any further `cars.json` edit, and belongs entirely to the race-incidents plan.
+therefore unrevised and still correct: the remaining distance is **not** reachable by any further
+`cars.json` edit. ~~and belongs entirely to the race-incidents plan~~ — **that last clause is now
+known to be wrong**; race incidents landed and moved win share by ~0pp. See the falsification note
+above for where the distance actually lives.
 
 **The circuit traffic penalty inflates on easy circuits without ever binding — and that is the
 resolution, not a defect to tune away.** The layer-2 traffic penalty is scaled per circuit and
@@ -657,8 +735,10 @@ low discriminating power against the specific regression it documents, since the
   since a durable pass removes the pair from immediate re-passing. Per §5 this is a **calibration
   anchor and never a gate**.
 - Spec §6.1's absolute clearing targets are **not met** (§3, §7).
-- No safety car, no red flag, no first-lap incident, no dry-weather driver error — §7's "the
-  simulation has no chaos" is unchanged by this work, and `tuning.incidents` is still dead (§8).
+- ~~No safety car, no red flag, no first-lap incident, no dry-weather driver error — §7's "the
+  simulation has no chaos" is unchanged by this work, and `tuning.incidents` is still dead (§8).~~
+  **Superseded 2026-08-29:** the race-incidents plan implemented driver error, crashes and safety
+  cars, and `tuning.incidents` is live. Red flags and first-lap incidents remain out (spec §3).
 
 ## 10. Invariants that must never break
 
