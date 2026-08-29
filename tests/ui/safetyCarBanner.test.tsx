@@ -61,10 +61,17 @@ describe('SafetyCarBanner', () => {
 
   it('fires exactly one haptic per deployment, and fires again on a second one', () => {
     /*
-     * FAILS IF the haptic is keyed on the banner rendering or on `safetyCar`
-     * being truthy rather than on the deploy COUNT -- either of which re-fires
-     * the buzz on every sim tick for the whole safety car period, roughly 15
-     * times per deployment.
+     * FAILS IF the one-shot guard is dropped and the haptic simply fires while
+     * `safetyCar` is truthy -- which re-buzzes on every sim tick for the whole
+     * period, roughly 15 times per deployment. Verified by mutation: removing
+     * the `buzzedForRef` guard turns the first assertion into 4 calls, not 1.
+     *
+     * NOTE, because the obvious reading is wrong: swapping the effect's dep
+     * array from [deployCount] to [safetyCar] does NOT fail this test, and an
+     * earlier draft of it claimed otherwise. The ref guard is idempotent, so it
+     * survives the extra invocations either way. The dep array is still the
+     * honest expression of what the effect keys on, but this test does not
+     * police it -- the guard is what it proves.
      */
     render(<SafetyCarBanner />)
     const sc: SafetyCarState = { deployedLap: 12, lapsRemaining: 4, cause: 'crash' }
