@@ -54,9 +54,40 @@ describe('SafetyCarBanner', () => {
     render(<SafetyCarBanner />)
     setRaceState({ deployedLap: 12, lapsRemaining: 3, cause: 'crash' }, [deployed()])
     const live = screen.getByRole('status')
-    expect(live.getAttribute('aria-live')).toBe('assertive')
     expect(live.textContent).toMatch(/safety car/i)
-    expect(live.textContent).toMatch(/3/)
+    expect(live.textContent).toMatch(/3 laps/)
+  })
+
+  it('announces politely, not assertively -- the countdown must not interrupt', () => {
+    /*
+     * FAILS IF someone sets aria-live="assertive" on the live region, as an
+     * earlier version of this component did.
+     *
+     * The text changes every lap as the countdown ticks. An assertive region
+     * interrupts whatever the screen reader is currently saying, so assertive
+     * here means cutting the user off four or five times per deployment. Polite
+     * queues instead. role="status" already implies polite, so the correct state
+     * is NO aria-live attribute at all -- an explicit "polite" would pass this
+     * test too and is harmless, but assertive must not.
+     */
+    render(<SafetyCarBanner />)
+    setRaceState({ deployedLap: 12, lapsRemaining: 3, cause: 'crash' }, [deployed()])
+    expect(screen.getByRole('status').getAttribute('aria-live')).not.toBe('assertive')
+  })
+
+  it('says "deployed" once, then only the countdown', () => {
+    // Repeating "Safety car deployed" on every lap is noise: the deployment is
+    // the event, the countdown is the update.
+    render(<SafetyCarBanner />)
+    const sc: SafetyCarState = { deployedLap: 12, lapsRemaining: 4, cause: 'crash' }
+    setRaceState(sc, [deployed()])
+    expect(screen.getByRole('status').textContent).toMatch(/deployed/i)
+
+    setRaceState({ ...sc, lapsRemaining: 3 }, [deployed()])
+    const after = screen.getByRole('status').textContent!
+    expect(after, 'the countdown update should not re-announce the deployment').not.toMatch(/deployed/i)
+    expect(after, 'but it must still say what is happening').toMatch(/safety car/i)
+    expect(after).toMatch(/3 laps/)
   })
 
   it('fires exactly one haptic per deployment, and fires again on a second one', () => {

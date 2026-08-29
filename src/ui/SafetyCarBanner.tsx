@@ -22,11 +22,18 @@ export function SafetyCarBanner() {
   // One buzz per DEPLOYMENT. Keyed on the count, not on `safetyCar` being
   // truthy: the latter re-fires on every sim tick for the whole period.
   const buzzedForRef = useRef(0)
+  // Which deployment the screen reader has already been told about, so the
+  // countdown updates that follow do not repeat the word "deployed".
+  const announcedDeploymentRef = useRef(0)
   useEffect(() => {
     if (deployCount > buzzedForRef.current) {
       buzzedForRef.current = deployCount
       warning()
     }
+    // Set AFTER the render that announced it: the effect runs post-render, so
+    // the first render of a new deployment still reads the old value and says
+    // "deployed", and every countdown render after it reads equal and does not.
+    announcedDeploymentRef.current = deployCount
     // `warning` is recreated each render by useHaptics; deployCount is the key.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deployCount])
@@ -75,19 +82,30 @@ export function SafetyCarBanner() {
 
           {/*
             Separate from the visual row on purpose. The row is a pulsing element
-            with abbreviated, styled text; this is one calm sentence, announced
-            once per change. Visually hidden rather than aria-label'd onto the row
-            so the announcement can differ from the terse on-screen copy.
+            with abbreviated, styled text; this is one calm sentence. Visually
+            hidden rather than aria-label'd onto the row so the announcement can
+            differ from the terse on-screen copy.
+
+            POLITE, not assertive, and the distinction matters here. This text
+            changes every lap as the countdown ticks, so an assertive region
+            would interrupt whatever the screen reader was mid-sentence on, four
+            or five times per deployment. Polite queues instead. `role="status"`
+            already implies polite, so there is no aria-live attribute to set --
+            an earlier version overrode it to assertive, which is why this
+            comment exists.
+
+            The word "deployed" is dropped after the first announcement for the
+            same reason: repeating it each lap is noise, and the countdown alone
+            is what has actually changed.
           */}
           <span
             role="status"
-            aria-live="assertive"
             style={{
               position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
               overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
             }}
           >
-            {`Safety car deployed. ${laps} lap${laps === 1 ? '' : 's'} remaining.`}
+            {`${announcedDeploymentRef.current === deployCount ? 'Safety car' : 'Safety car deployed'}. ${laps} lap${laps === 1 ? '' : 's'} remaining.`}
           </span>
         </motion.div>
       )}
