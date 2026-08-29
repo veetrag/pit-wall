@@ -4,7 +4,9 @@ import { useRaceStore } from '@state/raceStore'
 import type { Compound } from '@engine/types'
 import type { ProjectionResult } from '@engine/projection'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
+import { effectivePitLaneLoss } from '@engine/incidents'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
+import { useSafetyCar } from '@hooks/useSafetyCar'
 import { soundService } from '@audio/soundService'
 
 function driverCode(id: string | null, drivers: { id: string; code: string }[]): string {
@@ -79,6 +81,52 @@ function ProjectionCard({ result }: { result: ProjectionResult }) {
   )
 }
 
+/**
+ * Spec section 6 surface 2 -- the pit loss that applies RIGHT NOW.
+ *
+ * Routed through effectivePitLaneLoss rather than computed here. That function
+ * is the single source of truth shared with race.ts, projection.ts and
+ * raceStore.ts; a display that did its own arithmetic could promise a discount
+ * the race then failed to give, by 8-12s, on the game's centrepiece decision.
+ */
+function PitLossLine() {
+  const config = useRaceStore(s => s.config)
+  const safetyCar = useSafetyCar()
+  if (!config) return null
+
+  const loss = effectivePitLaneLoss(config.circuit, safetyCar, config.tuning)
+  const saving = config.circuit.pitLaneTimeLoss - loss
+  const discounted = safetyCar !== null && saving > 0
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap',
+      marginBottom: 14, paddingBottom: 10,
+      borderBottom: '1px solid var(--line-hair)',
+    }}>
+      <span style={{
+        fontFamily: 'var(--font-display)', fontSize: 10,
+        color: 'var(--text-dim)', letterSpacing: '0.1em',
+      }}>
+        PIT LOSS
+      </span>
+      <span className="mono" style={{
+        fontSize: 18, fontWeight: 700,
+        color: discounted ? 'var(--caution)' : 'var(--text-hi)',
+      }}>
+        {loss.toFixed(1)}s
+      </span>
+      {discounted && (
+        <span className="mono" style={{
+          fontSize: 11, fontWeight: 700, color: 'var(--caution)', letterSpacing: '0.04em',
+        }}>
+          −{saving.toFixed(1)}s UNDER SAFETY CAR
+        </span>
+      )}
+    </div>
+  )
+}
+
 const ALL_COMPOUNDS: { id: Compound; label: string; colorVar: string; wet: boolean }[] = [
   { id: 'S', label: 'SOFT',   colorVar: 'var(--tyre-soft)',              wet: false },
   { id: 'M', label: 'MEDIUM', colorVar: 'var(--tyre-medium)',            wet: false },
@@ -145,6 +193,8 @@ function PitPanelDrawer() {
           CANCEL
         </motion.button>
       </div>
+
+      <PitLossLine />
 
       {projectionResult && <ProjectionCard result={projectionResult} />}
 
