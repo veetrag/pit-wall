@@ -31,10 +31,16 @@ function setState(incidents: IncidentEvent[]) {
   })
 }
 
-/** Rows carry the caution tint via an inline background containing the token. */
+/**
+ * Rows carry the caution tint as a literal rgba of --caution (#FFB020) at 22%.
+ * A literal rather than color-mix() because minSdkVersion is 24 and color-mix
+ * needs Chromium 111 -- see the comment at the rowBg site in TimingTower.tsx.
+ * Matched on the rgb triple so a change to the ALPHA does not break this test,
+ * but a change to the colour does.
+ */
 function flashedRowCount(container: HTMLElement): number {
   return [...container.querySelectorAll<HTMLElement>('[data-tower-row]')]
-    .filter(el => el.style.background.includes('--caution')).length
+    .filter(el => /255,\s*176,\s*32/.test(el.style.background)).length
 }
 
 describe('TimingTower compression flash', () => {
@@ -64,6 +70,28 @@ describe('TimingTower compression flash', () => {
 
     act(() => { vi.advanceTimersByTime(2000) })
     expect(flashedRowCount(container), 'the flash is a one-shot, not a mode').toBe(0)
+  })
+
+  it('clears a flash already in flight when reduced motion is switched on', () => {
+    /*
+     * REGRESSION. Found by review, not by the original tests, and reachable
+     * only through the settings toggle mid-race.
+     *
+     * The effect re-runs when reducedMotion changes. Its cleanup cancels the
+     * pending timer, so if the effect then early-returns without clearing the
+     * state, `compressing` stays true FOREVER -- a permanent caution tint over
+     * every row for the rest of the race. That is the same unreadable-tower
+     * failure the timeout test guards against, reached by a different path.
+     */
+    const { container } = render(<TimingTower />)
+    setState([])
+    setState([deployed()])
+    expect(flashedRowCount(container), 'flash is in flight').toBeGreaterThan(0)
+
+    // Toggle reduced motion on BEFORE the 1200ms timeout would have fired.
+    act(() => { useSettingsStore.setState({ reducedMotion: true }) })
+    act(() => { vi.advanceTimersByTime(5000) })
+    expect(flashedRowCount(container), 'must not strand the tint').toBe(0)
   })
 
   it('does not tint under reduced motion', () => {

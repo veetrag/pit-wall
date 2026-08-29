@@ -107,8 +107,15 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
   // The compression flash wins over the player highlight for its ~1.2s: the
   // field collapsing is the more urgent thing to communicate, and the row
   // returns to its normal state immediately after.
+  // Literal rgba of --caution (#FFB020) at 22%, NOT color-mix(). Same
+  // constraint COMPOUND_COLORS documents at the top of this file, for a
+  // different reason: android/variables.gradle sets minSdkVersion 24, and
+  // color-mix needs Chromium 111 (2023). On an un-updated WebView the
+  // declaration is simply dropped, so the flash would silently not exist on
+  // exactly the low-end devices this project targets. Keep in sync with
+  // --caution in src/styles/tokens.css.
   const rowBg = compressed
-    ? 'color-mix(in srgb, var(--caution) 22%, transparent)'
+    ? 'rgba(255,176,32,0.22)'
     : car.isPlayer
     ? fresh
       ? 'rgba(0,229,208,0.14)'
@@ -247,7 +254,16 @@ export function TimingTower() {
   // the most dramatic reorder in the game, and the FLIP layout animation alone
   // does not explain WHY twenty rows moved at once.
   useEffect(() => {
-    if (deployCount === 0 || reducedMotion) return
+    // Clearing FIRST is load-bearing, not defensive tidying. If reducedMotion
+    // is switched on while a flash is mid-flight, the effect re-runs, the
+    // cleanup below cancels the pending timer, and the early return would then
+    // leave `compressing` stuck true forever -- a permanent tint over every
+    // row, which is precisely the unreadable-tower failure this flash's own
+    // test warns about. Reached only via the settings toggle mid-race.
+    if (deployCount === 0 || reducedMotion) {
+      setCompressing(false)
+      return
+    }
     setCompressing(true)
     const t = setTimeout(() => setCompressing(false), 1200)
     return () => clearTimeout(t)
