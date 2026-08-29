@@ -361,3 +361,44 @@ describe('safety car pit discount', () => {
     }
   }, 60_000)
 })
+
+describe('a race can end while the safety car is still out', () => {
+  it('happens often enough that the UI must handle it', () => {
+    /*
+     * Not a curiosity -- this is the PREMISE a UI gate depends on, pinned here
+     * so it cannot quietly stop being true.
+     *
+     * race.ts only clears `safetyCar` at a lap boundary, and there is no
+     * end-of-race clear, so a race whose final lap begins under yellow finishes
+     * with the flag still set. The banner, the timing tower flash and the
+     * commentary ticker are all gated to the racing/starting phases and vanish
+     * at the flag -- but the track canvas renders in every phase except idle.
+     * So TrackCanvas.tsx gates its caution wash on PHASE as well as on the flag;
+     * without that, the results screen sits under an unexplained yellow wash
+     * with every surface that could have explained it already unmounted.
+     *
+     * Found by whole-branch review, not by any per-task test, because no test
+     * covered any surface's behaviour in the `finished` phase.
+     *
+     * Measured 11/400 (2.75%) on veloce at shipped tuning. The assertion is a
+     * loose floor, not that figure: the point is that the case is REACHABLE,
+     * and a band tight enough to track the rate would be re-tuning noise.
+     */
+    const circuit = DATA.circuits['veloce']!
+    let under = 0
+    for (let seed = 1; seed <= 200; seed++) {
+      const config: RaceConfig = {
+        circuit, tuning: makeTuning({}), compounds: DATA.compounds,
+        drivers: DATA.drivers.drivers, teams: DATA.cars.teams,
+        strategies: DATA.strategies.defaults, playerDriverId: '__none__', seed,
+      }
+      let s = initRace(config)
+      const rng = createRng(seed)
+      for (let i = 0; i < circuit.laps * 3; i++) s = stepSector(config, s, rng)
+      if (s.safetyCar !== null) under++
+    }
+    // eslint-disable-next-line no-console
+    console.log(`races finishing under a safety car: ${under}/200`)
+    expect(under, 'if this ever reaches 0 the canvas phase gate is dead code').toBeGreaterThan(0)
+  }, 300_000)
+})

@@ -468,7 +468,17 @@ export function TrackCanvas() {
           // canvas, redrawn only when the flag state actually changes.
           // 0xFFB020 mirrors --caution in src/styles/tokens.css (see the same
           // note on COMPOUND_COLORS in src/ui/TimingTower.tsx) -- change both together.
-          const scActive = useRaceStore.getState().raceState?.safetyCar != null
+          //
+          // Gated on PHASE as well as the flag, and that is not belt-and-braces.
+          // race.ts only clears safetyCar at a lap boundary, so about 2.75% of
+          // races (measured: 11 of 400 seeds on veloce at shipped tuning) simply
+          // end while it is still out. The banner, the tower flash and the
+          // commentary are all gated to racing/starting, but the track canvas
+          // renders in every phase except idle -- so without this the results
+          // screen would sit under an unexplained yellow wash, with every
+          // surface that could explain it already gone.
+          const { raceState: scState, phase: scPhase } = useRaceStore.getState()
+          const scActive = scState?.safetyCar != null && (scPhase === 'racing' || scPhase === 'starting')
           if (scActive !== lastSafetyCar) {
             cautionGfx.clear()
             if (scActive) {
