@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useClockStore, type GameSpeed } from '@state/clockStore'
 import { GameClock } from './GameClock'
+import { SafetyCarBanner } from './SafetyCarBanner'
 import { StartScreen } from './StartScreen'
 import { TimingTower } from './TimingTower'
 import { PaceModeToggle } from './PaceModeToggle'
@@ -220,6 +221,10 @@ export function RaceHUD() {
                 </div>
               )}
             </div>
+
+            {/* Safety car — spec section 6 surface 1, above the tower because
+                its consequence (the field bunching) is read in the tower. */}
+            {(phase === 'racing' || phase === 'starting') && <SafetyCarBanner />}
 
             {/* RACE LEADERBOARD — full field by default, NEARBY toggle for a
                 tighter context window (label lives in TimingTower's own header) */}
