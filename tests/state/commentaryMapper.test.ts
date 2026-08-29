@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { processCommentaryTick, makeCommentaryState } from '@state/commentaryMapper'
-import type { RaceConfig, RaceState, CarState, TuningConstants } from '@engine/types'
+import type { RaceConfig, RaceState, CarState, TuningConstants, IncidentEvent } from '@engine/types'
 
 function makeCar(overrides: Partial<CarState> & { driverId: string; teamId: string }): CarState {
   return {
@@ -98,5 +98,79 @@ describe('commentaryMapper', () => {
     expect(first.lines.some(l => l.toLowerCase().includes('lights out'))).toBe(true)
     const second = processCommentaryTick(state, config, first.next)
     expect(second.lines.some(l => l.toLowerCase().includes('lights out'))).toBe(false)
+  })
+})
+
+describe('incident commentary', () => {
+  function inc(kind: IncidentEvent['kind'], over: Partial<IncidentEvent> = {}): IncidentEvent {
+    return { lap: 6, sector: 1, kind, driverId: null, timeLoss: null, ...over }
+  }
+  const CONFIG = makeConfig([{ id: 'a', code: 'AAA' }, { id: 'b', code: 'BBB' }])
+  const CARS = [
+    makeCar({ driverId: 'a', teamId: 'a', position: 3 }),
+    makeCar({ driverId: 'b', teamId: 'b', position: 4 }),
+  ]
+
+  it('reports only incidents new since the last tick', () => {
+    /*
+     * FAILS IF the mapper re-reads the whole log each tick. The log is
+     * append-only and reaches ~100 entries in a race; a mapper that emitted
+     * every entry every tick would flood the ticker and make it useless.
+     * Mirrors how prevOvertakeCount already works.
+     */
+    let cs = makeCommentaryState()
+
+    const first = processCommentaryTick(
+      makeState(CARS, { incidents: [inc('safety_car_deployed')] }), CONFIG, cs)
+    cs = first.next
+    expect(first.lines.some(l => /safety car deployed/i.test(l))).toBe(true)
+
+    // Same log, next tick: nothing new to say.
+    const second = processCommentaryTick(
+      makeState(CARS, { incidents: [inc('safety_car_deployed')] }), CONFIG, cs)
+    cs = second.next
+    expect(second.lines.some(l => /safety car deployed/i.test(l)), 'must not repeat').toBe(false)
+
+    // One more entry appended: only THAT one is reported.
+    const third = processCommentaryTick(
+      makeState(CARS, { incidents: [inc('safety_car_deployed'), inc('safety_car_ended')] }), CONFIG, cs)
+    expect(third.lines.some(l => /green flag/i.test(l))).toBe(true)
+    expect(third.lines.some(l => /safety car deployed/i.test(l))).toBe(false)
+  })
+
+  it('names the driver and the time lost on an error', () => {
+    const { lines } = processCommentaryTick(
+      makeState(CARS, { incidents: [inc('driver_error', { driverId: 'a', timeLoss: 3.42 })] }),
+      CONFIG, makeCommentaryState())
+    const line = lines.find(l => /runs wide/i.test(l))
+    expect(line, 'an error should produce a line').toBeTruthy()
+    expect(line!).toContain('AAA')
+    expect(line!, 'one decimal, not 3.42 and not the raw {loss} placeholder').toContain('3.4s')
+    expect(line!).not.toContain('{')
+  })
+
+  it('does not also emit the generic retirement line for a crash', () => {
+    // Both the crash incident and the retirement fire on the same tick; the
+    // specific line must win rather than the ticker reporting it twice.
+    const cars = [
+      makeCar({ driverId: 'a', teamId: 'a', position: 3, retired: true, retiredCause: 'crash', retiredLap: 6 }),
+      makeCar({ driverId: 'b', teamId: 'b', position: 4 }),
+    ]
+    const { lines } = processCommentaryTick(
+      makeState(cars, { incidents: [inc('crash', { driverId: 'a' })] }),
+      CONFIG, makeCommentaryState())
+    expect(lines.filter(l => l.includes('AAA')), 'exactly one line about this car').toHaveLength(1)
+  })
+
+  it('still emits the generic retirement line for a non-crash retirement', () => {
+    // The suppression must be narrow. A mechanical or tyre retirement has no
+    // incident-log entry of its own, so suppressing it would lose the line.
+    const cars = [
+      makeCar({ driverId: 'a', teamId: 'a', position: 3, retired: true, retiredCause: 'mechanical', retiredLap: 6 }),
+      makeCar({ driverId: 'b', teamId: 'b', position: 4 }),
+    ]
+    const { lines } = processCommentaryTick(
+      makeState(cars, {}), CONFIG, makeCommentaryState())
+    expect(lines.some(l => l.includes('AAA')), 'a mechanical DNF still gets its line').toBe(true)
   })
 })
