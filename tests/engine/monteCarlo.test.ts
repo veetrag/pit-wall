@@ -119,25 +119,51 @@ describe('Monte-Carlo regression', () => {
     expect(m.distinctWinners, n).toBeGreaterThanOrEqual(b.minDistinctWinners)
   }, 200_000)
 
-  // SKIPPED DELIBERATELY, not broken, and it WOULD FAIL if un-skipped today.
-  // MODEL_SPEC.md §3 bands mechanical DNFs at 6-10% per car-race against a
-  // real-F1 figure of 9.8pp; this simulation measures 4.67% +- 0.12pp over 28,800
-  // car-races, which is 11 SE BELOW the 6% floor. tuning.json carries that same
-  // unwidened 0.06 floor, so the premise holds against the data file as well as
-  // against §3. The cause is §7's "the simulation has no chaos", so the owner is
-  // the race-incidents plan, not the competitive-grid plan.
-  //
-  // The measurement itself is live (Metrics.mechanicalDnfPerCarRace, logged by
-  // the baseline test above); only the assertion waits. Un-skip when the
-  // incidents plan lands. Do NOT widen the band to make it pass -- an earlier
-  // revision loosened the floor to 0.04, which made the skipped test vacuously
-  // passable and lost the gate in both directions.
-  it.skip('mechanical DNF rate is inside its tuning.json band', () => {
+  // UN-SKIPPED 2026-08-29 by the race-incidents plan, which is what this was
+  // waiting for. It was skipped because the sim measured 4.67% +- 0.12pp against
+  // MODEL_SPEC.md §3's 6-10% band -- 11 SE below the floor -- and §7's "the
+  // simulation has no chaos" was the cause. Raising
+  // mechanicalFailure.baseChancePerLap from 0.008 to 0.012 takes it to
+  // 7.04-7.42% over all 12 circuits at n=720, mid-band, so the assertion now
+  // holds against the SAME unwidened band. The band was not touched.
+  it('mechanical DNF rate is inside its tuning.json band', () => {
     const m = runRaces({ races: 120, circuitIds: SAMPLE })
     const b = loadGameData().tuning._regressionBands!
     const n = `n=${m.races} races (${m.races * 20} car-races)`
     expect(m.mechanicalDnfPerCarRace, n).toBeGreaterThanOrEqual(b.mechanicalDnfPerCarRace[0])
     expect(m.mechanicalDnfPerCarRace, n).toBeLessThanOrEqual(b.mechanicalDnfPerCarRace[1])
+  }, 200_000)
+
+  // The two race-incidents bands, added 2026-08-29 when the mechanics landed.
+  //
+  // Both read from tuning.json rather than from literals, matching every other
+  // gate in this file, and both are sized from a measurement stated in the
+  // comment rather than picked to be comfortable.
+  it('crash and safety-car rates are inside their tuning.json bands', () => {
+    const m = runRaces({ races: 120, circuitIds: SAMPLE })
+    const b = loadGameData().tuning._regressionBands!
+    const n = `n=${m.races} races (${m.races * 20} car-races)`
+    // eslint-disable-next-line no-console
+    console.log(`crashes ${(m.crashesPerCarRace * 100).toFixed(2)}pp/car-race, ` +
+      `safety cars ${m.safetyCarsPerRace.toFixed(3)}/race, ` +
+      `driver errors ${m.driverErrorsPerRace.toFixed(2)}/race (${n})`)
+
+    // CRASHES. Band 5-9pp against §3's real-F1 accident share of 7.0pp, which
+    // is what incidents.driverErrorPerLap (0.0105) and terminalFraction (0.20)
+    // were solved backwards from. Measured 6.26-6.57pp over all 12 circuits at
+    // n=720, both difficulties. FAILS IF either of those two constants moves
+    // without the other being rechecked -- the identity between them and the
+    // 7.0pp target is stated in the spec's §7.1 and is easy to break silently.
+    expect(m.crashesPerCarRace, n).toBeGreaterThanOrEqual(b.crashesPerCarRace[0])
+    expect(m.crashesPerCarRace, n).toBeLessThanOrEqual(b.crashesPerCarRace[1])
+
+    // SAFETY CARS. Band 0.4-0.9 per race, around the owner's ~0.6-0.7 choice.
+    // Measured 0.550-0.586 over all 12 circuits at n=720. Wider than the crash
+    // band on purpose: this rate is a PRODUCT of four inputs (crash count,
+    // mechanical retirement count, and the two deploy chances), so it inherits
+    // all of their variance and a tight band here would fail on noise.
+    expect(m.safetyCarsPerRace, n).toBeGreaterThanOrEqual(b.safetyCarsPerRace[0])
+    expect(m.safetyCarsPerRace, n).toBeLessThanOrEqual(b.safetyCarsPerRace[1])
   }, 200_000)
 
   // MODEL_SPEC.md §10.1 says "byte-identical race", which the metric-level check

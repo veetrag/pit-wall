@@ -3,6 +3,12 @@ import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
 import type { RaceState, RaceConfig } from '@engine/types'
 import { soundService } from '@audio/soundService'
 
+const RETIREMENT_RADIO: Record<'tyre' | 'mechanical' | 'crash', string> = {
+  tyre: 'retired',
+  mechanical: 'retired_mechanical',
+  crash: 'retired_crash',
+}
+
 type RadioPool = Record<string, string[]>
 const pools = radioData as RadioPool
 
@@ -76,7 +82,10 @@ export function processRadioTick(
 
   // 0. Retirement (highest priority — the race is over, nothing else matters)
   if (player.retired && !radio.prevRetired) {
-    const trigger = player.retiredCause === 'mechanical' ? 'retired_mechanical' : 'retired'
+    // Keyed rather than a ternary: the generic 'retired' bucket contains
+    // "Puncture, nothing we could do", so routing a crash there would have the
+    // engineer report the wrong incident on the one call the player always hears.
+    const trigger = RETIREMENT_RADIO[player.retiredCause ?? 'tyre']
     tryPush(trigger, 2, {}, pushAlert)
   }
   next.prevRetired = player.retired

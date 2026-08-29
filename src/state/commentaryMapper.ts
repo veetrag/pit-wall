@@ -16,6 +16,7 @@ function fill(trigger: string, vars: Record<string, string | number> = {}): stri
 // to any car, not just the player's.
 export interface CommentaryState {
   prevOvertakeCount: number
+  prevIncidentCount: number
   prevPitsDone: Record<string, number>
   prevRetired: Record<string, boolean>
   prevWeatherState: WeatherState
@@ -26,6 +27,7 @@ export interface CommentaryState {
 export function makeCommentaryState(): CommentaryState {
   return {
     prevOvertakeCount: 0,
+    prevIncidentCount: 0,
     prevPitsDone: {},
     prevRetired: {},
     prevWeatherState: 'DRY',
@@ -79,6 +81,43 @@ export function processCommentaryTick(
   }
   next.prevOvertakeCount = newOvertakeCount
 
+  // Incidents — only entries appended since the last tick. The log is
+  // append-only and reaches ~100 entries in a race, so re-reading it whole
+  // every tick would flood the ticker. Same shape as prevOvertakeCount above.
+  const newIncidentCount = state.incidents.length
+  for (let i = prev.prevIncidentCount; i < newIncidentCount; i++) {
+    const ev = state.incidents[i]!
+    const code = ev.driverId ? codeFor(config, ev.driverId) : ''
+    const evLap = ev.lap + 1
+    switch (ev.kind) {
+      case 'driver_error': {
+        const line = fill('driver_error', { lap: evLap, code, loss: (ev.timeLoss ?? 0).toFixed(1) })
+        if (line) lines.push(line)
+        break
+      }
+      case 'crash': {
+        const line = fill('crash', { lap: evLap, code })
+        if (line) lines.push(line)
+        break
+      }
+      case 'safety_car_deployed': {
+        const line = fill('safety_car_deployed', { lap: evLap })
+        if (line) lines.push(line)
+        break
+      }
+      case 'safety_car_ended': {
+        const line = fill('safety_car_ended', { lap: evLap })
+        if (line) lines.push(line)
+        break
+      }
+      default: {
+        const _exhaustive: never = ev.kind
+        void _exhaustive
+      }
+    }
+  }
+  next.prevIncidentCount = newIncidentCount
+
   // Pits + retirements — any car in the top 10 by current position
   for (const car of state.cars) {
     const prevPits = prev.prevPitsDone[car.driverId] ?? 0
@@ -88,8 +127,10 @@ export function processCommentaryTick(
     }
     next.prevPitsDone[car.driverId] = car.pitsDone
 
+    // A crash already produced its own, more specific line from the incident
+    // log above. Emitting the generic one too would report it twice.
     const wasRetired = prev.prevRetired[car.driverId] ?? false
-    if (car.retired && !wasRetired) {
+    if (car.retired && !wasRetired && car.retiredCause !== 'crash') {
       const line = fill('retired', { lap: car.retiredLap ?? lap, code: codeFor(config, car.driverId), pos: car.position })
       if (line) lines.push(line)
     }

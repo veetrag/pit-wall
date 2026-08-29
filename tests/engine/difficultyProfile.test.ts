@@ -4,6 +4,7 @@ import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig, StrategyBrain, CircuitSpec } from '@engine/types'
 import { runRaces } from './monteCarloHarness'
+import { zeroIncidents } from '../fixtures/tuning'
 
 // Same four-circuit sample as tests/engine/monteCarlo.test.ts: a rain-heavy
 // round, a dry desert round, the street circuit and a high-speed round.
@@ -50,9 +51,13 @@ function buildRealConfig(
   }))
   return {
     circuit: REFERENCE_CIRCUIT,
+    // Incidents are always zeroed here: this file measures how far a reference
+    // car falls behind by difficulty, and crashes would eat the sample the
+    // comparison rests on. zeroMechanicalFailure stays a separate flag because
+    // some cases in this file want mechanical DNFs and none want crashes.
     tuning: zeroMechanicalFailure
-      ? { ...data.tuning, mechanicalFailure: { baseChancePerLap: 0 } }
-      : data.tuning,
+      ? { ...data.tuning, mechanicalFailure: { baseChancePerLap: 0 }, incidents: zeroIncidents(data.tuning.incidents) }
+      : { ...data.tuning, incidents: zeroIncidents(data.tuning.incidents) },
     compounds: data.compounds,
     drivers: data.drivers.drivers,
     teams: data.cars.teams,

@@ -13,6 +13,14 @@
   --text-dim:     #7E89A8;
   --accent:       #00E5D0;
   --accent-warm:  #FF4D5E;
+  /* Race control caution. Deliberately NOT --tyre-medium (#F2C94C): that is a
+     compound colour, and reusing it would tie race-control state to tyre
+     semantics in violation of CLAUDE.md 6.3. Shifted orange of the compound
+     yellow so the two are distinguishable side by side in the timing tower,
+     where a medium-shod car may sit on a caution-flashed row.
+     Measured: 9.66:1 against --bg-panel, 8.62:1 against --bg-elevated, and
+     10.53:1 for --bg-deep text drawn on a --caution fill. All clear AA. */
+  --caution:      #FFB020;
   --accent-violet: #9B8CFF;
   --tyre-soft:    #E8344E;
   --tyre-medium:  #F2C94C;

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { initRace } from '@engine/index'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig, CircuitSpec, StrategyPlan } from '@engine/types'
+import { zeroIncidents } from '../fixtures/tuning'
 
 // Found during on-device playtesting: every AI car started on the hardcoded dry
 // compound from strategies.json regardless of the weather, so a wet start left
@@ -27,7 +28,7 @@ function makeConfig(overrides: Partial<RaceConfig> = {}): RaceConfig {
   const drivers = DATA.drivers.drivers.slice(0, 4)
   return {
     circuit: CIRCUIT,
-    tuning: DATA.tuning,
+    tuning: { ...DATA.tuning, incidents: zeroIncidents(DATA.tuning.incidents) },
     compounds: DATA.compounds,
     drivers,
     teams: DATA.cars.teams,

@@ -39,6 +39,12 @@ export type Metrics = {
   // against a real-F1 9.8pp, but the sim measures 4.67% +- 0.12pp, so that band is
   // ASPIRATIONAL and owned by the race-incidents plan, not this one.
   mechanicalDnfPerCarRace: number
+  // Race-incidents metrics (spec 8.2). crashesPerCarRace is the direct
+  // counterpart of real F1's 7.0pp accident share; safetyCarsPerRace is the
+  // owner's ~0.6-0.7 choice.
+  crashesPerCarRace: number
+  safetyCarsPerRace: number
+  driverErrorsPerRace: number
 }
 
 // Duplicated from src/state/raceStore.ts:53 and :57-62 (BRAIN_ORDER and
@@ -184,6 +190,9 @@ export function runRaces(opts: HarnessOptions): Metrics {
   let overtakeTotal = 0
   let overtakeMin = Number.POSITIVE_INFINITY
   let mechanicalDnfs = 0
+  let crashes = 0
+  let safetyCars = 0
+  let driverErrors = 0
   let carRaces = 0
   const finishSumByTeam = new Map<string, number>()
   const finishCountByTeam = new Map<string, number>()
@@ -213,6 +222,10 @@ export function runRaces(opts: HarnessOptions): Metrics {
       finishCountByTeam.set(t, (finishCountByTeam.get(t) ?? 0) + 1)
     }
     spearmanSum += spearman(gs, fs)
+
+    crashes += state.cars.filter(c => c.retiredCause === 'crash').length
+    safetyCars += state.incidents.filter(i => i.kind === 'safety_car_deployed').length
+    driverErrors += state.incidents.filter(i => i.kind === 'driver_error').length
 
     const ot = state.overtakeEvents.length
     overtakeTotal += ot
@@ -246,5 +259,8 @@ export function runRaces(opts: HarnessOptions): Metrics {
     meanOvertakeEvents: overtakeTotal / races,
     minOvertakeEvents: overtakeMin,
     mechanicalDnfPerCarRace: mechanicalDnfs / carRaces,
+    crashesPerCarRace: crashes / carRaces,
+    safetyCarsPerRace: safetyCars / races,
+    driverErrorsPerRace: driverErrors / races,
   }
 }

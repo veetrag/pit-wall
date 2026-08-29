@@ -3,6 +3,7 @@ import { initRace, stepSector } from '@engine/index'
 import { projectPitNow } from '@engine/projection'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
+import { zeroIncidents } from '../fixtures/tuning'
 import { useRaceStore } from '@state/raceStore'
 import { runRaces } from './monteCarloHarness'
 import type { RaceConfig, StrategyBrain, CircuitSpec } from '@engine/types'
@@ -29,7 +30,14 @@ const SEEDS = [1, 2, 3, 4, 5]
 function buildConfig(circuit: CircuitSpec, seed: number): RaceConfig {
   return {
     circuit,
-    tuning: GAME.tuning,
+    // Incidents zeroed. This file's pit-loss test compares a stop at Veloce
+    // (18.0s) against one at Grand Savane (24.0s) and expects the +6.0s
+    // difference exactly -- but a stop taken under a safety car costs
+    // laneTimeLossUnderSc (10.0s) at BOTH circuits, which collapses the
+    // difference. It measured 4.8 against a 6.0 +- 0.05 expectation once
+    // incidents went live. A circuit-differentiation test must not have its
+    // subject overwritten by a safety car.
+    tuning: { ...GAME.tuning, incidents: zeroIncidents(GAME.tuning.incidents) },
     compounds: GAME.compounds,
     drivers: GAME.drivers.drivers,
     teams: GAME.cars.teams,
@@ -275,6 +283,7 @@ describe('circuits: pit lane loss comes from the circuit', () => {
         ...liveConfig,
         tuning: {
           ...liveConfig.tuning,
+          incidents: zeroIncidents(liveConfig.tuning.incidents),
           pit: { ...liveConfig.tuning.pit, stopSigma: 0 },
           projection: { ...liveConfig.tuning.projection, horizonLaps: 0 },
         },

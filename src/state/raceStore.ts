@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { loadGameData } from '@data/validators'
 import {
   initRace, stepSector, projectPitNow, resolveAllocatedCompound, consumeTyreSet,
+  effectivePitLaneLoss,
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
   type StrategyBrain, type DifficultyProfile,
 } from '@engine/index'
@@ -198,7 +199,10 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const finished = nextState.lap >= nextState.totalLaps && nextState.sector === 0
 
     const playerNow = nextState.cars.find(c => c.isPlayer)?.raceTime ?? 0
-    const stillInPit = playerInPit && playerNow < pitEndTime + config.circuit.pitLaneTimeLoss
+    // Same effective loss the stop itself was charged, so a stop taken under
+    // yellow is not held "in the pit lane" for the full green-flag duration.
+    const stillInPit = playerInPit &&
+      playerNow < pitEndTime + effectivePitLaneLoss(config.circuit, nextState.safetyCar, config.tuning)
 
     const nextRadio = processRadioTick(nextState, config, radioState, (msg, severity) => {
       const id = `alert-${++alertCounter}`
@@ -225,7 +229,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     }
 
     const { stopMean, stopSigma } = config.tuning.pit
-    const stopTime = config.circuit.pitLaneTimeLoss + stopMean + (rng() - 0.5) * 2 * stopSigma
+    const stopTime = effectivePitLaneLoss(config.circuit, raceState.safetyCar, config.tuning) +
+      stopMean + (rng() - 0.5) * 2 * stopSigma
 
     const updatedCars = raceState.cars.map(car => {
       if (!car.isPlayer) return car

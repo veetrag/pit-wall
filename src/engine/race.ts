@@ -1,10 +1,14 @@
-import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound } from './types'
+import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound, IncidentEvent } from './types'
 import type { Rng } from './rng'
 import { createRng, gaussianPair } from './rng'
 import { computeSectorTime } from './lapModel'
 import { generateWeatherTimeline } from './weather'
 import { aiDecision } from './strategy'
 import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, effectiveTyreAge, tyreCliffFraction } from './tyres'
+import {
+  rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
+  rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
+} from './incidents'
 
 // Grid-conditions tyre rule. A team that has not made a deliberate choice fits
 // the compound that matches the weather at lights out. Deliberately simple: no
@@ -81,6 +85,8 @@ export function initRace(config: RaceConfig): RaceState {
     cars,
     sectorResults: [],
     overtakeEvents: [],
+    safetyCar: null,
+    incidents: [],
     trackEvolutionLaps: 0,
     rngState: config.seed,
     weatherTimeline,
@@ -92,12 +98,13 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const sector = state.sector as SectorIndex
   const newSectorResults = [...state.sectorResults]
   const newOvertakeEvents: OvertakeEvent[] = [...state.overtakeEvents]
+  const newIncidents: IncidentEvent[] = [...state.incidents]
 
   // 1. Compute sector time for each car. Retired cars are frozen entirely —
   // no more sector time, no more sim work happens to them.
   const updatedCars: CarState[] = state.cars.map(car => {
     if (car.retired) return car
-    const result = computeSectorTime(config, car, sector, rng, state.weatherState)
+    const result = computeSectorTime(config, car, sector, rng, state.weatherState, state.safetyCar)
     newSectorResults.push(result)
     let updated = { ...car, raceTime: car.raceTime + result.sectorTime }
 
@@ -145,13 +152,82 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'mechanical' }
       }
     }
+
+    // Driver error. Ordering within this tick is fixed and load-bearing
+    // (spec 5.5): tyre failure, then mechanical, then driver error, then --
+    // outside this map -- the safety-car deployment roll for anything that
+    // retired. Applied HERE rather than inside computeSectorTime because the
+    // terminal branch retires the car, and lapModel.ts returns a SectorResult
+    // with no vocabulary for retirement.
+    //
+    // Consequence: the time loss is added to raceTime AFTER computeSectorTime
+    // has returned, so it does NOT appear in SectorResult.sectorTime. A UI that
+    // needs to show it reads the IncidentEvent log instead.
+    if (!updated.retired) {
+      if (rollDriverError(driver.facets.consistency, config.tuning, rng)) {
+        if (rollErrorIsTerminal(config.tuning, rng)) {
+          updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'crash' }
+          newIncidents.push({
+            lap: car.lap, sector, kind: 'crash', driverId: car.driverId, timeLoss: null,
+          })
+        } else {
+          const loss = rollErrorTimeLoss(config.tuning, rng)
+          updated = { ...updated, raceTime: updated.raceTime + loss }
+          newIncidents.push({
+            lap: car.lap, sector, kind: 'driver_error', driverId: car.driverId, timeLoss: loss,
+          })
+        }
+      }
+    }
     return updated
   })
 
+  // Safety car deployment. Rolled at most ONCE per tick even if two cars
+  // retire in it, and never while one is already active or once maxPerRace
+  // deployments have happened.
+  //
+  // `retiredThisTick` diffs against the PREVIOUS state's retired set rather
+  // than testing `retiredLap === state.lap`, because several cars can retire on
+  // the same lap across different sectors and we must not re-trigger on a
+  // retirement an earlier tick already accounted for.
+  let safetyCar = state.safetyCar
+  const scCfg = config.tuning.incidents.safetyCar
+  const wasRetired = new Set(state.cars.filter(c => c.retired).map(c => c.driverId))
+  const retiredThisTick = updatedCars.filter(c => c.retired && !wasRetired.has(c.driverId))
+  const scDeployedCount = state.incidents.filter(i => i.kind === 'safety_car_deployed').length
+
+  if (safetyCar === null && scDeployedCount < scCfg.maxPerRace && retiredThisTick.length > 0) {
+    // The first retirement of the tick is the trigger. A tyre failure counts as
+    // 'mechanical' for deployment purposes: a puncture strands a car the same
+    // way a broken gearbox does, and only a crash blocks the track outright.
+    const trigger = retiredThisTick[0]!
+    const cause: 'crash' | 'mechanical' = trigger.retiredCause === 'crash' ? 'crash' : 'mechanical'
+    if (rollSafetyCarDeployment(cause, config.tuning, rng)) {
+      safetyCar = { deployedLap: state.lap, lapsRemaining: rollSafetyCarDuration(config.tuning, rng), cause }
+      newIncidents.push({
+        lap: state.lap, sector, kind: 'safety_car_deployed', driverId: null, timeLoss: null,
+      })
+    }
+  }
+
+  // Compression happens ONCE, on the tick the safety car deploys. Applying it
+  // every tick while deployed would walk the whole field onto the leader.
+  const justDeployed = safetyCar !== null && state.safetyCar === null
+  let carsAfterSc = updatedCars
+  if (justDeployed) {
+    const active = updatedCars.filter(c => !c.retired)
+    const compressed = compressRaceTimes(active.map(c => c.raceTime), scCfg.gapCompression)
+    const byId = new Map(active.map((c, i) => [c.driverId, compressed[i]!]))
+    carsAfterSc = updatedCars.map(c => {
+      const t = byId.get(c.driverId)
+      return t === undefined ? c : { ...c, raceTime: t }
+    })
+  }
+
   // Retired cars stop racing entirely — excluded from traffic, overtakes,
   // dirty air, and AI decisions below; merged back in for final classification.
-  const activeCars = updatedCars.filter(c => !c.retired)
-  const retiredCars = updatedCars.filter(c => c.retired)
+  const activeCars = carsAfterSc.filter(c => !c.retired)
+  const retiredCars = carsAfterSc.filter(c => c.retired)
 
   // 2. Sort by raceTime (fastest first = leader) then apply traffic penalty
   const sorted = [...activeCars].sort((a, b) => a.raceTime - b.raceTime)
@@ -190,12 +266,38 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   })
 
   // 3. Sector-boundary overtake checks
-  const afterOvertakesActive = resolveOvertakes(config, penalisedCars, sector, state.lap, rng, newOvertakeEvents)
+  //
+  // No overtaking under yellow. Correct for real racing, and it also stops the
+  // sector-boundary check producing nonsense at freshly compressed gaps -- after
+  // a x0.35 collapse most of the field is suddenly inside gapThreshold, which
+  // would otherwise read as twenty simultaneous overtaking opportunities.
+  //
+  // resolveOvertakes both returns the reordered cars AND pushes into
+  // newOvertakeEvents, so skipping the call is what suppresses the events; there
+  // is no separate event list to leave empty.
+  const afterOvertakesActive = safetyCar === null
+    ? resolveOvertakes(config, penalisedCars, sector, state.lap, rng, newOvertakeEvents)
+    : penalisedCars
   const afterOvertakes = [...afterOvertakesActive, ...retiredCars]
 
   // 4. Advance sector/lap counters, handle pit stops, increment tyre age
   const nextSector = ((sector + 1) % 3) as SectorIndex
   const lapCompleted = sector === 2
+
+  // Tick the safety car down once per LAP, not per sector -- durationLapsMin/Max
+  // are laps, so decrementing per sector would make a "3 lap" safety car last
+  // one. Expiry is logged so the UI and the commentary can react to the restart.
+  if (safetyCar !== null && lapCompleted) {
+    const remaining = safetyCar.lapsRemaining - 1
+    if (remaining <= 0) {
+      safetyCar = null
+      newIncidents.push({
+        lap: state.lap, sector, kind: 'safety_car_ended', driverId: null, timeLoss: null,
+      })
+    } else {
+      safetyCar = { ...safetyCar, lapsRemaining: remaining }
+    }
+  }
   const newLap = lapCompleted ? state.lap + 1 : state.lap
 
   // Dirty air: a car held within gapThreshold of the car ahead across a whole
@@ -230,7 +332,10 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
           const crewFactor = team.facets.pitCrew / 100
           const effectiveStopMean = config.tuning.pit.stopMean - crewFactor * config.tuning.pit.pitCrewMeanRelief
           const effectiveStopSigma = config.tuning.pit.stopSigma * (1 - crewFactor * config.tuning.pit.pitCrewSigmaRelief)
-          const stopTime = config.circuit.pitLaneTimeLoss +
+          // Under yellow this is laneTimeLossUnderSc, not the circuit value.
+          // Routed through effectivePitLaneLoss so this and projection.ts can
+          // never disagree -- see that function's note.
+          const stopTime = effectivePitLaneLoss(config.circuit, safetyCar, config.tuning) +
             effectiveStopMean +
             stopNoise * effectiveStopSigma
           updated = {
@@ -288,6 +393,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     cars: positioned,
     sectorResults: newSectorResults,
     overtakeEvents: newOvertakeEvents,
+    safetyCar,
+    incidents: newIncidents,
     weatherState: newWeatherState,
   }
 }

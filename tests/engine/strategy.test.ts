@@ -45,7 +45,9 @@ function makeCar(overrides: Partial<CarState> = {}): CarState {
 function makeState(overrides: Partial<RaceState> = {}): RaceState {
   return {
     lap: 10, sector: 2, totalLaps: 30, cars: [], sectorResults: [],
-    overtakeEvents: [], trackEvolutionLaps: 10, rngState: 1,
+    overtakeEvents: [],
+    safetyCar: null,
+    incidents: [], trackEvolutionLaps: 10, rngState: 1,
     weatherTimeline: Array(30).fill('DRY') as import('@engine/types').WeatherState[],
     weatherState: 'DRY' as import('@engine/types').WeatherState,
     ...overrides,
@@ -217,7 +219,15 @@ function makeValidationConfig(seed: number): RaceConfig {
   }
   return {
     circuit: CIRCUIT_30,
-    tuning: { ...TUNING, incidents: { dnfPerLap: 0, driverErrorPerLap: 0 } },
+    // TUNING is makeDeterministicTuning(), which already zeroes every incident
+    // rate INCLUDING the safety-car deploy chances. An inline
+    // `incidents: { dnfPerLap: 0, driverErrorPerLap: 0 }` override used to sit
+    // here; it was redundant and actively harmful, because it REPLACED the
+    // whole incidents object with a two-key literal and so dropped every other
+    // key in it. That is the same partial-literal defect that once poisoned
+    // five fixtures with NaN -- vitest does not typecheck, so it surfaces only
+    // under `tsc --noEmit`.
+    tuning: TUNING,
     compounds: FULL_COMPOUNDS,
     drivers,
     teams,

@@ -4,6 +4,7 @@ import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
 import type { CarState, Compound, CompoundSpec } from '@engine/types'
 import { useUiTap } from '@hooks/useUiTap'
+import { useSafetyCarDeployCount } from '@hooks/useSafetyCar'
 
 // Default compact view targets a fixed row count centred on the player (not a
 // fixed radius) so a P1 or P20 player still gets a full-looking window instead
@@ -59,7 +60,7 @@ function WearBar({ compound, age, spec, fresh }: { compound: Compound; age: numb
   )
 }
 
-function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamColor, wide }: {
+function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamColor, wide, compressed }: {
   car: CarState
   leaderTime: number
   compounds: Record<string, CompoundSpec>
@@ -67,6 +68,7 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
   displayName?: string
   teamColor?: string
   wide?: boolean
+  compressed?: boolean
 }) {
   const gap = car.raceTime - leaderTime
   const spec = compounds[car.compound]
@@ -102,7 +104,19 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
   }, [car.tyreAge])
 
   const gapColor = car.position === 1 ? 'var(--text-dim)' : 'var(--text-mid)'
-  const rowBg = car.isPlayer
+  // The compression flash wins over the player highlight for its ~1.2s: the
+  // field collapsing is the more urgent thing to communicate, and the row
+  // returns to its normal state immediately after.
+  // Literal rgba of --caution (#FFB020) at 22%, NOT color-mix(). Same
+  // constraint COMPOUND_COLORS documents at the top of this file, for a
+  // different reason: android/variables.gradle sets minSdkVersion 24, and
+  // color-mix needs Chromium 111 (2023). On an un-updated WebView the
+  // declaration is simply dropped, so the flash would silently not exist on
+  // exactly the low-end devices this project targets. Keep in sync with
+  // --caution in src/styles/tokens.css.
+  const rowBg = compressed
+    ? 'rgba(255,176,32,0.22)'
+    : car.isPlayer
     ? fresh
       ? 'rgba(0,229,208,0.14)'
       : 'rgba(0,229,208,0.07)'
@@ -113,6 +127,7 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
     <motion.div
       layout
       layoutId={car.driverId}
+      data-tower-row
       transition={{ type: 'spring', stiffness: 450, damping: 38 }}
       style={{
         display: 'grid',
@@ -231,6 +246,28 @@ export function TimingTower() {
   const nameFormat = useSettingsStore(s => s.driverNameFormat)
   const setDriverNameFormat = useSettingsStore(s => s.setDriverNameFormat)
   const uiTap = useUiTap()
+  const deployCount = useSafetyCarDeployCount()
+  const reducedMotion = useSettingsStore(s => s.reducedMotion)
+  const [compressing, setCompressing] = useState(false)
+
+  // One-shot flash on deployment. Spec section 6 surface 4: the compression is
+  // the most dramatic reorder in the game, and the FLIP layout animation alone
+  // does not explain WHY twenty rows moved at once.
+  useEffect(() => {
+    // Clearing FIRST is load-bearing, not defensive tidying. If reducedMotion
+    // is switched on while a flash is mid-flight, the effect re-runs, the
+    // cleanup below cancels the pending timer, and the early return would then
+    // leave `compressing` stuck true forever -- a permanent tint over every
+    // row, which is precisely the unreadable-tower failure this flash's own
+    // test warns about. Reached only via the settings toggle mid-race.
+    if (deployCount === 0 || reducedMotion) {
+      setCompressing(false)
+      return
+    }
+    setCompressing(true)
+    const t = setTimeout(() => setCompressing(false), 1200)
+    return () => clearTimeout(t)
+  }, [deployCount, reducedMotion])
 
   if (!raceState || !config) return null
 
@@ -351,6 +388,7 @@ export function TimingTower() {
                 displayName={wide ? driverMap.get(row.car.driverId)?.name : driverMap.get(row.car.driverId)?.code}
                 teamColor={teamColorMap.get(row.car.teamId)}
                 wide={wide}
+                compressed={compressing}
               />
             )
           )}

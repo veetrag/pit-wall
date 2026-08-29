@@ -101,5 +101,11 @@
     "Retire the car. Mechanical failure, nothing we could do.",
     "Stop the car safely. Race over for us.",
     "We've lost the engine. Bring it home slowly, no rush."
+  ],
+  "retired_crash": [
+    "We're in the wall. Are you okay?",
+    "That's the race over. Stay in the car until the marshals reach you.",
+    "Into the barrier. Don't worry about it, we'll go again next time.",
+    "Race over. Get yourself out safely."
   ]
 }

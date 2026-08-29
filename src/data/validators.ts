@@ -110,7 +110,27 @@ const TuningSchema = z.object({
     horizonLaps: z.number(), useOvertakeRolls: z.boolean(),
     netEstimateHorizonLaps: z.number(),
   }),
-  incidents: z.object({ dnfPerLap: z.number(), driverErrorPerLap: z.number() }),
+  incidents: z.object({
+    dnfPerLap: z.number(),
+    driverErrorPerLap: z.number(),
+    // The .min(0).max(1) bounds on the four probabilities and two fractions are
+    // deliberate: they turn a fat-fingered 3.5 where 0.35 was meant into a
+    // load-time failure rather than a silently 10x-too-frequent mechanic.
+    terminalFraction: z.number().min(0).max(1),
+    errorTimeLossMean: z.number(),
+    errorTimeLossSigma: z.number(),
+    consistencyReliefMax: z.number().min(0).max(1),
+    safetyCar: z.object({
+      crashDeployChance: z.number().min(0).max(1),
+      mechanicalDeployChance: z.number().min(0).max(1),
+      gapCompression: z.number().min(0).max(1),
+      paceMultiplier: z.number(),
+      laneTimeLossUnderSc: z.number(),
+      durationLapsMin: z.number().int(),
+      durationLapsMax: z.number().int(),
+      maxPerRace: z.number().int(),
+    }),
+  }),
   weather: z.object({
     crossoverPenalty: z.record(z.string(), z.record(z.string(), z.number())),
     wetDegMultiplier: z.record(z.string(), z.record(z.string(), z.number())),
@@ -140,6 +160,8 @@ const TuningSchema = z.object({
     gridFinishSpearman: z.tuple([z.number(), z.number()]),
     minPaceRankCorrelation: z.number(),
     mechanicalDnfPerCarRace: z.tuple([z.number(), z.number()]),
+    crashesPerCarRace: z.tuple([z.number(), z.number()]),
+    safetyCarsPerRace: z.tuple([z.number(), z.number()]),
     _note: z.string(),
   }).optional(),
 }).passthrough()

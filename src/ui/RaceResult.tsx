@@ -4,6 +4,14 @@ import { useUiTap } from '@hooks/useUiTap'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 
+// See the note in TelemetryZone.tsx: a two-branch ternary here reported every
+// crash as "a puncture". Keyed so a new retiredCause fails to compile.
+const RETIREMENT_HEADLINE: Record<'tyre' | 'mechanical' | 'crash', string> = {
+  tyre: 'Retired — a puncture ended the race early.',
+  mechanical: 'Retired — a mechanical failure ended the race early.',
+  crash: 'Retired — a crash ended the race early.',
+}
+
 type DriverEntry = { id: string; name: string; code: string; teamId: string; flag?: string }
 type TeamEntry   = { id: string; name: string; colorPrimary: string }
 const allDrivers = driversData.drivers as DriverEntry[]
@@ -48,9 +56,7 @@ export function RaceResult() {
   const isTopThree = !playerResult?.retired && (playerResult?.position ?? 99) <= 3
   const headline = playerResult && lastRaceEvents
     ? (playerResult.retired
-        ? (playerResult.retiredCause === 'mechanical'
-            ? 'Retired — a mechanical failure ended the race early.'
-            : 'Retired — a puncture ended the race early.')
+        ? RETIREMENT_HEADLINE[playerResult.retiredCause ?? 'tyre']
         : raceHeadline(playerResult.position, lastRaceEvents))
     : null
   const isSeasonEnd = raceIndex >= TOTAL_RACES - 1

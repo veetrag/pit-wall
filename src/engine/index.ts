@@ -7,13 +7,18 @@ export {
   resolveAllocatedCompound, consumeTyreSet, UNLIMITED_TYRE_ALLOCATION,
 } from './tyres'
 export { computeSectorTime } from './lapModel'
+export {
+  driverErrorChancePerSector, rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
+  rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
+} from './incidents'
 export { createRng, gaussianPair } from './rng'
 export { generateWeatherTimeline, getWeatherForecast } from './weather'
 export type {
   RaceConfig, RaceState, CarState, SectorResult, OvertakeEvent,
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
-  TyreAllocation, DifficultyProfile, WeatherState, WeatherForecast,
+  TyreAllocation, DifficultyProfile, WeatherState, WeatherForecast, SafetyCarState,
+  IncidentEvent, IncidentKind,
 } from './types'
 export type { ProjectionResult } from './projection'
 export type { Rng } from './rng'

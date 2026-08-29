@@ -51,6 +51,39 @@ export function makeTuning(overrides: DeepPartial<TuningConstants> = {}): Tuning
 }
 
 /**
+ * The incident switches zeroed, preserving every other key.
+ *
+ * For tests that build a tuning object from the shipped `tuning.json` directly
+ * (rather than through `makeDeterministicTuning`) and measure some OTHER
+ * mechanism. The rule this serves: **a test measuring mechanism X gets incidents
+ * zeroed, unless incidents are its subject.** A traffic test whose sample is
+ * being eaten by crashes -- or worse, whose overtakes are being suppressed by a
+ * safety car -- is measuring less than it claims to.
+ *
+ * A FUNCTION rather than a spreadable constant, deliberately. As a constant it
+ * read `{ driverErrorPerLap: 0, safetyCar: { crashDeployChance: 0, ... } }` and
+ * every call site did `{ ...real.incidents, ...ZERO_INCIDENTS }` -- a SHALLOW
+ * spread, which replaced `safetyCar` wholesale and dropped its other six keys.
+ * That is the same partial-literal defect that once poisoned five fixtures with
+ * NaN, and tsc caught it here only because the tuning type is fully required.
+ * Taking the real object and returning a complete one makes the correct usage
+ * the only usage.
+ *
+ * Zeroes the three RATES only; magnitudes and durations are inert once the rates
+ * are zero, and pinning them here would let this drift from the shipped values
+ * it exists to neutralise.
+ */
+export function zeroIncidents(
+  incidents: TuningConstants['incidents'],
+): TuningConstants['incidents'] {
+  return {
+    ...incidents,
+    driverErrorPerLap: 0,
+    safetyCar: { ...incidents.safetyCar, crashDeployChance: 0, mechanicalDeployChance: 0 },
+  }
+}
+
+/**
  * The common engine-test baseline: the shipped constants with every random
  * incident switched off, so a unit test measures the mechanism it is about
  * rather than a DNF lottery. Prefer this in engine tests; pass overrides for
@@ -58,7 +91,17 @@ export function makeTuning(overrides: DeepPartial<TuningConstants> = {}): Tuning
  */
 export function makeDeterministicTuning(overrides: DeepPartial<TuningConstants> = {}): TuningConstants {
   return makeTuning(deepMerge({
-    incidents: { dnfPerLap: 0, driverErrorPerLap: 0 },
+    incidents: {
+      dnfPerLap: 0,
+      driverErrorPerLap: 0,
+      // Zeroing the two deploy chances is what keeps the safety car out of
+      // these tests, and it must be done HERE rather than via maxPerRace: 0.
+      // The deployment roll is guarded on the deploy chance (see
+      // incidents.ts), so a zero chance draws no rng() at all; a zero
+      // maxPerRace checked after the roll would still consume a draw and
+      // shift the stream for every existing test.
+      safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0 },
+    },
     mechanicalFailure: { baseChancePerLap: 0 },
   }, overrides) as DeepPartial<TuningConstants>)
 }

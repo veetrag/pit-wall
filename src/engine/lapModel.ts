@@ -1,4 +1,4 @@
-import type { RaceConfig, CarState, SectorIndex, SectorResult, WeatherState } from './types'
+import type { RaceConfig, CarState, SectorIndex, SectorResult, WeatherState, SafetyCarState } from './types'
 import type { Rng } from './rng'
 import { gaussianPair } from './rng'
 import { tyreDelta, effectiveTyreAge } from './tyres'
@@ -15,6 +15,7 @@ export function computeSectorTime(
   sector: SectorIndex,
   rng: Rng,
   weatherState: WeatherState = 'DRY',
+  safetyCar: SafetyCarState | null = null,
 ): SectorResult {
   const { tuning, circuit, compounds } = config
   const base = circuit.sectorBase[sector]!
@@ -98,9 +99,22 @@ export function computeSectorTime(
 
   const raw = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + noiseSample + spinLoss
 
+  // Safety car: every car is scaled by the same factor, so this changes no
+  // GAPS -- its entire purpose is to make the pit-loss discount meaningful, by
+  // making a lap under yellow slow enough that stopping costs less.
+  //
+  // Applied here rather than in race.ts because it SCALES the computed sector
+  // time rather than adding to it (spec 5.5's one stated exception). It
+  // performs no rng() call, so it cannot perturb the stream.
+  //
+  // Multiplied AFTER the base*0.85 floor, not before: the floor is a sanity
+  // clamp on the pace model, and clamping first would let a safety-car lap come
+  // out faster than the floor it is supposed to respect.
+  const scMultiplier = safetyCar ? tuning.incidents.safetyCar.paceMultiplier : 1
+
   return {
     driverId: car.driverId,
-    sectorTime: Math.max(raw, base * 0.85),
+    sectorTime: Math.max(raw, base * 0.85) * scMultiplier,
     tyreContribution: tyreSectorDelta,
     trafficPenalty: 0,
     noiseSample,

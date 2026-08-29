@@ -92,7 +92,26 @@ export interface TuningConstants {
     minRemainingLaps: number
   }
   projection: { horizonLaps: number; useOvertakeRolls: boolean; netEstimateHorizonLaps: number }
-  incidents: { dnfPerLap: number; driverErrorPerLap: number }
+  incidents: {
+    // dnfPerLap is dead: no consumer in src/engine/. Kept because removing it
+    // is outside the race-incidents plan's scope.
+    dnfPerLap: number
+    driverErrorPerLap: number
+    terminalFraction: number
+    errorTimeLossMean: number
+    errorTimeLossSigma: number
+    consistencyReliefMax: number
+    safetyCar: {
+      crashDeployChance: number
+      mechanicalDeployChance: number
+      gapCompression: number
+      paceMultiplier: number
+      laneTimeLossUnderSc: number
+      durationLapsMin: number
+      durationLapsMax: number
+      maxPerRace: number
+    }
+  }
   weather: {
     crossoverPenalty: Record<string, Record<string, number>>
     wetDegMultiplier: Record<string, Record<string, number>>
@@ -248,7 +267,7 @@ export interface CarState {
   retiredLap: number | null
   // Which roll ended the car's race, so the UI can attribute the retirement
   // correctly instead of assuming it was always a tyre failure.
-  retiredCause: 'tyre' | 'mechanical' | null
+  retiredCause: 'tyre' | 'mechanical' | 'crash' | null
 }
 
 export interface SectorResult {
@@ -267,6 +286,28 @@ export interface OvertakeEvent {
   overtakenId: string
 }
 
+export type IncidentKind =
+  | 'driver_error'
+  | 'crash'
+  | 'safety_car_deployed'
+  | 'safety_car_ended'
+
+export interface IncidentEvent {
+  lap: number
+  sector: SectorIndex
+  kind: IncidentKind
+  /** null for safety-car events, which belong to the race rather than a car. */
+  driverId: string | null
+  /** Seconds, for 'driver_error' only; null otherwise. */
+  timeLoss: number | null
+}
+
+export interface SafetyCarState {
+  deployedLap: number
+  lapsRemaining: number
+  cause: 'crash' | 'mechanical'
+}
+
 export interface WeatherForecast {
   currentState: WeatherState
   lap1: WeatherState
@@ -281,6 +322,14 @@ export interface RaceState {
   cars: CarState[]
   sectorResults: SectorResult[]
   overtakeEvents: OvertakeEvent[]
+  /**
+   * Lives on RaceState rather than in the Zustand store deliberately, and it is
+   * load-bearing: projection.ts clones RaceState and fast-forwards it, so with
+   * safetyCar here the "if you pit now" overlay prices a stop under yellow
+   * correctly with no changes to projection.ts at all.
+   */
+  safetyCar: SafetyCarState | null
+  incidents: IncidentEvent[]
   trackEvolutionLaps: number
   rngState: number
   weatherTimeline: WeatherState[]
