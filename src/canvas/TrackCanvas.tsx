@@ -385,6 +385,7 @@ export function TrackCanvas() {
     // R2/R4: redrawn only when atmosphere/weather actually change, not per frame.
     let lastAtmosphere = ''
     let lastWeather: WeatherState | '' = ''
+    let lastSafetyCar = false
 
     const cw = container.clientWidth || 400
     const ch = container.clientHeight || 300
@@ -407,18 +408,21 @@ export function TrackCanvas() {
         transform = buildTransform(arcTable.pts, cw, ch)
 
         // Layer order (back to front): atmosphere wash, track, rubber line,
-        // markers, wet static overlay (reduced-motion only), cars, rain (front).
+        // markers, caution wash (safety car), wet static overlay (reduced-motion
+        // only), cars, rain (front).
         const atmosphereGfx = new PIXI.Graphics()
         const trackGfx = new PIXI.Graphics()
         const rubberGfx = new PIXI.Graphics()
         const markerGfx = new PIXI.Graphics()
+        const cautionGfx = new PIXI.Graphics()
         const wetOverlayGfx = new PIXI.Graphics()
         const rainGfx = new PIXI.Graphics()
         app.stage.addChildAt(atmosphereGfx, 0)
         app.stage.addChildAt(trackGfx, 1)
         app.stage.addChildAt(rubberGfx, 2)
         app.stage.addChildAt(markerGfx, 3)
-        app.stage.addChildAt(wetOverlayGfx, 4)
+        app.stage.addChildAt(cautionGfx, 4)
+        app.stage.addChildAt(wetOverlayGfx, 5)
         drawMarkers(markerGfx, arcTable, transform)
         app.stage.addChild(rainGfx)
 
@@ -458,6 +462,21 @@ export function TrackCanvas() {
           frameCounter++
 
           const currentWeather = useRaceStore.getState().raceState?.weatherState ?? 'DRY'
+
+          // Deliberately modest per spec section 6 surface 5: the banner is the
+          // signal, this is atmosphere. A flat 5% caution wash over the whole
+          // canvas, redrawn only when the flag state actually changes.
+          // 0xFFB020 mirrors --caution in src/styles/tokens.css (see the same
+          // note on COMPOUND_COLORS in src/ui/TimingTower.tsx) -- change both together.
+          const scActive = useRaceStore.getState().raceState?.safetyCar != null
+          if (scActive !== lastSafetyCar) {
+            cautionGfx.clear()
+            if (scActive) {
+              cautionGfx.rect(0, 0, cw, ch).fill({ color: 0xFFB020, alpha: 0.05 })
+            }
+            lastSafetyCar = scActive
+          }
+
           const cars = useRaceStore.getState().raceState?.cars
           const leaderId = cars ? [...cars].sort((a, b) => a.position - b.position)[0]?.driverId : undefined
 
