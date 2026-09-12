@@ -19,8 +19,8 @@
     {
       "id": "d_rossi", "name": "Enzo Rossi", "code": "ROS", "teamId": "meridian",
       "archetype": "Mercurial star — blistering pace, error-prone",
-      "facets": { "pace": 94, "racecraft": 90, "tyreManagement": 76, "consistency": 74, "wetWeather": 85, "experience": 80 },
-      "potential": 95, "age": 26, "nationality": "Italian", "flag": "🇮🇹",
+      "facets": { "pace": 96, "racecraft": 90, "tyreManagement": 76, "consistency": 74, "wetWeather": 85, "experience": 80 },
+      "potential": 97, "age": 26, "nationality": "Italian", "flag": "🇮🇹",
       "bio": "Mercurial genius — sublime or in the wall",
       "backstory": "A generational qualifying talent from a family of Italian tifosi royalty; every wall he's put a car into has come with a lap time nobody else could touch."
     },
@@ -35,8 +35,8 @@
     {
       "id": "d_silva", "name": "Tomas Silva", "code": "SIL", "teamId": "vortex",
       "archetype": "Rain master — ordinary in the dry, sublime in the wet",
-      "facets": { "pace": 85, "racecraft": 86, "tyreManagement": 83, "consistency": 84, "wetWeather": 98, "experience": 82 },
-      "potential": 89, "age": 29, "nationality": "Brazilian", "flag": "🇧🇷",
+      "facets": { "pace": 88, "racecraft": 86, "tyreManagement": 83, "consistency": 84, "wetWeather": 98, "experience": 82 },
+      "potential": 90, "age": 29, "nationality": "Brazilian", "flag": "🇧🇷",
       "bio": "Turns into a magician the moment it rains",
       "backstory": "Grew up racing karts in tropical downpours back home; the wetter the forecast, the more his rivals start checking the radar themselves."
     },
@@ -51,8 +51,8 @@
     {
       "id": "d_berg", "name": "Erik Berg", "code": "BRG", "teamId": "kestrel",
       "archetype": "Qualifying specialist — one-lap pace, fades in races",
-      "facets": { "pace": 90, "racecraft": 78, "tyreManagement": 70, "consistency": 79, "wetWeather": 74, "experience": 76 },
-      "potential": 88, "age": 25, "nationality": "Swedish", "flag": "🇸🇪",
+      "facets": { "pace": 93, "racecraft": 78, "tyreManagement": 70, "consistency": 79, "wetWeather": 74, "experience": 76 },
+      "potential": 94, "age": 25, "nationality": "Swedish", "flag": "🇸🇪",
       "bio": "Qualifying flyer, Sunday is harder",
       "backstory": "Set three junior-series pole records before he'd turned twenty; Sunday afternoons have been a slower education."
     },

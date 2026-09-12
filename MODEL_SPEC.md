@@ -54,7 +54,7 @@ be corrected or must update this document with an argument.
 | Metric | Real F1 | Sim at 2026-08-29 (post race-incidents) | Band | Gated? |
 |---|---|---|---|---|
 | Mean \|grid − finish\| | **2.97** ± 0.04 classified (2011–25); 3.70 with DNFs | all 12, n=720, two seed bases: **3.6190 / 3.5838** ± 0.028 pro, **3.4361 / 3.4343** ± 0.028 rookie. Incidents raised it from 2.86 | **2.5 – 4.0** | **Yes — primary.** Now nearer the 4.0 CEILING than the floor; anything further raising churn should re-measure |
-| Top-team win share | median **58.6%**; min 35.0% (2012); max 95.5% (2023) | all 12, n=720, two seed bases: **58.75% / 56.81%** pro, **57.64% / 61.67%** rookie (SE 1.8pp) | **0.35 – 0.55** target; staged at **≤ 0.90** (§4) | **Yes**, at the staged ceiling. **The 0.35–0.55 target is NOT met and race incidents did not move it** (56.7–59.2% → 56.8–58.8%). Ceiling deliberately left at 0.90 rather than tightened. See §7's falsification note: the concentration is a driver-pace effect, not a chaos deficit |
+| Top-team win share | median **58.6%**; min 35.0% (2012); max 95.5% (2023) | all 12, n=720, two seed bases: **58.75% / 56.81%** pro, **57.64% / 61.67%** rookie (SE 1.8pp) | **0.35 – 0.55**, now FINAL — the last staged ceiling to reach its target (2026-09-12) | **Yes.** 0.396–0.489 over 10 seed bases per cell, both difficulties, on both the 12-circuit calendar (n=720) and the 4-circuit gate sample (n=240). Fixed by raising the challengers (Rossi 94→96, Berg 90→93, Silva 85→88), not by flattening Voss — see §4 |
 | Distinct winners / season | median **3**, range 2–6 | **7** on all four all-12 n=720 samples, both difficulties — unmoved by incidents | **≥ 4** | **Yes** |
 | Grid↔finish Spearman ρ | **0.779** ± 0.009 classified; 0.628 with DNFs | all 12, n=720: **0.6277 / 0.6359** pro, **0.6540 / 0.6508** rookie | **0.60 – 0.80** | **Yes.** Incidents moved this from 0.75–0.79 down to 0.62–0.65, which **resolves the ceiling worry the previous revision flagged** and creates a mild FLOOR one instead: rookie's 0.6393 leaves 0.039 above 0.60. Note it moved further from real F1's 0.779 classified but closer to its 0.628 DNF-inclusive figure, which is the fairer comparison now that DNFs are realistic |
 | Mechanical DNF / car-race | **9.8pp** of an 18.4% total DNF rate (2014–22) | all 12, n=720: **7.174% / 7.056%** pro, **7.417% / 7.042%** rookie, after `mechanicalFailure.baseChancePerLap` 0.008 → 0.012 | **6 – 10%** | **Yes — MET, and the assertion is UN-SKIPPED** (2026-08-29) against the same unwidened band |
@@ -92,7 +92,7 @@ therefore tighten as the work lands. The values in `tuning.json._regressionBands
 | The competitive-grid plan (**landed, met**) | **≤ 0.90** — measured **0.846** pro / **0.881** rookie, 12 circuits | **≥ 4** — measured **7–8** | 1.75 – 4.0 — measured 2.859 / 2.582 | **0.60 – 0.80** (the §3 target, reached early — see below); measured **0.753** / **0.785** |
 | The overtaking-race-time plan (**landed, met**) | ≤ 0.90 — measured **0.579** (4-circuit, n=240) / **0.650** (all 12), pro | ≥ 4 — measured **8** / 7 | **2.5 – 4.0** — **advanced to the §3 target** on measurement; 2.9896 ± 0.043 gated sample, 8 SE over the floor | 0.60 – 0.80 — measured **0.734** / 0.758 |
 | The circuit-sensitivity plan (**landed; every *banded* metric met — but see the \|Δpos\|-ratio regression below**) | ≤ 0.90 — measured **0.567 / 0.592** pro, **0.642 / 0.600** rookie (all 12, n=720) | ≥ 4 — measured **7**, both difficulties | 2.5 – 4.0 (already advanced) — measured **2.863 / 2.837** pro, **2.618 / 2.581** rookie | 0.60 – 0.80 — measured **0.750 / 0.756** pro, **0.777 / 0.787** rookie |
-| The race-incidents plan (**landed 2026-08-29; win share NOT met, every other band met**) | target **0.35 – 0.55** — measured **0.588 / 0.568** pro, **0.576 / 0.617** rookie. **Ceiling left at 0.90, deliberately not tightened** | ≥ 4 — measured **7** | 2.5 – 4.0 — measured **3.619 / 3.584** pro, **3.436 / 3.434** rookie (up from 2.86) | 0.60 – 0.80 — measured **0.628 / 0.636** pro, **0.654 / 0.651** rookie (down from 0.75–0.79) |
+| The race-incidents plan (**landed 2026-08-29; win share NOT met, every other band met**) | target **0.35 – 0.55** — measured **0.588 / 0.568** pro, **0.576 / 0.617** rookie. **Ceiling left at 0.90, deliberately not tightened** — superseded by the win-share plan below | ≥ 4 — measured **7** | 2.5 – 4.0 — measured **3.619 / 3.584** pro, **3.436 / 3.434** rookie (up from 2.86) | 0.60 – 0.80 — measured **0.628 / 0.636** pro, **0.654 / 0.651** rookie (down from 0.75–0.79) |
 
 **Why \|Δpos\| and ρ were staged rather than simply banded at their §3 values.** Before the
 competitive-grid change the simulation measured \|Δpos\| **1.83 – 2.06** and ρ **0.834 – 0.856**
@@ -135,7 +135,7 @@ Every band this plan owned except one is met, and the one it missed it did not m
 | Mean \|Δpos\| | 2.86 | **3.43–3.62** | in band, now nearer the ceiling |
 | Grid↔finish ρ | 0.75–0.79 | **0.63–0.65** | in band; ceiling worry resolved |
 | `paceRankCorrelation` | 0.9636 | **0.9879** | met, and it went **up** |
-| **Top-team win share** | 56.7–59.2% | **56.8–58.8%** | **MISSED (target 0.35–0.55)** |
+| **Top-team win share** | 56.7–59.2% | **56.8–58.8%** | **MISSED (target 0.35–0.55)** — resolved 2026-09-12, see below |
 
 **One magnitude did move, and for a reason unrelated to win share.** The spec proposed
 `mechanicalFailure.baseChancePerLap` 0.008 → **0.014**; the value shipped is **0.012**. At 0.014 the
@@ -164,6 +164,40 @@ would red the suite on a target no landed mechanism can reach. The remaining dis
 `drivers.json`'s top-end spread or to driver-car pairing — explicitly out of scope for all three
 plans so far, and carrying an owner-facing trade-off: a flatter driver spread makes the
 championship closer and an elite driver mean less.
+
+### The win-share plan (landed 2026-09-12) — the last staged ceiling reaches its target
+
+`topTeamWinRate` is now **[0.35, 0.55]**, final. Measured **0.396–0.489** over 10 seed bases per
+cell, both difficulties, on both the 12-circuit calendar (n=720) and the 4-circuit sample the gates
+actually assert on (n=240), down from **0.550–0.617**.
+
+**The prediction above was half right.** It correctly named `drivers.json`'s top-end spread as the
+remaining distance. It was wrong about the trade-off: *flattening the leader does not work*, and the
+owner-facing cost it feared — "an elite driver mean less" — was never paid.
+
+Three approaches were measured before one was chosen:
+
+| Approach | 12-circuit calendar | 4-circuit gate sample | Verdict |
+|---|---|---|---|
+| Flatten Voss (96→92/93, ±Rossi) | in band, 0.41–0.48 | top share **0.317** (< 0.35 floor), ρ **0.584** (< 0.60 floor) | **Fails the gates** |
+| Compress Apex's car (k = 0.6 / 0.3) | in band | `paceRankCorrelation` **0.891 / 0.794** | **Red-lines a FINAL 0.90 gate** |
+| **Raise the challengers** | **0.404–0.489** | **0.396–0.471** | **Chosen** |
+
+**Why flattening fails, and it is a consequence of Plan A.** Race incidents had already pulled
+`gridFinishSpearman` from ~0.75 down to ~0.62 — within **0.013** of its 0.60 floor. Compressing the
+field spends that same budget, and there was none left. Widening the top instead of compressing it
+costs nothing from it.
+
+**The change** (`drivers.json`): Rossi **94 → 96**, a genuine equal to Voss rather than a clear
+second; Berg **90 → 93**, making Kestrel a third force; Silva **85 → 88**, lifting Vortex into
+occasional-winner range. Potentials raised to stay above pace. **Voss keeps his 96** — the four-time
+champion of his own backstory is untouched, and he is still the fastest driver on the grid.
+
+**Three metrics improved rather than degrading**, which is the evidence that nothing was bought with
+noise: `gridFinishSpearman` **0.622–0.691** (was 0.613–0.628), `paceRankCorrelation` min **0.9394**
+on the calendar (was 0.9152), `meanAbsPosChange` max **3.650** (was 3.663). Distinct winners ≥ 6.
+Incident rates untouched. Tightest remaining margin is `paceRankCorrelation` at **+0.0152** on the
+rookie gate sample. Representative win share: **apex 45.8 / meridian 36.4 / vortex 8.8**.
 
 **That rookie caveat has since improved, and no band moved (2026-08-23, circuit-sensitivity plan).**
 Re-measured over all 12 circuits at n=720 on two seed bases: pro **2.8633 / 2.8371** ± 0.024, rookie
@@ -323,6 +357,19 @@ drivers are paired to cars — both of which the competitive-grid, circuits-that
 race-incidents specs each explicitly declared out of scope. That is now the open question, and it
 has an owner-facing decision in it: compressing the driver spread makes the grid closer but makes
 an elite driver mean less.
+
+**CLOSED 2026-09-12 — the diagnosis was right, the proposed remedy was not.** The distance did live
+in `drivers.json`'s top-end pace spread, exactly as stated. But the "owner-facing decision" framed
+here — compress the spread and accept that an elite driver means less — turned out to be a false
+dilemma, and measurably the *wrong* move: flattening Voss to 92–93 reaches the band on the 12-circuit
+calendar yet **fails the gate sample**, dropping top-team share to 0.317 (below the 0.35 floor) and
+`gridFinishSpearman` to 0.584 (below its 0.60 floor), because this plan's own incidents had already
+left only 0.013 of headroom above that floor.
+
+The fix was the opposite operation: **widen the top rather than compress the field.** Raising Rossi
+to 96, Berg to 93 and Silva to 88 puts top-team share at 0.396–0.489 with `gridFinishSpearman` and
+`paceRankCorrelation` both *improving*, and Voss keeps his 96. No elite driver was made to mean less.
+Full measurements and the three-way comparison are in §4.
 
 **Post-competitive-grid: the plateau held, and it is now the binding constraint.** The numbers
 in this section were measured on the old 1.482 s/lap spread; the competitive-grid change narrowed

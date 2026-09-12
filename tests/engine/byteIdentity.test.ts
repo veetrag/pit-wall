@@ -31,10 +31,24 @@ const GOLDEN_PATH = 'tests/fixtures/golden-race-pre-incidents.json'
  * reason those tests did not all need rebaselining when incidents went live.
  * The fixture itself is unchanged.
  *
- * (One re-capture IS legitimate, and only one: when RaceState gains the
- * `safetyCar` and `incidents` fields, its serialised SHAPE changes. That
- * re-capture must add exactly two lines -- `"safetyCar": null` and
- * `"incidents": []` -- and change no car value and no rngState.)
+ * WHEN RE-CAPTURE IS LEGITIMATE. Only when the INPUT DATA deliberately
+ * changes -- never after an engine-code change. A balance edit to
+ * drivers.json or cars.json necessarily produces a different race, and no
+ * guard can prevent that; an engine change that shifts the draw sequence
+ * produces a different race too, and that is the bug this test exists to
+ * catch. Telling them apart is the whole job, so before re-capturing, prove
+ * it is the former:
+ *
+ *   - `incidents` is still [] and `safetyCar` still null (the guards hold)
+ *   - lap, sector, weatherTimeline, trackEvolutionLaps are unchanged
+ *   - the divergence is explainable by the data you edited
+ *
+ * Re-captured twice so far, both data changes, both with that evidence:
+ *   1. RaceState gained `safetyCar`/`incidents` (shape only).
+ *   2. 2026-09-12, the win-share fix: ROS 94->96, BRG 90->93, SIL 85->88.
+ *      Verified incidents==[] and safetyCar==null, weather/lap/evolution
+ *      identical; overtakes 21->17 and one extra retirement, both downstream
+ *      of the intended pace edit.
  *
  * It compares serialised state, not summary metrics, deliberately: this
  * project's original determinism test passed while every car's lap times were
@@ -60,6 +74,17 @@ describe('byte-identity with incidents disabled', () => {
     let state = initRace(config)
     const rng = createRng(424242)
     for (let i = 0; i < circuit.laps * 3; i++) state = stepSector(config, state, rng)
+
+    /*
+     * The GUARANTEE, asserted in its own right rather than left implicit in the
+     * byte comparison below. A re-capture rewrites the fixture, so anything only
+     * encoded there can be silently lost with it; these two cannot. With all
+     * three incident switches zeroed the rolls must short-circuit before calling
+     * rng() at all, which means nothing can ever be logged.
+     */
+    expect(state.incidents, 'zeroed rates must produce no incident at all').toEqual([])
+    expect(state.safetyCar, 'zeroed deploy chances must never deploy').toBeNull()
+
     expect(JSON.stringify(state, null, 2) + '\n').toBe(golden)
   }, 60_000)
 })
