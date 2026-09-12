@@ -99,10 +99,45 @@ def paint_mark(size=CANVAS):
     return img
 
 
+def composite_as_masked(px_size):
+    """What an Android 8+ launcher ACTUALLY draws, reproduced exactly.
+
+    This is the icon every modern device shows, so it is also what the Play
+    Store listing icon must be: Play policy requires the listing icon to match
+    the app's own icon, and the listing icon was rejected in Sept 2026 because
+    it did not.
+
+    Two things make the adaptive rendering differ from `composite_legacy`, and
+    the old code accounted for neither:
+
+    1. THE MASK CROPS. Adaptive layers are 108dp but only the centre 72dp
+       survives masking -- the outer 18dp ring is reserved for parallax and is
+       never visible. Cropping to it and scaling up takes the mark from 44% of
+       the tile to 66%. That 1.5x is the difference that got flagged.
+    2. THE BACKGROUND IS FLAT. The adaptive background layer is a solid colour
+       (values/ic_launcher_background.xml, #0A0E1A). `paint_background`'s
+       gradient and floodlight glows are real on the splash, which we render
+       ourselves, but they never reach a launcher tile.
+    """
+    out = Image.new("RGBA", (px_size, px_size), BG_DEEP + (255,))
+    hi = px_size * SCALE
+    full = paint_mark(hi)
+    inset = round(hi * 18 / 108)          # the 18dp the mask eats on each side
+    visible = full.crop((inset, inset, hi - inset, hi - inset))
+    out.alpha_composite(visible.resize((px_size, px_size), Image.LANCZOS))
+    return out
+
+
 def composite_legacy(px_size):
-    """Full square legacy launcher icon (pre-API26): background baked in,
-    mark centered and scaled to fill the same visual weight the adaptive
-    foreground has once masked."""
+    """Full square legacy launcher icon for pre-API26 (minSdk is 24, so
+    Android 7.0-7.1 still uses this one).
+
+    NOTE: this does NOT match what API 26+ devices show -- it draws the mark at
+    the uncropped 108dp scale over the gradient background. Aligning it with
+    `composite_as_masked` needs a new AAB to reach users, so it is deliberately
+    left alone here; the store-icon rejection was fixed without a rebuild.
+    Worth folding into the next release.
+    """
     bg = paint_background(px_size * SCALE).resize((px_size, px_size), Image.LANCZOS)
     mark = paint_mark(px_size * SCALE).resize((px_size, px_size), Image.LANCZOS)
     out = bg.convert("RGBA")
@@ -185,8 +220,11 @@ def main():
         fg = paint_mark(fg_px * SCALE).resize((fg_px, fg_px), Image.LANCZOS)
         write(fg, os.path.join(folder, "ic_launcher_foreground.png"))
 
-    # Play Store listing icon, 512x512, no alpha (Play requires opaque PNG)
-    store_icon = composite_legacy(512).convert("RGB")
+    # Play Store listing icon, 512x512, no alpha (Play requires opaque PNG).
+    # Rendered from composite_as_masked, NOT composite_legacy: Play requires the
+    # listing icon to match the app icon users actually see, which on every
+    # API 26+ device is the masked adaptive rendering. See that function.
+    store_icon = composite_as_masked(512).convert("RGB")
     write(store_icon, os.path.join(REPO_ROOT, "store", "icon_512.png"))
 
     for rel, (w, h) in SPLASH_TARGETS.items():
