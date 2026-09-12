@@ -21,8 +21,14 @@ android {
         applicationId "com.veetrag.pitwall"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "1.0"
+        // 2 is the AAB currently in review at Google; Play rejects a duplicate
+        // versionCode, so the next binary release must be 3.
+        versionCode 3
+        // 1.1, not 1.0.1: the next release carries the whole race-incidents
+        // feature (driver errors, crashes, safety cars, and the five UI
+        // surfaces), not just the icon and minify fixes. Change if you'd
+        // rather ship those separately.
+        versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -47,8 +53,17 @@ android {
             } else {
                 logger.warn('Pit Wall: android/keystore.properties not found — release build will be UNSIGNED and cannot be uploaded to Play. See keystore.properties.example.')
             }
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // R8 code shrinking + obfuscation. proguard-rules.pro is load-bearing:
+            // Capacitor resolves its plugins reflectively, so without those keep
+            // rules R8 strips them and the app breaks at RUNTIME with no build
+            // error. Read that file before touching this flag.
+            minifyEnabled true
+            // Drops unreferenced resources. Safe here because nothing looks a
+            // resource up by name at runtime -- the splash drawables are named
+            // from styles.xml and the launcher icons from the manifest, both of
+            // which the shrinker follows.
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
