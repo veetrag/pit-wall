@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
+import { CIRCUIT_ORDER } from '@state/raceStore'
+import { loadSnapshot, type SeasonSnapshot } from '@state/seasonPersistence'
 import { useUiTap } from '@hooks/useUiTap'
 
 function AmbientHero() {
@@ -41,23 +44,59 @@ function AmbientHero() {
   )
 }
 
-const MENU_ITEMS = [
-  { id: 'race',     label: 'NEW SEASON',     sub: '12-race championship',       primary: true  },
+interface MenuItem { id: string; label: string; sub: string; primary: boolean }
+
+const BROWSE_ITEMS: MenuItem[] = [
   { id: 'grid',     label: 'GRID & GARAGE',  sub: 'Browse drivers & teams',     primary: false },
   { id: 'howto',    label: 'HOW TO PLAY',    sub: 'Strategy primer',            primary: false },
   { id: 'settings', label: 'SETTINGS',       sub: 'Sound, haptics, gameplay',   primary: false },
-] as const
+]
+
+const NEW_SEASON: MenuItem =
+  { id: 'race', label: 'NEW SEASON', sub: '12-race championship', primary: true }
 
 export function MainMenu() {
   const startNewSeason = useSeasonStore(s => s.startNewSeason)
+  const resumeSeason = useSeasonStore(s => s.resumeSeason)
   const viewGrid = useSeasonStore(s => s.viewGrid)
   const viewHowToPlay = useSeasonStore(s => s.viewHowToPlay)
   const viewSettings = useSeasonStore(s => s.viewSettings)
   const uiTap = useUiTap()
 
+  // Read on mount rather than at app start: the menu is remounted every time
+  // the player comes back to it, so a season abandoned during this run stops
+  // being offered without any invalidation plumbing.
+  const [saved, setSaved] = useState<SeasonSnapshot | null>(null)
+  useEffect(() => {
+    let live = true
+    void loadSnapshot().then(s => { if (live) setSaved(s) })
+    return () => { live = false }
+  }, [])
+
+  // Starting a new season CLEARS the saved one (startNewSeason nulls
+  // playerDriverId, which is the autosave's signal to delete). So when a save
+  // exists, the button asks once rather than destroying a championship on a
+  // mis-tap. Inline rather than a modal -- one tap to arm, one to confirm.
+  const [confirmNew, setConfirmNew] = useState(false)
+
+  const items: MenuItem[] = saved
+    ? [
+        { id: 'continue', label: 'CONTINUE SEASON',
+          sub: `Round ${saved.raceIndex + 1} of ${CIRCUIT_ORDER.length}`, primary: true },
+        confirmNew
+          ? { id: 'race', label: 'DISCARD AND START OVER?', sub: 'Tap again to confirm', primary: false }
+          : { ...NEW_SEASON, primary: false },
+        ...BROWSE_ITEMS,
+      ]
+    : [NEW_SEASON, ...BROWSE_ITEMS]
+
   function handleAction(id: string) {
     uiTap()
-    if (id === 'race') startNewSeason()
+    if (id === 'continue') { if (saved) resumeSeason(saved) }
+    else if (id === 'race') {
+      if (saved && !confirmNew) { setConfirmNew(true); return }
+      startNewSeason()
+    }
     else if (id === 'grid') viewGrid()
     else if (id === 'howto') viewHowToPlay()
     else if (id === 'settings') viewSettings()
@@ -108,7 +147,7 @@ export function MainMenu() {
 
         {/* Nav buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 300, width: '100%', alignSelf: 'center' }}>
-          {MENU_ITEMS.map(({ id, label, sub, primary }, i) => (
+          {items.map(({ id, label, sub, primary }, i) => (
             <motion.button
               key={id}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.07 }}
@@ -126,11 +165,22 @@ export function MainMenu() {
               }}
             >
               <span>{label}</span>
-              {!primary && (
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.05em', fontWeight: 400 }}>
-                  {sub}
-                </span>
-              )}
+              {/*
+                Rendered for the PRIMARY button too, which it was not before.
+                CONTINUE SEASON is primary and its sub-label carries the round
+                the player is on -- the single most useful thing on this screen
+                for a returning player -- so hiding it on primary items made
+                that text exist in code and never reach the screen.
+                rgba(0,0,0,0.6) on the accent fill measures 4.94:1, clearing AA;
+                --text-dim would be illegible there.
+              */}
+              <span style={{
+                fontFamily: 'var(--font-mono)', fontSize: 9,
+                color: primary ? 'rgba(0,0,0,0.6)' : 'var(--text-dim)',
+                letterSpacing: '0.05em', fontWeight: 400,
+              }}>
+                {sub}
+              </span>
             </motion.button>
           ))}
         </div>

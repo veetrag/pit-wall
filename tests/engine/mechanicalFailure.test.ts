@@ -320,5 +320,11 @@ describe('mechanical failure', () => {
     // Catastrophe ceiling. Raised 10 -> 14 because a 9-car race is now an
     // observed legitimate tail; 70% of the grid still is not.
     expect(worst, 'single-race retirements, 70% of the 20-car grid').toBeLessThanOrEqual(14)
-  })
+    // 200 races on the full 20-car grid, so vitest's 5s default is far too
+    // tight -- this measured 6.1s under full-suite parallel load and passed
+    // every assertion while being failed on the clock. It had no explicit
+    // timeout while every comparable Monte-Carlo test in the suite does
+    // (60s-600s); it was simply sitting just under the line until an unrelated
+    // new test file added enough load to push it over.
+  }, 120_000)
 })

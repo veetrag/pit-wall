@@ -5,6 +5,10 @@ import { loadGameData } from '@data/validators'
 
 export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings'
 
+// Type-only on purpose: seasonPersistence imports THIS module at runtime to
+// subscribe to the store, so a value import here would close a cycle.
+import type { SeasonSnapshot } from './seasonPersistence'
+
 export interface SeasonResult {
   driverId: string
   position: number
@@ -146,6 +150,7 @@ interface SeasonStore {
   recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | 'crash' | null }[], events: RaceEventSummary) => void
   nextRace: () => void
   playAgain: () => void
+  resumeSeason: (snap: SeasonSnapshot) => void
 }
 
 export const useSeasonStore = create<SeasonStore>((set, get) => ({
@@ -288,5 +293,32 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   playAgain() {
     set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {} })
+  },
+
+  /**
+   * Restores a saved season wholesale.
+   *
+   * Sets `phase` from the snapshot, which is the exact thing the previous
+   * attempt at persistence forgot to do -- it restored every other field and
+   * left the player sitting in the main menu with an invisible season loaded,
+   * which is why that code was dead and got deleted. tests/state/
+   * seasonPersistence.test.ts asserts the phase specifically for that reason.
+   */
+  resumeSeason(snap) {
+    set({
+      phase: snap.resumePhase,
+      playerDriverId: snap.playerDriverId,
+      selectedTeamId: snap.selectedTeamId,
+      selectedCircuitId: snap.selectedCircuitId,
+      raceIndex: snap.raceIndex,
+      standings: snap.standings,
+      playerStrategy: snap.playerStrategy,
+      attemptNonce: snap.attemptNonce,
+      devPoints: snap.devPoints,
+      purchasedTiers: snap.purchasedTiers,
+      rivalDevelopment: snap.rivalDevelopment,
+      lastRaceResults: snap.lastRaceResults,
+      lastRaceEvents: snap.lastRaceEvents,
+    })
   },
 }))
