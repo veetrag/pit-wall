@@ -1,17 +1,16 @@
 import { create } from 'zustand'
-import { loadGameData } from '@data/validators'
 import {
   initRace, stepSector, projectPitNow, resolveAllocatedCompound, consumeTyreSet,
   effectivePitLaneLoss,
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
-  type StrategyBrain, type DifficultyProfile,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
 import type { AlertMessage } from '../ui/HudAlert'
 import { processRadioTick, makeRadioState, type RadioState } from './radioMapper'
 import type { Difficulty } from './settingsStore'
 import type { PlayerStrategyChoice } from './seasonStore'
-import { applyUpgrades, type UpgradeOverlayInput } from './upgradeOverlay'
+import type { UpgradeOverlayInput } from './upgradeOverlay'
+import { buildRaceConfig } from './buildRaceConfig'
 
 export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 
@@ -51,101 +50,6 @@ export const CIRCUIT_ORDER = [
   'monsoon_bay', 'altiplano', 'aurora', 'harbour_lights',
 ] as const
 
-const BRAIN_ORDER: StrategyBrain[] = ['naive', 'smart', 'optimal']
-
-// M5: brain mix is now one profile lookup instead of a difficulty if/else —
-// promote one step if the profile allows it, then cap at the profile's ceiling.
-function applyBrainProfile(baseBrain: StrategyBrain, profile: DifficultyProfile): StrategyBrain {
-  const baseIdx = BRAIN_ORDER.indexOf(baseBrain)
-  const capIdx = BRAIN_ORDER.indexOf(profile.brainCap)
-  const promotedIdx = profile.brainPromote ? Math.min(baseIdx + 1, BRAIN_ORDER.length - 1) : baseIdx
-  return BRAIN_ORDER[Math.min(promotedIdx, capIdx)]!
-}
-
-function buildConfig(
-  seed: number,
-  playerDriverId: string,
-  circuitId = 'bengaluru',
-  difficulty: Difficulty = 'rookie',
-  playerStrategy?: PlayerStrategyChoice | null,
-  // Injected, not read from seasonStore: a value import of seasonStore here
-  // would close a real ESM cycle (seasonStore imports CIRCUIT_ORDER from this
-  // module as a value). buildConfig stays a pure function of its arguments.
-  upgrades?: UpgradeOverlayInput | null,
-): RaceConfig {
-  const data = loadGameData()
-  const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
-  const laps = circuit.laps
-  const profile = data.tuning.difficultyProfiles[difficulty]
-  // Scale planned pit laps proportionally to this circuit (reference: 30 laps)
-  const strategies = data.strategies.defaults.map(s => ({
-    ...s,
-    brain: applyBrainProfile((s.brain ?? 'naive') as StrategyBrain, profile),
-    plannedStops: s.plannedStops.map(stop => ({
-      ...stop,
-      lap: Math.round((stop.lap / 30) * laps),
-    })),
-  }))
-
-  // `playerTeam` is undefined when playerDriverId matches no driver. The `?? ''`
-  // fallback below is pre-existing behaviour for playerStrategyOverride; the
-  // overlay must NOT reuse it, see the guard at `overlayActive`.
-  const playerTeam = data.drivers.drivers.find(d => d.id === playerDriverId)?.teamId
-  const playerTeamId = playerTeam ?? ''
-  const playerStrategyOverride = playerStrategy
-    ? { teamId: playerTeamId, startCompound: playerStrategy.startCompound, plannedStops: playerStrategy.plannedStops }
-    : undefined
-
-  // Upgrades are applied here and nowhere else: the engine receives ordinary
-  // facet numbers and never learns that progression exists (CLAUDE.md §3).
-  //
-  // Run unconditionally, even with no overlay, so `config` never aliases the
-  // objects `loadGameData()` returned. That loader does not memoise today (it
-  // re-parses every schema per call), so this is currently belt-and-braces —
-  // but memoising it is an obvious optimisation, and this keeps that refactor
-  // from silently leaking one race's upgrades into the next.
-  //
-  // If playerDriverId resolves to no team, apply NO overlay rather than an
-  // inverted one: with playerTeamId falling back to '', `appliesTo` is false
-  // for every team, so the player's purchases would be discarded *and* the
-  // player's own team would take the rival-development branch — a bad id would
-  // produce a loudly wrong grid instead of a harmless no-op.
-  const overlayActive = playerTeam !== undefined
-  const purchasedTiers = overlayActive ? upgrades?.purchasedTiers ?? {} : {}
-  const rivalDevelopment = overlayActive ? upgrades?.rivalDevelopment ?? {} : {}
-  const teams = applyUpgrades(data.cars.teams, {
-    attributes: data.upgrades.attributes,
-    purchasedTiers,
-    target: 'team',
-    // Car upgrades belong to the chassis, so the player's teammate gets them too.
-    appliesTo: t => t.id === playerTeamId,
-    rivalDevelopment,
-  })
-  const drivers = applyUpgrades(data.drivers.drivers, {
-    attributes: data.upgrades.attributes,
-    purchasedTiers,
-    target: 'driver',
-    // Driver upgrades are personal — the teammate does not get them.
-    appliesTo: d => d.id === playerDriverId,
-  })
-
-  return {
-    circuit,
-    tuning: data.tuning,
-    compounds: data.compounds,
-    drivers,
-    teams,
-    strategies,
-    playerDriverId,
-    seed,
-    playerStrategyOverride,
-    tyreAllocationBase: data.tuning.tyreRules.allocation[difficulty],
-    mandatoryTwoCompound: data.tuning.tyreRules.mandatoryTwoCompound[difficulty],
-    coverReactionScale: profile.coverReactionScale,
-    paceModeAggression: profile.aiPaceModeAggression,
-  }
-}
-
 let alertCounter = 0
 
 export const useRaceStore = create<RaceStore>((set, get) => ({
@@ -162,14 +66,14 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
   startRace() {
     const seed = 42
-    const config = buildConfig(seed, 'd_voss')
+    const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
   },
 
   startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades) {
-    const config = buildConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades)
+    const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades)
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
@@ -177,7 +81,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
   initForStartSequence() {
     const seed = 42
-    const config = buildConfig(seed, 'd_voss')
+    const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })

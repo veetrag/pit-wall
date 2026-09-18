@@ -18,36 +18,48 @@ function src(name: string): string {
 
 describe('raceStore -> seasonStore boundary', () => {
   it('never imports seasonStore as a value', () => {
-    const text = src('raceStore.ts')
     // Every `... from './seasonStore'` must be a type-only import. `import type`
     // is fully erased at compile time; anything else emits a runtime require.
     // `[^']*` deliberately excludes quotes so the match cannot span an earlier
     // import's source string; it still crosses newlines for multi-line braces.
-    // BOTH specifier forms. The relative './seasonStore' is what raceStore.ts
-    // happens to use today, but '@state/seasonStore' is the house style
+    // BOTH specifier forms. The relative './seasonStore' is what these files
+    // happen to use today, but '@state/seasonStore' is the house style
     // everywhere else in src/ — and a regex matching only the relative form let
     // an ADDED aliased value import pass silently, which is the entire failure
     // this test exists to catch.
-    const imports = [...text.matchAll(
-      /^import\s+(?:type\s+)?[^']*from\s+'(?:\.\/|@state\/)seasonStore'/gm,
-    )].map(m => m[0])
-    expect(imports.length).toBeGreaterThan(0) // guard against the regex silently rotting
-    const valueImports = imports.filter(i => !/^import\s+type\s/.test(i))
-    expect(valueImports, [
-      'src/state/raceStore.ts must not import seasonStore as a value.',
+    //
+    // buildConfig (now buildRaceConfig) moved out of raceStore.ts into
+    // buildRaceConfig.ts, taking its `import type { PlayerStrategyChoice }`
+    // with it — so both files are checked, and the rot-guard below only needs
+    // the import to appear in whichever one currently carries the hazard.
+    const files = ['raceStore.ts', 'buildRaceConfig.ts']
+    const allImports: string[] = []
+    const allValueImports: string[] = []
+    for (const file of files) {
+      const text = src(file)
+      const imports = [...text.matchAll(
+        /^import\s+(?:type\s+)?[^']*from\s+'(?:\.\/|@state\/)seasonStore'/gm,
+      )].map(m => m[0])
+      allImports.push(...imports)
+      allValueImports.push(...imports.filter(i => !/^import\s+type\s/.test(i)))
+    }
+    expect(allImports.length).toBeGreaterThan(0) // guard against the regex silently rotting
+    expect(allValueImports, [
+      'Neither src/state/raceStore.ts nor src/state/buildRaceConfig.ts may',
+      'import seasonStore as a value.',
       '',
       'seasonStore.ts imports CIRCUIT_ORDER from raceStore.ts as a VALUE, at',
-      'module scope. raceStore importing seasonStore back as a value closes a',
+      'module scope. Either file importing seasonStore back as a value closes a',
       'real ESM cycle. A lazy `useSeasonStore.getState()` inside a function',
       'appears to work, but any later top-level use of either import puts',
       'CIRCUIT_ORDER in the temporal dead zone or leaves useSeasonStore',
-      'undefined at raceStore module scope — an inscrutable module-init bug.',
+      'undefined at module scope — an inscrutable module-init bug.',
       '',
-      'This is why the upgrade overlay is INJECTED into buildConfig as an',
+      'This is why the upgrade overlay is INJECTED into buildRaceConfig as an',
       'optional parameter and supplied by src/ui/RaceWatcher.tsx (which already',
       'subscribes to both stores) rather than read from seasonStore here.',
-      'Keep `import type { PlayerStrategyChoice }` type-only, and pass any new',
-      'season state in as an argument.',
+      'Keep `import type { PlayerStrategyChoice }` type-only in',
+      'buildRaceConfig.ts, and pass any new season state in as an argument.',
     ].join('\n')).toEqual([])
   })
 

@@ -1,0 +1,131 @@
+import { loadGameData } from '@data/validators'
+import type { RaceConfig, StrategyBrain, DifficultyProfile } from '@engine/index'
+import { applyUpgrades, type UpgradeOverlayInput } from './upgradeOverlay'
+import type { Difficulty } from './settingsStore'
+import type { PlayerStrategyChoice } from './seasonStore'
+
+const BRAIN_ORDER: StrategyBrain[] = ['naive', 'smart', 'optimal']
+
+// M5: brain mix is now one profile lookup instead of a difficulty if/else —
+// promote one step if the profile allows it, then cap at the profile's ceiling.
+function applyBrainProfile(baseBrain: StrategyBrain, profile: DifficultyProfile): StrategyBrain {
+  const baseIdx = BRAIN_ORDER.indexOf(baseBrain)
+  const capIdx = BRAIN_ORDER.indexOf(profile.brainCap)
+  const promotedIdx = profile.brainPromote ? Math.min(baseIdx + 1, BRAIN_ORDER.length - 1) : baseIdx
+  return BRAIN_ORDER[Math.min(promotedIdx, capIdx)]!
+}
+
+export function buildRaceConfig(
+  seed: number,
+  playerDriverId: string,
+  circuitId = 'bengaluru',
+  difficulty: Difficulty = 'rookie',
+  playerStrategy?: PlayerStrategyChoice | null,
+  // Injected, not read from seasonStore: a value import of seasonStore here
+  // would close a real ESM cycle (seasonStore imports CIRCUIT_ORDER from this
+  // module as a value). buildRaceConfig stays a pure function of its arguments.
+  upgrades?: UpgradeOverlayInput | null,
+): RaceConfig {
+  const data = loadGameData()
+  const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
+  const laps = circuit.laps
+  const profile = data.tuning.difficultyProfiles[difficulty]
+  // Scale planned pit laps proportionally to this circuit (reference: 30 laps)
+  const strategies = data.strategies.defaults.map(s => ({
+    ...s,
+    brain: applyBrainProfile((s.brain ?? 'naive') as StrategyBrain, profile),
+    plannedStops: s.plannedStops.map(stop => ({
+      ...stop,
+      lap: Math.round((stop.lap / 30) * laps),
+    })),
+  }))
+
+  // `playerTeam` is undefined when playerDriverId matches no driver. The `?? ''`
+  // fallback below is pre-existing behaviour for playerStrategyOverride; the
+  // overlay must NOT reuse it, see the guard at `overlayActive`.
+  const playerTeam = data.drivers.drivers.find(d => d.id === playerDriverId)?.teamId
+  const playerTeamId = playerTeam ?? ''
+  const playerStrategyOverride = playerStrategy
+    ? { teamId: playerTeamId, startCompound: playerStrategy.startCompound, plannedStops: playerStrategy.plannedStops }
+    : undefined
+
+  // Upgrades are applied here and nowhere else: the engine receives ordinary
+  // facet numbers and never learns that progression exists (CLAUDE.md §3).
+  //
+  // Run unconditionally, even with no overlay, so `config` never aliases the
+  // objects `loadGameData()` returned. That loader does not memoise today (it
+  // re-parses every schema per call), so this is currently belt-and-braces —
+  // but memoising it is an obvious optimisation, and this keeps that refactor
+  // from silently leaking one race's upgrades into the next.
+  //
+  // If playerDriverId resolves to no team, apply NO overlay rather than an
+  // inverted one: with playerTeamId falling back to '', `appliesTo` is false
+  // for every team, so the player's purchases would be discarded *and* the
+  // player's own team would take the rival-development branch — a bad id would
+  // produce a loudly wrong grid instead of a harmless no-op.
+  const overlayActive = playerTeam !== undefined
+  const purchasedTiers = overlayActive ? upgrades?.purchasedTiers ?? {} : {}
+  const rivalDevelopment = overlayActive ? upgrades?.rivalDevelopment ?? {} : {}
+  const teams = applyUpgrades(data.cars.teams, {
+    attributes: data.upgrades.attributes,
+    purchasedTiers,
+    target: 'team',
+    // Car upgrades belong to the chassis, so the player's teammate gets them too.
+    appliesTo: t => t.id === playerTeamId,
+    rivalDevelopment,
+  })
+  const drivers = applyUpgrades(data.drivers.drivers, {
+    attributes: data.upgrades.attributes,
+    purchasedTiers,
+    target: 'driver',
+    // Driver upgrades are personal — the teammate does not get them.
+    appliesTo: d => d.id === playerDriverId,
+  })
+
+  return {
+    circuit,
+    tuning: data.tuning,
+    compounds: data.compounds,
+    drivers,
+    teams,
+    strategies,
+    playerDriverId,
+    seed,
+    playerStrategyOverride,
+    tyreAllocationBase: data.tuning.tyreRules.allocation[difficulty],
+    mandatoryTwoCompound: data.tuning.tyreRules.mandatoryTwoCompound[difficulty],
+    coverReactionScale: profile.coverReactionScale,
+    paceModeAggression: profile.aiPaceModeAggression,
+  }
+}
+
+/**
+ * Scenarios are pinned to ONE difficulty, deliberately.
+ *
+ * A scenario is a seed plus a lap, and that pair only reproduces the authored
+ * situation if the config is identical too. Difficulty is not cosmetic here: it
+ * changes strategy brains, tyre allocation, the mandatory-two-compound rule,
+ * cover reaction and AI pace-mode aggression -- so reading it from settings
+ * would hand two players with different settings two different races under one
+ * brief. See the table in the plan doc: an unshared config turned "buried in
+ * the pack, P8" into leading the race.
+ */
+export const SCENARIO_DIFFICULTY: Difficulty = 'rookie'
+
+/**
+ * The ONLY way to build a scenario's RaceConfig.
+ *
+ * Both scripts/find-scenarios.ts (authoring) and raceStore (play) call this, so
+ * the situation the search prints is the situation the player is handed. Note
+ * the player id passed to buildRaceConfig is the REAL one: startScenario swaps
+ * in its own autopilot id for the fast-forward and hands the car back after.
+ */
+export function buildScenarioConfig(
+  spec: { circuitId: string; seed: number; playerDriverId: string },
+): RaceConfig {
+  return buildRaceConfig(
+    spec.seed, spec.playerDriverId, spec.circuitId, SCENARIO_DIFFICULTY,
+    null,   // no pre-race strategy: the player takes over mid-race
+    null,   // no season upgrades: a scenario must not vary with save state
+  )
+}

@@ -9,11 +9,10 @@
  *
  * Run:  npx vite-node scripts/find-scenarios.ts
  */
-import { initRace, stepSector } from '../src/engine/index'
-import { createRng } from '../src/engine/rng'
-import { describeSituation } from '../src/engine/scenario'
+import { startScenario, describeSituation } from '../src/engine/scenario'
 import { loadGameData } from '../src/data/validators'
-import type { RaceConfig, RaceState } from '../src/engine/types'
+import { buildScenarioConfig } from '../src/state/buildRaceConfig'
+import type { RaceState } from '../src/engine/types'
 
 const DATA = loadGameData()
 const PLAYER = 'd_voss'
@@ -47,23 +46,6 @@ const BRIEFS: Brief[] = [
   },
 ]
 
-function configFor(circuitId: string, seed: number): RaceConfig {
-  return {
-    circuit: DATA.circuits[circuitId]!,
-    tuning: DATA.tuning,
-    compounds: DATA.compounds,
-    drivers: DATA.drivers.drivers,
-    teams: DATA.cars.teams,
-    strategies: DATA.strategies.defaults,
-    // AUTOPILOT, not PLAYER. race.ts never makes strategy calls for the
-    // player's car, so searching with the real id finds situations where the
-    // car has been abandoned for 40 laps rather than raced. Mirrors what
-    // startScenario() does at play time. See src/engine/scenario.ts.
-    playerDriverId: '__none__',
-    seed,
-  }
-}
-
 const SEEDS = Number(process.env.SEEDS ?? 400)
 
 for (const brief of BRIEFS) {
@@ -72,18 +54,15 @@ for (const brief of BRIEFS) {
   const hits: string[] = []
 
   for (let seed = 1; seed <= SEEDS && hits.length < 3; seed++) {
-    const config = configFor(brief.circuitId, seed)
-    let state = initRace(config)
-    const rng = createRng(seed)
-    for (let lap = 0; lap < to && hits.length < 3; lap++) {
-      for (let s = 0; s < 3; s++) state = stepSector(config, state, rng)
-      if (lap + 1 < from) continue
+    const config = buildScenarioConfig({ circuitId: brief.circuitId, seed, playerDriverId: PLAYER })
+    for (let lap = from; lap <= to && hits.length < 3; lap++) {
+      const { state } = startScenario(config, lap)
       const sit = describeSituation(state, PLAYER)
       if (!sit) break
       if (brief.match(sit, state)) {
         const gap = sit.gapAhead === null ? 'leading' : `+${sit.gapAhead.toFixed(1)}s`
         hits.push(
-          `    seed ${String(seed).padStart(4)} startLap ${String(lap + 1).padStart(2)}  ` +
+          `    seed ${String(seed).padStart(4)} startLap ${String(lap).padStart(2)}  ` +
           `P${sit.position} · ${sit.lapsRemaining} to go · ${sit.compound}${sit.tyreAge} · ${gap}` +
           (sit.safetyCarOut ? ' · SAFETY CAR' : ''),
         )
