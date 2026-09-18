@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSettingsStore, type SimSpeed, type Difficulty } from '@state/settingsStore'
+import { useCoachStore } from '@state/coachStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
 
@@ -110,9 +111,9 @@ export function SettingsScreen() {
   const uiTap = useUiTap()
   const {
     soundEnabled, hapticsEnabled, reducedMotion,
-    simSpeed, proMode, skipStartSequence, difficulty,
+    simSpeed, proMode, skipStartSequence, difficulty, coachMarksSeen,
     setSoundEnabled, setHapticsEnabled, setReducedMotion,
-    setSimSpeed, setProMode, setSkipStartSequence, setDifficulty,
+    setSimSpeed, setProMode, setSkipStartSequence, setDifficulty, setCoachMarksSeen,
   } = useSettingsStore()
 
   return (
@@ -148,6 +149,12 @@ export function SettingsScreen() {
         <Toggle label="Skip start sequence" sublabel="Jump straight to racing" value={skipStartSequence} onChange={setSkipStartSequence} />
         <DifficultySelect value={difficulty} onChange={setDifficulty} />
         <Toggle label="Pro mode" sublabel="Hides recommended tyre hints" value={proMode} onChange={setProMode} />
+        <Toggle
+          label="Replay tutorial"
+          sublabel="Show the first-race coaching again"
+          value={!coachMarksSeen}
+          onChange={(v) => { setCoachMarksSeen(!v); useCoachStore.getState().reset() }}
+        />
 
         <SectionHeader title="ABOUT" />
         <div style={{ padding: '13px 0', borderBottom: '1px solid var(--line-hair)', display: 'flex', justifyContent: 'space-between' }}>
