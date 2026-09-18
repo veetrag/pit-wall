@@ -13,10 +13,21 @@ vi.mock('@capacitor/preferences', () => ({
   },
 }))
 
-// A trivial probe that mirrors what TelemetryZone / PitPanel actually do: read
-// the gate, and request a mark when a "coached surface" condition is true.
-// Mounting RaceHUD itself drags in PixiJS via TrackCanvas, which jsdom cannot
-// render, so this probe exercises the same hook contract without the canvas.
+/*
+ * A probe for useCoachingActive ALONE -- the gate, not the firing conditions.
+ *
+ * It deliberately does NOT mirror TelemetryZone / PitPanel: those request their
+ * mark from a useEffect behind a real condition (the cliff being within five
+ * laps; a projection having been computed), and this calls request() straight
+ * from the render body. Reading it as a stand-in for them would be a mistake --
+ * it was, once: while it was the only coverage, the cliff mark's actual
+ * threshold could be widened, inverted, or stripped of its !pastCliff term
+ * without a single test failing.
+ *
+ * Those conditions are covered against the real components in
+ * tests/ui/cliffCoachMark.test.tsx and tests/ui/projectionCoachMark.test.tsx.
+ * What is left here is the gate itself: seen-it flag, and season vs scenario.
+ */
 function CoachedSurfaceProbe({ id }: { id: 'tyre_cliff' | 'projection' }) {
   const coaching = useCoachingActive()
   const request = useCoachStore(s => s.request)
