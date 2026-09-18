@@ -20,7 +20,14 @@
      where a medium-shod car may sit on a caution-flashed row.
      Measured: 9.66:1 against --bg-panel, 8.62:1 against --bg-elevated, and
      10.53:1 for --bg-deep text drawn on a --caution fill. All clear AA. */
-  --caution:      #FFB020;
+  /* Declared as CHANNELS with the colour derived, so a translucent wash of it
+     has something to reference. rgba(var(--caution-rgb), a) works everywhere
+     rgba() does (CSS variable substitution, Chrome 49+); color-mix() would be
+     the modern spelling but needs Chromium 111 and minSdkVersion is 24.
+     Before this, TimingTower carried a literal rgba(255,176,32,0.22) under a
+     comment asking whoever edited the token to remember to change it too. */
+  --caution-rgb:  255, 176, 32;
+  --caution:      rgb(var(--caution-rgb));
   --accent-violet: #9B8CFF;
   --tyre-soft:    #E8344E;
   --tyre-medium:  #F2C94C;

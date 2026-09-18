@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSafetyCar, useSafetyCarDeployCount } from '@hooks/useSafetyCar'
 import { useSettingsStore } from '@state/settingsStore'
@@ -38,10 +38,49 @@ export function SafetyCarBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deployCount])
 
+  /*
+   * The GREEN FLAG announcement, and why it lives outside the banner below.
+   *
+   * When the safety car comes in, `safetyCar` goes null and the whole banner --
+   * live region included -- unmounts. A sighted player sees it disappear and
+   * the field spread out, which is signal enough. A screen-reader user was told
+   * the safety car deployed, told the countdown four or five times, and then
+   * told nothing at all: the region simply stopped existing, which announces
+   * nothing. They had no way to know racing had resumed.
+   *
+   * So this region is rendered unconditionally, as a sibling of the banner,
+   * and carries text only for a few seconds after the transition.
+   */
+  const safetyCarOut = safetyCar != null
+  const wasOutRef = useRef(false)
+  const [greenFlag, setGreenFlag] = useState(false)
+  useEffect(() => {
+    const ended = wasOutRef.current && !safetyCarOut
+    wasOutRef.current = safetyCarOut
+    // Guards the false announcement at lights out, when there has been no
+    // safety car to end: without the ref the first render would look like a
+    // transition into green.
+    if (!ended) return
+    setGreenFlag(true)
+    const timer = setTimeout(() => setGreenFlag(false), 5000)
+    return () => clearTimeout(timer)
+  }, [safetyCarOut])
+
   const laps = safetyCar?.lapsRemaining ?? 0
   const lapText = `${laps} LAP${laps === 1 ? '' : 'S'}`
 
   return (
+    <>
+    <span
+      role="status"
+      data-testid="green-flag-status"
+      style={{
+        position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
+        overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+      }}
+    >
+      {greenFlag ? 'Green flag. Racing resumes.' : ''}
+    </span>
     <AnimatePresence>
       {safetyCar && (
         <motion.div
@@ -100,6 +139,7 @@ export function SafetyCarBanner() {
           */}
           <span
             role="status"
+            data-testid="safety-car-status"
             style={{
               position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
               overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
@@ -110,5 +150,6 @@ export function SafetyCarBanner() {
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   )
 }

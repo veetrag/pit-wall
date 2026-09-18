@@ -411,6 +411,14 @@ describe('overtaking: spec §6.1 clearing targets', () => {
   //
   // Measured at the time of skipping (n=120, advantage 0.4): median laps 2,
   // median-circuit failure 0.008 +- 0.008, Harbour Lights 0.450 +- 0.045.
+  //
+  // RE-MEASURED after the win-share balance change to drivers.json (which
+  // raised Rossi, Bergstrom and Silva): median laps still 2 at every advantage
+  // in the 0.3-0.5 bracket, median-circuit failure still 0.008, Harbour Lights
+  // 0.458 +- 0.045. The balance change moved the championship fight without
+  // touching the overtaking gap -- worth recording, because "we rebalanced the
+  // drivers" is the obvious thing to assume has invalidated a stale
+  // measurement, and here it had not.
   it.skip('§6.1: 3-8 laps to clear, 15-25% failure on a median circuit, 60-75% at Harbour Lights', () => {
     const ALL = Object.keys(GAME.circuits)
     const rs = ALL.map(id => measureClearing({ circuitId: id, seeds: GATE_SEEDS, advantage: 0.4 }))
