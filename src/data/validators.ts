@@ -332,6 +332,11 @@ const ScenarioSchema = z.object({
     lapsRemaining: z.number().int().nonnegative(),
     compound: z.string().min(1),
     tyreAge: z.number().int().nonnegative(),
+    // PAR: where this car finishes when the AI drives it to the flag. It is
+    // what goal.position is calibrated against (goal = par - 1), so it is
+    // recorded rather than recomputed -- a tuning change that moves par must
+    // fail the suite, not silently re-grade every scenario.
+    par: z.number().int().positive(),
   }),
 })
 const ScenariosWrapperSchema = z.object({ scenarios: z.array(ScenarioSchema).nonempty() })

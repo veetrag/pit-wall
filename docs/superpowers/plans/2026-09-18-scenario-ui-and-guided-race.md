@@ -319,9 +319,22 @@ scenario (fill `seed`/`startLap`/`expect` from the *actual* search output):
 ```
 
 Author THREE scenarios, one per brief in `scripts/find-scenarios.ts`
-(`recovery_drive`, `safety_car_gamble`, `cliff_edge`). Set each `goal.position`
-from the situation the search actually reported: a goal of roughly **three
-places better than the handover position**, clamped to a minimum of P1. Write
+(`recovery_drive`, `safety_car_gamble`, `cliff_edge`).
+
+**Set `goal.position` from PAR, not from the handover position.** Par is where
+the car finishes when the AI drives it to the flag: build the config with
+`playerDriverId: '__none__'`, `startScenario` to `startLap`, then `stepSector`
+to the end. Rules: reject a candidate whose par is a RETIREMENT (the outcome is
+then a mechanical-failure roll the player cannot influence); reject a candidate
+whose par is P1 (no room for a goal above it); otherwise
+`goal.position = par - 1`.
+
+This replaces an earlier rule of "three places better than the handover", which
+was wrong and shipped two broken scenarios before being caught. A mid-race
+handover position says nothing about where the strategy cycle is already
+carrying the car — one candidate handed the player P10 "buried in the midfield"
+with a par finish of **P1**, so its goal was met by never touching the controls.
+Record the measured par in `expect.par`. Write
 the `expect` block to match the search output EXACTLY — it is the anti-drift
 record, not decoration. `gapAhead` is deliberately NOT in `expect`: it is a
 float and would make the test brittle without adding brief-bearing information.
