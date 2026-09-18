@@ -4,6 +4,7 @@ import { useRaceStore } from '@state/raceStore'
 import { useCoachStore } from '@state/coachStore'
 import { useCoachingActive } from '@hooks/useCoachingActive'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
+import type { RaceConfig, RaceState } from '@engine/types'
 
 // Keyed rather than a ternary chain on purpose. This used to read
 // `retiredCause === 'mechanical' ? 'mechanical failure' : 'tyre failure'`,
@@ -157,36 +158,57 @@ function StatCard({ accent, critical, children }: { accent: string; critical?: b
   )
 }
 
+/**
+ * The player's tyre-cliff state, or null when there is no player car to read.
+ *
+ * Extracted so the gauge and the "the cliff is coming" coach mark are driven by
+ * the SAME numbers. It also has to be callable before TelemetryZone's early
+ * returns, because the coach-mark effect below them would otherwise be a
+ * conditional hook -- `player.retired` flips mid-race while the component stays
+ * mounted.
+ */
+function cliffStatus(raceState: RaceState | null, config: RaceConfig | null) {
+  if (!raceState || !config) return null
+  const player = raceState.cars.find(c => c.isPlayer)
+  if (!player) return null
+  const spec = config.compounds[player.compound]
+  const driver = config.drivers.find(d => d.id === player.driverId)
+  const effAge = driver && spec ? effectiveTyreAge(player, driver, raceState.weatherState, config.tuning) : player.tyreAge
+  const wearRate = driver && spec ? effectiveTyreAge({ ...player, tyreAge: 1 }, driver, raceState.weatherState, config.tuning) : 1
+  const fraction = spec ? tyreCliffFraction(spec, effAge) : 0
+  const cliffIn = spec ? Math.max(0, Math.ceil((spec.cliff - effAge) / Math.max(wearRate, 0.01))) : null
+  return { player, spec, effAge, wearRate, fraction, cliffIn, pastCliff: fraction >= 1.0, retired: player.retired }
+}
+
 export function TelemetryZone() {
   const raceState = useRaceStore(s => s.raceState)
   const config    = useRaceStore(s => s.config)
   const coaching = useCoachingActive()
   const request = useCoachStore(s => s.request)
 
-  // Hooks must run unconditionally on every render of this component, so the
-  // cliff-mark condition is (re)computed here, ahead of the early returns
-  // below (no race state / no player / player retired) rather than inlined
-  // next to the render-time `cliffIn` further down.
-  const livePlayer = raceState?.cars.find(c => c.isPlayer) ?? null
-  const liveSpec = config && livePlayer ? config.compounds[livePlayer.compound] : undefined
-  const liveDriver = config && livePlayer ? config.drivers.find(d => d.id === livePlayer.driverId) : undefined
-  const liveEffAge = raceState && config && liveDriver && liveSpec
-    ? effectiveTyreAge(livePlayer!, liveDriver, raceState.weatherState, config.tuning)
-    : livePlayer?.tyreAge ?? 0
-  const liveWearRate = raceState && config && liveDriver && liveSpec
-    ? effectiveTyreAge({ ...livePlayer!, tyreAge: 1 }, liveDriver, raceState.weatherState, config.tuning)
-    : 1
-  const liveFraction = liveSpec ? tyreCliffFraction(liveSpec, liveEffAge) : 0
-  const liveCliffIn = liveSpec ? Math.max(0, Math.ceil((liveSpec.cliff - liveEffAge) / Math.max(liveWearRate, 0.01))) : null
-  const approaching = !!livePlayer && !livePlayer.retired && liveCliffIn !== null && liveCliffIn <= 5 && liveFraction < 1.0
+  // Computed ONCE, above every early return, and used by both the coach-mark
+  // effect and the gauge below.
+  //
+  // It has to be above the returns because hooks must run unconditionally and
+  // `player.retired` can flip mid-race while this component stays mounted --
+  // computing it next to the gauge and reading it from an effect would change
+  // the hook count on the lap the player retires.
+  //
+  // It is ONE computation rather than a second copy for the effect: two copies
+  // of the cliff formula would have to be kept in agreement by hand, and a
+  // coach mark that fires on a different definition of "the cliff is coming"
+  // than the gauge draws is a tutorial that points at the wrong thing.
+  const cliff = cliffStatus(raceState, config)
+
+  const approaching = cliff !== null && !cliff.retired && cliff.cliffIn !== null &&
+    cliff.cliffIn <= 5 && !cliff.pastCliff
   useEffect(() => {
     if (coaching && approaching) request('tyre_cliff')
   }, [coaching, approaching]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!raceState || !config) return null
+  if (!raceState || !config || cliff === null) return null
 
-  const player = raceState.cars.find(c => c.isPlayer)
-  if (!player) return null
+  const { player, spec, fraction, cliffIn, pastCliff } = cliff
 
   if (player.retired) {
     return (
@@ -206,14 +228,6 @@ export function TelemetryZone() {
       </div>
     )
   }
-
-  const spec = config.compounds[player.compound]
-  const driver = config.drivers.find(d => d.id === player.driverId)
-  const effAge = driver && spec ? effectiveTyreAge(player, driver, raceState.weatherState, config.tuning) : player.tyreAge
-  const wearRate = driver && spec ? effectiveTyreAge({ ...player, tyreAge: 1 }, driver, raceState.weatherState, config.tuning) : 1
-  const fraction = spec ? tyreCliffFraction(spec, effAge) : 0
-  const cliffIn = spec ? Math.max(0, Math.ceil((spec.cliff - effAge) / Math.max(wearRate, 0.01))) : null
-  const pastCliff = fraction >= 1.0
 
   // Position readouts
   const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
