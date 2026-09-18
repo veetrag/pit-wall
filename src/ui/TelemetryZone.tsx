@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
+import { useCoachStore } from '@state/coachStore'
+import { useCoachingActive } from '@hooks/useCoachingActive'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
 
 // Keyed rather than a ternary chain on purpose. This used to read
@@ -158,6 +160,28 @@ function StatCard({ accent, critical, children }: { accent: string; critical?: b
 export function TelemetryZone() {
   const raceState = useRaceStore(s => s.raceState)
   const config    = useRaceStore(s => s.config)
+  const coaching = useCoachingActive()
+  const request = useCoachStore(s => s.request)
+
+  // Hooks must run unconditionally on every render of this component, so the
+  // cliff-mark condition is (re)computed here, ahead of the early returns
+  // below (no race state / no player / player retired) rather than inlined
+  // next to the render-time `cliffIn` further down.
+  const livePlayer = raceState?.cars.find(c => c.isPlayer) ?? null
+  const liveSpec = config && livePlayer ? config.compounds[livePlayer.compound] : undefined
+  const liveDriver = config && livePlayer ? config.drivers.find(d => d.id === livePlayer.driverId) : undefined
+  const liveEffAge = raceState && config && liveDriver && liveSpec
+    ? effectiveTyreAge(livePlayer!, liveDriver, raceState.weatherState, config.tuning)
+    : livePlayer?.tyreAge ?? 0
+  const liveWearRate = raceState && config && liveDriver && liveSpec
+    ? effectiveTyreAge({ ...livePlayer!, tyreAge: 1 }, liveDriver, raceState.weatherState, config.tuning)
+    : 1
+  const liveFraction = liveSpec ? tyreCliffFraction(liveSpec, liveEffAge) : 0
+  const liveCliffIn = liveSpec ? Math.max(0, Math.ceil((liveSpec.cliff - liveEffAge) / Math.max(liveWearRate, 0.01))) : null
+  const approaching = !!livePlayer && !livePlayer.retired && liveCliffIn !== null && liveCliffIn <= 5 && liveFraction < 1.0
+  useEffect(() => {
+    if (coaching && approaching) request('tyre_cliff')
+  }, [coaching, approaching]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!raceState || !config) return null
 

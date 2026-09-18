@@ -1,6 +1,10 @@
+import { useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useClockStore, type GameSpeed } from '@state/clockStore'
+import { useCoachStore } from '@state/coachStore'
+import { useSettingsStore } from '@state/settingsStore'
+import { CoachMark } from './CoachMark'
 import { GameClock } from './GameClock'
 import { SafetyCarBanner } from './SafetyCarBanner'
 import { StartScreen } from './StartScreen'
@@ -146,8 +150,23 @@ function FinishBanner() {
   )
 }
 
+/**
+ * Retires the first-race tutorial once both coach marks have been dismissed.
+ *
+ * Extracted from `RaceHUD` so it can be unit-tested without mounting the HUD
+ * (which drags in PixiJS via `TrackCanvas`, which jsdom cannot render).
+ */
+export function useRetireCoachTutorial(): void {
+  const done = useCoachStore(s => s.done)
+  const setCoachMarksSeen = useSettingsStore(s => s.setCoachMarksSeen)
+  useEffect(() => {
+    if (done.tyre_cliff && done.projection) setCoachMarksSeen(true)
+  }, [done]) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 export function RaceHUD() {
   const phase = useRaceStore(s => s.phase)
+  useRetireCoachTutorial()
 
   return (
     <div style={{
@@ -258,6 +277,17 @@ export function RaceHUD() {
       </AnimatePresence>
 
       <PitPanel />
+
+      <CoachMark
+        id="tyre_cliff"
+        title="THE CLIFF IS COMING"
+        body="Tyre pace falls away gently, then collapses. That gauge is counting down the laps until it does — once you are past it you lose far more than a pit stop costs."
+      />
+      <CoachMark
+        id="projection"
+        title="WHAT PITTING COSTS YOU"
+        body="This is where you would rejoin if you boxed right now, traffic included. Compare it with where you are before you commit."
+      />
     </div>
   )
 }
