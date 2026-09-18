@@ -10,7 +10,8 @@ import { processRadioTick, makeRadioState, type RadioState } from './radioMapper
 import type { Difficulty } from './settingsStore'
 import type { PlayerStrategyChoice } from './seasonStore'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
-import { buildRaceConfig } from './buildRaceConfig'
+import { buildRaceConfig, buildScenarioConfig } from './buildRaceConfig'
+import { startScenario } from '@engine/scenario'
 
 export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 
@@ -28,6 +29,7 @@ interface RaceStore {
 
   startRace: () => void
   startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null) => void
+  startScenarioRace: (spec: { circuitId: string; seed: number; playerDriverId: string; startLap: number }) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
   resetRace: () => void
@@ -77,6 +79,21 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
+  },
+
+  /**
+   * Enters a race already in progress.
+   *
+   * Goes straight to 'racing', not 'starting': there are no start lights
+   * halfway through a grand prix. The rng comes from startScenario and MUST be
+   * the one stored -- it carries the draw sequence forward from the handover,
+   * and a fresh one would fork the race off the branch the scenario was
+   * authored on. See src/engine/scenario.ts.
+   */
+  startScenarioRace(spec) {
+    const config = buildScenarioConfig(spec)
+    const { state, rng } = startScenario(config, spec.startLap)
+    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0, hudAlerts: [], radioState: makeRadioState() })
   },
 
   initForStartSequence() {

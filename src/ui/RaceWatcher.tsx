@@ -3,6 +3,8 @@ import { useRaceStore } from '@state/raceStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useClockStore } from '@state/clockStore'
 import { useSettingsStore } from '@state/settingsStore'
+import { useScenarioStore } from '@state/scenarioStore'
+import { goalMet } from '@engine/scenario'
 import type { RaceEventSummary } from '@state/seasonStore'
 
 export function RaceWatcher() {
@@ -23,8 +25,13 @@ export function RaceWatcher() {
   const rivalDevelopment = useSeasonStore(s => s.rivalDevelopment)
   const setSpeed = useClockStore(s => s.setSpeed)
   const difficulty = useSettingsStore(s => s.difficulty)
+  const startScenarioRace = useRaceStore(s => s.startScenarioRace)
+  const activeScenario = useScenarioStore(s => s.active)
+  const recordScenarioOutcome = useScenarioStore(s => s.recordOutcome)
+  const toScenarioResult = useSeasonStore(s => s.toScenarioResult)
 
   const hasFiredRef = useRef(false)
+  const scenarioFiredRef = useRef(false)
 
   useEffect(() => {
     if (seasonPhase === 'racing' && racePhase === 'idle' && playerDriverId) {
@@ -49,6 +56,30 @@ export function RaceWatcher() {
       setTimeout(() => resetRace(), 1500)
     }
   }, [racePhase]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (seasonPhase === 'scenario_racing' && racePhase === 'idle' && activeScenario) {
+      scenarioFiredRef.current = false
+      startScenarioRace(activeScenario)
+    }
+  }, [seasonPhase, racePhase, activeScenario]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (seasonPhase !== 'scenario_racing') return
+    if (racePhase !== 'finished' || !raceState || scenarioFiredRef.current) return
+    scenarioFiredRef.current = true
+    setSpeed(0)
+    const spec = activeScenario
+    if (!spec) return
+    const car = raceState.cars.find(c => c.driverId === spec.playerDriverId)
+    recordScenarioOutcome({
+      met: goalMet(raceState, spec.playerDriverId, spec.goal),
+      position: car?.position ?? 0,
+      retired: car?.retired ?? false,
+    })
+    toScenarioResult()
+    setTimeout(() => resetRace(), 1500)
+  }, [racePhase, seasonPhase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return null
 }

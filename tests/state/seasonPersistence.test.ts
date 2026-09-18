@@ -62,7 +62,7 @@ describe('snapshotFrom', () => {
      * a snapshot saying they are sitting in Settings -- and on resume they would
      * land there with no season behind them.
      */
-    for (const phase of ['menu', 'grid', 'team_select', 'driver_select', 'how_to_play', 'settings'] as const) {
+    for (const phase of ['menu', 'grid', 'team_select', 'driver_select', 'how_to_play', 'settings', 'scenario_select', 'scenario_racing', 'scenario_result'] as const) {
       useSeasonStore.setState({ playerDriverId: 'd_voss', phase })
       expect(snapshotFrom(useSeasonStore.getState()), phase).toBeNull()
     }
