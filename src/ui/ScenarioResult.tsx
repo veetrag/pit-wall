@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useScenarioStore } from '@state/scenarioStore'
+import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useRaceStore } from '@state/raceStore'
 import { useUiTap } from '@hooks/useUiTap'
@@ -20,6 +21,9 @@ export function ScenarioResult() {
   const startScenarioPhase = useSeasonStore(s => s.startScenarioPhase)
   const backToMenu = useSeasonStore(s => s.backToMenu)
   const uiTap = useUiTap()
+  // Matches ScenarioSelect and CoachMark; RaceResult is the only new-adjacent
+  // screen that reads the media query directly instead.
+  const reducedMotion = useSettingsStore(s => s.reducedMotion)
 
   // Defensive guard: this route is only reachable once select() + a completed
   // race have populated both. Never expected in practice.
@@ -66,7 +70,7 @@ export function ScenarioResult() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <motion.div
           role="status"
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          initial={reducedMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
           style={{
             background: 'var(--bg-panel)', border: `1px solid ${verdictColor}`, borderRadius: 12,
             padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center',
@@ -95,7 +99,7 @@ export function ScenarioResult() {
       <div style={{ padding: '0 16px 12px', display: 'flex', gap: 10, flexShrink: 0 }}>
         <motion.button
           type="button"
-          whileTap={{ scale: 0.97 }}
+          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
           onClick={tryAgain}
           style={{
             flex: 1, background: 'var(--accent)', color: 'var(--bg-deep)',
@@ -108,7 +112,7 @@ export function ScenarioResult() {
         </motion.button>
         <motion.button
           type="button"
-          whileTap={{ scale: 0.97 }}
+          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
           onClick={toMenu}
           style={{
             flex: 0, minWidth: 110, background: 'transparent', color: 'var(--text-mid)',

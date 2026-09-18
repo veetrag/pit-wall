@@ -11,21 +11,18 @@ import { loadGameData, type ScenarioSpecData } from '@data/validators'
 const GAME = loadGameData()
 const SCENARIOS = GAME.scenarios
 
-// Compound letter -> the CSS custom property carrying its colour, per
-// src/data/compounds.json. S/M/H map onto the tokens CLAUDE.md documents;
-// I and W are real shipped compounds (one scenario hands over on I40) with
-// their own tokens, so they must not silently fall through to `undefined`
-// and render invisible text.
-const COMPOUND_TOKEN: Record<string, string> = {
-  S: 'var(--tyre-soft)',
-  M: 'var(--tyre-medium)',
-  H: 'var(--tyre-hard)',
-  I: 'var(--tyre-inter)',
-  W: 'var(--tyre-wet)',
-}
-
+/**
+ * Compound letter -> its colour, read from the validated compound data.
+ *
+ * src/data/compounds.json already carries `colorToken` per compound and it is
+ * zod-validated on load, so a local letter->token map here would be a second
+ * source of truth that a new compound could silently fall out of -- the `??`
+ * fallback would render it in grey rather than failing. RaceSetup.tsx already
+ * reads colorToken the same way.
+ */
 function compoundToken(letter: string): string {
-  return COMPOUND_TOKEN[letter] ?? 'var(--text-mid)'
+  const token = GAME.compounds[letter]?.colorToken
+  return token ? `var(${token})` : 'var(--text-mid)'
 }
 
 function ScenarioCard({ spec, expanded, onToggle }: {
@@ -50,6 +47,15 @@ function ScenarioCard({ spec, expanded, onToggle }: {
       layout={!reducedMotion}
       whileTap={{ scale: 0.97 }}
       onClick={onToggle}
+      /*
+       * A non-native element with role="button" does NOT synthesise a click
+       * from Enter or Space, so without this a keyboard or switch user could
+       * focus the card and never open it -- and TAKE OVER only exists inside
+       * the expanded region, making the whole mode unreachable for them.
+       */
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() }
+      }}
       role="button"
       tabIndex={0}
       aria-expanded={expanded}
@@ -151,7 +157,11 @@ function ScenarioCard({ spec, expanded, onToggle }: {
                   width: '100%', border: 'none', borderRadius: 10, padding: '14px',
                   background: 'var(--accent)', color: 'var(--bg-deep)',
                   fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700,
-                  letterSpacing: '0.08em', cursor: 'pointer', outline: 'none',
+                  letterSpacing: '0.08em', cursor: 'pointer',
+                  // NOT outline:'none'. This repo has no global :focus-visible
+                  // style, so suppressing the UA outline here would leave the
+                  // screen's primary action with no visible focus state at all.
+                  outlineOffset: 2,
                 }}
               >
                 TAKE OVER

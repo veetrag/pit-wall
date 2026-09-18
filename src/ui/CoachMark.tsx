@@ -57,7 +57,18 @@ export function CoachMark({ id, title, body }: Props) {
             position: 'fixed',
             left: 16, right: 16,
             bottom: 'calc(16px + var(--safe-bottom))',
-            zIndex: 90,
+            /*
+             * Above the pit drawer and the settings sheet, both zIndex 100.
+             *
+             * The projection mark's ONLY firing path is the pit panel having
+             * computed a projection, so the drawer is open every time it
+             * appears. At zIndex 90 it rendered underneath that opaque,
+             * bottom-anchored drawer -- invisible 100% of the time it fired,
+             * while still pausing the race and leaving GOT IT unreachable, so
+             * coachMarksSeen could never flip. Below StartLights' 200, which is
+             * a full-screen takeover that nothing should sit over.
+             */
+            zIndex: 120,
             background: 'var(--bg-elevated)',
             border: '1px solid var(--accent)',
             borderRadius: 12,

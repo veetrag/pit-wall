@@ -63,7 +63,7 @@ describe('every shipped scenario', () => {
        */
     })
 
-    it(`${s.id}: CANNOT BE WON BY DOING NOTHING`, () => {
+    it(`${s.id}: CANNOT BE WON BY LETTING THE AI DRIVE IT`, () => {
       /*
        * THE SCENARIO-DESIGN INVARIANT.
        *
@@ -71,6 +71,11 @@ describe('every shipped scenario', () => {
        * Par is where the car finishes when the AI drives it to the flag -- if
        * par already meets the goal, the player is being congratulated for
        * watching.
+       *
+       * Par is the AI-driven trajectory specifically, NOT a human sitting on
+       * their hands: race.ts skips strategy for the player's car, so a human
+       * who truly does nothing leaves it unmanaged and ends up somewhere worse.
+       * Par is the stronger bar of the two, which is why it is the one pinned.
        *
        * This is not hypothetical. An earlier cut of this file calibrated goals
        * against the HANDOVER position: one scenario handed the player P10,

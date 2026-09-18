@@ -4,6 +4,7 @@ import { act } from 'react'
 import { useRaceStore } from '@state/raceStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useScenarioStore } from '@state/scenarioStore'
+import { useClockStore } from '@state/clockStore'
 import { RaceWatcher } from '@ui/RaceWatcher'
 import { loadGameData } from '@data/validators'
 
@@ -17,6 +18,7 @@ const SPEC = loadGameData().scenarios[0]!
 
 beforeEach(() => {
   useRaceStore.getState().resetRace()
+  useClockStore.setState({ speed: 0 })
   useScenarioStore.setState({ active: null, outcome: null })
   useSeasonStore.setState({
     phase: 'menu', playerDriverId: null, standings: [], raceIndex: 0,
@@ -73,4 +75,29 @@ describe('RaceWatcher — a scenario is not a season race', () => {
     expect(useScenarioStore.getState().outcome,
       'the scenario outcome must be recorded').not.toBeNull()
   }, 120_000)
+})
+
+describe('RaceWatcher — a scenario starts running', () => {
+  it('STARTS THE CLOCK, because nothing else will', async () => {
+    /*
+     * clockStore initialises at speed 0, and StartLights -- the only thing in
+     * the app that ever sets it to 1 -- renders exclusively during the
+     * 'starting' phase, which a mid-race takeover deliberately skips.
+     *
+     * So the scenario opened fully rendered and completely frozen: timing tower
+     * populated, safety car banner up, and the race never advancing. The player
+     * had to find the speed control to start their own scenario.
+     *
+     * The existing separation test above could never catch this because it
+     * drives the race by calling step() in a loop, bypassing the clock.
+     */
+    useScenarioStore.getState().select(SPEC)
+    useSeasonStore.setState({ phase: 'scenario_racing' })
+    render(<RaceWatcher />)
+    await act(async () => { await Promise.resolve() })
+
+    expect(useRaceStore.getState().phase).toBe('racing')
+    expect(useClockStore.getState().speed,
+      'a scenario that never ticks is not a race').toBeGreaterThan(0)
+  }, 60_000)
 })

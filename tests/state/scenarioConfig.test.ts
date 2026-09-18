@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildScenarioConfig } from '@state/buildRaceConfig'
+import { buildScenarioConfig, buildRaceConfig, SCENARIO_DIFFICULTY } from '@state/buildRaceConfig'
 import { startScenario, describeSituation } from '@engine/scenario'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig } from '@engine/types'
@@ -47,12 +47,26 @@ describe('buildScenarioConfig', () => {
     expect(shared).not.toEqual(naive)
   }, 60_000)
 
-  it('does not vary with season upgrades or a pre-race strategy', () => {
-    // Two calls with identical spec must be identical configs; a scenario that
-    // moved with the player's save state would not be a fixed challenge.
-    const a = buildScenarioConfig({ circuitId: 'veloce', seed: 17, playerDriverId: PLAYER })
-    const b = buildScenarioConfig({ circuitId: 'veloce', seed: 17, playerDriverId: PLAYER })
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b))
-    expect(a.playerStrategyOverride, 'no pre-race plan in a mid-race takeover').toBeUndefined()
+  it('DOES NOT VARY WITH THE PLAYER\'S SAVE STATE', () => {
+    /*
+     * A scenario must be the same challenge for everyone, so its config must
+     * not pick up the season's purchased upgrades or rival development.
+     *
+     * Comparing two identical calls would NOT show this: if buildScenarioConfig
+     * started reading useSeasonStore internally, both calls would read the same
+     * store and still agree. So this compares the scenario config against one
+     * built with a fully-developed season, which must differ ONLY if the
+     * scenario path is leaking save state.
+     */
+    const spec = { circuitId: 'veloce', seed: 17, playerDriverId: PLAYER }
+    const plain = buildScenarioConfig(spec)
+    const upgraded = buildRaceConfig(17, PLAYER, 'veloce', SCENARIO_DIFFICULTY, null, {
+      purchasedTiers: { power: 3, aero: 3, handling: 3, reliability: 3, driverPace: 3 },
+      rivalDevelopment: { terra: 12, zenith: 12 },
+    })
+    expect(JSON.stringify(plain.teams),
+      'a scenario must not inherit purchased upgrades').not.toBe(JSON.stringify(upgraded.teams))
+    expect(plain.playerStrategyOverride,
+      'no pre-race plan in a mid-race takeover').toBeUndefined()
   })
 })

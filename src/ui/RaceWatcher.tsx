@@ -32,6 +32,11 @@ export function RaceWatcher() {
 
   const hasFiredRef = useRef(false)
   const scenarioFiredRef = useRef(false)
+  const scenarioResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (scenarioResetRef.current !== null) clearTimeout(scenarioResetRef.current)
+  }, [])
 
   useEffect(() => {
     if (seasonPhase === 'racing' && racePhase === 'idle' && playerDriverId) {
@@ -70,6 +75,17 @@ export function RaceWatcher() {
     if (seasonPhase === 'scenario_racing' && racePhase === 'idle' && activeScenario) {
       scenarioFiredRef.current = false
       startScenarioRace(activeScenario)
+      /*
+       * Scenarios have to start their own clock.
+       *
+       * clockStore initialises at speed 0 and StartLights -- the only thing in
+       * the app that ever sets it to 1 -- renders exclusively during the
+       * 'starting' phase, which a mid-race takeover deliberately skips. Without
+       * this the scenario opened fully rendered and frozen, and the player had
+       * to find the speed control to start their own race. It recurs on every
+       * retry, because the finish handler below sets the speed back to 0.
+       */
+      setSpeed(1)
     }
   }, [seasonPhase, racePhase, activeScenario]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -87,7 +103,15 @@ export function RaceWatcher() {
       retired: car?.retired ?? false,
     })
     toScenarioResult()
-    setTimeout(() => resetRace(), 1500)
+    /*
+     * Tracked and cleared on unmount: TRY AGAIN is live the instant the result
+     * screen appears, and it restarts the race itself. An orphaned timeout
+     * firing 1.5s later would reset a race the player had already resumed,
+     * which the start effect above then restarts from the handover lap --
+     * silently discarding ~1.3s of the retry.
+     */
+    if (scenarioResetRef.current !== null) clearTimeout(scenarioResetRef.current)
+    scenarioResetRef.current = setTimeout(() => { scenarioResetRef.current = null; resetRace() }, 1500)
   }, [racePhase, seasonPhase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return null
