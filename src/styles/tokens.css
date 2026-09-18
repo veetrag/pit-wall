@@ -25,6 +25,11 @@
   --tyre-soft:    #E8344E;
   --tyre-medium:  #F2C94C;
   --tyre-hard:    #EAEAEA;
+  /* Wet-weather compounds. data/compounds.json points I and W at these
+     tokens; matched to TimingTower's COMPOUND_COLORS so a compound reads the
+     same colour on the timing tower and on the scenario picker. */
+  --tyre-inter:   #39B54A;
+  --tyre-wet:     #4DA6FF;
   --positive:     #3DDC84;
   --negative:     #FF6B6B;
 

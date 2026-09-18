@@ -47,6 +47,7 @@ function AmbientHero() {
 interface MenuItem { id: string; label: string; sub: string; primary: boolean }
 
 const BROWSE_ITEMS: MenuItem[] = [
+  { id: 'scenarios', label: 'SCENARIOS',     sub: 'Drop into a race in progress', primary: false },
   { id: 'grid',     label: 'GRID & GARAGE',  sub: 'Browse drivers & teams',     primary: false },
   { id: 'howto',    label: 'HOW TO PLAY',    sub: 'Strategy primer',            primary: false },
   { id: 'settings', label: 'SETTINGS',       sub: 'Sound, haptics, gameplay',   primary: false },
@@ -61,6 +62,7 @@ export function MainMenu() {
   const viewGrid = useSeasonStore(s => s.viewGrid)
   const viewHowToPlay = useSeasonStore(s => s.viewHowToPlay)
   const viewSettings = useSeasonStore(s => s.viewSettings)
+  const viewScenarios = useSeasonStore(s => s.viewScenarios)
   const uiTap = useUiTap()
 
   // Read on mount rather than at app start: the menu is remounted every time
@@ -100,6 +102,7 @@ export function MainMenu() {
     else if (id === 'grid') viewGrid()
     else if (id === 'howto') viewHowToPlay()
     else if (id === 'settings') viewSettings()
+    else if (id === 'scenarios') viewScenarios()
   }
 
   return (
