@@ -332,6 +332,13 @@ const ScenarioSchema = z.object({
     lapsRemaining: z.number().int().nonnegative(),
     compound: z.string().min(1),
     tyreAge: z.number().int().nonnegative(),
+    // Whether the safety car is out at the handover. Recorded because it is
+    // brief-bearing: "Safety Car Gamble" is ABOUT the safety car, and the
+    // briefing showed only "P4 / 20 LAPS LEFT / M12" without it -- the one fact
+    // the scenario turns on was missing from the screen that sells it. Pinning
+    // it here also means a tuning change that stops the safety car being out at
+    // that lap fails the suite instead of quietly gutting the premise.
+    safetyCarOut: z.boolean(),
     // PAR: where this car finishes when the AI drives it to the flag. It is
     // what goal.position is calibrated against (goal = par - 1), so it is
     // recorded rather than recomputed -- a tuning change that moves par must

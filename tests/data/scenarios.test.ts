@@ -37,6 +37,7 @@ describe('every shipped scenario', () => {
       expect({
         position: sit!.position, lapsRemaining: sit!.lapsRemaining,
         compound: sit!.compound, tyreAge: sit!.tyreAge,
+        safetyCarOut: sit!.safetyCarOut,
       }).toEqual(situation)
     }, 60_000)
 

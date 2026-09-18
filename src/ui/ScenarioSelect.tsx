@@ -123,6 +123,17 @@ function ScenarioCard({ spec, expanded, onToggle }: {
                       compound letter is always printed alongside the dot. */}
                   <span style={{ color: 'var(--text-hi)' }}>{`${spec.expect.compound}${spec.expect.tyreAge}`}</span>
                 </span>
+                {/* The safety car is the whole premise of one of these
+                    scenarios, so it belongs in the situation line and not only
+                    in the prose blurb. --caution is the race-control token and
+                    measures 9.66:1 on --bg-panel; the warning glyph carries the
+                    same signal without colour (CLAUDE.md §6.3). */}
+                {spec.expect.safetyCarOut && (
+                  <>
+                    <span style={{ color: 'var(--line-hair)' }} aria-hidden>·</span>
+                    <span style={{ color: 'var(--caution)' }}>{'\u26A0 SAFETY CAR'}</span>
+                  </>
+                )}
               </div>
 
               <div style={{
