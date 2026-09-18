@@ -7,6 +7,7 @@ import driversJson from './drivers.json'
 import strategiesJson from './strategies.json'
 import rivalriesJson from './rivalries.json'
 import upgradesJson from './upgrades.json'
+import scenariosJson from './scenarios.json'
 
 const DifficultyProfileSchema = z.object({
   brainCap: z.enum(['naive', 'smart', 'optimal']),
@@ -312,6 +313,30 @@ export const UpgradesSchema = z.object({
   attributes: z.array(UpgradeAttributeSchema).length(5),
 })
 
+const ScenarioSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  blurb: z.string().min(1),
+  circuitId: z.string().min(1),
+  seed: z.number().int().nonnegative(),
+  playerDriverId: z.string().min(1),
+  // .positive(): a scenario IS a mid-race takeover. startLap 0 is a normal race
+  // from the grid, which is what the season mode is for.
+  startLap: z.number().int().positive(),
+  goal: z.object({ position: z.number().int().positive() }),
+  // The situation the engine produced when this scenario was authored. A test
+  // re-derives it on every run, so a tuning or balance change that moves the
+  // scenario fails loudly instead of silently rewriting the brief.
+  expect: z.object({
+    position: z.number().int().positive(),
+    lapsRemaining: z.number().int().nonnegative(),
+    compound: z.string().min(1),
+    tyreAge: z.number().int().nonnegative(),
+  }),
+})
+const ScenariosWrapperSchema = z.object({ scenarios: z.array(ScenarioSchema).nonempty() })
+export type ScenarioSpecData = z.infer<typeof ScenarioSchema>
+
 export type Tuning = z.infer<typeof TuningSchema>
 export type CompoundsWrapper = z.infer<typeof CompoundsWrapperSchema>
 export type CircuitsWrapper = z.infer<typeof CircuitsWrapperSchema>
@@ -332,6 +357,7 @@ export interface GameData {
   strategies: Strategies
   rivalries: Rivalry[]
   upgrades: UpgradesData
+  scenarios: ScenarioSpecData[]
 }
 
 export function loadGameData(): GameData {
@@ -343,6 +369,7 @@ export function loadGameData(): GameData {
   const strategies = StrategiesSchema.parse(strategiesJson)
   const rivalries = RivalriesSchema.parse(rivalriesJson)
   const upgrades = UpgradesSchema.parse(upgradesJson)
+  const scenarios = ScenariosWrapperSchema.parse(scenariosJson)
 
   const teamIds = new Set(cars.teams.map(t => t.id))
   for (const d of drivers.drivers) {
@@ -355,6 +382,10 @@ export function loadGameData(): GameData {
   for (const r of rivalries.rivalries) {
     if (!driverIds.has(r.a) || !driverIds.has(r.b)) throw new Error(`Rivalry references unknown driverId in pair (${r.a}, ${r.b})`)
   }
+  for (const s of scenarios.scenarios) {
+    if (!circuitsWrapper.circuits[s.circuitId]) throw new Error(`Scenario ${s.id} references unknown circuitId "${s.circuitId}"`)
+    if (!driverIds.has(s.playerDriverId)) throw new Error(`Scenario ${s.id} references unknown playerDriverId "${s.playerDriverId}"`)
+  }
 
   return {
     tuning,
@@ -365,5 +396,6 @@ export function loadGameData(): GameData {
     strategies,
     rivalries: rivalries.rivalries,
     upgrades,
+    scenarios: scenarios.scenarios,
   }
 }
