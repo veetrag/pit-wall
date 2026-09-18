@@ -25,6 +25,20 @@
 
         </activity>
 
+        <!--
+            NOT DEAD, despite nothing in this app referencing it.
+
+            Capacitor's own BridgeWebChromeClient calls
+            FileProvider.getUriForFile(activity, packageName + ".fileprovider", ...)
+            when the WebView opens a file chooser with camera capture. The
+            authority below is that exact string, so deleting this provider does
+            not fail the build or any test -- it plants a crash that only fires
+            the first time a <input type="file"> reaches for the camera.
+
+            There are no file inputs in the app today, which is why this looks
+            unused. Keep it: it costs a few bytes of manifest and removing it
+            has already been proposed once on the strength of a grep.
+        -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

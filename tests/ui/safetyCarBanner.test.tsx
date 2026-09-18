@@ -53,7 +53,7 @@ describe('SafetyCarBanner', () => {
   it('exposes a live screen-reader announcement naming the state and the countdown', () => {
     render(<SafetyCarBanner />)
     setRaceState({ deployedLap: 12, lapsRemaining: 3, cause: 'crash' }, [deployed()])
-    const live = screen.getByRole('status')
+    const live = screen.getByTestId('safety-car-status')
     expect(live.textContent).toMatch(/safety car/i)
     expect(live.textContent).toMatch(/3 laps/)
   })
@@ -72,7 +72,7 @@ describe('SafetyCarBanner', () => {
      */
     render(<SafetyCarBanner />)
     setRaceState({ deployedLap: 12, lapsRemaining: 3, cause: 'crash' }, [deployed()])
-    expect(screen.getByRole('status').getAttribute('aria-live')).not.toBe('assertive')
+    expect(screen.getByTestId('safety-car-status').getAttribute('aria-live')).not.toBe('assertive')
   })
 
   it('says "deployed" once, then only the countdown', () => {
@@ -81,10 +81,10 @@ describe('SafetyCarBanner', () => {
     render(<SafetyCarBanner />)
     const sc: SafetyCarState = { deployedLap: 12, lapsRemaining: 4, cause: 'crash' }
     setRaceState(sc, [deployed()])
-    expect(screen.getByRole('status').textContent).toMatch(/deployed/i)
+    expect(screen.getByTestId('safety-car-status').textContent).toMatch(/deployed/i)
 
     setRaceState({ ...sc, lapsRemaining: 3 }, [deployed()])
-    const after = screen.getByRole('status').textContent!
+    const after = screen.getByTestId('safety-car-status').textContent!
     expect(after, 'the countdown update should not re-announce the deployment').not.toMatch(/deployed/i)
     expect(after, 'but it must still say what is happening').toMatch(/safety car/i)
     expect(after).toMatch(/3 laps/)
@@ -129,5 +129,54 @@ describe('SafetyCarBanner', () => {
     setRaceState({ deployedLap: 12, lapsRemaining: 2, cause: 'crash' }, [deployed()])
     expect(screen.getByText(/SAFETY CAR/)).toBeTruthy()
     expect(screen.getByText(/2 LAPS/)).toBeTruthy()
+  })
+})
+
+describe('SafetyCarBanner — the green flag', () => {
+  beforeEach(() => {
+    warning.mockClear()
+    useRaceStore.setState({ raceState: null })
+    useSettingsStore.setState({ reducedMotion: false, hapticsEnabled: true })
+  })
+
+  it('ANNOUNCES THAT RACING HAS RESUMED', () => {
+    /*
+     * When the safety car comes in, `safetyCar` goes null and the banner --
+     * live region included -- unmounts. A sighted player sees it vanish and the
+     * field spread out. A screen-reader user was told the safety car deployed,
+     * told the countdown four or five times, and then told nothing: the region
+     * stopped existing, and a region that stops existing announces nothing.
+     * They had no way to learn racing had resumed.
+     *
+     * The announcement therefore lives OUTSIDE the banner's AnimatePresence,
+     * which is the whole reason this works -- moving it back inside would make
+     * it unmount at exactly the moment it has something to say.
+     */
+    render(<SafetyCarBanner />)
+    setRaceState({ deployedLap: 12, lapsRemaining: 2, cause: 'crash' }, [deployed()])
+    expect(screen.getByTestId('green-flag-status').textContent,
+      'nothing to say while the safety car is still out').toBe('')
+
+    setRaceState(null, [deployed()])
+    expect(screen.getByTestId('green-flag-status').textContent,
+      'the banner is gone, so this must carry the news').toMatch(/green flag/i)
+  })
+
+  it('does not announce a green flag at lights out', () => {
+    // There has been no safety car to end. Without the was-out guard the first
+    // render looks exactly like a transition into green.
+    render(<SafetyCarBanner />)
+    setRaceState(null, [])
+    expect(screen.getByTestId('green-flag-status').textContent).toBe('')
+  })
+
+  it('is polite, like the deployment announcement', () => {
+    // role="status" implies aria-live polite. Assertive would interrupt
+    // whatever the reader was mid-sentence on, for news that is not urgent --
+    // the player has nothing to decide at the green flag.
+    render(<SafetyCarBanner />)
+    setRaceState({ deployedLap: 12, lapsRemaining: 1, cause: 'crash' }, [deployed()])
+    setRaceState(null, [deployed()])
+    expect(screen.getByTestId('green-flag-status').getAttribute('aria-live')).not.toBe('assertive')
   })
 })

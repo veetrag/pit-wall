@@ -11,10 +11,22 @@ export type AlertMessage = {
   icon: string
 }
 
+/*
+ * Tokens, not hex. info/urgent were already exactly --accent and --accent-warm,
+ * so those two are a pure rename.
+ *
+ * `caution` was #F2C94C, which is --tyre-medium -- the one reuse the token file
+ * explicitly legislates against, because it ties a race-control state to tyre
+ * semantics (CLAUDE.md 6.3): a medium-shod car on a caution-flashed row would
+ * be drawn in the same yellow as the flag. It now uses --caution, the token
+ * that exists for this, which also makes an alert match the safety-car banner
+ * and the scenario briefing. Visible change: caution alerts shift yellow to
+ * amber. --caution measures 9.66:1 on --bg-panel and 8.62:1 on --bg-elevated.
+ */
 const SEVERITY_COLOR: Record<AlertSeverity, string> = {
-  info:    '#00E5D0',
-  caution: '#F2C94C',
-  urgent:  '#FF4D5E',
+  info:    'var(--accent)',
+  caution: 'var(--caution)',
+  urgent:  'var(--accent-warm)',
 }
 const SEVERITY_BG: Record<AlertSeverity, string> = {
   info:    'transparent',

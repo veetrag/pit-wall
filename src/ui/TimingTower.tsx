@@ -107,15 +107,15 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
   // The compression flash wins over the player highlight for its ~1.2s: the
   // field collapsing is the more urgent thing to communicate, and the row
   // returns to its normal state immediately after.
-  // Literal rgba of --caution (#FFB020) at 22%, NOT color-mix(). Same
-  // constraint COMPOUND_COLORS documents at the top of this file, for a
-  // different reason: android/variables.gradle sets minSdkVersion 24, and
-  // color-mix needs Chromium 111 (2023). On an un-updated WebView the
-  // declaration is simply dropped, so the flash would silently not exist on
-  // exactly the low-end devices this project targets. Keep in sync with
-  // --caution in src/styles/tokens.css.
+  // --caution at 22%, via its channel token. NOT color-mix(): that needs
+  // Chromium 111 (2023) and android/variables.gradle sets minSdkVersion 24, so
+  // on an un-updated WebView the declaration is simply dropped and the flash
+  // would silently not exist on exactly the low-end devices this project
+  // targets. rgba(var(--x-rgb), a) has none of that problem and, unlike the
+  // literal that used to sit here under a "keep in sync" comment, cannot drift
+  // from the token.
   const rowBg = compressed
-    ? 'rgba(255,176,32,0.22)'
+    ? 'rgba(var(--caution-rgb), 0.22)'
     : car.isPlayer
     ? fresh
       ? 'rgba(0,229,208,0.14)'

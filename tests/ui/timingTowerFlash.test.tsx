@@ -32,15 +32,21 @@ function setState(incidents: IncidentEvent[]) {
 }
 
 /**
- * Rows carry the caution tint as a literal rgba of --caution (#FFB020) at 22%.
- * A literal rather than color-mix() because minSdkVersion is 24 and color-mix
- * needs Chromium 111 -- see the comment at the rowBg site in TimingTower.tsx.
- * Matched on the rgb triple so a change to the ALPHA does not break this test,
- * but a change to the colour does.
+ * Rows carry the caution tint as rgba(var(--caution-rgb), 0.22).
+ *
+ * The channel token rather than a literal rgba, so the tint cannot drift from
+ * --caution; and rgba(var(...)) rather than color-mix() because minSdkVersion
+ * is 24 and color-mix needs Chromium 111. See the rowBg site in
+ * TimingTower.tsx and tests/ui/cautionToken.test.ts.
+ *
+ * Matched on the VAR REFERENCE, not the resolved colour: jsdom does not
+ * resolve custom properties, and this test used to match the rgb triple --
+ * which quietly made it an assertion about a hardcoded literal, so removing
+ * that literal (the point of the change) failed it.
  */
 function flashedRowCount(container: HTMLElement): number {
   return [...container.querySelectorAll<HTMLElement>('[data-tower-row]')]
-    .filter(el => /255,\s*176,\s*32/.test(el.style.background)).length
+    .filter(el => /var\(\s*--caution-rgb\s*\)/.test(el.style.background)).length
 }
 
 describe('TimingTower compression flash', () => {
