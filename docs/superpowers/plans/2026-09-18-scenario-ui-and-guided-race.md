@@ -241,12 +241,34 @@ describe('buildScenarioConfig', () => {
 })
 ```
 
-- [ ] **Step 5: Verify**
+- [ ] **Step 5: Keep the store-boundary test honest**
 
-Run: `npx vitest run tests/state/scenarioConfig.test.ts && npx tsc --noEmit && npx vitest run`
+`tests/state/storeBoundaries.test.ts` asserts that `raceStore.ts` imports
+`seasonStore` type-only, and guards its own regex against rot with
+`expect(imports.length).toBeGreaterThan(0)`. Step 1 moves that import OUT of
+raceStore and into `buildRaceConfig.ts`, so that rot-guard will fail — the test
+would be protecting a file that no longer has the hazard while the file that now
+does goes unchecked.
+
+Change the first test to check BOTH files. Replace `const text = src('raceStore.ts')`
+with a loop over `['raceStore.ts', 'buildRaceConfig.ts']`, collecting matches
+from each, and assert:
+
+- the COMBINED match count is `> 0` (the rot-guard, now satisfied by whichever
+  file carries the import)
+- NO file has a value import
+
+Update the failure message to name `buildRaceConfig.ts` as the module that now
+holds `buildConfig` and must keep `PlayerStrategyChoice` type-only. The cycle it
+describes is unchanged: `seasonStore` still imports `CIRCUIT_ORDER` from
+`raceStore` as a value.
+
+- [ ] **Step 6: Verify**
+
+Run: `npx vitest run tests/state/scenarioConfig.test.ts tests/state/storeBoundaries.test.ts && npx tsc --noEmit && npx vitest run`
 Expected: new tests pass, whole suite still green (46 files / 375 passed / 1 skipped baseline).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add -A && git commit -m "fix(state): one config builder for scenarios, shared with the search tool"
@@ -446,10 +468,17 @@ Add to the store interface and implementation:
 ```ts
   viewScenarios: () => void
   exitScenarios: () => void
+  startScenarioPhase: () => void
+  toScenarioResult: () => void
 ```
 ```ts
   viewScenarios() { set({ phase: 'scenario_select' }) },
   exitScenarios() { set({ phase: 'menu' }) },
+  // Every scenario phase transition is an ACTION, never a setState from a
+  // component. RaceWatcher and the screens below all go through these, so the
+  // set of reachable phases stays readable from this file alone.
+  startScenarioPhase() { set({ phase: 'scenario_racing' }) },
+  toScenarioResult() { set({ phase: 'scenario_result' }) },
 ```
 
 - [ ] **Step 2: Keep scenarios out of the save**
@@ -540,7 +569,7 @@ as they are — `scenario_racing` is a different value, so they will not fire.
   const startScenarioRace = useRaceStore(s => s.startScenarioRace)
   const activeScenario = useScenarioStore(s => s.active)
   const recordScenarioOutcome = useScenarioStore(s => s.recordOutcome)
-  const setPhase = useSeasonStore(s => s.phase)   // already subscribed as seasonPhase
+  const toScenarioResult = useSeasonStore(s => s.toScenarioResult)
 ```
 
 ```ts
@@ -566,7 +595,7 @@ as they are — `scenario_racing` is a different value, so they will not fire.
       position: car?.position ?? 0,
       retired: car?.retired ?? false,
     })
-    useSeasonStore.setState({ phase: 'scenario_result' })
+    toScenarioResult()
     setTimeout(() => resetRace(), 1500)
   }, [racePhase, seasonPhase]) // eslint-disable-line react-hooks/exhaustive-deps
 ```
@@ -629,7 +658,10 @@ describe('startScenarioRace', () => {
     expect(s.rng, 'the live rng must be carried forward').not.toBeNull()
     const player = s.raceState!.cars.find(c => c.isPlayer)
     expect(player?.driverId).toBe(SPEC.playerDriverId)
-    expect(player!.pitsDone, 'autopilot raced the car properly').toBeGreaterThan(0)
+    // NOT asserting pitsDone > 0 here: that is a property of the handover
+    // itself, already covered by the "HANDS OVER A MANAGED CAR" test in
+    // tests/engine/scenario.test.ts, and it would be a false failure for any
+    // scenario authored with an early startLap.
   }, 60_000)
 
   it('is the situation the data file promises', () => {
@@ -682,7 +714,7 @@ Create `src/ui/ScenarioSelect.tsx`. Requirements, all of which the test asserts:
   - the blurb
   - a situation readout derived from `spec.expect`, NOT re-simulated: `P{position}` · `{lapsRemaining} LAPS LEFT` · `{compound}{tyreAge}`. Deriving the display from `expect` keeps this screen instant; Task 2's test is what guarantees `expect` is true.
   - the goal, rendered as the literal text `FINISH P{goal.position} OR BETTER`
-  - a button with the literal text `TAKE OVER` which calls `uiTap()`, `select(spec)`, then `useSeasonStore.getState().viewScenarios` → instead set phase directly via a new action; use `useSeasonStore.setState({ phase: 'scenario_racing' })` is NOT acceptable from a component — add `startScenarioPhase: () => void` to seasonStore in this task, implemented as `set({ phase: 'scenario_racing' })`, and call that.
+  - a button with the literal text `TAKE OVER` which calls `uiTap()`, then `select(spec)`, then `startScenarioPhase()` (the seasonStore action added in Task 3). Never `useSeasonStore.setState` from a component.
 - Tapping the selected card again collapses it.
 - Every tappable element uses `whileTap={{ scale: 0.97 }}` and `useUiTap()`.
 - Numbers use `fontVariantNumeric: 'tabular-nums'` and `var(--font-mono)`.
@@ -907,7 +939,7 @@ import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCoachStore, type CoachMarkId } from '@state/coachStore'
 import { useSettingsStore } from '@state/settingsStore'
-import { useClockStore } from '@state/clockStore'
+import { useClockStore, type GameSpeed } from '@state/clockStore'
 import { useUiTap } from '@hooks/useUiTap'
 
 interface Props { id: CoachMarkId; title: string; body: string }
@@ -933,7 +965,7 @@ export function CoachMark({ id, title, body }: Props) {
   const setSpeed = useClockStore(s => s.setSpeed)
   const uiTap = useUiTap()
   const showing = active === id
-  const restoreRef = useRef<number | null>(null)
+  const restoreRef = useRef<GameSpeed | null>(null)
 
   useEffect(() => {
     if (!showing) return
@@ -942,7 +974,7 @@ export function CoachMark({ id, title, body }: Props) {
     return () => {
       // Restore on unmount too, not only on dismiss -- a mark that is still up
       // when the race ends must not leave the clock paused forever.
-      if (restoreRef.current !== null) setSpeed(restoreRef.current as never)
+      if (restoreRef.current !== null) setSpeed(restoreRef.current)
       restoreRef.current = null
     }
   }, [showing]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1015,7 +1047,9 @@ git add -A && git commit -m "feat(ui): coach-mark primitive that pauses the race
 
 - [ ] **Step 1: A single gate for "is the player being coached"**
 
-Add to `src/state/coachStore.ts`:
+Create `src/hooks/useCoachingActive.ts` (NOT in `state/` — it composes two
+stores for the UI's benefit, which is exactly what `src/hooks/useSafetyCar.ts`
+already does, and it keeps `coachStore` free of store-to-store imports):
 
 ```ts
 /**
@@ -1032,11 +1066,10 @@ export function useCoachingActive(): boolean {
 }
 ```
 
-This imports `useSettingsStore` and `useSeasonStore`. `coachStore` is in
-`state/`, so importing other stores is allowed — but verify with
-`tests/state/storeBoundaries.test.ts` that this does not violate whatever that
-test enforces. **Read that test first**; if it forbids the import, put
-`useCoachingActive` in `src/hooks/useCoachingActive.ts` instead.
+Import `useSettingsStore` from `@state/settingsStore` and `useSeasonStore` from
+`@state/seasonStore`. Both are plain value imports; `hooks/` sits above `state/`
+so this introduces no cycle and is outside everything
+`tests/state/storeBoundaries.test.ts` constrains.
 
 - [ ] **Step 2: Fire the cliff mark**
 
