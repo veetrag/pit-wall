@@ -41,6 +41,15 @@ export function RaceWatcher() {
   }, [seasonPhase, racePhase, playerDriverId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    // The seasonPhase guard is NOT redundant with hasFiredRef.
+    //
+    // hasFiredRef starts false and is only reset by the SEASON start effect, so
+    // a scenario played on a freshly launched app reaches the flag with it
+    // still false. Without this guard that wrote 20 championship standings
+    // entries and a race of development points out of a scenario, and set phase
+    // 'result', stealing the player away from their scenario result screen.
+    // Covered by tests/ui/scenarioWatcher.test.tsx.
+    if (seasonPhase !== 'racing') return
     if (racePhase === 'finished' && raceState && !hasFiredRef.current) {
       hasFiredRef.current = true
       setSpeed(0)
