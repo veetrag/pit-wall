@@ -16,6 +16,8 @@ import { RaceResult } from './ui/RaceResult'
 import { Championship } from './ui/Championship'
 import { RaceWatcher } from './ui/RaceWatcher'
 import { SettingsScreen } from './ui/SettingsPanel'
+import { ScenarioSelect } from './ui/ScenarioSelect'
+import { ScenarioResult } from './ui/ScenarioResult'
 import { useAndroidBackButton } from './hooks/useAndroidBackButton'
 import { AppErrorBoundary } from './ui/AppErrorBoundary'
 
@@ -53,6 +55,9 @@ export default function App() {
           {phase === 'racing' && <RaceHUD key="race" />}
           {phase === 'result' && <RaceResult key="result" />}
           {phase === 'championship' && <Championship key="championship" />}
+          {phase === 'scenario_select' && <ScenarioSelect key="scenario_select" />}
+          {phase === 'scenario_racing' && <RaceHUD key="scenario_race" />}
+          {phase === 'scenario_result' && <ScenarioResult key="scenario_result" />}
         </AnimatePresence>
       </div>
     </AppErrorBoundary>

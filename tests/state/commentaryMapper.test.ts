@@ -174,3 +174,23 @@ describe('incident commentary', () => {
     expect(lines.some(l => l.includes('AAA')), 'a mechanical DNF still gets its line').toBe(true)
   })
 })
+
+describe('joining a race already in progress', () => {
+  it('DOES NOT ANNOUNCE THE START OF A RACE THAT STARTED WITHOUT YOU', () => {
+    /*
+     * A scenario hands the player a race at, say, lap 14. The commentary feed
+     * opened with "Lights out and away we go" -- announcing a start that
+     * happened fourteen laps earlier, as the very first thing the player reads.
+     *
+     * Caught by playing the scenario and looking at the screen; no assertion in
+     * the suite covered the ticker's opening line.
+     */
+    const state = makeCommentaryState(14)
+    expect(state.started, 'a mid-race join has already started').toBe(true)
+  })
+
+  it('still announces the start of a race that begins on lap 0', () => {
+    expect(makeCommentaryState(0).started).toBe(false)
+    expect(makeCommentaryState().started, 'default must stay unchanged').toBe(false)
+  })
+})

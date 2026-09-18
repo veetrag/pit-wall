@@ -3,7 +3,7 @@ import { CIRCUIT_ORDER } from './raceStore'
 import type { Compound, PitStop } from '@engine/index'
 import { loadGameData } from '@data/validators'
 
-export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings'
+export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result'
 
 // Type-only on purpose: seasonPersistence imports THIS module at runtime to
 // subscribe to the store, so a value import here would close a cycle.
@@ -137,6 +137,10 @@ interface SeasonStore {
   exitHowToPlay: () => void
   viewSettings: () => void
   exitSettings: () => void
+  viewScenarios: () => void
+  exitScenarios: () => void
+  startScenarioPhase: () => void
+  toScenarioResult: () => void
   backToMenu: () => void
   backToTeamSelect: () => void
   backToDriverSelect: () => void
@@ -212,6 +216,13 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   exitHowToPlay() { set({ phase: 'menu' }) },
   viewSettings() { set({ phase: 'settings' }) },
   exitSettings() { set({ phase: 'menu' }) },
+  viewScenarios() { set({ phase: 'scenario_select' }) },
+  exitScenarios() { set({ phase: 'menu' }) },
+  // Every scenario phase transition is an ACTION, never a setState from a
+  // component. RaceWatcher and the screens below all go through these, so the
+  // set of reachable phases stays readable from this file alone.
+  startScenarioPhase() { set({ phase: 'scenario_racing' }) },
+  toScenarioResult() { set({ phase: 'scenario_result' }) },
   backToMenu() { set({ phase: 'menu' }) },
   backToTeamSelect() { set({ phase: 'team_select', playerDriverId: null }) },
   backToDriverSelect() { set({ phase: 'driver_select' }) },

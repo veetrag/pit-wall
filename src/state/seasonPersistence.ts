@@ -63,6 +63,10 @@ const RESUME_PHASE: Record<SeasonPhase, ResumePhase | null> = {
   racing: 'race_setup',
   result: 'result',
   championship: 'championship',
+  // A scenario is not a season. It has no standings, no development and no
+  // round, so there is nothing to resume INTO -- and mapping any of these to a
+  // real phase would let a scenario overwrite a championship in progress.
+  scenario_select: null, scenario_racing: null, scenario_result: null,
 }
 
 const StandingSchema = z.object({ driverId: z.string(), points: z.number() })

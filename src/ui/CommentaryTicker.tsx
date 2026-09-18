@@ -11,7 +11,12 @@ const MAX_FEED = 8
 export function CommentaryTicker() {
   const raceState = useRaceStore(s => s.raceState)
   const config = useRaceStore(s => s.config)
-  const stateRef = useRef<CommentaryState>(makeCommentaryState())
+  // Seeded from the lap the ticker mounts on: a scenario drops the player into
+  // a race in progress, and a fresh commentary state would open the feed with
+  // "Lights out and away we go" on lap 15 of 34.
+  const stateRef = useRef<CommentaryState>(
+    makeCommentaryState(useRaceStore.getState().raceState?.lap ?? 0),
+  )
   const [feed, setFeed] = useState<string[]>([])
 
   useEffect(() => {

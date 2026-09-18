@@ -14,6 +14,7 @@ export interface SettingsState {
   skipStartSequence: boolean
   difficulty: Difficulty
   driverNameFormat: DriverNameFormat
+  coachMarksSeen: boolean
   setSoundEnabled: (v: boolean) => void
   setHapticsEnabled: (v: boolean) => void
   setReducedMotion: (v: boolean) => void
@@ -22,6 +23,7 @@ export interface SettingsState {
   setSkipStartSequence: (v: boolean) => void
   setDifficulty: (v: Difficulty) => void
   setDriverNameFormat: (v: DriverNameFormat) => void
+  setCoachMarksSeen: (v: boolean) => void
   loadSettings: () => Promise<void>
 }
 
@@ -34,6 +36,7 @@ const K = {
   skipStart: 'settings.skipStart',
   difficulty: 'settings.difficulty',
   driverNameFormat: 'settings.driverNameFormat',
+  coachMarksSeen: 'settings.coachMarksSeen',
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -45,6 +48,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   skipStartSequence: false,
   difficulty: 'rookie',
   driverNameFormat: 'code',
+  coachMarksSeen: false,
 
   setSoundEnabled(v) { set({ soundEnabled: v }); void Preferences.set({ key: K.sound, value: String(v) }) },
   setHapticsEnabled(v) { set({ hapticsEnabled: v }); void Preferences.set({ key: K.haptics, value: String(v) }) },
@@ -54,11 +58,12 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setSkipStartSequence(v) { set({ skipStartSequence: v }); void Preferences.set({ key: K.skipStart, value: String(v) }) },
   setDifficulty(v) { set({ difficulty: v }); void Preferences.set({ key: K.difficulty, value: v }) },
   setDriverNameFormat(v) { set({ driverNameFormat: v }); void Preferences.set({ key: K.driverNameFormat, value: v }) },
+  setCoachMarksSeen(v) { set({ coachMarksSeen: v }); void Preferences.set({ key: K.coachMarksSeen, value: String(v) }) },
 
   async loadSettings() {
     const keys = Object.values(K)
     const results = await Promise.all(keys.map(k => Preferences.get({ key: k })))
-    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty, driverNameFormat] = results.map(r => r.value)
+    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty, driverNameFormat, coachMarksSeen] = results.map(r => r.value)
     set({
       soundEnabled:      sound     != null ? sound     === 'true' : true,
       hapticsEnabled:    haptics   != null ? haptics   === 'true' : true,
@@ -68,6 +73,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       skipStartSequence: skipStart != null ? skipStart === 'true' : false,
       difficulty:        difficulty === 'pro' ? 'pro' : 'rookie',
       driverNameFormat:  driverNameFormat === 'full' ? 'full' : 'code',
+      coachMarksSeen:    coachMarksSeen != null ? coachMarksSeen === 'true' : false,
     })
   },
 }))

@@ -24,7 +24,15 @@ export interface CommentaryState {
   started: boolean
 }
 
-export function makeCommentaryState(): CommentaryState {
+/**
+ * @param joinedAtLap the lap the ticker first sees. Non-zero means the race was
+ *   already underway when this ticker was mounted -- a scenario takeover, where
+ *   "Lights out and away we go" would be announcing a start that happened
+ *   fourteen laps ago. Expressed as the join lap rather than a `isScenario`
+ *   flag so the mapper stays ignorant of game modes: any future mid-race entry
+ *   gets the right behaviour for free.
+ */
+export function makeCommentaryState(joinedAtLap = 0): CommentaryState {
   return {
     prevOvertakeCount: 0,
     prevIncidentCount: 0,
@@ -32,7 +40,7 @@ export function makeCommentaryState(): CommentaryState {
     prevRetired: {},
     prevWeatherState: 'DRY',
     prevLap: -1,
-    started: false,
+    started: joinedAtLap > 0,
   }
 }
 

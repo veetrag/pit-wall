@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
+import { useCoachStore } from '@state/coachStore'
+import { useCoachingActive } from '@hooks/useCoachingActive'
 import type { Compound } from '@engine/types'
 import type { ProjectionResult } from '@engine/projection'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
@@ -139,6 +141,12 @@ function PitPanelDrawer() {
   const { pitNow, closePitPanel, projectionResult, updateProjection } = useRaceStore()
   const raceState = useRaceStore(s => s.raceState)
   const { impact } = useHaptics()
+  const coaching = useCoachingActive()
+  const request = useCoachStore(s => s.request)
+
+  useEffect(() => {
+    if (coaching && projectionResult) request('projection')
+  }, [coaching, projectionResult]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show wet compounds when conditions are damp/wet now or within next 2 laps
   const lap = raceState?.lap ?? 0
