@@ -1,20 +1,23 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useCareerStore, erodeTiers, escalateRivals } from '@state/careerStore'
+import { careerSnapshotFrom } from '@state/careerPersistence'
 import { loadGameData } from '@data/validators'
 
 const EMPTY = {
   seasonNumber: 1, titles: 0, wins: 0, seasonWins: 0, podiums: 0, poles: 0,
-  racesStarted: 0, bestFinish: null, seasonHistory: [], hasCareer: false,
+  racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [], hasCareer: false,
 }
+
+const RACE_DEFAULTS = { round: 0, grid: 5, stops: 1, overtakes: 0, wet: false }
 
 describe('careerStore', () => {
   beforeEach(() => { useCareerStore.setState(EMPTY) })
 
   it('RECORDS A RACE INTO THE CAREER TOTALS', () => {
     const s = () => useCareerStore.getState()
-    s().recordRace({ position: 1, retired: false, pole: true })
-    s().recordRace({ position: 3, retired: false, pole: false })
-    s().recordRace({ position: 8, retired: true, pole: false })
+    s().recordRace({ position: 1, retired: false, pole: true, ...RACE_DEFAULTS })
+    s().recordRace({ position: 3, retired: false, pole: false, ...RACE_DEFAULTS })
+    s().recordRace({ position: 8, retired: true, pole: false, ...RACE_DEFAULTS })
     expect(s().racesStarted).toBe(3)
     expect(s().wins).toBe(1)
     expect(s().podiums, 'a win is also a podium').toBe(2)
@@ -29,7 +32,7 @@ describe('careerStore', () => {
      * because seventeen others retired behind it did not stand on a podium.
      */
     const s = () => useCareerStore.getState()
-    s().recordRace({ position: 1, retired: true, pole: false })
+    s().recordRace({ position: 1, retired: true, pole: false, ...RACE_DEFAULTS })
     expect(s().wins).toBe(0)
     expect(s().podiums).toBe(0)
     expect(s().racesStarted, 'it was still started').toBe(1)
@@ -53,10 +56,10 @@ describe('careerStore', () => {
      * of what that season was actually worth.
      */
     const s = () => useCareerStore.getState()
-    s().recordRace({ position: 1, retired: false, pole: false })
-    s().recordRace({ position: 1, retired: false, pole: false })
+    s().recordRace({ position: 1, retired: false, pole: false, ...RACE_DEFAULTS })
+    s().recordRace({ position: 1, retired: false, pole: false, ...RACE_DEFAULTS })
     s().rollOverSeason({ seasonNumber: 1, teamId: 'apex', driverId: 'd_voss', championshipPosition: 1, points: 300, wins: 0 }, {})
-    s().recordRace({ position: 1, retired: false, pole: false })
+    s().recordRace({ position: 1, retired: false, pole: false, ...RACE_DEFAULTS })
     s().rollOverSeason({ seasonNumber: 2, teamId: 'apex', driverId: 'd_voss', championshipPosition: 1, points: 280, wins: 0 }, {})
 
     expect(s().seasonHistory[0]!.wins, 'season 1 had two wins').toBe(2)
@@ -106,10 +109,61 @@ describe('careerStore', () => {
     s().beginCareer()
     expect(s().hasCareer).toBe(true)
     expect(s().seasonNumber).toBe(1)
-    s().recordRace({ position: 1, retired: false, pole: true })
+    s().recordRace({ position: 1, retired: false, pole: true, ...RACE_DEFAULTS })
     s().endCareer()
     expect(s().hasCareer).toBe(false)
     expect(s().wins).toBe(0)
     expect(s().seasonHistory).toEqual([])
+  })
+})
+
+describe('recordRace logs the race', () => {
+  function race(over: Partial<Parameters<ReturnType<typeof useCareerStore.getState>['recordRace']>[0]> = {}) {
+    return { position: 5, retired: false, pole: false, round: 0, grid: 5, stops: 1, overtakes: 0, wet: false, ...over }
+  }
+
+  beforeEach(() => { useCareerStore.getState().beginCareer() })
+
+  it('APPENDS ONE FACT PER RACE, IN ORDER', () => {
+    useCareerStore.getState().recordRace(race({ round: 0, grid: 3 }))
+    useCareerStore.getState().recordRace(race({ round: 1, grid: 7 }))
+    const log = useCareerStore.getState().raceLog
+    expect(log).toHaveLength(2)
+    expect(log.map(f => f.grid)).toEqual([3, 7])
+    expect(log[0]?.season).toBe(1)
+  })
+
+  it('records the FINISHING position as finish', () => {
+    useCareerStore.getState().recordRace(race({ position: 4 }))
+    expect(useCareerStore.getState().raceLog[0]?.finish).toBe(4)
+  })
+
+  it('reports badges earned by THIS race in justEarned', () => {
+    useCareerStore.getState().recordRace(race({ position: 1 }))
+    expect(useCareerStore.getState().justEarned).toContain('winner')
+  })
+
+  it('DOES NOT REPORT A BADGE TWICE', () => {
+    // The toast fires off justEarned. Without the set difference, a second
+    // win would re-announce "Winner".
+    useCareerStore.getState().recordRace(race({ position: 1 }))
+    useCareerStore.getState().recordRace(race({ position: 1, round: 1 }))
+    expect(useCareerStore.getState().justEarned).not.toContain('winner')
+  })
+
+  it('justEarned is cleared by beginCareer and resumeCareer', () => {
+    useCareerStore.getState().recordRace(race({ position: 1 }))
+    expect(useCareerStore.getState().justEarned.length).toBeGreaterThan(0)
+    useCareerStore.getState().beginCareer()
+    expect(useCareerStore.getState().justEarned).toEqual([])
+  })
+
+  it('justEarned is NOT persisted', () => {
+    // It is a UI signal, not career history. If it round-tripped, reopening
+    // the app would re-toast a badge earned weeks ago.
+    useCareerStore.getState().recordRace(race({ position: 1 }))
+    const snap = careerSnapshotFrom(useCareerStore.getState())
+    expect(snap).not.toBeNull()
+    expect(Object.keys(snap!)).not.toContain('justEarned')
   })
 })

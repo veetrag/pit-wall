@@ -379,10 +379,22 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     const player = results.find(r => r.driverId === get().playerDriverId)
     if (player) {
       const grid = get().qualifyingResult
+      const playerId = get().playerDriverId
+      // 1-based grid slot. Without a qualifying result the field starts in
+      // championship order, so the player's standings slot is the honest
+      // fallback -- never 0, which would read as "started ahead of pole".
+      const gridSlot = grid && playerId
+        ? grid.order.indexOf(playerId) + 1
+        : player.position
       useCareerStore.getState().recordRace({
         position: player.position,
         retired: player.retired,
-        pole: grid ? grid.order[0] === get().playerDriverId : false,
+        pole: grid ? grid.order[0] === playerId : false,
+        round: get().raceIndex,
+        grid: gridSlot > 0 ? gridSlot : player.position,
+        stops: events.pitsDone,
+        overtakes: events.overtakesGained,
+        wet: events.hadRain,
       })
     }
   },

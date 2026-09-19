@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { loadGameData } from '@data/validators'
-import type { RaceFact } from './badges'
+import { newlyEarned, type RaceFact } from './badges'
 
 /**
  * The career: the layer above a season that owns what survives one.
@@ -92,7 +92,19 @@ export function escalateRivals(
 
 interface CareerStore extends CareerRecord {
   hasCareer: boolean
-  recordRace: (r: { position: number; retired: boolean; pole: boolean }) => void
+  /**
+   * Badges earned by the race just recorded.
+   *
+   * Deliberately on the STORE and not on CareerRecord: careerSnapshotFrom
+   * takes a CareerRecord, so keeping this off the record makes "it is never
+   * saved" a type-level guarantee rather than a convention. It is a UI
+   * signal -- if it persisted, reopening the app would re-toast an old badge.
+   */
+  justEarned: string[]
+  recordRace: (r: {
+    position: number; retired: boolean; pole: boolean
+    round: number; grid: number; stops: number; overtakes: number; wet: boolean
+  }) => void
   /**
    * Ends a season. Takes the player's current tiers and returns the eroded
    * ones -- it never reads or writes seasonStore, which is what keeps this
@@ -109,8 +121,9 @@ interface CareerStore extends CareerRecord {
 export const useCareerStore = create<CareerStore>((set, get) => ({
   ...FRESH,
   hasCareer: false,
+  justEarned: [],
 
-  recordRace({ position, retired, pole }) {
+  recordRace({ position, retired, pole, round, grid, stops, overtakes, wet }) {
     const s = get()
     // A DNF is never a win or a podium, matching recordRaceResult, which
     // already scores a retirement as 0 points regardless of classified
@@ -118,16 +131,30 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     // stand on a podium.
     const scored = !retired
     const won = scored && position === 1
-    set({
-      racesStarted: s.racesStarted + 1,
+
+    const fact: RaceFact = {
+      season: s.seasonNumber, round, grid,
+      finish: position, retired, pole, stops, overtakes, wet,
+    }
+
+    // Built as a whole record so the badge difference below compares two
+    // complete states rather than a patch against a partial one.
+    const next: CareerRecord = {
+      seasonNumber: s.seasonNumber,
+      titles: s.titles,
       wins: s.wins + (won ? 1 : 0),
       seasonWins: s.seasonWins + (won ? 1 : 0),
       podiums: s.podiums + (scored && position <= 3 ? 1 : 0),
       poles: s.poles + (pole ? 1 : 0),
+      racesStarted: s.racesStarted + 1,
       bestFinish: scored
         ? (s.bestFinish === null ? position : Math.min(s.bestFinish, position))
         : s.bestFinish,
-    })
+      seasonHistory: s.seasonHistory,
+      raceLog: [...s.raceLog, fact],
+    }
+
+    set({ ...next, justEarned: newlyEarned(s, next) })
   },
 
   rollOverSeason(summary, tiers) {
@@ -144,7 +171,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     return { erodedTiers: erodeTiers(tiers, tierDecayPerSeason) }
   },
 
-  beginCareer() { set({ ...FRESH, hasCareer: true }) },
-  endCareer() { set({ ...FRESH, hasCareer: false }) },
-  resumeCareer(snap) { set({ ...snap, hasCareer: true }) },
+  beginCareer() { set({ ...FRESH, hasCareer: true, justEarned: [] }) },
+  endCareer() { set({ ...FRESH, hasCareer: false, justEarned: [] }) },
+  resumeCareer(snap) { set({ ...snap, hasCareer: true, justEarned: [] }) },
 }))

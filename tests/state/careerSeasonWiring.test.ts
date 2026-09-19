@@ -98,3 +98,65 @@ describe('career wiring', () => {
     expect(useSeasonStore.getState().phase).toBe('menu')
   })
 })
+
+describe('the race log records what actually happened', () => {
+  /*
+   * Without these the log could be plausibly populated but WRONG -- and every
+   * grid-based badge (comeback, damage_limitation) would be wrong with it,
+   * silently, because nothing else in the game reads grid position once the
+   * race has started.
+   */
+  function order(playerSlot: number): string[] {
+    // 20 ids with the player at the given 1-based slot.
+    const ids = Array.from({ length: 20 }, (_, i) => `d_filler${i}`)
+    ids[playerSlot - 1] = 'd_voss'
+    return ids
+  }
+
+  beforeEach(() => {
+    useCareerStore.getState().beginCareer()
+    useSeasonStore.setState({
+      phase: 'racing', playerDriverId: 'd_voss', raceIndex: 3,
+      standings: [], lastRaceResults: null, qualifyingResult: null,
+    })
+  })
+
+  it('STORES THE GRID SLOT, NOT THE FINISHING POSITION', () => {
+    useSeasonStore.setState({ qualifyingResult: { laps: [], order: order(12) } })
+    useSeasonStore.getState().recordRaceResult(
+      [{ driverId: 'd_voss', position: 4 }],
+      { overtakesGained: 8, pitsDone: 2, hadRain: true },
+    )
+    const fact = useCareerStore.getState().raceLog[0]
+    expect(fact?.grid, 'grid must come from qualifyingResult.order').toBe(12)
+    expect(fact?.finish).toBe(4)
+    expect(fact?.round, 'round is seasonStore.raceIndex').toBe(3)
+    expect(fact?.overtakes).toBe(8)
+    expect(fact?.stops).toBe(2)
+    expect(fact?.wet).toBe(true)
+  })
+
+  it('a pole start is recorded as grid 1 AND pole true', () => {
+    useSeasonStore.setState({ qualifyingResult: { laps: [], order: order(1) } })
+    useSeasonStore.getState().recordRaceResult(
+      [{ driverId: 'd_voss', position: 1 }],
+      { overtakesGained: 0, pitsDone: 1, hadRain: false },
+    )
+    const fact = useCareerStore.getState().raceLog[0]
+    expect(fact?.grid).toBe(1)
+    expect(fact?.pole).toBe(true)
+  })
+
+  it('WITHOUT QUALIFYING, grid is never 0', () => {
+    // indexOf returns -1 for a driver not in the order, and -1 + 1 = 0 would
+    // read as "started ahead of pole" -- which would earn nothing, but would
+    // also make damage_limitation impossible to reason about. The fallback is
+    // the finishing position.
+    useSeasonStore.setState({ qualifyingResult: null })
+    useSeasonStore.getState().recordRaceResult(
+      [{ driverId: 'd_voss', position: 6 }],
+      { overtakesGained: 0, pitsDone: 1, hadRain: false },
+    )
+    expect(useCareerStore.getState().raceLog[0]?.grid).toBe(6)
+  })
+})

@@ -17,7 +17,7 @@ describe('career persistence', () => {
 
   it('ROUND-TRIPS A CAREER', () => {
     useCareerStore.getState().beginCareer()
-    useCareerStore.getState().recordRace({ position: 1, retired: false, pole: true })
+    useCareerStore.getState().recordRace({ position: 1, retired: false, pole: true, round: 0, grid: 1, stops: 1, overtakes: 0, wet: false })
     const snap = careerSnapshotFrom(useCareerStore.getState())!
     expect(snap.v).toBe(CAREER_SAVE_VERSION)
     const parsed = CareerSnapshotSchema.safeParse(JSON.parse(JSON.stringify(snap)))
@@ -41,7 +41,7 @@ describe('career persistence', () => {
   it('THE CAREER SURVIVES AN ABANDONED SEASON', () => {
     // The whole reason the two saves are separate.
     useCareerStore.getState().beginCareer()
-    useCareerStore.getState().recordRace({ position: 2, retired: false, pole: false })
+    useCareerStore.getState().recordRace({ position: 2, retired: false, pole: false, round: 0, grid: 2, stops: 1, overtakes: 0, wet: false })
     // Abandoning a season clears the SEASON save; the career snapshot must
     // still be produced from an untouched career store.
     const snap = careerSnapshotFrom(useCareerStore.getState())
