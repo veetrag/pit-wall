@@ -11,7 +11,11 @@
      sits on (--bg-elevated, 4.53:1) while staying visibly dimmer than
      --text-mid (1.45:1 apart) so the hi/mid/dim hierarchy still reads. */
   --text-dim:     #7E89A8;
-  --accent:       #00E5D0;
+  /* Channels first, colour derived -- same shape as --caution-rgb below, and
+     for the same reason: a translucent wash of this token needs something to
+     reference, and color-mix() is unavailable at minSdkVersion 24. */
+  --accent-rgb:   0, 229, 208;
+  --accent:       rgb(var(--accent-rgb));
   --accent-warm:  #FF4D5E;
   /* Race control caution. Deliberately NOT --tyre-medium (#F2C94C): that is a
      compound colour, and reusing it would tie race-control state to tyre
@@ -37,7 +41,8 @@
      same colour on the timing tower and on the scenario picker. */
   --tyre-inter:   #39B54A;
   --tyre-wet:     #4DA6FF;
-  --positive:     #3DDC84;
+  --positive-rgb: 61, 220, 132;
+  --positive:     rgb(var(--positive-rgb));
   --negative:     #FF6B6B;
 
   --font-display: 'Rajdhani', sans-serif;
