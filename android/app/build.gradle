@@ -24,11 +24,15 @@ android {
         // 2 is the AAB currently in review at Google; Play rejects a duplicate
         // versionCode, so the next binary release must be 3.
         versionCode 3
-        // 1.1, not 1.0.1: the next release carries the whole race-incidents
-        // feature (driver errors, crashes, safety cars, and the five UI
-        // surfaces), not just the icon and minify fixes. Change if you'd
-        // rather ship those separately.
-        versionName "1.1"
+        // MUST match package.json's version -- pinned by
+        // tests/data/appVersion.test.ts, because gradle cannot import JSON and
+        // nothing else in the toolchain reads Android config.
+        //
+        // 1.2, not 2.0: since 1.1 (race incidents, currently the versionCode 2
+        // AAB at Google) this adds qualifying, the multi-season career, badges
+        // and the font fix. That is a substantial content release, not a change
+        // to what the game IS -- 2.0 is worth keeping for that.
+        versionName "1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
