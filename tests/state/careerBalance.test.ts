@@ -49,3 +49,30 @@ describe('an endless career does not flatten out', () => {
     }
   })
 })
+
+describe('unspent development points survive a season boundary', () => {
+  it('BANK RATHER THAN EXPIRE, ACROSS SEASONS AS WELL AS WITHIN ONE', async () => {
+    /*
+     * seasonStore states the principle at toRaceSetup: "unspent points bank
+     * rather than expire, so it reads as a decision point and not a toll
+     * booth." A season boundary is the one place that was not honouring it.
+     *
+     * It is not cosmetic. Simulated over 10 seasons of optimal buying,
+     * discarding them plateaus the player at 11 of 15 tiers from season 3 and
+     * then wastes 21 points every season forever -- erosion keeps eating tiers
+     * they can never quite afford to replace, so Development stops being a
+     * decision. Banking climbs 8 -> 10 -> 12 -> 13 and is still rising at
+     * season 10, with erosion still preventing a max-out.
+     */
+    const { useSeasonStore } = await import('@state/seasonStore')
+    const { useCareerStore } = await import('@state/careerStore')
+    useCareerStore.getState().beginCareer()
+    useSeasonStore.setState({
+      phase: 'championship', playerDriverId: 'd_voss', selectedTeamId: 'apex',
+      raceIndex: 11, standings: [{ driverId: 'd_voss', points: 300 }],
+      devPoints: 21, purchasedTiers: { power: 3 }, rivalDevelopment: {}, attemptNonce: 0,
+    })
+    useSeasonStore.getState().startNextSeason()
+    expect(useSeasonStore.getState().devPoints, 'unspent points must survive the winter').toBe(21)
+  })
+})

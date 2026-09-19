@@ -426,7 +426,19 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       playerStrategy: null,
       qualifyingResult: null,
       attemptNonce: 0,
-      devPoints: 0,
+      // devPoints are NOT reset. Unspent points bank rather than expire --
+      // the principle already stated at toRaceSetup above, applied across the
+      // season boundary as well as within one.
+      //
+      // Discarding them made the career go dead flat. Simulated over 10
+      // seasons with optimal buying, a player who loses their unspent points
+      // plateaus at 11 of 15 tiers from season 3 and then burns 21 points
+      // every season forever, because erosion keeps eating tiers they can
+      // never quite afford to replace. The Development screen becomes "rebuy
+      // what you lost, waste the rest" -- no progression and no decision,
+      // which is the outcome erosion was introduced to prevent, arriving by a
+      // different route. Banking them instead climbs 8 -> 10 -> 12 -> 13 and
+      // is still rising at season 10, while erosion still stops a max-out.
       purchasedTiers: erodedTiers,
       rivalDevelopment: escalateRivals(s.rivalDevelopment, standing === 0),
       // playerDriverId and selectedTeamId are deliberately NOT reset.

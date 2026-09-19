@@ -16,9 +16,13 @@ const RACES = 12
 // season, and wins the title whenever their total tier count leads.
 let tiers: Record<string, number> = Object.fromEntries(attributes.map(a => [a.id, 0]))
 let rivals: Record<string, number> = {}
+// Unspent points BANK across the winter, matching startNextSeason. Modelling
+// them as discarded understates the career badly: it plateaus at 11/15 from
+// season 3 and burns 21 points a season forever.
+let banked = 0
 
 for (let season = 1; season <= SEASONS; season++) {
-  let budget = income.perRace * RACES
+  let budget = income.perRace * RACES + banked
   // Buy greedily, cheapest tier first.
   for (;;) {
     const affordable = attributes
@@ -32,6 +36,7 @@ for (let season = 1; season <= SEASONS; season++) {
     budget -= pick.cost
     tiers[pick.id] = pick.owned + 1
   }
+  banked = budget
   const total = Object.values(tiers).reduce((a, b) => a + b, 0)
   const maxTotal = attributes.length * tierCosts.length
   const rivalTotal = Object.values(rivals).reduce((a, b) => a + b, 0)

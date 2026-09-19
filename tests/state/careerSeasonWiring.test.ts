@@ -72,7 +72,11 @@ describe('career wiring', () => {
     expect(s.purchasedTiers.power).toBe(3 - tierDecayPerSeason)
     expect(s.raceIndex, 'a new season starts at round 1').toBe(0)
     expect(s.standings, 'standings do not carry').toEqual([])
-    expect(s.devPoints, 'unspent points do not carry').toBe(0)
+    // Unspent points DO carry. This assertion originally said they did not,
+    // which contradicted the principle already stated at seasonStore's
+    // toRaceSetup ("unspent points bank rather than expire") and made the
+    // career plateau dead flat -- see the banking test in careerBalance.
+    expect(s.devPoints, 'unspent points bank across the winter').toBe(40)
     expect(useCareerStore.getState().seasonNumber).toBe(2)
     expect(s.phase).toBe('development')
   })
