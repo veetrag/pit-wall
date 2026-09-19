@@ -13,12 +13,28 @@ export function generateWeatherTimeline(
   circuit: CircuitSpec,
   tuning: TuningConstants,
   rng: RNG,
+  /** Forces lap 1 to DRY. Later laps evolve normally -- see RaceConfig.dryStart. */
+  dryStart = false,
 ): WeatherState[] {
   const { rainProbability = 0.1, weatherBias = 'stable' } = circuit
   const tl = tuning.weather.timeline
   const bias = tl.intensityBias[weatherBias] ?? 0.2
 
+  /*
+   * The rolls are consumed EXACTLY as before and the result is overridden
+   * afterwards, deliberately.
+   *
+   * The obvious refactor -- hoisting both rolls into consts and testing
+   * dryStart in the condition -- consumes two rolls unconditionally, where
+   * this expression short-circuits and consumes the second only when the
+   * first says rain. That shifts the weather stream for every race whose
+   * opening roll was dry, which broke four scenario tests, driverError and
+   * the 8000-race strategy validation. The RNG stream is the contract.
+   */
   let state: WeatherState = rng() < rainProbability ? (rng() < 0.5 ? 'WET' : 'DAMP') : 'DRY'
+  // Constrains the OPENING conditions only; the timeline below evolves from
+  // here exactly as it would have, so rain can still arrive later.
+  if (dryStart) state = 'DRY'
   const timeline: WeatherState[] = [state]
   let lapsSinceChange = 0
 

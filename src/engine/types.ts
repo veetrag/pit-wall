@@ -357,6 +357,18 @@ export interface RaceConfig {
   playerDriverId: string
   seed: number
   weatherSeed?: number
+  /**
+   * Forces lap 1 to start DRY. The timeline still evolves normally afterwards,
+   * so rain can arrive later -- this constrains the OPENING conditions only.
+   *
+   * Set by the season for round 1. A new player's first ever race was wet:
+   * currentSeed() at raceIndex 0 is 42, and at seed 42 the opening roll lands
+   * wet at almost every circuit on the calendar (measured: every one except
+   * sol_desert, including circuits with rainProbability as low as 0.15). So it
+   * could not be fixed by reordering the calendar, and changing the seed base
+   * would have shifted every race in the game.
+   */
+  dryStart?: boolean
   // Starting grid, P1 first, as driverIds. ABSENT means "use drivers.json
   // order", which is exactly what the engine did before qualifying existed --
   // byteIdentity, the Monte-Carlo bands and all three scenarios depend on that

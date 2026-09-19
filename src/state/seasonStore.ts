@@ -329,6 +329,10 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     const config = buildRaceConfig(
       s.currentSeed(), s.playerDriverId, s.currentCircuitId(), difficulty,
       s.playerStrategy, { purchasedTiers: s.purchasedTiers, rivalDevelopment: s.rivalDevelopment },
+      // No grid order: qualifying is what PRODUCES it.
+      undefined,
+      // Round 1 opens dry, and qualifying must agree with the race it precedes.
+      s.raceIndex === 0,
     )
     set({ qualifyingResult: runQualifying(config, qualifyingRng(config), call) })
   },

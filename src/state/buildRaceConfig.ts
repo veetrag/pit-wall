@@ -29,6 +29,10 @@ export function buildRaceConfig(
   // caller that wants the engine's drivers.json default -- see the comment on
   // RaceConfig.gridOrder for why absence must stay meaningful.
   gridOrder?: string[],
+  // Round 1 of a season opens dry -- see RaceConfig.dryStart. Threaded rather
+  // than derived because this module is a pure function of its arguments and
+  // deliberately does not read seasonStore.
+  dryStart?: boolean,
 ): RaceConfig {
   const data = loadGameData()
   const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
@@ -101,6 +105,7 @@ export function buildRaceConfig(
     coverReactionScale: profile.coverReactionScale,
     paceModeAggression: profile.aiPaceModeAggression,
     gridOrder,
+    dryStart,
   }
 }
 

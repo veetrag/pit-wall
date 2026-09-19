@@ -34,6 +34,7 @@ export function initRace(config: RaceConfig): RaceState {
     config.circuit,
     config.tuning,
     weatherRng,
+    config.dryStart,
   )
   const weatherState: WeatherState = weatherTimeline[0] ?? 'DRY'
   const gridCompound = gridConditionsCompound(weatherState)

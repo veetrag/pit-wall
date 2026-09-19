@@ -87,7 +87,10 @@ export function runQualifying(
   // so a wet race is preceded by a wet qualifying.
   const weatherRng = createRng(config.weatherSeed ?? config.seed + 999999)
   const timeline = generateWeatherTimeline(
-    config.circuit.laps, config.circuit, config.tuning, weatherRng,
+    // config.dryStart is passed here too: qualifying reads timeline[0], which
+    // is the exact value the flag constrains. Omitting it would give a WET
+    // qualifying for a race that then starts DRY.
+    config.circuit.laps, config.circuit, config.tuning, weatherRng, config.dryStart,
   )
   const weather: WeatherState = timeline[0] ?? 'DRY'
 
