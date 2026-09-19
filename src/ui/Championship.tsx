@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
+import { useCareerStore, erodeTiers } from '@state/careerStore'
+import { useSettingsStore } from '@state/settingsStore'
 import { useUiTap } from '@hooks/useUiTap'
+import { loadGameData } from '@data/validators'
 import driversData from '@data/drivers.json'
 
 type DriverEntry = { id: string; name: string; teamId: string }
@@ -11,8 +15,17 @@ function driverName(id: string): string {
 }
 
 export function Championship() {
-  const { standings, playerDriverId, playAgain } = useSeasonStore()
+  const { standings, playerDriverId, purchasedTiers, startNextSeason, endCareer } = useSeasonStore()
+  const seasonNumber = useCareerStore(s => s.seasonNumber)
+  const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const uiTap = useUiTap()
+  const [confirmingEnd, setConfirmingEnd] = useState(false)
+
+  const { tierCosts, attributes } = loadGameData().upgrades
+  const { tierDecayPerSeason } = loadGameData().tuning.career
+  const maxTiers = attributes.length * tierCosts.length
+  const erodedTiers = erodeTiers(purchasedTiers, tierDecayPerSeason)
+  const keptTiers = Object.values(erodedTiers).reduce((sum, n) => sum + n, 0)
 
   const winner = standings[0]
   const playerStanding = standings.find(s => s.driverId === playerDriverId)
@@ -132,20 +145,70 @@ export function Championship() {
         ))}
       </div>
 
-      {/* Play again */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
+      {/* Season boundary */}
+      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); playAgain() }}
+          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+          onClick={() => { uiTap(); startNextSeason() }}
           style={{
-            width: '100%', border: 'none', borderRadius: 10, padding: '16px',
+            width: '100%', border: 'none', borderRadius: 10, padding: '14px 16px',
             background: 'var(--accent)', color: 'var(--bg-deep)',
-            fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700,
-            letterSpacing: '0.08em', cursor: 'pointer',
+            fontFamily: 'var(--font-display)', textAlign: 'left', cursor: 'pointer',
           }}
         >
-          PLAY AGAIN
+          <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '0.08em' }}>
+            NEXT SEASON
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.02em', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+            Season {seasonNumber + 1} · You keep {keptTiers} of {maxTiers} upgrade tiers · Rivals developed over the winter
+          </div>
         </motion.button>
+
+        {!confirmingEnd ? (
+          <motion.button
+            whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+            onClick={() => { uiTap(); setConfirmingEnd(true) }}
+            style={{
+              width: '100%', borderRadius: 10, padding: '12px 16px',
+              background: 'transparent', border: '1px solid var(--line-hair)', color: 'var(--text-mid)',
+              fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600,
+              letterSpacing: '0.06em', cursor: 'pointer',
+            }}
+          >
+            END CAREER
+          </motion.button>
+        ) : (
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ display: 'flex', gap: 8 }}
+          >
+            <motion.button
+              whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+              onClick={() => { uiTap(); setConfirmingEnd(false) }}
+              style={{
+                flex: 1, borderRadius: 10, padding: '12px 16px',
+                background: 'transparent', border: '1px solid var(--line-hair)', color: 'var(--text-mid)',
+                fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600,
+                letterSpacing: '0.04em', cursor: 'pointer',
+              }}
+            >
+              CANCEL
+            </motion.button>
+            <motion.button
+              whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+              onClick={() => { uiTap(); endCareer() }}
+              style={{
+                flex: 2, borderRadius: 10, padding: '12px 16px',
+                background: 'transparent', border: '1px solid var(--accent-warm)', color: 'var(--accent-warm)',
+                fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+                letterSpacing: '0.04em', cursor: 'pointer',
+              }}
+            >
+              CONFIRM — END CAREER
+            </motion.button>
+          </motion.div>
+        )}
       </div>
     </motion.div>
   )

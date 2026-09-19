@@ -3,6 +3,7 @@ import './styles/tokens.css'
 import { AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from './state/seasonStore'
 import { startSeasonAutosave } from './state/seasonPersistence'
+import { startCareerAutosave } from './state/careerPersistence'
 import { useSettingsStore, startReducedMotionWatch } from './state/settingsStore'
 import { MainMenu } from './ui/MainMenu'
 import { GridStats } from './ui/GridStats'
@@ -15,6 +16,7 @@ import { HowToPlay } from './ui/HowToPlay'
 import { RaceHUD } from './ui/RaceHUD'
 import { RaceResult } from './ui/RaceResult'
 import { Championship } from './ui/Championship'
+import { CareerRecord } from './ui/CareerRecord'
 import { RaceWatcher } from './ui/RaceWatcher'
 import { SettingsScreen } from './ui/SettingsPanel'
 import { ScenarioSelect } from './ui/ScenarioSelect'
@@ -39,6 +41,7 @@ export default function App() {
   // can advance a season while forgetting to persist it -- which is precisely
   // how the previous attempt at saving ended up dead. See seasonPersistence.ts.
   useEffect(() => startSeasonAutosave(), [])
+  useEffect(() => startCareerAutosave(), [])
 
   // Follows the OS accessibility preference while the app is open. It only
   // applies while the player has made no explicit choice of their own -- see
@@ -62,6 +65,7 @@ export default function App() {
           {phase === 'racing' && <RaceHUD key="race" />}
           {phase === 'result' && <RaceResult key="result" />}
           {phase === 'championship' && <Championship key="championship" />}
+          {phase === 'career' && <CareerRecord key="career" />}
           {phase === 'scenario_select' && <ScenarioSelect key="scenario_select" />}
           {phase === 'scenario_racing' && <RaceHUD key="scenario_race" />}
           {phase === 'scenario_result' && <ScenarioResult key="scenario_result" />}

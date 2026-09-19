@@ -80,9 +80,9 @@ describe('seasonStore', () => {
     expect(useSeasonStore.getState().phase).toBe('development')
   })
 
-  it('playAgain resets to menu', () => {
+  it('endCareer resets to menu', () => {
     useSeasonStore.setState({ phase: 'championship', raceIndex: 7, standings: [{ driverId: 'd_ver', points: 100 }], playerDriverId: 'd_ver', lastRaceResults: null })
-    useSeasonStore.getState().playAgain()
+    useSeasonStore.getState().endCareer()
     expect(useSeasonStore.getState().phase).toBe('menu')
     expect(useSeasonStore.getState().standings).toHaveLength(0)
   })

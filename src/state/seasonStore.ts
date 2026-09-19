@@ -4,8 +4,9 @@ import { buildRaceConfig } from './buildRaceConfig'
 import { runQualifying, qualifyingRng, type Compound, type PitStop, type QualifyingCall, type QualifyingResult } from '@engine/index'
 import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
+import { useCareerStore, escalateRivals } from './careerStore'
 
-export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result'
+export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result' | 'career'
 
 // Type-only on purpose: seasonPersistence imports THIS module at runtime to
 // subscribe to the store, so a value import here would close a cycle.
@@ -136,6 +137,8 @@ interface SeasonStore {
   setCircuit: (id: string) => void
   viewGrid: () => void
   exitGrid: () => void
+  viewCareer: () => void
+  exitCareer: () => void
   viewHowToPlay: () => void
   exitHowToPlay: () => void
   viewSettings: () => void
@@ -158,8 +161,46 @@ interface SeasonStore {
   startRaceFromQualifying: () => void
   recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | 'crash' | null }[], events: RaceEventSummary) => void
   nextRace: () => void
-  playAgain: () => void
+  startNextSeason: () => void
+  endCareer: () => void
   resumeSeason: (snap: SeasonSnapshot) => void
+}
+
+/**
+ * The race seed, as a pure function of the three things that vary.
+ *
+ * Extracted from currentSeed so the collision guarantee can be exercised over
+ * a large domain without driving it through the store: asserting it via
+ * setState took 360,000 store notifications and 37 seconds, which is how a
+ * genuine guarantee turns into a test people start skipping.
+ *
+ * (seasonNumber - 1), NOT seasonNumber: season 1 must add exactly zero so its
+ * seeds are byte-identical to the pre-career game. tests/engine/byteIdentity,
+ * the Monte-Carlo bands in MODEL_SPEC.md 10.1 and all three scenarios in
+ * src/data/scenarios.json depend on that.
+ *
+ * Collisions are prevented MODULARLY, not by magnitude. attemptNonce is
+ * unbounded -- retryRace never caps it -- so "the stride is bigger than the
+ * other terms" is false: thirteen retries already exceed it. The real
+ * argument: seedStride and 1000 are both multiples of 1000 and
+ * gcd(7919, 1000) = 1, so a collision needs the nonce difference to be a
+ * multiple of 1000, which then needs |dRace| >= 100 -- impossible across a
+ * 12-round season.
+ */
+// Cached deliberately. loadGameData() re-parses every zod schema on every
+// call -- it does not memoise -- and seedFor is called in tight loops by the
+// collision test. Reading it per call cost 360,000 full schema parses and blew
+// a 5s test timeout. The stride is a build-time constant in tuning.json, so
+// reading it once is safe; a test that needs a different stride should call
+// seedFor's arithmetic directly rather than mutating tuning underneath it.
+let cachedStride: number | null = null
+function seedStride(): number {
+  if (cachedStride === null) cachedStride = loadGameData().tuning.career.seedStride
+  return cachedStride
+}
+
+export function seedFor(seasonNumber: number, raceIndex: number, attemptNonce: number): number {
+  return (seasonNumber - 1) * seedStride() + raceIndex * 1000 + 42 + attemptNonce * 7919
 }
 
 export const useSeasonStore = create<SeasonStore>((set, get) => ({
@@ -202,7 +243,9 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   // 7919 is prime — keeps each attempt's seed stream well-separated from the
   // next round's base seed (raceIndex*1000+42) and from other attempts.
   currentSeed() {
-    return get().raceIndex * 1000 + 42 + get().attemptNonce * 7919
+    const { raceIndex, attemptNonce } = get()
+    const { seasonNumber } = useCareerStore.getState()
+    return seedFor(seasonNumber, raceIndex, attemptNonce)
   },
 
   retryRace() {
@@ -218,6 +261,8 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   viewGrid() { set({ phase: 'grid' }) },
   exitGrid() { set({ phase: 'menu' }) },
+  viewCareer() { set({ phase: 'career' }) },
+  exitCareer() { set({ phase: 'menu' }) },
   viewHowToPlay() { set({ phase: 'how_to_play' }) },
   exitHowToPlay() { set({ phase: 'menu' }) },
   viewSettings() { set({ phase: 'settings' }) },
@@ -234,6 +279,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   backToDriverSelect() { set({ phase: 'driver_select' }) },
 
   startNewSeason() {
+    useCareerStore.getState().beginCareer()
     set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {} })
   },
 
@@ -327,6 +373,18 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       devPoints: get().devPoints + loadGameData().upgrades.income.perRace,
       rivalDevelopment: accumulateRivalDevelopment(get().rivalDevelopment),
     })
+
+    // The career's running totals. Read from the same results the standings
+    // use, so the two can never disagree.
+    const player = results.find(r => r.driverId === get().playerDriverId)
+    if (player) {
+      const grid = get().qualifyingResult
+      useCareerStore.getState().recordRace({
+        position: player.position,
+        retired: player.retired,
+        pole: grid ? grid.order[0] === get().playerDriverId : false,
+      })
+    }
   },
 
   nextRace() {
@@ -340,8 +398,62 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     }
   },
 
-  playAgain() {
-    set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {} })
+  /**
+   * A new season inside the SAME career. Keeps the seat (the player is not on
+   * the driver market) and the eroded upgrades; resets everything season-scoped.
+   */
+  startNextSeason() {
+    const s = get()
+    const career = useCareerStore.getState()
+    const standing = s.standings.findIndex(x => x.driverId === s.playerDriverId)
+    const { erodedTiers } = career.rollOverSeason({
+      seasonNumber: career.seasonNumber,
+      teamId: s.selectedTeamId ?? '',
+      driverId: s.playerDriverId ?? '',
+      championshipPosition: standing >= 0 ? standing + 1 : s.standings.length,
+      points: s.standings.find(x => x.driverId === s.playerDriverId)?.points ?? 0,
+      // Overwritten by careerStore from its own season-scoped counter --
+      // seasonStore does not track wins, so it must not guess at them.
+      wins: 0,
+    }, s.purchasedTiers)
+    set({
+      phase: 'development',
+      raceIndex: 0,
+      standings: [],
+      lastRaceResults: null,
+      lastRaceEvents: null,
+      selectedCircuitId: CIRCUIT_ORDER[0] ?? null,
+      playerStrategy: null,
+      qualifyingResult: null,
+      attemptNonce: 0,
+      // devPoints are NOT reset. Unspent points bank rather than expire --
+      // the principle already stated at toRaceSetup above, applied across the
+      // season boundary as well as within one.
+      //
+      // Discarding them made the career go dead flat. Simulated over 10
+      // seasons with optimal buying, a player who loses their unspent points
+      // plateaus at 11 of 15 tiers from season 3 and then burns 21 points
+      // every season forever, because erosion keeps eating tiers they can
+      // never quite afford to replace. The Development screen becomes "rebuy
+      // what you lost, waste the rest" -- no progression and no decision,
+      // which is the outcome erosion was introduced to prevent, arriving by a
+      // different route. Banking them instead climbs 8 -> 10 -> 12 -> 13 and
+      // is still rising at season 10, while erosion still stops a max-out.
+      purchasedTiers: erodedTiers,
+      rivalDevelopment: escalateRivals(s.rivalDevelopment, standing === 0),
+      // playerDriverId and selectedTeamId are deliberately NOT reset.
+    })
+  },
+
+  /** Abandon the career. This is what playAgain used to do, named honestly. */
+  endCareer() {
+    useCareerStore.getState().endCareer()
+    set({
+      phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0,
+      standings: [], lastRaceResults: null, lastRaceEvents: null,
+      selectedCircuitId: null, playerStrategy: null, qualifyingResult: null,
+      attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {},
+    })
   },
 
   /**

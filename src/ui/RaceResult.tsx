@@ -59,7 +59,15 @@ function Confetti() {
 }
 
 export function RaceResult() {
-  const { lastRaceResults, lastRaceEvents, standings, playerDriverId, raceIndex, nextRace, playAgain, retryRace } = useSeasonStore()
+  // MENU navigates. It does NOT abandon anything.
+  //
+  // This button called playAgain() before the career landed, which nulled
+  // playerDriverId -- and the autosave clears the save whenever that is null.
+  // So "MENU" silently destroyed the season a player had just raced. Career
+  // made it worse (endCareer would take every season with it), which is how it
+  // was noticed. backToMenu only changes phase, so the season save and the
+  // career both survive and Continue still works.
+  const { lastRaceResults, lastRaceEvents, standings, playerDriverId, raceIndex, nextRace, backToMenu, retryRace } = useSeasonStore()
   const uiTap = useUiTap()
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
@@ -280,7 +288,7 @@ export function RaceResult() {
         </motion.button>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); playAgain() }}
+          onClick={() => { uiTap(); backToMenu() }}
           style={{
             flex: 0, minWidth: 90,
             background: 'transparent', color: 'var(--text-mid)',

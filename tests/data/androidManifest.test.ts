@@ -130,5 +130,22 @@ describe('Capacitor gradle paths point at this checkout', () => {
     const missing = dirs.filter(d => !existsSync(resolve(process.cwd(), 'android', d)))
     expect(missing, 'these plugin paths do not exist from android/; re-run `npx cap sync android` from the repo root')
       .toEqual([])
+
+    /*
+     * Existence is NOT enough, and this is the second time this file has caused
+     * a broken release build.
+     *
+     * Inside a git worktree at <repo>/.worktrees/<name>, a sync writes
+     * '../../../node_modules/...' -- which from <worktree>/android resolves to
+     * <repo>/node_modules and therefore EXISTS. The existence check above
+     * passes happily, the wrong paths get committed, and the build breaks only
+     * once they reach main, where the same string points outside the repo.
+     *
+     * So assert the SHAPE the repo root produces, not merely that something is
+     * there. Every plugin sits one level up from android/, always.
+     */
+    const wrongDepth = dirs.filter(d => !d.startsWith('../node_modules/'))
+    expect(wrongDepth, 'plugin paths must be ../node_modules/... — these look like they were generated inside a git worktree; re-run `npx cap sync android` from the repo root')
+      .toEqual([])
   })
 })

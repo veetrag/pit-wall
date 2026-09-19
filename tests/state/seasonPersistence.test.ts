@@ -178,7 +178,7 @@ describe('autosave keeps the save in step with the store', () => {
     await Promise.resolve()
     expect(await loadSnapshot()).not.toBeNull()
 
-    useSeasonStore.getState().playAgain()   // nulls playerDriverId
+    useSeasonStore.getState().endCareer()   // nulls playerDriverId
     await Promise.resolve()
     stop()
     expect(await loadSnapshot(), 'abandoning a season must not leave it resumable').toBeNull()

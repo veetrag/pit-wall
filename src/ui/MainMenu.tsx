@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
 import { loadSnapshot, type SeasonSnapshot } from '@state/seasonPersistence'
+import { loadCareer } from '@state/careerPersistence'
+import { useCareerStore } from '@state/careerStore'
 import { useUiTap } from '@hooks/useUiTap'
 
 function AmbientHero() {
@@ -49,6 +51,7 @@ interface MenuItem { id: string; label: string; sub: string; primary: boolean }
 const BROWSE_ITEMS: MenuItem[] = [
   { id: 'scenarios', label: 'SCENARIOS',     sub: 'Drop into a race in progress', primary: false },
   { id: 'grid',     label: 'GRID & GARAGE',  sub: 'Browse drivers & teams',     primary: false },
+  { id: 'career',   label: 'CAREER',         sub: 'Titles, wins & season history', primary: false },
   { id: 'howto',    label: 'HOW TO PLAY',    sub: 'Strategy primer',            primary: false },
   { id: 'settings', label: 'SETTINGS',       sub: 'Sound, haptics, gameplay',   primary: false },
 ]
@@ -60,9 +63,12 @@ export function MainMenu() {
   const startNewSeason = useSeasonStore(s => s.startNewSeason)
   const resumeSeason = useSeasonStore(s => s.resumeSeason)
   const viewGrid = useSeasonStore(s => s.viewGrid)
+  const viewCareer = useSeasonStore(s => s.viewCareer)
   const viewHowToPlay = useSeasonStore(s => s.viewHowToPlay)
   const viewSettings = useSeasonStore(s => s.viewSettings)
   const viewScenarios = useSeasonStore(s => s.viewScenarios)
+  const resumeCareer = useCareerStore(s => s.resumeCareer)
+  const hasCareer = useCareerStore(s => s.hasCareer)
   const uiTap = useUiTap()
 
   // Read on mount rather than at app start: the menu is remounted every time
@@ -72,6 +78,7 @@ export function MainMenu() {
   useEffect(() => {
     let live = true
     void loadSnapshot().then(s => { if (live) setSaved(s) })
+    void loadCareer().then(c => { if (live && c) resumeCareer(c) })
     return () => { live = false }
   }, [])
 
@@ -81,6 +88,8 @@ export function MainMenu() {
   // mis-tap. Inline rather than a modal -- one tap to arm, one to confirm.
   const [confirmNew, setConfirmNew] = useState(false)
 
+  const browseItems = hasCareer ? BROWSE_ITEMS : BROWSE_ITEMS.filter(i => i.id !== 'career')
+
   const items: MenuItem[] = saved
     ? [
         { id: 'continue', label: 'CONTINUE SEASON',
@@ -88,9 +97,9 @@ export function MainMenu() {
         confirmNew
           ? { id: 'race', label: 'DISCARD AND START OVER?', sub: 'Tap again to confirm', primary: false }
           : { ...NEW_SEASON, primary: false },
-        ...BROWSE_ITEMS,
+        ...browseItems,
       ]
-    : [NEW_SEASON, ...BROWSE_ITEMS]
+    : [NEW_SEASON, ...browseItems]
 
   function handleAction(id: string) {
     uiTap()
@@ -100,6 +109,7 @@ export function MainMenu() {
       startNewSeason()
     }
     else if (id === 'grid') viewGrid()
+    else if (id === 'career') viewCareer()
     else if (id === 'howto') viewHowToPlay()
     else if (id === 'settings') viewSettings()
     else if (id === 'scenarios') viewScenarios()

@@ -113,9 +113,9 @@ describe('development points', () => {
     expect(s.rivalDevelopment).toEqual({})
   })
 
-  it('clears everything on playAgain', () => {
+  it('clears everything on endCareer', () => {
     useSeasonStore.setState({ devPoints: 50, purchasedTiers: { power: 2 }, rivalDevelopment: { terra: 6 } })
-    useSeasonStore.getState().playAgain()
+    useSeasonStore.getState().endCareer()
     const s = useSeasonStore.getState()
     expect(s.devPoints).toBe(0)
     expect(s.purchasedTiers).toEqual({})
