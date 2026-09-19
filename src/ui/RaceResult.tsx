@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore, TOTAL_RACES, raceHeadline } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
 import driversData from '@data/drivers.json'
@@ -25,7 +26,18 @@ function teamColor(teamId: string): string {
 }
 
 function Confetti() {
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  /*
+   * The STORE, not matchMedia directly.
+   *
+   * Reading the media query here meant the in-app reduced-motion toggle did
+   * NOT suppress the confetti -- two dozen simultaneously animating elements,
+   * the heaviest motion moment in the game, ignoring the one setting a player
+   * would reach for to stop it.
+   *
+   * The store now carries the OS preference as its default, so this is a
+   * superset of the old behaviour rather than a replacement for it.
+   */
+  const reduced = useSettingsStore(s => s.reducedMotion)
   if (reduced) return null
   const COLORS = ['#00E5D0', '#FF4D5E', '#F2C94C', '#3DDC84', '#EAEAEA']
   return (

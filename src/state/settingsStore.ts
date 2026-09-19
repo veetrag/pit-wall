@@ -9,6 +9,13 @@ export interface SettingsState {
   soundEnabled: boolean
   hapticsEnabled: boolean
   reducedMotion: boolean
+  /*
+   * Whether the PLAYER has made an explicit reduced-motion choice, as opposed
+   * to inheriting the OS preference. Deliberately not persisted -- it is
+   * derived from whether the stored key exists. It exists so an OS-level change
+   * can be followed WITHOUT overruling someone who set the toggle themselves.
+   */
+  motionPreferenceStored: boolean
   simSpeed: SimSpeed
   proMode: boolean
   skipStartSequence: boolean
@@ -39,10 +46,23 @@ const K = {
   coachMarksSeen: 'settings.coachMarksSeen',
 }
 
+/**
+ * The OS-level accessibility preference.
+ *
+ * Guarded: jsdom has no matchMedia, and this module is imported by tests that
+ * never touch a DOM.
+ */
+export function osPrefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 export const useSettingsStore = create<SettingsState>((set) => ({
   soundEnabled: true,
   hapticsEnabled: true,
   reducedMotion: false,
+  motionPreferenceStored: false,
   simSpeed: 1,
   proMode: false,
   skipStartSequence: false,
@@ -52,7 +72,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
   setSoundEnabled(v) { set({ soundEnabled: v }); void Preferences.set({ key: K.sound, value: String(v) }) },
   setHapticsEnabled(v) { set({ hapticsEnabled: v }); void Preferences.set({ key: K.haptics, value: String(v) }) },
-  setReducedMotion(v) { set({ reducedMotion: v }); void Preferences.set({ key: K.motion, value: String(v) }) },
+  setReducedMotion(v) { set({ reducedMotion: v, motionPreferenceStored: true }); void Preferences.set({ key: K.motion, value: String(v) }) },
   setSimSpeed(v) { set({ simSpeed: v }); void Preferences.set({ key: K.simSpeed, value: String(v) }) },
   setProMode(v) { set({ proMode: v }); void Preferences.set({ key: K.proMode, value: String(v) }) },
   setSkipStartSequence(v) { set({ skipStartSequence: v }); void Preferences.set({ key: K.skipStart, value: String(v) }) },
@@ -67,7 +87,13 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     set({
       soundEnabled:      sound     != null ? sound     === 'true' : true,
       hapticsEnabled:    haptics   != null ? haptics   === 'true' : true,
-      reducedMotion:     motion    != null ? motion    === 'true' : false,
+      // The OS preference is the DEFAULT, not an override: an explicit stored
+      // choice still wins. Before this, someone with reduce-motion set at the
+      // system level got the full motion language until they found the in-app
+      // toggle -- and tokens.css's @media block does not help, because it only
+      // neutralises CSS animations and this app animates from JS.
+      reducedMotion:     motion    != null ? motion    === 'true' : osPrefersReducedMotion(),
+      motionPreferenceStored: motion != null,
       simSpeed:          simSpeed  != null ? (Number(simSpeed) as SimSpeed) : 1,
       proMode:           proMode   != null ? proMode   === 'true' : false,
       skipStartSequence: skipStart != null ? skipStart === 'true' : false,
@@ -77,3 +103,23 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     })
   },
 }))
+
+/**
+ * Keeps reduced motion in step with the OS while the app is open; returns an
+ * unsubscribe.
+ *
+ * Gated on motionPreferenceStored: a player who has set the toggle themselves
+ * owns that setting, and an OS-level change must not silently overrule them.
+ * Without the gate this would be an override rather than a default, and would
+ * quietly re-enable motion for someone who had deliberately turned it off.
+ */
+export function startReducedMotionWatch(): () => void {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return () => {}
+  const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+  const onChange = (e: MediaQueryListEvent) => {
+    if (useSettingsStore.getState().motionPreferenceStored) return
+    useSettingsStore.setState({ reducedMotion: e.matches })
+  }
+  mq.addEventListener('change', onChange)
+  return () => mq.removeEventListener('change', onChange)
+}
