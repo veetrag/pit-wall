@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useCoachStore, type CoachMarkId } from '@state/coachStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useClockStore, type GameSpeed } from '@state/clockStore'
+import { useRaceStore } from '@state/raceStore'
 import { useUiTap } from '@hooks/useUiTap'
 
 interface Props { id: CoachMarkId; title: string; body: string }
@@ -28,6 +29,7 @@ export function CoachMark({ id, title, body }: Props) {
   const setSpeed = useClockStore(s => s.setSpeed)
   const uiTap = useUiTap()
   const showing = active === id
+  const pitPanelOpen = useRaceStore(s => s.pitPanelOpen)
   const restoreRef = useRef<GameSpeed | null>(null)
 
   useEffect(() => {
@@ -56,7 +58,20 @@ export function CoachMark({ id, title, body }: Props) {
           style={{
             position: 'fixed',
             left: 16, right: 16,
-            bottom: 'calc(16px + var(--safe-bottom))',
+            /*
+             * Anchored to the TOP while the pit drawer is open.
+             *
+             * Raising this above the drawer (see the zIndex note below) fixed
+             * it being invisible, but then it simply covered the drawer
+             * instead: measured on device, the cliff mark sat over the compound
+             * chips and pushed BOX NOW off the bottom of the screen. Both marks
+             * can be showing while that drawer is up -- the projection one
+             * always is -- so when it is, the card moves out of the drawer's
+             * way rather than fighting it for the same strip of screen.
+             */
+            ...(pitPanelOpen
+              ? { top: 'calc(16px + var(--safe-top))' }
+              : { bottom: 'calc(16px + var(--safe-bottom))' }),
             /*
              * Above the pit drawer and the settings sheet, both zIndex 100.
              *

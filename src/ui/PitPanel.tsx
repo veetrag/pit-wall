@@ -180,7 +180,16 @@ function PitPanelDrawer() {
       style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         background: 'var(--bg-elevated)', borderRadius: '16px 16px 0 0',
-        padding: '20px 20px 32px',
+        /*
+         * --safe-bottom, not a bare 32px.
+         *
+         * RaceHUD pads its root by --safe-bottom, but this drawer is
+         * position:absolute against that root, so it sits OUTSIDE that padding
+         * and runs under the system navigation bar. Measured on a Pixel 10 Pro
+         * XL (targetSdk 36, edge-to-edge): BOX NOW -- the primary action on the
+         * game's centrepiece interaction -- was clipped by the nav bar.
+         */
+        padding: '20px 20px calc(32px + var(--safe-bottom))',
         borderTop: '1px solid var(--line-hair)',
         zIndex: 100,
       }}

@@ -185,12 +185,51 @@ describe('joining a race already in progress', () => {
      * Caught by playing the scenario and looking at the screen; no assertion in
      * the suite covered the ticker's opening line.
      */
-    const state = makeCommentaryState(14)
-    expect(state.started, 'a mid-race join has already started').toBe(true)
+    const joined = makeState([makeCar({ driverId: 'd_voss', teamId: 'apex' })], { lap: 14 })
+    expect(makeCommentaryState(joined).started, 'a mid-race join has already started').toBe(true)
   })
 
   it('still announces the start of a race that begins on lap 0', () => {
-    expect(makeCommentaryState(0).started).toBe(false)
+    const grid = makeState([makeCar({ driverId: 'd_voss', teamId: 'apex' })], { lap: 0 })
+    expect(makeCommentaryState(grid).started).toBe(false)
     expect(makeCommentaryState().started, 'default must stay unchanged').toBe(false)
+  })
+
+  it('TREATS THE FAST-FORWARD AS HISTORY, NOT NEWS', () => {
+    /*
+     * The second half of the same bug, which the first fix missed.
+     *
+     * A scenario handover carries the whole run-up with it: overtakes,
+     * incidents, pit stops and retirements that happened while the AI drove.
+     * With the counters starting at zero the ticker treats every one of them as
+     * having just occurred -- observed on device, the feed opening with
+     * "L1 VOS passes CHN for P4" on the first tick after taking over at lap 14.
+     */
+    const cars = [
+      makeCar({ driverId: 'd_voss', teamId: 'apex', pitsDone: 2 }),
+      makeCar({ driverId: 'd_rossi', teamId: 'meridian', retired: true }),
+    ]
+    const joined = makeState(cars, {
+      lap: 14,
+      overtakeEvents: [{}, {}, {}] as never,
+      incidents: [{}, {}] as never,
+      weatherState: 'WET',
+    })
+    const s = makeCommentaryState(joined)
+    expect(s.prevOvertakeCount, 'the run-up\'s overtakes are already history').toBe(3)
+    expect(s.prevIncidentCount).toBe(2)
+    expect(s.prevPitsDone['d_voss'], 'stops made before handover are not news').toBe(2)
+    expect(s.prevRetired['d_rossi'], 'nor is a car that was already out').toBe(true)
+    expect(s.prevWeatherState, 'nor a weather change that already happened').toBe('WET')
+  })
+
+  it('announces nothing on the very first tick after a handover', () => {
+    // The end-to-end version: feed the joined state straight back in and the
+    // mapper must have nothing to say about it.
+    const cars = [makeCar({ driverId: 'd_voss', teamId: 'apex', pitsDone: 1 })]
+    const joined = makeState(cars, { lap: 14, overtakeEvents: [{}, {}] as never })
+    const config = makeConfig([{ id: 'd_voss', code: 'VOS' }])
+    const { lines } = processCommentaryTick(joined, config, makeCommentaryState(joined))
+    expect(lines, 'the handover state is the baseline, not a news feed').toEqual([])
   })
 })
