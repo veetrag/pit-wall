@@ -89,25 +89,40 @@ describe('runQualifying', () => {
      * the attack paceDelta, attack would be -0.60s/lap rather than -0.45, and
      * every future edit to paceModes would silently retune qualifying.
      *
-     * Measured against a zero-delta control: the gap between attack and
-     * balanced must match tuning, within one lap of noise.
+     * SCRAPPY LAPS MUST BE EXCLUDED, and that is the whole difficulty here.
+     * attack errors at 0.15 and balanced at 0.06, so scrappy laps inflate the
+     * attack mean by 0.15*1.2 = 0.180s and the balanced mean by 0.06*1.2 =
+     * 0.072s -- a systematic 0.108s that shrinks the observed gap. An earlier
+     * version of this test compared raw means with a 0.12s tolerance and
+     * therefore PASSED with the double-count present: 0.60 - 0.108 = 0.49
+     * against an expected 0.45 is a miss of only 0.04. It could not fail.
+     *
+     * Filtering to clean laps removes that confound entirely, so the gap is
+     * the tuning delta plus sampling noise alone and the tolerance can be
+     * tight enough to separate 0.45 from 0.60.
      */
     const c = config()
-    const meanFor = (attack: 'attack' | 'balanced') => {
-      let total = 0
-      for (let seed = 0; seed < 120; seed++) {
-        const r = runQualifying(c, createRng(seed), { compound: 'S', attack })
-        total += r.laps.find(l => l.driverId === c.playerDriverId)!.time
+    const cleanMean = (attack: 'attack' | 'balanced') => {
+      const times: number[] = []
+      for (let seed = 0; seed < 300; seed++) {
+        const lap = runQualifying(c, createRng(seed), { compound: 'S', attack })
+          .laps.find(l => l.driverId === c.playerDriverId)!
+        if (!lap.scrappy) times.push(lap.time)
       }
-      return total / 120
+      expect(times.length, 'too few clean laps to average').toBeGreaterThan(100)
+      return times.reduce((a, b) => a + b, 0) / times.length
     }
     const expected = Math.abs(
       c.tuning.qualifying.attackLevels.attack.paceDelta
       - c.tuning.qualifying.attackLevels.balanced.paceDelta,
     )
-    // Scrappy laps inflate both means; compare with a tolerance wide enough for
-    // that and for sampling noise, but far tighter than a 0.15s double-count.
-    const observed = meanFor('balanced') - meanFor('attack')
-    expect(Math.abs(observed - expected)).toBeLessThan(0.12)
-  })
+    const observed = cleanMean('balanced') - cleanMean('attack')
+    // A double-count would read ~0.60 against an expected 0.45, a miss of 0.15.
+    // Per-lap noise is ~0.139s (sigmaPerSector 0.08 over 3 sectors); at 100+
+    // samples the standard error is under 0.015, so 0.08 is >5 SE of headroom
+    // while still less than the 0.15 a double-count would produce.
+    expect(Math.abs(observed - expected),
+      `clean-lap gap ${observed.toFixed(3)}s vs tuning ${expected.toFixed(3)}s`,
+    ).toBeLessThan(0.08)
+  }, 120_000)
 })
