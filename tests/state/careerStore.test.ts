@@ -48,6 +48,31 @@ describe('careerStore', () => {
     expect(s().seasonHistory).toHaveLength(2)
   })
 
+  it('WINNING THE TITLE PUTS CHAMPION IN justEarned AT THE ROLLOVER', () => {
+    // The regression: titles is bumped ONLY inside rollOverSeason, and
+    // recordRace never sees it, so champion/dynasty could only ever become
+    // true here. If rollOverSeason does not compute justEarned itself, the
+    // badge lands in the trophy case with no announcement, ever.
+    const s = () => useCareerStore.getState()
+    s().rollOverSeason({ seasonNumber: 1, teamId: 'apex', driverId: 'd_voss', championshipPosition: 1, points: 300, wins: 9 }, {})
+    expect(s().justEarned).toContain('champion')
+  })
+
+  it('A NON-TITLE ROLLOVER DOES NOT ANNOUNCE CHAMPION', () => {
+    const s = () => useCareerStore.getState()
+    s().rollOverSeason({ seasonNumber: 1, teamId: 'apex', driverId: 'd_voss', championshipPosition: 2, points: 200, wins: 5 }, {})
+    expect(s().justEarned).not.toContain('champion')
+  })
+
+  it('ROLLOVER DOES NOT DISTURB raceLog', () => {
+    const s = () => useCareerStore.getState()
+    s().recordRace({ position: 1, retired: false, pole: false, ...RACE_DEFAULTS })
+    const before = s().raceLog
+    s().rollOverSeason({ seasonNumber: 1, teamId: 'apex', driverId: 'd_voss', championshipPosition: 1, points: 300, wins: 1 }, {})
+    expect(s().raceLog).toEqual(before)
+    expect(s().raceLog).toHaveLength(1)
+  })
+
   it('SEASON HISTORY RECORDS THE WINS THAT SEASON, NOT THE CAREER TOTAL', () => {
     /*
      * seasonStore does not count wins, so it passes 0 and careerStore fills it

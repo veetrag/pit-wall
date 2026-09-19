@@ -160,14 +160,29 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
   rollOverSeason(summary, tiers) {
     const s = get()
     const { tierDecayPerSeason } = loadGameData().tuning.career
-    set({
+
+    // Built as a whole record, same as recordRace, so newlyEarned compares
+    // two complete states. titles is bumped here and ONLY here -- a season
+    // win is not a race, so recordRace never sees it -- which is exactly why
+    // this action must compute justEarned itself: champion/dynasty can only
+    // ever become true at a rollover, never at a race.
+    const next: CareerRecord = {
       seasonNumber: s.seasonNumber + 1,
       titles: s.titles + (summary.championshipPosition === 1 ? 1 : 0),
+      wins: s.wins,
       // The caller cannot know this -- seasonStore does not count wins -- so
       // the store fills it in from its own season-scoped counter.
       seasonHistory: [...s.seasonHistory, { ...summary, wins: s.seasonWins }],
       seasonWins: 0,
-    })
+      podiums: s.podiums,
+      poles: s.poles,
+      racesStarted: s.racesStarted,
+      bestFinish: s.bestFinish,
+      // A rollover is not a race: raceLog is carried over unchanged.
+      raceLog: s.raceLog,
+    }
+
+    set({ ...next, justEarned: newlyEarned(s, next) })
     return { erodedTiers: erodeTiers(tiers, tierDecayPerSeason) }
   },
 

@@ -29,11 +29,17 @@ export function BadgeToast() {
     .map(id => BADGES.find(b => b.id === id))
     .filter((b): b is NonNullable<typeof b> => b !== undefined)
 
+  // Keyed on the badge IDS, not the count: two consecutive single-badge
+  // announcements (e.g. a race badge, then a title badge at the next
+  // rollover) must not collapse into one silent haptic just because both
+  // sets happen to have length 1 and the component stays mounted between them.
+  const earnedKey = earned.map(b => b.id).join(',')
+
   useEffect(() => {
     if (earned.length > 0) void impact(ImpactStyle.Medium)
-    // Fires once per set of newly earned badges.
+    // Fires once per distinct set of newly earned badges.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [earned.length, impact])
+  }, [earnedKey, impact])
 
   if (earned.length === 0) return null
 
