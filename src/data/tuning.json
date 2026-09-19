@@ -136,6 +136,10 @@
     }
   },
   "_regressionBands": {
+    "career": {
+      "erosionBitesWithinSeasons": 10,
+      "rivalDevelopmentCompounds": true
+    },
     "qualifying": {
       "attackScrappyRate": [0.11, 0.19],
       "topCarMeanGridPosition": [1, 8]

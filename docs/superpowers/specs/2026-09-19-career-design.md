@@ -1,7 +1,7 @@
 # Multi-Season Career — Design Spec
 
 **Date:** 2026-09-19
-**Status:** Approved in brainstorming; awaiting review before implementation planning.
+**Status:** Implemented. See `docs/superpowers/plans/2026-09-19-career.md`.
 **Roadmap:** `docs/superpowers/specs/2026-09-19-v2-roadmap.md` (item A)
 
 ## 1. The problem
