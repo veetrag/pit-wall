@@ -132,7 +132,7 @@
   },
   "_regressionBands": {
     "qualifying": {
-      "attackScrappyRate": [0.10, 0.20],
+      "attackScrappyRate": [0.11, 0.19],
       "topCarMeanGridPosition": [1, 8]
     },
     "topTeamWinRate": [0.35, 0.55],

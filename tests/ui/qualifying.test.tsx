@@ -127,3 +127,49 @@ describe('race setup points at what it actually opens', () => {
     expect(screen.getByRole('button', { name: /qualifying/i })).toBeTruthy()
   })
 })
+
+describe('the screen adapts to the conditions', () => {
+  /*
+   * currentSeed() is raceIndex * 1000 + 42 + attemptNonce * 7919, so the nonce
+   * is the only handle a test has on the weather. At raceIndex 0 on bengaluru:
+   * nonce 0 is WET, 1 is DRY, 4 is DAMP.
+   *
+   * Worth knowing on its own: nonce 0 is the DEFAULT, so round 1 of a brand
+   * new season is a wet race.
+   */
+  const setWeatherByNonce = (attemptNonce: number) =>
+    useSeasonStore.setState({
+      phase: 'qualifying', qualifyingResult: null, playerDriverId: 'd_voss',
+      raceIndex: 0, attemptNonce, selectedCircuitId: 'bengaluru',
+    })
+
+  it('OFFERS WET TYRES, AND SAYS WHY, WHEN THE TRACK IS WET', () => {
+    setWeatherByNonce(0)
+    render(<Qualifying />)
+    expect(screen.getByTestId('qualifying-conditions').textContent).toMatch(/WET/)
+    expect(screen.getByRole('button', { name: /wet/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /inter/i })).toBeTruthy()
+  })
+
+  it('SAYS DAMP, NOT WET, WHEN THE TRACK IS DAMP', () => {
+    // The two are different calls -- inters vs full wets -- so one label for
+    // both would be actively misleading.
+    setWeatherByNonce(4)
+    render(<Qualifying />)
+    expect(screen.getByTestId('qualifying-conditions').textContent).toMatch(/DAMP/)
+  })
+
+  it('HIDES THE WET TYRES IN THE DRY', () => {
+    /*
+     * The mirror of the wet case, and the one that would catch the conditions
+     * check being inverted or stuck. Without it, a screen that always offered
+     * wets would pass the test above and still be wrong.
+     */
+    setWeatherByNonce(1)
+    render(<Qualifying />)
+    expect(screen.getByTestId('qualifying-conditions').textContent).toMatch(/DRY/)
+    expect(screen.queryByRole('button', { name: /wet/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /inter/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /soft/i })).toBeTruthy()
+  })
+})
