@@ -83,6 +83,12 @@ export interface TuningConstants {
     pitCrewSigmaRelief: number
   }
   paceModes: Record<PaceMode, { paceDelta: number; degMultiplier: number }>
+  qualifying: {
+    attackLevels: Record<AttackLevel, { paceDelta: number; errorChance: number }>
+    scrappyLapPenalty: number
+    seedOffset: number
+    gridSlotGapSec: number
+  }
   tyreManagement: { degReliefFactor: number }
   strategyReaction: {
     coverUndercutEnabled: boolean
@@ -346,6 +352,14 @@ export interface RaceConfig {
   playerDriverId: string
   seed: number
   weatherSeed?: number
+  // Starting grid, P1 first, as driverIds. ABSENT means "use drivers.json
+  // order", which is exactly what the engine did before qualifying existed --
+  // byteIdentity, the Monte-Carlo bands and all three scenarios depend on that
+  // fallback being byte-identical, so do not make this required.
+  gridOrder?: string[]
+  // Separate RNG stream for qualifying, same pattern as weatherSeed above, so
+  // a qualifying session consumes nothing from the main race seed.
+  qualifyingSeed?: number
   // Overrides the player's own strategy (start compound + planned stops) chosen
   // at Race Setup. Only applies to the car whose driverId === playerDriverId —
   // teammates and rivals keep whatever `strategies` assigns them.
@@ -361,4 +375,29 @@ export interface RaceConfig {
   // configs built before M5 behave identically.
   coverReactionScale?: number
   paceModeAggression?: number
+}
+
+export type AttackLevel = 'conserve' | 'balanced' | 'attack'
+
+export interface QualifyingCall {
+  compound: Compound
+  attack: AttackLevel
+}
+
+export interface QualifyingLap {
+  driverId: string
+  teamId: string
+  /** Total lap time in seconds, including the attack delta and any scrappy penalty. */
+  time: number
+  compound: Compound
+  attack: AttackLevel
+  /** An error was rolled on this lap. Never a retirement -- see qualifying.ts. */
+  scrappy: boolean
+}
+
+export interface QualifyingResult {
+  /** Sorted ascending by time. */
+  laps: QualifyingLap[]
+  /** driverIds, P1 first. Derived from `laps`; stored so consumers never re-sort. */
+  order: string[]
 }

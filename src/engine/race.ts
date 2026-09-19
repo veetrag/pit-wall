@@ -38,7 +38,26 @@ export function initRace(config: RaceConfig): RaceState {
   const weatherState: WeatherState = weatherTimeline[0] ?? 'DRY'
   const gridCompound = gridConditionsCompound(weatherState)
 
+  // Validate before use: a gridOrder that is not a permutation of the field
+  // would otherwise silently leave cars at position 0 or stack two cars on the
+  // same slot, and the symptom would surface laps later as a nonsense result.
+  if (config.gridOrder) {
+    const fieldIds = config.drivers.map(d => d.id)
+    const given = config.gridOrder
+    const unique = new Set(given)
+    const ok = given.length === fieldIds.length
+      && unique.size === given.length
+      && given.every(id => fieldIds.includes(id))
+    if (!ok) {
+      throw new Error(
+        `gridOrder must be a permutation of config.drivers (got ${given.length} entries, ` +
+        `${unique.size} unique, for a field of ${fieldIds.length})`,
+      )
+    }
+  }
+
   const cars: CarState[] = config.drivers.map((driver, i) => {
+    const gridPosition = config.gridOrder ? config.gridOrder.indexOf(driver.id) + 1 : i + 1
     const isPlayer = driver.id === config.playerDriverId
     const playerChose = isPlayer && !!config.playerStrategyOverride
     const baseStrategy = (isPlayer && config.playerStrategyOverride)
@@ -58,8 +77,26 @@ export function initRace(config: RaceConfig): RaceState {
     return {
       driverId: driver.id,
       teamId: driver.teamId,
-      position: i + 1,
-      raceTime: 0,
+      position: gridPosition,
+      // Starting further back is a TIME DEFICIT, not just a label.
+      //
+      // stepSector re-derives position from raceTime on every tick, and every
+      // car starts at 0 -- so without this, a car starting P20 and a car
+      // starting pole run byte-identical races and the grid evaporates on the
+      // first sector. Verified before this line existed: pole and last both
+      // finished P17 on 2530.682s, to the millisecond.
+      //
+      // Seeding raceTime with the slot's deficit makes the grid real. Gaps,
+      // dirty air and the sector-boundary overtake checks then all follow from
+      // the existing model rather than needing a second mechanism.
+      //
+      // Applied ONLY when gridOrder is present. With no grid the offset is
+      // zero for every car, so byteIdentity, the Monte-Carlo bands and all
+      // three scenarios stay byte-identical -- same contract as gridOrder
+      // itself.
+      raceTime: config.gridOrder
+        ? (gridPosition - 1) * config.tuning.qualifying.gridSlotGapSec
+        : 0,
       lap: 0,
       sector: 0 as SectorIndex,
       compound: startCompound,

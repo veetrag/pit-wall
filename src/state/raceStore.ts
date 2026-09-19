@@ -28,7 +28,7 @@ interface RaceStore {
   radioState: RadioState
 
   startRace: () => void
-  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null) => void
+  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null, gridOrder?: string[]) => void
   startScenarioRace: (spec: { circuitId: string; seed: number; playerDriverId: string; startLap: number }) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
@@ -74,8 +74,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
   },
 
-  startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades) {
-    const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades)
+  startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder) {
+    const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades, gridOrder)
     const raceState = initRace(config)
     const rng = createRng(seed)
     set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })

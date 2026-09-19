@@ -13,12 +13,14 @@ export {
 } from './incidents'
 export { createRng, gaussianPair } from './rng'
 export { generateWeatherTimeline, getWeatherForecast } from './weather'
+export { runQualifying, qualifyingRng } from './qualifying'
 export type {
   RaceConfig, RaceState, CarState, SectorResult, OvertakeEvent,
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
   TyreAllocation, DifficultyProfile, WeatherState, WeatherForecast, SafetyCarState,
   IncidentEvent, IncidentKind,
+  AttackLevel, QualifyingCall, QualifyingLap, QualifyingResult,
 } from './types'
 export type { ProjectionResult } from './projection'
 export type { Rng } from './rng'

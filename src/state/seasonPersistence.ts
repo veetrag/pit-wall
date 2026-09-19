@@ -60,6 +60,13 @@ const RESUME_PHASE: Record<SeasonPhase, ResumePhase | null> = {
   settings: null,
   development: 'development',
   race_setup: 'race_setup',
+  // 'race_setup', NOT null. A player in qualifying is genuinely mid-season, so
+  // the save should be written -- unlike the menu/settings detours above, which
+  // map to null precisely so they cannot overwrite a save with "sitting in a
+  // menu". This matches `racing` directly below: a QualifyingResult's validity
+  // depends on config that may have changed between launches, so the honest
+  // offer on reload is "set up the round again", not a half-restored session.
+  qualifying: 'race_setup',
   racing: 'race_setup',
   result: 'result',
   championship: 'championship',
