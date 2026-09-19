@@ -164,6 +164,43 @@ interface SeasonStore {
   resumeSeason: (snap: SeasonSnapshot) => void
 }
 
+/**
+ * The race seed, as a pure function of the three things that vary.
+ *
+ * Extracted from currentSeed so the collision guarantee can be exercised over
+ * a large domain without driving it through the store: asserting it via
+ * setState took 360,000 store notifications and 37 seconds, which is how a
+ * genuine guarantee turns into a test people start skipping.
+ *
+ * (seasonNumber - 1), NOT seasonNumber: season 1 must add exactly zero so its
+ * seeds are byte-identical to the pre-career game. tests/engine/byteIdentity,
+ * the Monte-Carlo bands in MODEL_SPEC.md 10.1 and all three scenarios in
+ * src/data/scenarios.json depend on that.
+ *
+ * Collisions are prevented MODULARLY, not by magnitude. attemptNonce is
+ * unbounded -- retryRace never caps it -- so "the stride is bigger than the
+ * other terms" is false: thirteen retries already exceed it. The real
+ * argument: seedStride and 1000 are both multiples of 1000 and
+ * gcd(7919, 1000) = 1, so a collision needs the nonce difference to be a
+ * multiple of 1000, which then needs |dRace| >= 100 -- impossible across a
+ * 12-round season.
+ */
+// Cached deliberately. loadGameData() re-parses every zod schema on every
+// call -- it does not memoise -- and seedFor is called in tight loops by the
+// collision test. Reading it per call cost 360,000 full schema parses and blew
+// a 5s test timeout. The stride is a build-time constant in tuning.json, so
+// reading it once is safe; a test that needs a different stride should call
+// seedFor's arithmetic directly rather than mutating tuning underneath it.
+let cachedStride: number | null = null
+function seedStride(): number {
+  if (cachedStride === null) cachedStride = loadGameData().tuning.career.seedStride
+  return cachedStride
+}
+
+export function seedFor(seasonNumber: number, raceIndex: number, attemptNonce: number): number {
+  return (seasonNumber - 1) * seedStride() + raceIndex * 1000 + 42 + attemptNonce * 7919
+}
+
 export const useSeasonStore = create<SeasonStore>((set, get) => ({
   phase: 'menu',
   playerDriverId: null,
@@ -206,17 +243,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   currentSeed() {
     const { raceIndex, attemptNonce } = get()
     const { seasonNumber } = useCareerStore.getState()
-    // (seasonNumber - 1), NOT seasonNumber: season 1 must add zero so its
-    // seeds are byte-identical to the pre-career game. byteIdentity, the
-    // Monte-Carlo bands and all three scenarios depend on that.
-    //
-    // Collisions are prevented modularly, not by magnitude -- attemptNonce is
-    // unbounded, so "the stride is bigger than the other terms" is false. Both
-    // seedStride and 1000 are multiples of 1000 and gcd(7919, 1000) = 1, so a
-    // collision needs the nonce difference to be a multiple of 1000, which
-    // then needs |dRace| >= 100 -- impossible across 12 rounds.
-    const stride = loadGameData().tuning.career.seedStride
-    return (seasonNumber - 1) * stride + raceIndex * 1000 + 42 + attemptNonce * 7919
+    return seedFor(seasonNumber, raceIndex, attemptNonce)
   },
 
   retryRace() {

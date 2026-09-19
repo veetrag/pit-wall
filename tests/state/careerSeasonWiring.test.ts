@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useSeasonStore } from '@state/seasonStore'
+import { useSeasonStore, seedFor } from '@state/seasonStore'
 import { useCareerStore } from '@state/careerStore'
 import { loadGameData } from '@data/validators'
 
@@ -30,21 +30,36 @@ describe('career wiring', () => {
   })
 
   it('LATER SEASONS DO NOT REPLAY EARLIER ONES', () => {
+    /*
+     * Exercised through the PURE seedFor rather than the store. Driving
+     * 30 x 12 x 1000 combinations through setState took 360,000 store
+     * notifications and 37 seconds, which is how a real guarantee becomes a
+     * test people skip. The delegation test below keeps currentSeed honest.
+     *
+     * The nonce bound is explicit because attemptNonce is unbounded in
+     * principle (retryRace never caps it), so this is a guarantee over a
+     * stated domain rather than a universal one. See the career spec 3.2.
+     */
     const seeds = new Set<number>()
+    let count = 0
     for (let season = 1; season <= 30; season++) {
-      useCareerStore.setState({ seasonNumber: season })
       for (let raceIndex = 0; raceIndex < 12; raceIndex++) {
         for (let attemptNonce = 0; attemptNonce < 1000; attemptNonce++) {
-          useSeasonStore.setState({ raceIndex, attemptNonce })
-          seeds.add(useSeasonStore.getState().currentSeed())
+          seeds.add(seedFor(season, raceIndex, attemptNonce))
+          count++
         }
       }
     }
-    // The nonce bound is explicit because attemptNonce is unbounded in
-    // principle (retryRace never caps it), so the guarantee is over a stated
-    // domain rather than universal. See the career spec section 3.2.
-    expect(seeds.size).toBe(30 * 12 * 1000)
-  }, 60_000)
+    expect(seeds.size, 'a collision means two seasons run the same race').toBe(count)
+  })
+
+  it('currentSeed DELEGATES TO seedFor', () => {
+    // The pure function carries the collision guarantee, so the store must
+    // actually use it rather than keeping a second copy of the arithmetic.
+    useCareerStore.setState({ seasonNumber: 4 })
+    useSeasonStore.setState({ raceIndex: 7, attemptNonce: 2 })
+    expect(useSeasonStore.getState().currentSeed()).toBe(seedFor(4, 7, 2))
+  })
 
   it('startNextSeason KEEPS THE SEAT AND ERODES THE UPGRADES', () => {
     useCareerStore.getState().beginCareer()
