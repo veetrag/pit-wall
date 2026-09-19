@@ -63,3 +63,42 @@ describe('Android XML is well-formed', () => {
     expect(files.some(f => f.endsWith('AndroidManifest.xml')), 'the manifest must be covered').toBe(true)
   })
 })
+
+describe('minSdkVersion matches what the bundle can actually run', () => {
+  it('IS AT LEAST 30', () => {
+    /*
+     * This floor is measured, not chosen for neatness.
+     *
+     * vite.config.ts sets no `build.target`, so Vite uses its default
+     * ('modules') and emits optional chaining and nullish coalescing. Probed
+     * on a factory system-images;android-24;google_apis emulator, whose
+     * bundled WebView is Chromium 53:
+     *
+     *     optional-chaining: SYNTAX ERROR
+     *     nullish:           SYNTAX ERROR
+     *
+     * A parse error takes out the whole module, so the app rendered nothing
+     * but the native background colour -- it did not degrade, it did not
+     * start. minSdkVersion was 24 at the time, which made the manifest a
+     * promise the bundle could not keep.
+     *
+     * API 30's factory WebView is Chromium 91, which parses both and runs the
+     * app correctly (verified: main menu renders, accent tokens correct).
+     * That makes 30 the lowest HONEST floor for the current build target.
+     *
+     * If you lower this, you are asserting the bundle parses on that API
+     * level's factory WebView. Verify it on an emulator of that level before
+     * changing the number -- `docs/DEVICE-CHECKLIST.md` has the commands.
+     * Alternatively, set an explicit lower `build.target` in vite.config.ts,
+     * re-verify, and then lower this together with it.
+     */
+    const gradle = readFileSync(resolve(process.cwd(), 'android/variables.gradle'), 'utf8')
+    const match = /minSdkVersion\s*=\s*(\d+)/.exec(gradle)
+    expect(match, 'minSdkVersion not found in android/variables.gradle').not.toBeNull()
+    const minSdk = Number(match![1])
+    expect(
+      minSdk,
+      'the bundle needs a Chromium 87+ WebView; API 30 ships Chromium 91, API 24 ships 53',
+    ).toBeGreaterThanOrEqual(30)
+  })
+})

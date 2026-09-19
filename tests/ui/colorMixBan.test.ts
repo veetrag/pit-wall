@@ -48,10 +48,24 @@ function stripComments(text: string): string[] {
 describe('color-mix() is banned', () => {
   it('NO SOURCE FILE USES color-mix()', () => {
     /*
-     * android/variables.gradle sets minSdkVersion 24. color-mix() needs
+     * android/variables.gradle sets minSdkVersion 30. color-mix() needs
      * Chromium 111 (2023), and an unsupported CSS value is DROPPED, not
      * approximated -- so the declaration silently does nothing on exactly the
      * low-end devices this project targets, while looking perfect in dev.
+     *
+     * Raising minSdk from 24 to 30 did NOT retire this ban, and the gap is
+     * wider than the version numbers suggest. Measured on a factory
+     * system-images;android-30;google_apis emulator: the bundled WebView is
+     * Chromium 91, and CSS.supports('color', 'color-mix(in srgb,red,blue)')
+     * returns false there. 30 is the floor at which the app RUNS (Vite's
+     * default build target needs Chromium 87 for optional chaining); it is 20
+     * Chromium versions short of the floor at which color-mix PARSES.
+     *
+     * WebView updates through the Play Store independently of the OS, so an
+     * online API 30 handset will usually have a far newer Chromium than 91.
+     * This ban protects the device that is offline, has no Play Services, or
+     * has never updated -- which is the same device the performance budget in
+     * CLAUDE.md 5 is written for.
      *
      * It survived in Development.tsx long after TimingTower documented the ban,
      * on a tier-pip glow that had ALREADY been lost once to a different
@@ -73,7 +87,7 @@ describe('color-mix() is banned', () => {
       }
     }
     expect(offenders, [
-      'color-mix() is unsupported at minSdkVersion 24 (needs Chromium 111).',
+      'color-mix() is unsupported at minSdkVersion 30 (needs Chromium 111).',
       'An unsupported value is DROPPED, so this styling silently vanishes on',
       'the low-end devices this project targets -- and looks fine in dev.',
       '',

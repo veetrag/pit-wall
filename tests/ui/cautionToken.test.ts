@@ -53,7 +53,7 @@ describe('--caution has one source of truth', () => {
       'Use var(--caution) for the solid colour, or',
       'rgba(var(--caution-rgb), <alpha>) for a translucent wash.',
       '',
-      'Do NOT use color-mix(): minSdkVersion is 24 and color-mix needs',
+      'Do NOT use color-mix(): minSdkVersion is 30 and color-mix needs',
       'Chromium 111, so the declaration is dropped on exactly the low-end',
       'devices this project targets.',
     ].join('\n')).toEqual([])
