@@ -1,7 +1,7 @@
 # Qualifying — Design Spec
 
 **Date:** 2026-09-19
-**Status:** Approved in brainstorming; awaiting review before implementation planning.
+**Status:** Implemented. See `docs/superpowers/plans/2026-09-19-qualifying.md`. Task 7's defect-proof test (`tests/state/qualifyingUpgrades.test.ts`) found that the back-marker team (zenith / d_kane) is far enough behind the rest of the grid that maxed Development upgrades still cannot lift it off P20 in 80/80 seeds — see `task-7-report.md` for details. The mechanism works (upgrades measurably change facets and lap time) but the magnitude is currently insufficient for this specific team/driver pairing.
 
 ## 1. The problem
 
