@@ -38,6 +38,24 @@ export function initRace(config: RaceConfig): RaceState {
   const weatherState: WeatherState = weatherTimeline[0] ?? 'DRY'
   const gridCompound = gridConditionsCompound(weatherState)
 
+  // Validate before use: a gridOrder that is not a permutation of the field
+  // would otherwise silently leave cars at position 0 or stack two cars on the
+  // same slot, and the symptom would surface laps later as a nonsense result.
+  if (config.gridOrder) {
+    const fieldIds = config.drivers.map(d => d.id)
+    const given = config.gridOrder
+    const unique = new Set(given)
+    const ok = given.length === fieldIds.length
+      && unique.size === given.length
+      && given.every(id => fieldIds.includes(id))
+    if (!ok) {
+      throw new Error(
+        `gridOrder must be a permutation of config.drivers (got ${given.length} entries, ` +
+        `${unique.size} unique, for a field of ${fieldIds.length})`,
+      )
+    }
+  }
+
   const cars: CarState[] = config.drivers.map((driver, i) => {
     const isPlayer = driver.id === config.playerDriverId
     const playerChose = isPlayer && !!config.playerStrategyOverride
@@ -58,7 +76,7 @@ export function initRace(config: RaceConfig): RaceState {
     return {
       driverId: driver.id,
       teamId: driver.teamId,
-      position: i + 1,
+      position: config.gridOrder ? config.gridOrder.indexOf(driver.id) + 1 : i + 1,
       raceTime: 0,
       lap: 0,
       sector: 0 as SectorIndex,

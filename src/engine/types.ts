@@ -346,6 +346,14 @@ export interface RaceConfig {
   playerDriverId: string
   seed: number
   weatherSeed?: number
+  // Starting grid, P1 first, as driverIds. ABSENT means "use drivers.json
+  // order", which is exactly what the engine did before qualifying existed --
+  // byteIdentity, the Monte-Carlo bands and all three scenarios depend on that
+  // fallback being byte-identical, so do not make this required.
+  gridOrder?: string[]
+  // Separate RNG stream for qualifying, same pattern as weatherSeed above, so
+  // a qualifying session consumes nothing from the main race seed.
+  qualifyingSeed?: number
   // Overrides the player's own strategy (start compound + planned stops) chosen
   // at Race Setup. Only applies to the car whose driverId === playerDriverId —
   // teammates and rivals keep whatever `strategies` assigns them.
