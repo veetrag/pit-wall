@@ -107,7 +107,12 @@ interface RowProps {
   reducedMotion: boolean
 }
 
-function TierPips({ owned, accent }: { owned: number; accent: string }) {
+function TierPips(
+  // `accentRgb` is the CHANNEL form of `accent` (e.g. 'var(--accent-rgb)').
+  // rgba() cannot take var(--accent) as its first three arguments, so a
+  // translucent version of this colour needs the channels passed alongside it.
+  { owned, accent, accentRgb }: { owned: number; accent: string; accentRgb: string },
+) {
   return (
     <div style={{ display: 'flex', gap: 3, alignItems: 'center' }} aria-hidden>
       {Array.from({ length: MAX_TIERS }, (_, i) => {
@@ -120,9 +125,15 @@ function TierPips({ owned, accent }: { owned: number; accent: string }) {
               width: 14, height: 5, borderRadius: 3,
               background: isOwned ? accent : 'transparent',
               border: isOwned ? 'none' : `1px solid ${isNext ? 'var(--text-dim)' : 'var(--line-hair)'}`,
-              // `${accent}66` produced `var(--accent)66`, invalid CSS that the
-              // browser dropped — so this channel was silently absent.
-              boxShadow: isOwned ? `0 0 6px color-mix(in srgb, ${accent} 40%, transparent)` : 'none',
+              // rgba(var(--x-rgb), 0.4), NOT color-mix(): minSdkVersion is 24 and
+              // color-mix needs Chromium 111, so the declaration is DROPPED and
+              // this glow silently disappears on exactly the low-end devices
+              // this project targets.
+              //
+              // That is the SECOND time this one channel has been lost to a
+              // colour spelling the browser would not parse: it previously read
+              // `${accent}66`, which produced the invalid `var(--accent)66`.
+              boxShadow: isOwned ? `0 0 6px rgba(${accentRgb}, 0.4)` : 'none',
             }}
           />
         )
@@ -149,6 +160,7 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
   //   spentOut   ⊘ NO GAIN  tiers left but the facet is capped, so nothing to sell
   //   unaffordable ✕ NEED n  still a goal, so it keeps its consequence line
   const accent = maxed ? 'var(--positive)' : 'var(--accent)'
+  const accentRgb = maxed ? 'var(--positive-rgb)' : 'var(--accent-rgb)'
   const edge = maxed ? 'var(--positive)'
     : spentOut ? 'var(--text-mid)'
       : canBuy ? 'var(--accent)' : 'var(--line-hair)'
@@ -167,7 +179,16 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '10px 12px',
         borderRadius: 12,
-        background: maxed ? 'color-mix(in srgb, var(--positive) 7%, var(--bg-elevated))' : 'var(--bg-elevated)',
+        background: maxed
+          // A 7% --positive tint composited over the solid --bg-elevated.
+          //
+          // The gradient layer is the portable spelling of color-mix's
+          // OPAQUE-BASE blend, which minSdk 24 cannot parse. A bare
+          // rgba(var(--positive-rgb), 0.07) would NOT be equivalent: it would
+          // make the row 93% transparent over whatever sits behind it, rather
+          // than tinting the elevated surface.
+          ? 'linear-gradient(rgba(var(--positive-rgb), 0.07), rgba(var(--positive-rgb), 0.07)), var(--bg-elevated)'
+          : 'var(--bg-elevated)',
         border: '1px solid var(--line-hair)',
         borderLeft: `2px solid ${edge}`,
       }}
@@ -181,7 +202,7 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
           }}>
             {attr.label}
           </span>
-          <TierPips owned={owned} accent={accent} />
+          <TierPips owned={owned} accent={accent} accentRgb={accentRgb} />
         </div>
         <div
           data-testid={`effect-${attr.id}`}
