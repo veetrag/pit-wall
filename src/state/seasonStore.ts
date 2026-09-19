@@ -270,8 +270,18 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     // (see src/ui/RaceWatcher.tsx:44). If these two ever diverge, the grid
     // would be qualified under different car performance than the race runs
     // with -- a bug that would look like the simulation being unfair.
+    // RaceWatcher guards its own startSeasonRace call on `playerDriverId`
+    // being set, and this must match it. A null id reaching buildRaceConfig
+    // resolves to no team, which disables the upgrade overlay entirely -- so
+    // an unguarded call here would qualify the grid WITHOUT the player's
+    // upgrades and then race WITH them. That is precisely the config
+    // divergence the comment below warns about, arriving through the back
+    // door.
+    if (!s.playerDriverId) {
+      throw new Error('runQualifyingSession called with no playerDriverId')
+    }
     const config = buildRaceConfig(
-      s.currentSeed(), s.playerDriverId ?? '', s.currentCircuitId(), difficulty,
+      s.currentSeed(), s.playerDriverId, s.currentCircuitId(), difficulty,
       s.playerStrategy, { purchasedTiers: s.purchasedTiers, rivalDevelopment: s.rivalDevelopment },
     )
     set({ qualifyingResult: runQualifying(config, qualifyingRng(config), call) })

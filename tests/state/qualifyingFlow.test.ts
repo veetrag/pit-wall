@@ -4,7 +4,13 @@ import { buildScenarioConfig } from '@state/buildRaceConfig'
 
 describe('qualifying flow', () => {
   beforeEach(() => {
-    useSeasonStore.setState({ phase: 'race_setup', qualifyingResult: null })
+    // playerDriverId MUST be a real driver. These tests previously left it
+    // null, which buildRaceConfig resolved to no team -- so they were
+    // qualifying a field that contained no player car at all, and asserting
+    // that worked. Setting it makes the assertions mean what they say.
+    useSeasonStore.setState({
+      phase: 'race_setup', qualifyingResult: null, playerDriverId: 'd_voss',
+    })
   })
 
   it('race_setup CONFIRMS INTO qualifying, NOT racing', () => {
@@ -53,5 +59,23 @@ describe('qualifying flow', () => {
     // change the situation its expect block was authored against.
     const config = buildScenarioConfig({ circuitId: 'bengaluru', seed: 193, playerDriverId: 'd_voss' })
     expect(config.gridOrder).toBeUndefined()
+  })
+})
+
+describe('qualifying config cannot diverge from the race config', () => {
+  it('REFUSES TO QUALIFY WITH NO PLAYER DRIVER', () => {
+    /*
+     * buildRaceConfig resolves a missing driver to no team, and applyUpgrades
+     * then applies NO overlay. RaceWatcher already guards its startSeasonRace
+     * call on playerDriverId for the same reason. Without a matching guard
+     * here, a null id would qualify the grid on stock cars and then race on
+     * upgraded ones -- the player's own upgrades silently missing from the one
+     * session that decides track position.
+     */
+    useSeasonStore.setState({ phase: 'qualifying', playerDriverId: null, qualifyingResult: null })
+    expect(() => useSeasonStore.getState().runQualifyingSession(
+      { compound: 'S', attack: 'attack' }, 'rookie',
+    )).toThrow(/playerDriverId/)
+    expect(useSeasonStore.getState().qualifyingResult).toBeNull()
   })
 })
