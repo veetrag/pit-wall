@@ -33,7 +33,7 @@
       "balanced": { "paceDelta": 0.0, "errorChance": 0.06 },
       "attack": { "paceDelta": -0.45, "errorChance": 0.15 }
     },
-    "scrappyLapPenalty": 1.2,
+    "scrappyLapPenalty": 0.8,
     "seedOffset": 777777
   },
   "tyreManagement": { "degReliefFactor": 0.25 },
@@ -130,6 +130,10 @@
     }
   },
   "_regressionBands": {
+    "qualifying": {
+      "attackScrappyRate": [0.10, 0.20],
+      "topCarMeanGridPosition": [1, 8]
+    },
     "topTeamWinRate": [0.35, 0.55],
     "minDistinctWinners": 4,
     "meanAbsPosChange": [2.5, 4.0],
