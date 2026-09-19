@@ -11,7 +11,9 @@ function driverName(id: string): string {
 }
 
 export function Championship() {
-  const { standings, playerDriverId, playAgain } = useSeasonStore()
+  // Interim: this footer just abandons the career. Task 5 rebuilds this
+  // screen to offer startNextSeason vs endCareer as distinct choices.
+  const { standings, playerDriverId, endCareer } = useSeasonStore()
   const uiTap = useUiTap()
 
   const winner = standings[0]
@@ -136,7 +138,7 @@ export function Championship() {
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); playAgain() }}
+          onClick={() => { uiTap(); endCareer() }}
           style={{
             width: '100%', border: 'none', borderRadius: 10, padding: '16px',
             background: 'var(--accent)', color: 'var(--bg-deep)',

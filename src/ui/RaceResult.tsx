@@ -59,7 +59,8 @@ function Confetti() {
 }
 
 export function RaceResult() {
-  const { lastRaceResults, lastRaceEvents, standings, playerDriverId, raceIndex, nextRace, playAgain, retryRace } = useSeasonStore()
+  // Interim: MENU just abandons the career. Task 5 rebuilds this footer.
+  const { lastRaceResults, lastRaceEvents, standings, playerDriverId, raceIndex, nextRace, endCareer, retryRace } = useSeasonStore()
   const uiTap = useUiTap()
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
@@ -280,7 +281,7 @@ export function RaceResult() {
         </motion.button>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); playAgain() }}
+          onClick={() => { uiTap(); endCareer() }}
           style={{
             flex: 0, minWidth: 90,
             background: 'transparent', color: 'var(--text-mid)',

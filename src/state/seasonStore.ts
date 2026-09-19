@@ -4,6 +4,7 @@ import { buildRaceConfig } from './buildRaceConfig'
 import { runQualifying, qualifyingRng, type Compound, type PitStop, type QualifyingCall, type QualifyingResult } from '@engine/index'
 import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
+import { useCareerStore, escalateRivals } from './careerStore'
 
 export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result'
 
@@ -158,7 +159,8 @@ interface SeasonStore {
   startRaceFromQualifying: () => void
   recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | 'crash' | null }[], events: RaceEventSummary) => void
   nextRace: () => void
-  playAgain: () => void
+  startNextSeason: () => void
+  endCareer: () => void
   resumeSeason: (snap: SeasonSnapshot) => void
 }
 
@@ -202,7 +204,19 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   // 7919 is prime — keeps each attempt's seed stream well-separated from the
   // next round's base seed (raceIndex*1000+42) and from other attempts.
   currentSeed() {
-    return get().raceIndex * 1000 + 42 + get().attemptNonce * 7919
+    const { raceIndex, attemptNonce } = get()
+    const { seasonNumber } = useCareerStore.getState()
+    // (seasonNumber - 1), NOT seasonNumber: season 1 must add zero so its
+    // seeds are byte-identical to the pre-career game. byteIdentity, the
+    // Monte-Carlo bands and all three scenarios depend on that.
+    //
+    // Collisions are prevented modularly, not by magnitude -- attemptNonce is
+    // unbounded, so "the stride is bigger than the other terms" is false. Both
+    // seedStride and 1000 are multiples of 1000 and gcd(7919, 1000) = 1, so a
+    // collision needs the nonce difference to be a multiple of 1000, which
+    // then needs |dRace| >= 100 -- impossible across 12 rounds.
+    const stride = loadGameData().tuning.career.seedStride
+    return (seasonNumber - 1) * stride + raceIndex * 1000 + 42 + attemptNonce * 7919
   },
 
   retryRace() {
@@ -234,6 +248,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   backToDriverSelect() { set({ phase: 'driver_select' }) },
 
   startNewSeason() {
+    useCareerStore.getState().beginCareer()
     set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {} })
   },
 
@@ -327,6 +342,18 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       devPoints: get().devPoints + loadGameData().upgrades.income.perRace,
       rivalDevelopment: accumulateRivalDevelopment(get().rivalDevelopment),
     })
+
+    // The career's running totals. Read from the same results the standings
+    // use, so the two can never disagree.
+    const player = results.find(r => r.driverId === get().playerDriverId)
+    if (player) {
+      const grid = get().qualifyingResult
+      useCareerStore.getState().recordRace({
+        position: player.position,
+        retired: player.retired,
+        pole: grid ? grid.order[0] === get().playerDriverId : false,
+      })
+    }
   },
 
   nextRace() {
@@ -340,8 +367,50 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     }
   },
 
-  playAgain() {
-    set({ phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {} })
+  /**
+   * A new season inside the SAME career. Keeps the seat (the player is not on
+   * the driver market) and the eroded upgrades; resets everything season-scoped.
+   */
+  startNextSeason() {
+    const s = get()
+    const career = useCareerStore.getState()
+    const standing = s.standings.findIndex(x => x.driverId === s.playerDriverId)
+    const { erodedTiers } = career.rollOverSeason({
+      seasonNumber: career.seasonNumber,
+      teamId: s.selectedTeamId ?? '',
+      driverId: s.playerDriverId ?? '',
+      championshipPosition: standing >= 0 ? standing + 1 : s.standings.length,
+      points: s.standings.find(x => x.driverId === s.playerDriverId)?.points ?? 0,
+      // Overwritten by careerStore from its own season-scoped counter --
+      // seasonStore does not track wins, so it must not guess at them.
+      wins: 0,
+    }, s.purchasedTiers)
+    set({
+      phase: 'development',
+      raceIndex: 0,
+      standings: [],
+      lastRaceResults: null,
+      lastRaceEvents: null,
+      selectedCircuitId: CIRCUIT_ORDER[0] ?? null,
+      playerStrategy: null,
+      qualifyingResult: null,
+      attemptNonce: 0,
+      devPoints: 0,
+      purchasedTiers: erodedTiers,
+      rivalDevelopment: escalateRivals(s.rivalDevelopment, standing === 0),
+      // playerDriverId and selectedTeamId are deliberately NOT reset.
+    })
+  },
+
+  /** Abandon the career. This is what playAgain used to do, named honestly. */
+  endCareer() {
+    useCareerStore.getState().endCareer()
+    set({
+      phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0,
+      standings: [], lastRaceResults: null, lastRaceEvents: null,
+      selectedCircuitId: null, playerStrategy: null, qualifyingResult: null,
+      attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {},
+    })
   },
 
   /**
