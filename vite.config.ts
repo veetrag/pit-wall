@@ -20,6 +20,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
     coverage: { provider: 'v8' },
-    exclude: ['**/node_modules/**', '**/.claude/**', '**/dist/**'],
+    // .worktrees is excluded because superpowers creates git worktrees there,
+    // each a full checkout with its own tests/. Without this, `vitest run`
+    // globs them and reports double the suite -- 140 files / 1004 tests during
+    // the qualifying merge -- which hides whether the tests being counted are
+    // the ones on this branch.
+    exclude: ['**/node_modules/**', '**/.claude/**', '**/dist/**', '**/.worktrees/**'],
   },
 })
