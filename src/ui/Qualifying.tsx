@@ -126,8 +126,31 @@ export function Qualifying() {
 
         {/* Compound chips */}
         <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--line-hair)' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 12 }}>
-            COMPOUND
+          {/*
+            The conditions MUST be stated, not implied.
+            Before this, `weather` only gated which chips existed -- the player
+            was never told it was wet. Found on device: a dry tyre picked in a
+            wet session qualified P20, and because the session derives from the
+            race seed it cannot be re-run. A decision that is irreversible by
+            design has to be an informed one.
+          */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+            marginBottom: 12,
+          }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em' }}>
+              COMPOUND
+            </span>
+            <span
+              data-testid="qualifying-conditions"
+              style={{
+                fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.12em',
+                color: weather === 'DRY' ? 'var(--text-mid)' : 'var(--accent-warm)',
+              }}
+            >
+              {weather === 'DRY' ? 'TRACK DRY' : weather === 'DAMP' ? 'TRACK DAMP · WETS ADVISED' : 'TRACK WET · WETS ADVISED'}
+            </span>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {availableCompounds.map(c => {

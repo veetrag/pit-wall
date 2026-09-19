@@ -76,3 +76,17 @@ describe('Qualifying screen', () => {
     expect(useSeasonStore.getState().phase).toBe('racing')
   })
 })
+
+describe('the compound decision must be informed', () => {
+  it('STATES THE TRACK CONDITIONS', () => {
+    /*
+     * The session derives from the race seed, so a bad tyre call cannot be
+     * re-run. Before this, the weather only gated WHICH chips appeared and was
+     * never stated -- found on an API 30 emulator, where a soft tyre chosen in
+     * a wet session qualified P20 with nothing on screen saying it was wet.
+     */
+    render(<Qualifying />)
+    const el = screen.getByTestId('qualifying-conditions')
+    expect(el.textContent).toMatch(/TRACK (DRY|DAMP|WET)/)
+  })
+})
