@@ -250,8 +250,15 @@ same engine/UI boundary `raceStore` already keeps.
 
 ### 4.3 Persistence
 
-`src/state/seasonPersistence.ts` gains `qualifying: null` to its phase map,
-the same treatment `grid`, `settings` and `how_to_play` already receive.
+`src/state/seasonPersistence.ts` gains `qualifying: 'race_setup'` to its
+`RESUME_PHASE` map -- the same treatment `racing` already receives, and NOT the
+`null` given to the menu/settings detours.
+
+The distinction matters. `null` means "write no save snapshot at all", which is
+right for a player who opens Settings mid-season and must not overwrite their
+save with a snapshot that says they are sitting in a menu. A player in
+qualifying is genuinely mid-season, so the save should be written -- it simply
+should resume into `race_setup` rather than into a half-run session.
 
 Qualifying is a transient step, not a resumable save point: quitting mid-session
 returns the player to `race_setup` on reload rather than restoring a half-run
