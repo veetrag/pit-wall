@@ -25,6 +25,10 @@ export function buildRaceConfig(
   // would close a real ESM cycle (seasonStore imports CIRCUIT_ORDER from this
   // module as a value). buildRaceConfig stays a pure function of its arguments.
   upgrades?: UpgradeOverlayInput | null,
+  // The grid from qualifying, P1 first. Omitted for scenarios and for any
+  // caller that wants the engine's drivers.json default -- see the comment on
+  // RaceConfig.gridOrder for why absence must stay meaningful.
+  gridOrder?: string[],
 ): RaceConfig {
   const data = loadGameData()
   const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
@@ -96,6 +100,7 @@ export function buildRaceConfig(
     mandatoryTwoCompound: data.tuning.tyreRules.mandatoryTwoCompound[difficulty],
     coverReactionScale: profile.coverReactionScale,
     paceModeAggression: profile.aiPaceModeAggression,
+    gridOrder,
   }
 }
 

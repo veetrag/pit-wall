@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import { CIRCUIT_ORDER } from './raceStore'
-import type { Compound, PitStop } from '@engine/index'
+import { buildRaceConfig } from './buildRaceConfig'
+import { runQualifying, qualifyingRng, type Compound, type PitStop, type QualifyingCall, type QualifyingResult } from '@engine/index'
+import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
 
-export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result'
+export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result'
 
 // Type-only on purpose: seasonPersistence imports THIS module at runtime to
 // subscribe to the store, so a value import here would close a cycle.
@@ -112,6 +114,7 @@ interface SeasonStore {
   selectedCircuitId: string | null
   selectedTeamId: string | null
   playerStrategy: PlayerStrategyChoice | null
+  qualifyingResult: QualifyingResult | null
   // M5: increments each time the player retries the current round without
   // advancing — varies the seed (and therefore the weather stream, which
   // derives from seed+999999) so a retry isn't a byte-identical replay.
@@ -150,7 +153,9 @@ interface SeasonStore {
   selectDriver: (id: string) => void
   confirmDriver: () => void
   toRaceSetup: () => void
-  confirmRaceSetup: (circuitId?: string, strategy?: PlayerStrategyChoice) => void
+  confirmRaceSetup: (circuitId?: string, strategy?: PlayerStrategyChoice | null) => void
+  runQualifyingSession: (call: QualifyingCall, difficulty: Difficulty) => void
+  startRaceFromQualifying: () => void
   recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | 'crash' | null }[], events: RaceEventSummary) => void
   nextRace: () => void
   playAgain: () => void
@@ -167,6 +172,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   selectedCircuitId: null,
   selectedTeamId: null,
   playerStrategy: null,
+  qualifyingResult: null,
   attemptNonce: 0,
   devPoints: 0,
   purchasedTiers: {},
@@ -251,11 +257,33 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   // The development screen is skippable by design: unspent points bank rather
   // than expire, so it reads as a decision point and not a toll booth.
-  toRaceSetup() { set({ phase: 'race_setup' }) },
+  toRaceSetup() { set({ phase: 'race_setup', qualifyingResult: null }) },
 
   confirmRaceSetup(circuitId, strategy) {
     if (circuitId) set({ selectedCircuitId: circuitId })
-    set({ phase: 'racing', playerStrategy: strategy ?? null })
+    set({ phase: 'qualifying', playerStrategy: strategy ?? null, qualifyingResult: null })
+  },
+
+  runQualifyingSession(call, difficulty) {
+    const s = get()
+    // Built with EXACTLY the arguments RaceWatcher passes to startSeasonRace
+    // (see src/ui/RaceWatcher.tsx:44). If these two ever diverge, the grid
+    // would be qualified under different car performance than the race runs
+    // with -- a bug that would look like the simulation being unfair.
+    const config = buildRaceConfig(
+      s.currentSeed(), s.playerDriverId ?? '', s.currentCircuitId(), difficulty,
+      s.playerStrategy, { purchasedTiers: s.purchasedTiers, rivalDevelopment: s.rivalDevelopment },
+    )
+    set({ qualifyingResult: runQualifying(config, qualifyingRng(config), call) })
+  },
+
+  startRaceFromQualifying() {
+    const result = get().qualifyingResult
+    // No result means the player reached the race without a session, which the
+    // UI does not allow. Racing with an undefined grid would silently fall back
+    // to the fixed drivers.json order -- the exact defect this feature removes.
+    if (!result) throw new Error('startRaceFromQualifying called with no qualifyingResult')
+    set({ phase: 'racing' })
   },
 
   // Invariant: must be called at most once per race. There is no idempotency

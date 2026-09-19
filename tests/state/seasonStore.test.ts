@@ -35,14 +35,17 @@ describe('seasonStore', () => {
     expect(useSeasonStore.getState().phase).toBe('development')
   })
 
-  it('confirmRaceSetup transitions to racing', () => {
+  it('confirmRaceSetup transitions to qualifying', () => {
+    // Task 5: race_setup now confirms into 'qualifying', not straight to
+    // 'racing' -- the player qualifies before the grid is set. See
+    // tests/state/qualifyingFlow.test.ts for the full qualifying -> racing flow.
     useSeasonStore.getState().startNewSeason()
     useSeasonStore.getState().selectTeam('apex')
     useSeasonStore.getState().confirmTeam()
     useSeasonStore.getState().selectDriver('d_voss')
     useSeasonStore.getState().confirmDriver()
     useSeasonStore.getState().confirmRaceSetup()
-    expect(useSeasonStore.getState().phase).toBe('racing')
+    expect(useSeasonStore.getState().phase).toBe('qualifying')
   })
 
   it('currentSeed returns raceIndex * 1000 + 42', () => {

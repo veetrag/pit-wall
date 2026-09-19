@@ -23,6 +23,7 @@ export function RaceWatcher() {
   // already subscribes to both stores, so it is the natural seam.
   const purchasedTiers = useSeasonStore(s => s.purchasedTiers)
   const rivalDevelopment = useSeasonStore(s => s.rivalDevelopment)
+  const qualifyingResult = useSeasonStore(s => s.qualifyingResult)
   const setSpeed = useClockStore(s => s.setSpeed)
   const difficulty = useSettingsStore(s => s.difficulty)
   const startScenarioRace = useRaceStore(s => s.startScenarioRace)
@@ -41,7 +42,7 @@ export function RaceWatcher() {
   useEffect(() => {
     if (seasonPhase === 'racing' && racePhase === 'idle' && playerDriverId) {
       hasFiredRef.current = false
-      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty, playerStrategy, { purchasedTiers, rivalDevelopment })
+      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty, playerStrategy, { purchasedTiers, rivalDevelopment }, qualifyingResult?.order)
     }
   }, [seasonPhase, racePhase, playerDriverId]) // eslint-disable-line react-hooks/exhaustive-deps
 
