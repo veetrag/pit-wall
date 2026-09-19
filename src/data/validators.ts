@@ -77,6 +77,15 @@ const TuningSchema = z.object({
     neutral:  z.object({ paceDelta: z.number(), degMultiplier: z.number() }),
     conserve: z.object({ paceDelta: z.number(), degMultiplier: z.number() }),
   }),
+  qualifying: z.object({
+    attackLevels: z.object({
+      conserve: z.object({ paceDelta: z.number(), errorChance: z.number().min(0).max(1) }),
+      balanced: z.object({ paceDelta: z.number(), errorChance: z.number().min(0).max(1) }),
+      attack:   z.object({ paceDelta: z.number(), errorChance: z.number().min(0).max(1) }),
+    }),
+    scrappyLapPenalty: z.number(),
+    seedOffset: z.number(),
+  }),
   tyreManagement: z.object({ degReliefFactor: z.number() }),
   tyreRules: z.object({
     allocation: z.object({

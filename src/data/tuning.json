@@ -27,6 +27,15 @@
     "neutral":  { "paceDelta":  0.00, "degMultiplier": 1.00 },
     "conserve": { "paceDelta":  0.20, "degMultiplier": 0.75 }
   },
+  "qualifying": {
+    "attackLevels": {
+      "conserve": { "paceDelta": 0.35, "errorChance": 0.02 },
+      "balanced": { "paceDelta": 0.0, "errorChance": 0.06 },
+      "attack": { "paceDelta": -0.45, "errorChance": 0.15 }
+    },
+    "scrappyLapPenalty": 1.2,
+    "seedOffset": 777777
+  },
   "tyreManagement": { "degReliefFactor": 0.25 },
   "tyreRules": {
     "allocation": {
