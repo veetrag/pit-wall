@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { migrateSave, SEASON_MIGRATIONS } from './saveMigration'
 import { Preferences } from '@capacitor/preferences'
 import { useSeasonStore } from './seasonStore'
 import type { SeasonPhase } from './seasonStore'
@@ -173,7 +174,15 @@ export async function loadSnapshot(): Promise<SeasonSnapshot | null> {
   try {
     const { value } = await Preferences.get({ key: SAVE_KEY })
     if (!value) return null
-    const parsed = SeasonSnapshotSchema.safeParse(JSON.parse(value))
+    // Migrate BEFORE validating. The schema pins `v` with z.literal, so an
+    // older save would fail validation for the one reason a migration exists
+    // to fix. See src/state/saveMigration.ts.
+    const migrated = migrateSave(JSON.parse(value), SAVE_VERSION, SEASON_MIGRATIONS)
+    if (!migrated.data) {
+      console.warn('[season] discarding save —', migrated.reason)
+      return null
+    }
+    const parsed = SeasonSnapshotSchema.safeParse(migrated.data)
     if (!parsed.success) {
       console.warn('[season] discarding unreadable save', parsed.error.issues[0]?.message)
       return null

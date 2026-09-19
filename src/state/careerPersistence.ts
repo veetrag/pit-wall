@@ -1,5 +1,6 @@
 import { Preferences } from '@capacitor/preferences'
 import { z } from 'zod'
+import { migrateSave, CAREER_MIGRATIONS } from './saveMigration'
 import { useCareerStore, type CareerRecord } from './careerStore'
 
 /**
@@ -110,7 +111,13 @@ export async function loadCareer(): Promise<CareerSnapshot | null> {
   try {
     const { value } = await Preferences.get({ key: CAREER_SAVE_KEY })
     if (!value) return null
-    const parsed = CareerSnapshotSchema.safeParse(JSON.parse(value))
+    // Migrate BEFORE validating -- see the note in seasonPersistence.loadSnapshot.
+    const migrated = migrateSave(JSON.parse(value), CAREER_SAVE_VERSION, CAREER_MIGRATIONS)
+    if (!migrated.data) {
+      console.warn('[career] discarding save —', migrated.reason)
+      return null
+    }
+    const parsed = CareerSnapshotSchema.safeParse(migrated.data)
     if (!parsed.success) {
       console.warn('[career] discarding unreadable save', parsed.error.issues[0]?.message)
       return null
