@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useClockStore, type GameSpeed } from '@state/clockStore'
 import { useCoachStore } from '@state/coachStore'
+import { useCoachingActive } from '@hooks/useCoachingActive'
 import { useSettingsStore } from '@state/settingsStore'
 import { CoachMark } from './CoachMark'
 import { GameClock } from './GameClock'
@@ -160,13 +161,42 @@ export function useRetireCoachTutorial(): void {
   const done = useCoachStore(s => s.done)
   const setCoachMarksSeen = useSettingsStore(s => s.setCoachMarksSeen)
   useEffect(() => {
-    if (done.tyre_cliff && done.projection) setCoachMarksSeen(true)
+    // All four, not just the original two. Adding a mark without adding it
+    // here would retire the tutorial before the new mark had ever been shown.
+    if (done.timing_tower && done.pace_modes && done.tyre_cliff && done.projection) {
+      setCoachMarksSeen(true)
+    }
   }, [done]) // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/**
+ * Requests the two marks that have no natural trigger of their own.
+ *
+ * The cliff and the projection are requested by the things that cause them
+ * (TelemetryZone, PitPanel). The tower and the pace trade are always on
+ * screen, so they are keyed to the lap instead: the tower at lights-out,
+ * because it is the first thing a new player has to read, and the pace trade
+ * once the race is actually running and the tyres have started to go off.
+ *
+ * Re-requesting on later laps is harmless and deliberate: coachStore refuses a
+ * mark while another is active, so a request dropped at lap 1 is made again at
+ * lap 2 rather than lost.
+ */
+function useTutorialMarks(): void {
+  const coaching = useCoachingActive()
+  const lap = useRaceStore(s => s.raceState?.lap ?? 0)
+  const request = useCoachStore(s => s.request)
+  useEffect(() => {
+    if (!coaching) return
+    if (lap >= 0) request('timing_tower')
+    if (lap >= 2) request('pace_modes')
+  }, [coaching, lap, request])
 }
 
 export function RaceHUD() {
   const phase = useRaceStore(s => s.phase)
   useRetireCoachTutorial()
+  useTutorialMarks()
 
   return (
     <div style={{
@@ -278,6 +308,16 @@ export function RaceHUD() {
 
       <PitPanel />
 
+      <CoachMark
+        id="timing_tower"
+        title="READ THE TOWER"
+        body="Every car, in order, with the gap to the one ahead. Your row is the teal one. Those gaps are the whole game — when one falls under a second, a move is on."
+      />
+      <CoachMark
+        id="pace_modes"
+        title="PACE COSTS TYRES"
+        body="PUSH buys lap time and spends tyre life. SAVE does the opposite. There is no free setting — every second you gain now is a second you may give back when the rubber goes."
+      />
       <CoachMark
         id="tyre_cliff"
         title="THE CLIFF IS COMING"

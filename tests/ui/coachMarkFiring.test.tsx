@@ -64,17 +64,24 @@ describe('coach marks firing on the first race', () => {
     expect(useCoachStore.getState().active).toBe('tyre_cliff')
   })
 
-  it('once both marks are dismissed, coachMarksSeen becomes true', () => {
+  it('coachMarksSeen becomes true only when EVERY mark is dismissed', () => {
+    /*
+     * Asserted one at a time, and the intermediate expectations are the point:
+     * they are what catches a new mark being added to the union without being
+     * added to useRetireCoachTutorial. That mistake retires the tutorial early
+     * and the new mark is never seen by anyone.
+     */
     render(<RetireTutorialProbe />)
-    expect(useSettingsStore.getState().coachMarksSeen).toBe(false)
-
-    act(() => { useCoachStore.getState().request('tyre_cliff') })
-    act(() => { useCoachStore.getState().dismiss('tyre_cliff') })
-    expect(useSettingsStore.getState().coachMarksSeen).toBe(false)
-
-    act(() => { useCoachStore.getState().request('projection') })
-    act(() => { useCoachStore.getState().dismiss('projection') })
-    expect(useSettingsStore.getState().coachMarksSeen).toBe(true)
+    const ids = ['timing_tower', 'pace_modes', 'tyre_cliff', 'projection'] as const
+    for (const [i, id] of ids.entries()) {
+      expect(useSettingsStore.getState().coachMarksSeen, `before dismissing ${id}`).toBe(false)
+      act(() => { useCoachStore.getState().request(id) })
+      act(() => { useCoachStore.getState().dismiss(id) })
+      if (i < ids.length - 1) {
+        expect(useSettingsStore.getState().coachMarksSeen, `after ${id}, ${ids.length - 1 - i} left`).toBe(false)
+      }
+    }
+    expect(useSettingsStore.getState().coachMarksSeen, 'all four dismissed').toBe(true)
   })
 
   it('a mark dismissed in one race does not return in the next within the same session', () => {

@@ -1,6 +1,16 @@
 import { create } from 'zustand'
 
-export type CoachMarkId = 'tyre_cliff' | 'projection'
+/*
+ * Order matters to the player, not to this file: the marks are requested at
+ * the moment each thing first happens, so the race itself sequences them --
+ * the tower at lights-out, the pace trade once running, then the cliff and
+ * the projection when those actually arise.
+ */
+export type CoachMarkId =
+  | 'timing_tower'
+  | 'pace_modes'
+  | 'tyre_cliff'
+  | 'projection'
 
 interface CoachStore {
   /** At most one mark is ever on screen. */
