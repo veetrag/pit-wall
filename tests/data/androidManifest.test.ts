@@ -149,3 +149,67 @@ describe('Capacitor gradle paths point at this checkout', () => {
       .toEqual([])
   })
 })
+
+describe('the app requests no network access', () => {
+  /*
+   * Pit Wall talks to nobody. The simulation is local, the save is local, there
+   * is no analytics, no ads and no IAP -- so the app declares no INTERNET
+   * permission, and the Play Store data-safety declaration says it collects and
+   * transmits nothing.
+   *
+   * That claim is only as good as this guard. It is also load-bearing in the
+   * other direction: because there is no INTERNET permission, ANY remote asset
+   * fails silently on device while working in the dev browser. Three Google
+   * Fonts <link> tags survived that way from Phase 0 until they were measured
+   * on an emulator (see src/styles/fonts.css). tests/ui/noRemoteAssets.test.ts
+   * guards the other half of the same invariant.
+   *
+   * Adding INTERNET is a legitimate decision, not a forbidden one -- but it is
+   * a PRODUCT decision with a store-disclosure consequence, so it should fail
+   * here and be made deliberately rather than arrive inside a dependency.
+   */
+  const PERMISSION = /uses-permission[^>]*android:name\s*=\s*"([^"]+)"/g
+
+  it('DOES NOT DECLARE android.permission.INTERNET', () => {
+    const manifest = readFileSync(join(ANDROID, 'AndroidManifest.xml'), 'utf8')
+    const declared = [...manifest.matchAll(PERMISSION)].map(m => m[1])
+    expect(declared, 'the app manifest must not request network access').not.toContain('android.permission.INTERNET')
+  })
+
+  it('no dependency slips INTERNET into the MERGED manifest', () => {
+    /*
+     * The app manifest is not the whole story: a Capacitor plugin's own
+     * manifest is merged in, and that is how a network permission would
+     * realistically arrive -- from a dependency nobody inspected, not from an
+     * edit to the file above.
+     *
+     * The merged manifest only exists after a gradle build, so this SKIPS when
+     * it is absent rather than failing: a fresh clone must not fail its test
+     * suite for not having built an APK yet. It is still worth having -- the
+     * release-day build is exactly when it matters, and by then the file is
+     * there.
+     */
+    const merged = resolve(
+      process.cwd(),
+      'android/app/build/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml',
+    )
+    if (!existsSync(merged)) {
+      console.log('merged manifest absent (no release build yet) -- skipping')
+      return
+    }
+    const declared = [...readFileSync(merged, 'utf8').matchAll(PERMISSION)].map(m => m[1])
+    // Assert the whole set, not just the absence: a new permission of any kind
+    // is a store-disclosure question and should be looked at deliberately.
+    expect(declared.sort()).toEqual([
+      'android.permission.VIBRATE',
+      'com.veetrag.pitwall.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION',
+    ])
+  })
+
+  it('the permission matcher actually matches', () => {
+    // Without this, a regex that matched nothing would make both assertions
+    // above pass on an empty list forever.
+    const sample = '<uses-permission android:name="android.permission.INTERNET" />'
+    expect([...sample.matchAll(PERMISSION)].map(m => m[1])).toEqual(['android.permission.INTERNET'])
+  })
+})
