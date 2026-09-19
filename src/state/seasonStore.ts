@@ -6,7 +6,7 @@ import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
 import { useCareerStore, escalateRivals } from './careerStore'
 
-export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result'
+export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result' | 'career'
 
 // Type-only on purpose: seasonPersistence imports THIS module at runtime to
 // subscribe to the store, so a value import here would close a cycle.
@@ -137,6 +137,8 @@ interface SeasonStore {
   setCircuit: (id: string) => void
   viewGrid: () => void
   exitGrid: () => void
+  viewCareer: () => void
+  exitCareer: () => void
   viewHowToPlay: () => void
   exitHowToPlay: () => void
   viewSettings: () => void
@@ -259,6 +261,8 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   viewGrid() { set({ phase: 'grid' }) },
   exitGrid() { set({ phase: 'menu' }) },
+  viewCareer() { set({ phase: 'career' }) },
+  exitCareer() { set({ phase: 'menu' }) },
   viewHowToPlay() { set({ phase: 'how_to_play' }) },
   exitHowToPlay() { set({ phase: 'menu' }) },
   viewSettings() { set({ phase: 'settings' }) },

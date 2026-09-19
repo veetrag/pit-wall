@@ -60,6 +60,7 @@ export type ResumePhase = 'development' | 'race_setup' | 'result' | 'championshi
 const RESUME_PHASE: Record<SeasonPhase, ResumePhase | null> = {
   menu: null,
   grid: null,
+  career: null,
   team_select: null,
   driver_select: null,
   how_to_play: null,

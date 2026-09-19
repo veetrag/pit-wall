@@ -16,6 +16,7 @@ import { HowToPlay } from './ui/HowToPlay'
 import { RaceHUD } from './ui/RaceHUD'
 import { RaceResult } from './ui/RaceResult'
 import { Championship } from './ui/Championship'
+import { CareerRecord } from './ui/CareerRecord'
 import { RaceWatcher } from './ui/RaceWatcher'
 import { SettingsScreen } from './ui/SettingsPanel'
 import { ScenarioSelect } from './ui/ScenarioSelect'
@@ -64,6 +65,7 @@ export default function App() {
           {phase === 'racing' && <RaceHUD key="race" />}
           {phase === 'result' && <RaceResult key="result" />}
           {phase === 'championship' && <Championship key="championship" />}
+          {phase === 'career' && <CareerRecord key="career" />}
           {phase === 'scenario_select' && <ScenarioSelect key="scenario_select" />}
           {phase === 'scenario_racing' && <RaceHUD key="scenario_race" />}
           {phase === 'scenario_result' && <ScenarioResult key="scenario_result" />}
