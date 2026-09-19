@@ -67,7 +67,10 @@ New `src/state/careerStore.ts`, holding only what outlives a season:
 export interface CareerRecord {
   seasonNumber: number        // 1-based. Season 1 is a career's first season.
   titles: number
-  wins: number
+  wins: number                // career total
+  seasonWins: number          // this season only; reset at each rollover, so
+                              // SeasonSummary records what a season was worth
+                              // rather than the running career total
   podiums: number
   poles: number               // qualifying makes this meaningful
   racesStarted: number
@@ -137,14 +140,27 @@ not hold.
 
 ### 3.3 The season rollover
 
-A new `careerStore.rollOverSeason(result)` runs once, between `championship`
-and the next season's `development` phase. It does four things, in order:
+A season boundary runs once, between `championship` and the next season's
+`development` phase, and does four things:
 
 1. **Record the season** into `CareerRecord` — increment `titles` if the player
-   finished first, add wins/podiums/poles, append a `SeasonSummary`.
+   finished first, append a `SeasonSummary`.
 2. **Erode the player's upgrades** (3.4).
 3. **Escalate the rivals** (3.5).
 4. **Increment `seasonNumber`.**
+
+**The split between the two stores is forced, and worth stating.**
+`careerStore.rollOverSeason(summary, tiers)` does 1, 2 and 4 — it TAKES the
+current tiers and RETURNS the eroded ones. `seasonStore.startNextSeason()` does
+3 and applies the returned tiers.
+
+The reason is the import direction. `seasonStore` imports `careerStore` as a
+value (for `currentSeed`), so `careerStore` must not import `seasonStore` back
+— that closes a real ESM cycle. Passing tiers in and handing them back keeps
+erosion a pure function of its arguments and keeps the cycle open. It is the
+same constraint that already stops `raceStore` reading `seasonStore` directly
+and routes the upgrade overlay through `RaceWatcher` instead; see the comment
+at `src/state/buildRaceConfig.ts:25`.
 
 `seasonStore` then resets its season-scoped state — `raceIndex`, `standings`,
 `devPoints`, `attemptNonce`, `lastRaceResults` — while KEEPING
