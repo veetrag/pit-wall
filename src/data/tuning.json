@@ -37,6 +37,11 @@
     "seedOffset": 777777,
     "gridSlotGapSec": 0.25
   },
+  "career": {
+    "tierDecayPerSeason": 1,
+    "rivalCatchUp": { "base": 0.5, "championBonus": 0.5 },
+    "seedStride": 100000
+  },
   "tyreManagement": { "degReliefFactor": 0.25 },
   "tyreRules": {
     "allocation": {

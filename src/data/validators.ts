@@ -87,6 +87,14 @@ const TuningSchema = z.object({
     seedOffset: z.number(),
     gridSlotGapSec: z.number(),
   }),
+  career: z.object({
+    tierDecayPerSeason: z.number().int().min(0),
+    rivalCatchUp: z.object({
+      base: z.number().min(0),
+      championBonus: z.number().min(0),
+    }),
+    seedStride: z.number().int().positive(),
+  }),
   tyreManagement: z.object({ degReliefFactor: z.number() }),
   tyreRules: z.object({
     allocation: z.object({

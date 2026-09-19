@@ -89,6 +89,11 @@ export interface TuningConstants {
     seedOffset: number
     gridSlotGapSec: number
   }
+  career: {
+    tierDecayPerSeason: number
+    rivalCatchUp: { base: number; championBonus: number }
+    seedStride: number
+  }
   tyreManagement: { degReliefFactor: number }
   strategyReaction: {
     coverUndercutEnabled: boolean
