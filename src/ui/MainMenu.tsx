@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
 import { loadSnapshot, type SeasonSnapshot } from '@state/seasonPersistence'
+import { loadCareer } from '@state/careerPersistence'
+import { useCareerStore } from '@state/careerStore'
 import { useUiTap } from '@hooks/useUiTap'
 
 function AmbientHero() {
@@ -63,6 +65,7 @@ export function MainMenu() {
   const viewHowToPlay = useSeasonStore(s => s.viewHowToPlay)
   const viewSettings = useSeasonStore(s => s.viewSettings)
   const viewScenarios = useSeasonStore(s => s.viewScenarios)
+  const resumeCareer = useCareerStore(s => s.resumeCareer)
   const uiTap = useUiTap()
 
   // Read on mount rather than at app start: the menu is remounted every time
@@ -72,6 +75,7 @@ export function MainMenu() {
   useEffect(() => {
     let live = true
     void loadSnapshot().then(s => { if (live) setSaved(s) })
+    void loadCareer().then(c => { if (live && c) resumeCareer(c) })
     return () => { live = false }
   }, [])
 

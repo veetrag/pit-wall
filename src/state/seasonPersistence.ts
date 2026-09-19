@@ -32,8 +32,14 @@ export const SAVE_KEY = 'season.save'
  * version loads as `null` -- the player loses a season, which is bad, but far
  * better than restoring a half-shaped object into the store and crashing on a
  * screen they cannot get out of.
+ *
+ * Bumped to 2 when career landed. currentSeed() now includes a season term, so
+ * a v1 save resuming into a career-less store would run different races than it
+ * was saved under -- silently. Failing the parse and discarding is the honest
+ * outcome, and it is only acceptable because the game has not shipped. Once it
+ * has, a migration layer is a prerequisite for any further bump.
  */
-export const SAVE_VERSION = 1
+export const SAVE_VERSION = 2
 
 /** The phases a season can resume INTO. Menus and detours are not among them. */
 export type ResumePhase = 'development' | 'race_setup' | 'result' | 'championship'

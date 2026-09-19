@@ -3,6 +3,7 @@ import './styles/tokens.css'
 import { AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from './state/seasonStore'
 import { startSeasonAutosave } from './state/seasonPersistence'
+import { startCareerAutosave } from './state/careerPersistence'
 import { useSettingsStore, startReducedMotionWatch } from './state/settingsStore'
 import { MainMenu } from './ui/MainMenu'
 import { GridStats } from './ui/GridStats'
@@ -39,6 +40,7 @@ export default function App() {
   // can advance a season while forgetting to persist it -- which is precisely
   // how the previous attempt at saving ended up dead. See seasonPersistence.ts.
   useEffect(() => startSeasonAutosave(), [])
+  useEffect(() => startCareerAutosave(), [])
 
   // Follows the OS accessibility preference while the app is open. It only
   // applies while the player has made no explicit choice of their own -- see
