@@ -198,7 +198,26 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   updateProjection(compound: Compound) {
     const { config, raceState } = get()
     if (!config || !raceState) return
-    const result = projectPitNow(config, raceState, compound, Date.now() % 100000)
+    /*
+     * Seeded from the RACE, not the clock.
+     *
+     * This was `Date.now() % 100000`, which meant the same race state produced
+     * DIFFERENT advice every time the pit panel was opened. A player who closed
+     * the panel to think and reopened it could be told something else, with
+     * nothing in the race having changed -- on the single highest-stakes number
+     * the game shows. It was also the last value in the game not reproducible
+     * from a seed, which made the projection impossible to test or to reproduce
+     * from a bug report.
+     *
+     * rngState is the live race RNG, so it is fully determined by the race seed
+     * and advances every tick: the projection is stable at a given moment and
+     * still moves as the race moves. Reading it does not consume it.
+     *
+     * The compound is deliberately NOT mixed in, so soft/medium/hard are
+     * projected under identical luck and the only difference the player sees
+     * between them is the tyre.
+     */
+    const result = projectPitNow(config, raceState, compound, raceState.rngState)
     set({ projectionResult: result })
   },
 }))
