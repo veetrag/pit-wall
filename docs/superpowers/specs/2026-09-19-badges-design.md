@@ -243,8 +243,12 @@ difference logic is unit-testable without a store.
 - Fires for ids returned by `newlyEarned`, computed from the career record
   snapshotted immediately before `recordRace` and the record immediately
   after.
-- Slide-in with `motion/react`, one at a time, ~2.5s each when several land
-  together.
+- Slide-in with `motion/react`, staggered when several land together, and
+  then PERSISTENT for as long as the race-result screen is open rather than
+  auto-dismissing after a few seconds. The result screen is static and the
+  player leaves it by choosing to; a badge that vanishes on a timer can be
+  missed entirely by someone reading the classification, and the badge is the
+  reward. Nothing else on that screen is time-limited either.
 - Haptic on appearance via `useHaptics().impact` directly, NOT via
   `useUiTap`: that helper also plays the `navTap` sound, which is the
   acknowledgement of a press. A badge arriving is not a press, and firing the
