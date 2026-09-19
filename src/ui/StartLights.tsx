@@ -253,6 +253,13 @@ function CircuitBackground() {
 export function StartLights() {
   const confirmRaceStart = useRaceStore(s => s.confirmRaceStart)
   const setSpeed = useClockStore(s => s.setSpeed)
+  /*
+   * The player's "Default playback speed" setting. It was persisted and
+   * rendered but NOTHING consumed it: both lights-out paths below hardcoded
+   * setSpeed(1), so every race started at 1x no matter what the player chose.
+   * Found by setting it to 4x on a device and watching the race start at 1x.
+   */
+  const simSpeed = useSettingsStore(s => s.simSpeed)
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const { impact } = useHaptics()
   const config = useRaceStore(s => s.config)
@@ -265,7 +272,7 @@ export function StartLights() {
     if (reducedMotion) {
       soundService.play('lightsOut')
       confirmRaceStart()
-      setSpeed(1)
+      setSpeed(simSpeed)
       return
     }
 
@@ -289,7 +296,7 @@ export function StartLights() {
 
     timers.push(setTimeout(() => {
       confirmRaceStart()
-      setSpeed(1)
+      setSpeed(simSpeed)
       setDone(true)
     }, totalLightTime + 800))
 

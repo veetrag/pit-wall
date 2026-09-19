@@ -11,11 +11,11 @@ const MAX_FEED = 8
 export function CommentaryTicker() {
   const raceState = useRaceStore(s => s.raceState)
   const config = useRaceStore(s => s.config)
-  // Seeded from the lap the ticker mounts on: a scenario drops the player into
-  // a race in progress, and a fresh commentary state would open the feed with
-  // "Lights out and away we go" on lap 15 of 34.
+  // Seeded from the state the ticker mounts on: a scenario drops the player
+  // into a race in progress, and a fresh commentary state would open the feed
+  // with "Lights out and away we go" plus every overtake from the fast-forward.
   const stateRef = useRef<CommentaryState>(
-    makeCommentaryState(useRaceStore.getState().raceState?.lap ?? 0),
+    makeCommentaryState(useRaceStore.getState().raceState ?? undefined),
   )
   const [feed, setFeed] = useState<string[]>([])
 

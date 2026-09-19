@@ -25,22 +25,28 @@ export interface CommentaryState {
 }
 
 /**
- * @param joinedAtLap the lap the ticker first sees. Non-zero means the race was
- *   already underway when this ticker was mounted -- a scenario takeover, where
- *   "Lights out and away we go" would be announcing a start that happened
- *   fourteen laps ago. Expressed as the join lap rather than a `isScenario`
- *   flag so the mapper stays ignorant of game modes: any future mid-race entry
- *   gets the right behaviour for free.
+ * @param from the race state the ticker first sees, when it is joining a race
+ *   already in progress (a scenario takeover). Omitted for a normal start.
+ *
+ * Everything already in that state is HISTORY, not news. Seeding the counters
+ * from it is what stops the feed opening with a backlog: a scenario handed over
+ * at lap 14 announced "Lights out and away we go" and then replayed every
+ * overtake from the fast-forward as though it had just happened -- observed on
+ * device showing "L1 VOS passes CHN for P4" on the first tick after taking over
+ * at lap 14.
+ *
+ * Expressed as the joining state rather than an `isScenario` flag so the mapper
+ * stays ignorant of game modes: any future mid-race entry is correct for free.
  */
-export function makeCommentaryState(joinedAtLap = 0): CommentaryState {
+export function makeCommentaryState(from?: RaceState): CommentaryState {
   return {
-    prevOvertakeCount: 0,
-    prevIncidentCount: 0,
-    prevPitsDone: {},
-    prevRetired: {},
-    prevWeatherState: 'DRY',
-    prevLap: -1,
-    started: joinedAtLap > 0,
+    prevOvertakeCount: from?.overtakeEvents.length ?? 0,
+    prevIncidentCount: from?.incidents.length ?? 0,
+    prevPitsDone: Object.fromEntries((from?.cars ?? []).map(c => [c.driverId, c.pitsDone])),
+    prevRetired: Object.fromEntries((from?.cars ?? []).map(c => [c.driverId, c.retired])),
+    prevWeatherState: from?.weatherState ?? 'DRY',
+    prevLap: from ? from.lap : -1,
+    started: (from?.lap ?? 0) > 0,
   }
 }
 

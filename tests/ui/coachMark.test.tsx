@@ -4,6 +4,7 @@ import { act } from 'react'
 import { useCoachStore } from '@state/coachStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useClockStore } from '@state/clockStore'
+import { useRaceStore } from '@state/raceStore'
 import { CoachMark } from '@ui/CoachMark'
 
 vi.mock('@hooks/useHaptics', async (orig) => ({
@@ -66,5 +67,32 @@ describe('CoachMark', () => {
     render(<CoachMark id="tyre_cliff" title="Cliff" body="The cliff explained." />)
     expect(screen.getByText('Cliff')).toBeTruthy()
     expect(screen.getByText('The cliff explained.')).toBeTruthy()
+  })
+})
+
+describe('CoachMark — staying clear of the pit drawer', () => {
+  it('MOVES TO THE TOP WHILE THE PIT DRAWER IS OPEN', () => {
+    /*
+     * Found on device. Raising the mark above the drawer (zIndex 120) stopped
+     * it being invisible, but then it simply covered the drawer instead: the
+     * cliff mark sat over the compound chips and pushed BOX NOW off screen.
+     *
+     * Both marks can be up while that drawer is open -- the projection one
+     * always is, since a computed projection is its only firing path -- so the
+     * card gets out of the way rather than fighting it for the same strip.
+     */
+    useRaceStore.setState({ pitPanelOpen: false })
+    useCoachStore.setState({ active: 'tyre_cliff', done: {} })
+    const { container, rerender } = render(
+      <CoachMark id="tyre_cliff" title="T" body="B" />,
+    )
+    const card = () => container.querySelector('[role="region"]') as HTMLElement
+    expect(card().style.bottom, 'bottom-anchored normally').not.toBe('')
+    expect(card().style.top).toBe('')
+
+    act(() => { useRaceStore.setState({ pitPanelOpen: true }) })
+    rerender(<CoachMark id="tyre_cliff" title="T" body="B" />)
+    expect(card().style.top, 'top-anchored while the drawer is open').not.toBe('')
+    expect(card().style.bottom, 'and no longer bottom-anchored').toBe('')
   })
 })
