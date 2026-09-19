@@ -5,6 +5,7 @@ import { useSettingsStore } from '@state/settingsStore'
 import { useUiTap } from '@hooks/useUiTap'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
+import { BadgeCase } from './BadgeCase'
 
 type DriverEntry = { id: string; name: string; teamId: string }
 type TeamEntry = { id: string; name: string }
@@ -102,6 +103,8 @@ export function CareerRecord() {
           <StatTile label="Races Started" value={racesStarted} />
           <StatTile label="Best Finish" value={bestFinish === null ? '—' : `P${bestFinish}`} />
         </div>
+
+        <BadgeCase />
 
         {/* Season history */}
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 8 }}>
