@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useCareerStore, erodeTiers } from '@state/careerStore'
 import { useSettingsStore } from '@state/settingsStore'
+import { BadgeToast } from './BadgeToast'
 import { useUiTap } from '@hooks/useUiTap'
 import { loadGameData } from '@data/validators'
 import driversData from '@data/drivers.json'
@@ -40,8 +41,19 @@ export function Championship() {
         height: '100%', display: 'flex', flexDirection: 'column',
         background: 'var(--bg-deep)',
         paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
+        // BadgeToast is absolutely positioned and needs a positioned ancestor,
+        // exactly as in RaceResult.tsx.
+        position: 'relative',
       }}
     >
+      {/*
+        The season was banked by careerStore.recordSeasonEnd on the transition
+        into this phase, so by the time this renders the career record already
+        holds the title -- which is what lets Champion and Dynasty be announced
+        here, on the screen that celebrates the season, rather than on the
+        upgrades screen afterwards.
+      */}
+      <BadgeToast />
       {/* Header */}
       <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>

@@ -403,6 +403,21 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     const { raceIndex } = get()
     const next = raceIndex + 1
     if (next >= TOTAL_RACES) {
+      // Bank the season BEFORE the championship screen renders, so the career
+      // record it reads already contains the title -- which is what lets the
+      // Champion badge be announced there rather than a screen later.
+      const career = useCareerStore.getState()
+      const standing = get().standings.findIndex(x => x.driverId === get().playerDriverId)
+      career.recordSeasonEnd({
+        seasonNumber: career.seasonNumber,
+        teamId: get().selectedTeamId ?? '',
+        driverId: get().playerDriverId ?? '',
+        championshipPosition: standing >= 0 ? standing + 1 : get().standings.length,
+        points: get().standings.find(x => x.driverId === get().playerDriverId)?.points ?? 0,
+        // Overwritten by careerStore from its own season-scoped counter --
+        // seasonStore does not track wins, so it must not guess at them.
+        wins: 0,
+      })
       set({ phase: 'championship' })
     } else {
       const nextCircuit = CIRCUIT_ORDER[next % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
@@ -418,16 +433,9 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     const s = get()
     const career = useCareerStore.getState()
     const standing = s.standings.findIndex(x => x.driverId === s.playerDriverId)
-    const { erodedTiers } = career.rollOverSeason({
-      seasonNumber: career.seasonNumber,
-      teamId: s.selectedTeamId ?? '',
-      driverId: s.playerDriverId ?? '',
-      championshipPosition: standing >= 0 ? standing + 1 : s.standings.length,
-      points: s.standings.find(x => x.driverId === s.playerDriverId)?.points ?? 0,
-      // Overwritten by careerStore from its own season-scoped counter --
-      // seasonStore does not track wins, so it must not guess at them.
-      wins: 0,
-    }, s.purchasedTiers)
+    // The title and the history entry were already banked by recordSeasonEnd
+    // when the season ended; this only starts the new one.
+    const { erodedTiers } = career.rollOverSeason(s.purchasedTiers)
     set({
       phase: 'development',
       raceIndex: 0,

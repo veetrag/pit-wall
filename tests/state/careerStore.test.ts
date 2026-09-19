@@ -10,6 +10,25 @@ const EMPTY = {
 
 const RACE_DEFAULTS = { round: 0, grid: 5, stops: 1, overtakes: 0, wet: false }
 
+/*
+ * The real season boundary is now TWO actions, in this order: the season ends
+ * (recordSeasonEnd banks the title and the history entry) and then the next
+ * one starts (rollOverSeason advances seasonNumber and erodes tiers). These
+ * tests drive both, because driving only one would assert against a state the
+ * game never actually occupies.
+ */
+function endSeason(over: Partial<{ seasonNumber: number; championshipPosition: number; points: number }> = {}) {
+  const c = useCareerStore.getState()
+  c.recordSeasonEnd({
+    seasonNumber: c.seasonNumber, teamId: 'apex', driverId: 'd_voss',
+    championshipPosition: 1, points: 300, wins: 0, ...over,
+  })
+}
+function endAndStartNext(over: Parameters<typeof endSeason>[0] = {}) {
+  endSeason(over)
+  useCareerStore.getState().rollOverSeason({})
+}
+
 describe('careerStore', () => {
   beforeEach(() => { useCareerStore.setState(EMPTY) })
 
@@ -40,35 +59,35 @@ describe('careerStore', () => {
 
   it('TITLES INCREMENT ONLY ON A CHAMPIONSHIP WIN', () => {
     const s = () => useCareerStore.getState()
-    s().rollOverSeason({ seasonNumber: 1, teamId: 'apex', driverId: 'd_voss', championshipPosition: 2, points: 200, wins: 5 }, {})
+    endAndStartNext({ championshipPosition: 2, points: 200 })
     expect(s().titles).toBe(0)
-    s().rollOverSeason({ seasonNumber: 2, teamId: 'apex', driverId: 'd_voss', championshipPosition: 1, points: 300, wins: 9 }, {})
+    endAndStartNext({ championshipPosition: 1, points: 300 })
     expect(s().titles).toBe(1)
-    expect(s().seasonNumber, 'two rollovers means season 3').toBe(3)
+    expect(s().seasonNumber, 'two completed seasons means season 3').toBe(3)
     expect(s().seasonHistory).toHaveLength(2)
   })
 
-  it('WINNING THE TITLE PUTS CHAMPION IN justEarned AT THE ROLLOVER', () => {
-    // The regression: titles is bumped ONLY inside rollOverSeason, and
-    // recordRace never sees it, so champion/dynasty could only ever become
-    // true here. If rollOverSeason does not compute justEarned itself, the
+  it('WINNING THE TITLE PUTS CHAMPION IN justEarned WHEN THE SEASON ENDS', () => {
+    // The regression this guards: titles are bumped when a SEASON ends, and
+    // recordRace never sees that, so champion/dynasty can only ever become
+    // true there. If recordSeasonEnd does not compute justEarned itself, the
     // badge lands in the trophy case with no announcement, ever.
     const s = () => useCareerStore.getState()
-    s().rollOverSeason({ seasonNumber: 1, teamId: 'apex', driverId: 'd_voss', championshipPosition: 1, points: 300, wins: 9 }, {})
+    endSeason({ championshipPosition: 1 })
     expect(s().justEarned).toContain('champion')
   })
 
-  it('A NON-TITLE ROLLOVER DOES NOT ANNOUNCE CHAMPION', () => {
+  it('A NON-TITLE SEASON DOES NOT ANNOUNCE CHAMPION', () => {
     const s = () => useCareerStore.getState()
-    s().rollOverSeason({ seasonNumber: 1, teamId: 'apex', driverId: 'd_voss', championshipPosition: 2, points: 200, wins: 5 }, {})
+    endSeason({ championshipPosition: 2, points: 200 })
     expect(s().justEarned).not.toContain('champion')
   })
 
-  it('ROLLOVER DOES NOT DISTURB raceLog', () => {
+  it('THE SEASON BOUNDARY DOES NOT DISTURB raceLog', () => {
     const s = () => useCareerStore.getState()
     s().recordRace({ position: 1, retired: false, pole: false, ...RACE_DEFAULTS })
     const before = s().raceLog
-    s().rollOverSeason({ seasonNumber: 1, teamId: 'apex', driverId: 'd_voss', championshipPosition: 1, points: 300, wins: 1 }, {})
+    endAndStartNext({ championshipPosition: 1 })
     expect(s().raceLog).toEqual(before)
     expect(s().raceLog).toHaveLength(1)
   })
@@ -76,16 +95,17 @@ describe('careerStore', () => {
   it('SEASON HISTORY RECORDS THE WINS THAT SEASON, NOT THE CAREER TOTAL', () => {
     /*
      * seasonStore does not count wins, so it passes 0 and careerStore fills it
-     * in from its own season-scoped counter. Without the reset at rollover,
+     * in from its own season-scoped counter. Without the reset when a season
+     * ends,
      * every season in the history would show the running career total instead
      * of what that season was actually worth.
      */
     const s = () => useCareerStore.getState()
     s().recordRace({ position: 1, retired: false, pole: false, ...RACE_DEFAULTS })
     s().recordRace({ position: 1, retired: false, pole: false, ...RACE_DEFAULTS })
-    s().rollOverSeason({ seasonNumber: 1, teamId: 'apex', driverId: 'd_voss', championshipPosition: 1, points: 300, wins: 0 }, {})
+    endAndStartNext({ championshipPosition: 1, points: 300 })
     s().recordRace({ position: 1, retired: false, pole: false, ...RACE_DEFAULTS })
-    s().rollOverSeason({ seasonNumber: 2, teamId: 'apex', driverId: 'd_voss', championshipPosition: 1, points: 280, wins: 0 }, {})
+    endAndStartNext({ championshipPosition: 1, points: 280 })
 
     expect(s().seasonHistory[0]!.wins, 'season 1 had two wins').toBe(2)
     expect(s().seasonHistory[1]!.wins, 'season 2 had one, not three').toBe(1)

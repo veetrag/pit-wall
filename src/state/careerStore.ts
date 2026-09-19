@@ -106,12 +106,27 @@ interface CareerStore extends CareerRecord {
     round: number; grid: number; stops: number; overtakes: number; wet: boolean
   }) => void
   /**
-   * Ends a season. Takes the player's current tiers and returns the eroded
-   * ones -- it never reads or writes seasonStore, which is what keeps this
-   * module free of the import cycle described in the header.
+   * Banks the season that has just finished: the title, the history entry,
+   * the season-win reset, and the badges those earn. Called on the TRANSITION
+   * to the championship screen, not when the player leaves it.
+   *
+   * Split out of rollOverSeason because a title used to be recorded only when
+   * the player tapped NEXT SEASON. The championship screen therefore showed a
+   * career record that did not yet contain the title just won, and the
+   * Champion badge could not be announced there without inventing a second
+   * source of truth for it.
+   *
+   * It deliberately does NOT advance seasonNumber: that feeds seedFor(), and
+   * moving it would shift every seed in the game.
+   */
+  recordSeasonEnd: (s: SeasonSummary) => void
+  /**
+   * Starts the next season. Takes the player's current tiers and returns the
+   * eroded ones -- it never reads or writes seasonStore, which is what keeps
+   * this module free of the import cycle described in the header.
    */
   rollOverSeason: (
-    s: SeasonSummary, tiers: Record<string, number>,
+    tiers: Record<string, number>,
   ) => { erodedTiers: Record<string, number> }
   beginCareer: () => void
   endCareer: () => void
@@ -157,17 +172,27 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     set({ ...next, justEarned: newlyEarned(s, next) })
   },
 
-  rollOverSeason(summary, tiers) {
+  recordSeasonEnd(summary) {
     const s = get()
-    const { tierDecayPerSeason } = loadGameData().tuning.career
+    /*
+     * Idempotent for a season already banked. nextRace() sets phase
+     * 'championship' whenever raceIndex passes the final round, and any
+     * re-entry of that path -- a restored save, a future retry button --
+     * would otherwise award a SECOND title for the same season. Titles are
+     * the rarest thing in the game; double-counting one is worse than
+     * missing one.
+     */
+    if (s.seasonHistory.some(h => h.seasonNumber === summary.seasonNumber)) return
 
-    // Built as a whole record, same as recordRace, so newlyEarned compares
-    // two complete states. titles is bumped here and ONLY here -- a season
-    // win is not a race, so recordRace never sees it -- which is exactly why
-    // this action must compute justEarned itself: champion/dynasty can only
-    // ever become true at a rollover, never at a race.
+    // Built as a whole record, same as recordRace, so newlyEarned compares two
+    // complete states. titles is bumped here and ONLY here -- a season win is
+    // not a race, so recordRace never sees it -- which is why this action must
+    // compute justEarned itself: champion/dynasty can only ever become true
+    // when a season ends, never at a race.
     const next: CareerRecord = {
-      seasonNumber: s.seasonNumber + 1,
+      // NOT advanced here. The season has ENDED; the next one starts in
+      // rollOverSeason. seasonNumber feeds seedFor().
+      seasonNumber: s.seasonNumber,
       titles: s.titles + (summary.championshipPosition === 1 ? 1 : 0),
       wins: s.wins,
       // The caller cannot know this -- seasonStore does not count wins -- so
@@ -178,11 +203,18 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       poles: s.poles,
       racesStarted: s.racesStarted,
       bestFinish: s.bestFinish,
-      // A rollover is not a race: raceLog is carried over unchanged.
+      // Ending a season is not a race: raceLog is carried over unchanged.
       raceLog: s.raceLog,
     }
 
     set({ ...next, justEarned: newlyEarned(s, next) })
+  },
+
+  rollOverSeason(tiers) {
+    const { tierDecayPerSeason } = loadGameData().tuning.career
+    // Only the season counter and the tier erosion remain here. The title and
+    // the history entry were banked by recordSeasonEnd when the season ended.
+    set({ seasonNumber: get().seasonNumber + 1 })
     return { erodedTiers: erodeTiers(tiers, tierDecayPerSeason) }
   },
 

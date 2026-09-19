@@ -5,7 +5,6 @@ import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore, TOTAL_RACES } from '@state/seasonStore'
 import { applyUpgrades, rivalFacetValue } from '@state/upgradeOverlay'
 import { loadGameData, type UpgradeAttribute } from '@data/validators'
-import { BadgeToast } from './BadgeToast'
 
 const GAME = loadGameData()
 const TUNING = GAME.tuning
@@ -408,7 +407,6 @@ export function Development() {
         paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
       }}
     >
-      <BadgeToast />
       {/* Header */}
       <div style={{
         padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
