@@ -90,3 +90,40 @@ describe('the compound decision must be informed', () => {
     expect(el.textContent).toMatch(/TRACK (DRY|DAMP|WET)/)
   })
 })
+
+describe('the player can always see their own row', () => {
+  it('RENDERS EVERY DRIVER, NOT JUST THE TOP FEW', () => {
+    /*
+     * The result box is a flex child with overflow hidden, so without an
+     * explicit flexShrink: 0 it shrinks and clips. On an API 30 emulator that
+     * showed exactly four rows -- so a player who qualified P20 never saw
+     * their own row at all.
+     */
+    render(<Qualifying />)
+    fireEvent.click(screen.getByRole('button', { name: /^run lap$/i }))
+    const result = useSeasonStore.getState().qualifyingResult!
+    expect(result.laps.length).toBeGreaterThan(4)
+    const rows = screen.getAllByTestId('qualifying-row')
+    expect(rows.length, 'every driver must have a row in the DOM').toBe(result.laps.length)
+  })
+})
+
+describe('race setup points at what it actually opens', () => {
+  it('DOES NOT PROMISE LIGHTS OUT', async () => {
+    /*
+     * This button used to go straight to the race. It now opens qualifying,
+     * and a player who taps "LIGHTS OUT" expecting the start of the race and
+     * lands on a tyre decision has been misled by the label.
+     */
+    // jsdom does not implement scrollIntoView, which RaceSetup calls to centre
+    // the selected circuit chip. Stub it rather than change the component.
+    if (!Element.prototype.scrollIntoView) {
+      Element.prototype.scrollIntoView = function () {}
+    }
+    const { RaceSetup } = await import('@ui/RaceSetup')
+    useSeasonStore.setState({ phase: 'race_setup', playerDriverId: 'd_voss' })
+    render(<RaceSetup />)
+    expect(screen.queryByRole('button', { name: /lights out/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /qualifying/i })).toBeTruthy()
+  })
+})

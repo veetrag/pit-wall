@@ -271,6 +271,15 @@ export function Qualifying() {
           <div style={{
             background: 'var(--bg-elevated)', borderRadius: 10,
             border: '1px solid var(--line-hair)', overflow: 'hidden',
+            // flexShrink 0 is load-bearing, not cosmetic. This box is a child
+            // of a flex column, so by default it SHRINKS to fit the space
+            // left over -- and with overflow hidden that silently clipped the
+            // list to the first four rows. On device the player could not see
+            // their own row unless they qualified in the top four, which is
+            // precisely when they least need to look. The parent already
+            // scrolls; this lets the box claim its natural height so there is
+            // something to scroll to.
+            flexShrink: 0,
           }}>
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -292,6 +301,7 @@ export function Qualifying() {
                 return (
                   <motion.div
                     key={lap.driverId}
+                    data-testid="qualifying-row"
                     layoutId={lap.driverId}
                     {...motionLayoutProps}
                     style={{

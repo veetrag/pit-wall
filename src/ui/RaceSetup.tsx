@@ -475,7 +475,7 @@ export function RaceSetup() {
             letterSpacing: '0.08em', cursor: 'pointer', outline: 'none',
           }}
         >
-          LIGHTS OUT →
+          TO QUALIFYING →
         </motion.button>
       </div>
     </motion.div>
