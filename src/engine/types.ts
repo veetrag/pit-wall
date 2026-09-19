@@ -83,6 +83,11 @@ export interface TuningConstants {
     pitCrewSigmaRelief: number
   }
   paceModes: Record<PaceMode, { paceDelta: number; degMultiplier: number }>
+  qualifying: {
+    attackLevels: Record<AttackLevel, { paceDelta: number; errorChance: number }>
+    scrappyLapPenalty: number
+    seedOffset: number
+  }
   tyreManagement: { degReliefFactor: number }
   strategyReaction: {
     coverUndercutEnabled: boolean
@@ -369,4 +374,29 @@ export interface RaceConfig {
   // configs built before M5 behave identically.
   coverReactionScale?: number
   paceModeAggression?: number
+}
+
+export type AttackLevel = 'conserve' | 'balanced' | 'attack'
+
+export interface QualifyingCall {
+  compound: Compound
+  attack: AttackLevel
+}
+
+export interface QualifyingLap {
+  driverId: string
+  teamId: string
+  /** Total lap time in seconds, including the attack delta and any scrappy penalty. */
+  time: number
+  compound: Compound
+  attack: AttackLevel
+  /** An error was rolled on this lap. Never a retirement -- see qualifying.ts. */
+  scrappy: boolean
+}
+
+export interface QualifyingResult {
+  /** Sorted ascending by time. */
+  laps: QualifyingLap[]
+  /** driverIds, P1 first. Derived from `laps`; stored so consumers never re-sort. */
+  order: string[]
 }
