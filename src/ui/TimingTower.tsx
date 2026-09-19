@@ -108,7 +108,7 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
   // field collapsing is the more urgent thing to communicate, and the row
   // returns to its normal state immediately after.
   // --caution at 22%, via its channel token. NOT color-mix(): that needs
-  // Chromium 111 (2023) and android/variables.gradle sets minSdkVersion 24, so
+  // Chromium 111 (2023) and android/variables.gradle sets minSdkVersion 30, so
   // on an un-updated WebView the declaration is simply dropped and the flash
   // would silently not exist on exactly the low-end devices this project
   // targets. rgba(var(--x-rgb), a) has none of that problem and, unlike the

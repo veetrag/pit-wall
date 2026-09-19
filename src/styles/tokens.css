@@ -13,7 +13,7 @@
   --text-dim:     #7E89A8;
   /* Channels first, colour derived -- same shape as --caution-rgb below, and
      for the same reason: a translucent wash of this token needs something to
-     reference, and color-mix() is unavailable at minSdkVersion 24. */
+     reference, and color-mix() is unavailable at minSdkVersion 30. */
   --accent-rgb:   0, 229, 208;
   --accent:       rgb(var(--accent-rgb));
   --accent-warm:  #FF4D5E;
@@ -27,7 +27,7 @@
   /* Declared as CHANNELS with the colour derived, so a translucent wash of it
      has something to reference. rgba(var(--caution-rgb), a) works everywhere
      rgba() does (CSS variable substitution, Chrome 49+); color-mix() would be
-     the modern spelling but needs Chromium 111 and minSdkVersion is 24.
+     the modern spelling but needs Chromium 111 and minSdkVersion is 30.
      Before this, TimingTower carried a literal rgba(255,176,32,0.22) under a
      comment asking whoever edited the token to remember to change it too. */
   --caution-rgb:  255, 176, 32;

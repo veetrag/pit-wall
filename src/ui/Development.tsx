@@ -125,7 +125,7 @@ function TierPips(
               width: 14, height: 5, borderRadius: 3,
               background: isOwned ? accent : 'transparent',
               border: isOwned ? 'none' : `1px solid ${isNext ? 'var(--text-dim)' : 'var(--line-hair)'}`,
-              // rgba(var(--x-rgb), 0.4), NOT color-mix(): minSdkVersion is 24 and
+              // rgba(var(--x-rgb), 0.4), NOT color-mix(): minSdkVersion is 30 and
               // color-mix needs Chromium 111, so the declaration is DROPPED and
               // this glow silently disappears on exactly the low-end devices
               // this project targets.
@@ -183,7 +183,7 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
           // A 7% --positive tint composited over the solid --bg-elevated.
           //
           // The gradient layer is the portable spelling of color-mix's
-          // OPAQUE-BASE blend, which minSdk 24 cannot parse. A bare
+          // OPAQUE-BASE blend, which minSdk 30 cannot parse. A bare
           // rgba(var(--positive-rgb), 0.07) would NOT be equivalent: it would
           // make the row 93% transparent over whatever sits behind it, rather
           // than tinting the elevated surface.
