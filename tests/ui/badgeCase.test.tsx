@@ -18,9 +18,15 @@ describe('BadgeCase', () => {
     expect(screen.getByText('Win the championship')).toBeTruthy()
   })
 
-  it('counts earned out of total, and the count tracks the record', () => {
+  it('counts earned out of total on a fresh career', () => {
     render(<BadgeCase />)
     expect(screen.getByText(`0 / ${BADGES.length}`)).toBeTruthy()
+  })
+
+  it('counts earned out of total, and the count tracks the record', () => {
+    useCareerStore.setState({ wins: 1 })
+    render(<BadgeCase />)
+    expect(screen.getByText(`1 / ${BADGES.length}`)).toBeTruthy()
   })
 
   it('marks an earned badge as earned for a screen reader, not by colour alone', () => {
