@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { loadGameData } from '@data/validators'
+import type { RaceFact } from './badges'
 
 /**
  * The career: the layer above a season that owns what survives one.
@@ -36,11 +37,21 @@ export interface CareerRecord {
   /** Lowest position number achieved; null before any race. */
   bestFinish: number | null
   seasonHistory: SeasonSummary[]
+  /**
+   * Every race this career has run, oldest first. Badges fold over this.
+   *
+   * A log rather than incremental counters: "longest run of consecutive
+   * finishes" is subtly wrong as a maintained counter and obviously right as
+   * a fold, and a log makes a badge added later retroactive over races
+   * already played. ~12 entries per season; a few KB at any real career
+   * length. See docs/superpowers/specs/2026-09-19-badges-design.md §2.2.
+   */
+  raceLog: RaceFact[]
 }
 
 const FRESH: CareerRecord = {
   seasonNumber: 1, titles: 0, wins: 0, seasonWins: 0, podiums: 0, poles: 0,
-  racesStarted: 0, bestFinish: null, seasonHistory: [],
+  racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [],
 }
 
 /** Each attribute drops by at most `decay` tiers, floored at 0. */

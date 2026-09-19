@@ -25,6 +25,18 @@ export const CAREER_SAVE_KEY = 'career.save'
  */
 export const CAREER_SAVE_VERSION = 1
 
+const RaceFactSchema = z.object({
+  season: z.number(),
+  round: z.number(),
+  grid: z.number(),
+  finish: z.number(),
+  retired: z.boolean(),
+  pole: z.boolean(),
+  stops: z.number(),
+  overtakes: z.number(),
+  wet: z.boolean(),
+})
+
 const SeasonSummarySchema = z.object({
   seasonNumber: z.number(),
   teamId: z.string(),
@@ -47,6 +59,14 @@ export const CareerSnapshotSchema = z.object({
   racesStarted: z.number(),
   bestFinish: z.number().nullable(),
   seasonHistory: z.array(SeasonSummarySchema),
+  /*
+   * .default([]) and NOT a version bump. A save written before badges shipped
+   * has no raceLog key; with a default it parses and the career survives,
+   * losing only the event badges whose facts were never recorded. Bumping
+   * CAREER_SAVE_VERSION instead would make loadCareer discard every existing
+   * save -- silent, total career loss. Asserted in careerPersistence.test.ts.
+   */
+  raceLog: z.array(RaceFactSchema).default([]),
 })
 
 export type CareerSnapshot = z.infer<typeof CareerSnapshotSchema>
@@ -67,6 +87,7 @@ export function careerSnapshotFrom(
     racesStarted: r.racesStarted,
     bestFinish: r.bestFinish,
     seasonHistory: r.seasonHistory,
+    raceLog: r.raceLog,
   }
 }
 

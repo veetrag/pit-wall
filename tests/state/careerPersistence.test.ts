@@ -3,6 +3,11 @@ import { careerSnapshotFrom, CareerSnapshotSchema, CAREER_SAVE_VERSION } from '@
 import { SAVE_VERSION } from '@state/seasonPersistence'
 import { useCareerStore } from '@state/careerStore'
 
+const FRESH_FOR_TEST = {
+  seasonNumber: 1, titles: 0, wins: 0, seasonWins: 0, podiums: 0, poles: 0,
+  racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [],
+}
+
 describe('career persistence', () => {
   beforeEach(() => { useCareerStore.getState().endCareer() })
 
@@ -42,5 +47,40 @@ describe('career persistence', () => {
     const snap = careerSnapshotFrom(useCareerStore.getState())
     expect(snap).not.toBeNull()
     expect(snap!.podiums).toBe(1)
+  })
+})
+
+describe('the race log survives the save', () => {
+  it('A V1 SAVE WITH NO raceLog STILL LOADS', async () => {
+    /*
+     * The failure mode here is SILENT CAREER LOSS. CareerSnapshotSchema pins
+     * v: z.literal(CAREER_SAVE_VERSION) and loadCareer discards anything that
+     * fails to parse -- so if raceLog were added as a required field, or the
+     * version bumped, every save written before badges shipped would be
+     * thrown away and the player would open the app to an empty menu.
+     */
+    const legacy = {
+      v: 1, seasonNumber: 2, titles: 1, wins: 4, seasonWins: 0, podiums: 7,
+      poles: 2, racesStarted: 24, bestFinish: 1, seasonHistory: [],
+    }
+    const parsed = CareerSnapshotSchema.safeParse(legacy)
+    expect(parsed.success, parsed.success ? '' : JSON.stringify(parsed.error?.issues)).toBe(true)
+    expect(parsed.data?.raceLog).toEqual([])
+  })
+
+  it('the version is still 1', () => {
+    // A bump is a legitimate decision, but it destroys every existing career,
+    // so it must be a deliberate act that fails this test first.
+    expect(CAREER_SAVE_VERSION).toBe(1)
+  })
+
+  it('a log round-trips unchanged', () => {
+    const fact = { season: 1, round: 3, grid: 12, finish: 1, retired: false, pole: false, stops: 1, overtakes: 4, wet: true }
+    const snap = careerSnapshotFrom({
+      ...FRESH_FOR_TEST, hasCareer: true, raceLog: [fact],
+    })
+    const reparsed = CareerSnapshotSchema.safeParse(JSON.parse(JSON.stringify(snap)))
+    expect(reparsed.success).toBe(true)
+    expect(reparsed.data?.raceLog).toEqual([fact])
   })
 })
