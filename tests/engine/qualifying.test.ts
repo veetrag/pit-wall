@@ -90,12 +90,15 @@ describe('runQualifying', () => {
      * every future edit to paceModes would silently retune qualifying.
      *
      * SCRAPPY LAPS MUST BE EXCLUDED, and that is the whole difficulty here.
-     * attack errors at 0.15 and balanced at 0.06, so scrappy laps inflate the
-     * attack mean by 0.15*1.2 = 0.180s and the balanced mean by 0.06*1.2 =
-     * 0.072s -- a systematic 0.108s that shrinks the observed gap. An earlier
-     * version of this test compared raw means with a 0.12s tolerance and
-     * therefore PASSED with the double-count present: 0.60 - 0.108 = 0.49
-     * against an expected 0.45 is a miss of only 0.04. It could not fail.
+     * attack errors at 0.15 and balanced at 0.06, so at the current
+     * scrappyLapPenalty of 0.8s they inflate the attack mean by 0.120s and the
+     * balanced mean by 0.048s -- a systematic 0.072s that shrinks the observed
+     * gap. An earlier version of this test compared raw means with a 0.12s
+     * tolerance and therefore PASSED with the double-count present: at the
+     * original 1.2s penalty it read 0.49 against an expected 0.45, a miss of
+     * 0.04; at 0.8s it reads 0.53 against 0.45, a miss of 0.08. Both inside
+     * the tolerance. It could not fail either way -- which is why the
+     * comparison below filters rather than widening.
      *
      * Filtering to clean laps removes that confound entirely, so the gap is
      * the tuning delta plus sampling noise alone and the tolerance can be
