@@ -85,6 +85,7 @@ const TuningSchema = z.object({
     }),
     scrappyLapPenalty: z.number(),
     seedOffset: z.number(),
+    gridSlotGapSec: z.number(),
   }),
   tyreManagement: z.object({ degReliefFactor: z.number() }),
   tyreRules: z.object({

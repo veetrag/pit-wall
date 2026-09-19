@@ -56,3 +56,50 @@ describe('RaceConfig.gridOrder', () => {
       .toThrow(/gridOrder/)
   })
 })
+
+describe('the grid is a time deficit, not a label', () => {
+  it('STARTING LAST IS NOT THE SAME RACE AS STARTING ON POLE', () => {
+    /*
+     * stepSector re-derives position from raceTime on every tick, and every car
+     * starts at raceTime 0. So assigning `position` in initRace does NOTHING on
+     * its own -- the grid evaporates on the first sector.
+     *
+     * Measured before the fix: d_voss starting pole and d_voss starting last
+     * both finished P17 on 2530.682s, identical to the millisecond. The whole
+     * qualifying feature was cosmetic and every test still passed, because
+     * nothing asserted that the grid REACHED the race.
+     *
+     * initRace now seeds raceTime with (slot - 1) * gridSlotGapSec.
+     */
+    const base = buildRaceConfig(1, '__none__', 'bengaluru', 'rookie', null, null)
+    const ids = base.drivers.map(d => d.id)
+    const SUBJECT = ids[0]!
+    const run = (gridOrder: string[]) => {
+      const config = { ...base, gridOrder }
+      const rng = createRng(1)
+      let state = initRace(config)
+      for (let i = 0; i < config.circuit.laps * 3; i++) state = stepSector(config, state, rng)
+      return state.cars.find(c => c.driverId === SUBJECT)!.raceTime
+    }
+    const pole = run([SUBJECT, ...ids.filter(i => i !== SUBJECT)])
+    const last = run([...ids.filter(i => i !== SUBJECT), SUBJECT])
+    expect(pole, 'starting last must not produce the same race as starting on pole').not.toBe(last)
+  }, 60_000)
+
+  it('THE DEFICIT IS EXACTLY THE SLOT GAP, AND ZERO WITHOUT A GRID', () => {
+    const base = buildRaceConfig(1, 'd_voss', 'bengaluru', 'rookie', null, null)
+    const gap = base.tuning.qualifying.gridSlotGapSec
+    const ids = base.drivers.map(d => d.id)
+
+    // No grid: every car starts level, which is what keeps byteIdentity, the
+    // Monte-Carlo bands and all three scenarios valid.
+    for (const car of initRace(base).cars) expect(car.raceTime).toBe(0)
+
+    const reversed = [...ids].reverse()
+    const state = initRace({ ...base, gridOrder: reversed })
+    for (const [i, driverId] of reversed.entries()) {
+      const car = state.cars.find(c => c.driverId === driverId)!
+      expect(car.raceTime, `${driverId} starting P${i + 1}`).toBeCloseTo(i * gap, 10)
+    }
+  })
+})

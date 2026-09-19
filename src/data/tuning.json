@@ -34,7 +34,8 @@
       "attack": { "paceDelta": -0.45, "errorChance": 0.15 }
     },
     "scrappyLapPenalty": 0.8,
-    "seedOffset": 777777
+    "seedOffset": 777777,
+    "gridSlotGapSec": 0.25
   },
   "tyreManagement": { "degReliefFactor": 0.25 },
   "tyreRules": {

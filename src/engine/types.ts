@@ -87,6 +87,7 @@ export interface TuningConstants {
     attackLevels: Record<AttackLevel, { paceDelta: number; errorChance: number }>
     scrappyLapPenalty: number
     seedOffset: number
+    gridSlotGapSec: number
   }
   tyreManagement: { degReliefFactor: number }
   strategyReaction: {
