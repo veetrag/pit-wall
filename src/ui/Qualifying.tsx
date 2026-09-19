@@ -47,7 +47,6 @@ function formatTime(t: number): string {
 export function Qualifying() {
   const qualifyingResult = useSeasonStore(s => s.qualifyingResult)
   const playerDriverId = useSeasonStore(s => s.playerDriverId)
-  const selectDriver = useSeasonStore(s => s.selectDriver)
   const runQualifyingSession = useSeasonStore(s => s.runQualifyingSession)
   const startRaceFromQualifying = useSeasonStore(s => s.startRaceFromQualifying)
   const currentSeed = useSeasonStore(s => s.currentSeed)
@@ -72,32 +71,13 @@ export function Qualifying() {
 
   const q = GAME_DATA.tuning.qualifying
 
-  // A quali session's outcome is not replayable -- it derives from the race
-  // seed via a fixed offset (tuning.qualifying.seedOffset), so calling it
-  // twice for the same attempt is not a "retry", it's the same roll. A
-  // qualifying session is therefore only ever run once the player has an
-  // actual driver seat; the store enforces that with a hard throw rather
-  // than silently qualifying an undefined car. In the normal flow the player
-  // always has one by the time this screen is reachable (confirmDriver runs
-  // long before race_setup); this fallback only matters for direct-state
-  // entry into the phase (as in tests), where it defends the invariant
-  // instead of crashing the screen.
-  function ensurePlayerDriver(): void {
-    if (!playerDriverId) {
-      const fallback = GAME_DATA.drivers.drivers[0]
-      if (fallback) selectDriver(fallback.id)
-    }
-  }
-
   function handleRunLap() {
     uiTap()
-    ensurePlayerDriver()
     runQualifyingSession({ compound, attack }, difficulty)
   }
 
   function handleSimulate() {
     uiTap()
-    ensurePlayerDriver()
     runQualifyingSession({ compound: 'M', attack: 'balanced' }, difficulty)
   }
 
@@ -108,7 +88,7 @@ export function Qualifying() {
 
   const laps_ = qualifyingResult?.laps ?? []
   const order = qualifyingResult?.order ?? []
-  const activePlayerId = playerDriverId ?? laps_.find(l => l.driverId)?.driverId
+  const activePlayerId = playerDriverId
   const playerPosition = activePlayerId ? order.indexOf(activePlayerId) + 1 : 0
   const driverMap = new Map(GAME_DATA.drivers.drivers.map(d => [d.id, d]))
   const teamColorMap = new Map(GAME_DATA.cars.teams.map(t => [t.id, t.colorPrimary]))
@@ -297,9 +277,9 @@ export function Qualifying() {
                       alignItems: 'center',
                       gap: 4,
                       padding: '6px 10px',
-                      background: isPlayer ? 'rgba(0,229,208,0.07)' : 'transparent',
+                      background: isPlayer ? 'rgba(var(--accent-rgb), 0.07)' : 'transparent',
                       borderLeft: isPlayer ? '2px solid var(--accent)' : `2px solid ${teamColor ? teamColor + '44' : 'transparent'}`,
-                      borderBottom: '0.5px solid #141a2b',
+                      borderBottom: '0.5px solid var(--line-hair)',
                     }}
                   >
                     <span style={{

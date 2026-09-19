@@ -6,7 +6,14 @@ import { useSettingsStore } from '@state/settingsStore'
 
 describe('Qualifying screen', () => {
   beforeEach(() => {
-    useSeasonStore.setState({ phase: 'qualifying', qualifyingResult: null })
+    // playerDriverId MUST be set. The screen is only reachable long after
+    // driver selection, and runQualifyingSession throws without one -- by
+    // design, so a null player can never qualify a grid without their own
+    // upgrades applied. A fixture that omits it is testing a state the app
+    // cannot produce, and tempts the component into compensating for it.
+    useSeasonStore.setState({
+      phase: 'qualifying', qualifyingResult: null, playerDriverId: 'd_voss',
+    })
   })
 
   it('OFFERS THE ATTACK CALL WITH ITS RISK STATED AS A NUMBER', () => {
