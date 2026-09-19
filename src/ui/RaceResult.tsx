@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore, TOTAL_RACES, raceHeadline } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
+import { BadgeToast } from './BadgeToast'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 
@@ -107,6 +108,7 @@ export function RaceResult() {
       }}
     >
       {isTopThree && <Confetti />}
+      <BadgeToast />
 
       {/* Header */}
       <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, position: 'relative', zIndex: 2 }}>
