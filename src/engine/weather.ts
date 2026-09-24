@@ -1,4 +1,5 @@
 import type { WeatherState, WeatherForecast, TuningConstants, CircuitSpec } from './types'
+import { createRng } from './rng'
 
 type RNG = () => number
 
@@ -84,4 +85,38 @@ export function crossoverPenalty(
 ): number {
   const key = compoundKey(compound)
   return tuning.weather.crossoverPenalty[key]?.[weather] ?? 0
+}
+
+
+/**
+ * THE ONE PLACE OPENING WEATHER IS DERIVED. Use this; do not call
+ * generateWeatherTimeline with a hand-rolled RNG.
+ *
+ * Before this existed the derivation was copy-pasted into FOUR places --
+ * initRace(), qualifying.ts, RaceSetup.tsx and Qualifying.tsx -- each
+ * repeating the `seed + 999999` offset by hand. Adding `dryStart` to the race
+ * config reached the two engine sites and neither UI one, so on a real phone
+ * the setup screen announced WET and pre-selected the wet tyre, and the
+ * qualifying screen said "TRACK WET - WETS ADVISED", for a race that started
+ * DRY. Two screens confidently contradicting the race, from one missed
+ * argument, twice.
+ *
+ * The offset is deliberate and load-bearing: weather runs on its own RNG
+ * stream so that a qualifying session, a forecast preview and the race itself
+ * all see the same weather without any of them consuming the main race seed.
+ * That is precisely the kind of invariant that must live in one function.
+ */
+export function openingTimeline(opts: {
+  laps: number
+  circuit: CircuitSpec
+  tuning: TuningConstants
+  /** The race seed. */
+  seed: number
+  /** Explicit override, as RaceConfig.weatherSeed. Falls back to seed + 999999. */
+  weatherSeed?: number
+  /** Forces lap 1 to DRY -- see RaceConfig.dryStart. */
+  dryStart?: boolean
+}): WeatherState[] {
+  const { laps, circuit, tuning, seed, weatherSeed, dryStart } = opts
+  return generateWeatherTimeline(laps, circuit, tuning, createRng(weatherSeed ?? seed + 999999), dryStart)
 }

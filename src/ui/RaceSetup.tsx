@@ -6,7 +6,7 @@ import { useSeasonStore } from '@state/seasonStore'
 import type { PlayerStrategyChoice } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
 import { loadGameData } from '@data/validators'
-import { generateWeatherTimeline, createRng, type WeatherState } from '@engine/index'
+import { openingTimeline, type WeatherState } from '@engine/index'
 import circuitsJson from '@data/circuits.json'
 import compoundsData from '@data/compounds.json'
 
@@ -65,7 +65,7 @@ export function computeStartWeather(
 ): WeatherState[] {
   const spec = GAME_DATA.circuits[circuitId]
   if (!spec) return ['DRY']
-  return generateWeatherTimeline(laps, spec, GAME_DATA.tuning, createRng(seed + 999999), dryStart)
+  return openingTimeline({ laps, circuit: spec, tuning: GAME_DATA.tuning, seed, dryStart })
 }
 
 // Minimum laps required between two planned stops (and from a stop to the flag).

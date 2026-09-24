@@ -2,7 +2,7 @@ import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, Weath
 import type { Rng } from './rng'
 import { createRng, gaussianPair } from './rng'
 import { computeSectorTime } from './lapModel'
-import { generateWeatherTimeline } from './weather'
+import { openingTimeline } from './weather'
 import { aiDecision } from './strategy'
 import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, effectiveTyreAge, tyreCliffFraction } from './tyres'
 import {
@@ -28,14 +28,14 @@ export function initRace(config: RaceConfig): RaceState {
   // Weather is resolved before the grid is built, because the starting compound
   // now depends on lap-1 conditions. Safe to reorder: this is a separate RNG
   // stream, so it consumes nothing from the main race seed.
-  const weatherRng = createRng(config.weatherSeed ?? config.seed + 999999)
-  const weatherTimeline = generateWeatherTimeline(
-    config.circuit.laps,
-    config.circuit,
-    config.tuning,
-    weatherRng,
-    config.dryStart,
-  )
+  const weatherTimeline = openingTimeline({
+    laps: config.circuit.laps,
+    circuit: config.circuit,
+    tuning: config.tuning,
+    seed: config.seed,
+    weatherSeed: config.weatherSeed,
+    dryStart: config.dryStart,
+  })
   const weatherState: WeatherState = weatherTimeline[0] ?? 'DRY'
   const gridCompound = gridConditionsCompound(weatherState)
 

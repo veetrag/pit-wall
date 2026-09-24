@@ -12,7 +12,7 @@ export {
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
 } from './incidents'
 export { createRng, gaussianPair } from './rng'
-export { generateWeatherTimeline, getWeatherForecast } from './weather'
+export { generateWeatherTimeline, getWeatherForecast, openingTimeline } from './weather'
 export { runQualifying, qualifyingRng } from './qualifying'
 export type {
   RaceConfig, RaceState, CarState, SectorResult, OvertakeEvent,

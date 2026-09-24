@@ -137,14 +137,20 @@ describe('the screen adapts to the conditions', () => {
    * Worth knowing on its own: nonce 0 is the DEFAULT, so round 1 of a brand
    * new season is a wet race.
    */
+  /*
+   * raceIndex 1, not 0. Round 1 is forced DRY (RaceConfig.dryStart), so a wet
+   * or damp fixture is impossible there by design -- these tests would be
+   * asserting against a state the game can no longer produce. Round 2 is an
+   * ordinary round where the seeded weather still decides.
+   */
   const setWeatherByNonce = (attemptNonce: number) =>
     useSeasonStore.setState({
       phase: 'qualifying', qualifyingResult: null, playerDriverId: 'd_voss',
-      raceIndex: 0, attemptNonce, selectedCircuitId: 'bengaluru',
+      raceIndex: 1, attemptNonce, selectedCircuitId: 'bengaluru',
     })
 
   it('OFFERS WET TYRES, AND SAYS WHY, WHEN THE TRACK IS WET', () => {
-    setWeatherByNonce(0)
+    setWeatherByNonce(1)   // seeded WET at round 2, bengaluru
     render(<Qualifying />)
     expect(screen.getByTestId('qualifying-conditions').textContent).toMatch(/WET/)
     expect(screen.getByRole('button', { name: /wet/i })).toBeTruthy()
@@ -154,7 +160,7 @@ describe('the screen adapts to the conditions', () => {
   it('SAYS DAMP, NOT WET, WHEN THE TRACK IS DAMP', () => {
     // The two are different calls -- inters vs full wets -- so one label for
     // both would be actively misleading.
-    setWeatherByNonce(4)
+    setWeatherByNonce(2)   // seeded DAMP at round 2, bengaluru
     render(<Qualifying />)
     expect(screen.getByTestId('qualifying-conditions').textContent).toMatch(/DAMP/)
   })
@@ -165,7 +171,7 @@ describe('the screen adapts to the conditions', () => {
      * check being inverted or stuck. Without it, a screen that always offered
      * wets would pass the test above and still be wrong.
      */
-    setWeatherByNonce(1)
+    setWeatherByNonce(0)   // seeded DRY at round 2, bengaluru
     render(<Qualifying />)
     expect(screen.getByTestId('qualifying-conditions').textContent).toMatch(/DRY/)
     expect(screen.queryByRole('button', { name: /wet/i })).toBeNull()

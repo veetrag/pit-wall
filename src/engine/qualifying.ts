@@ -5,7 +5,7 @@ import type {
 import type { Rng } from './rng'
 import { createRng } from './rng'
 import { computeSectorTime } from './lapModel'
-import { generateWeatherTimeline } from './weather'
+import { openingTimeline } from './weather'
 import { UNLIMITED_TYRE_ALLOCATION } from './tyres'
 
 /**
@@ -85,13 +85,14 @@ export function runQualifying(
 
   // Same weather the grid will form up in, derived the same way initRace does,
   // so a wet race is preceded by a wet qualifying.
-  const weatherRng = createRng(config.weatherSeed ?? config.seed + 999999)
-  const timeline = generateWeatherTimeline(
-    // config.dryStart is passed here too: qualifying reads timeline[0], which
-    // is the exact value the flag constrains. Omitting it would give a WET
-    // qualifying for a race that then starts DRY.
-    config.circuit.laps, config.circuit, config.tuning, weatherRng, config.dryStart,
-  )
+  const timeline = openingTimeline({
+    laps: config.circuit.laps,
+    circuit: config.circuit,
+    tuning: config.tuning,
+    seed: config.seed,
+    weatherSeed: config.weatherSeed,
+    dryStart: config.dryStart,
+  })
   const weather: WeatherState = timeline[0] ?? 'DRY'
 
   const laps: QualifyingLap[] = config.drivers.map(driver => {

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { loadGameData } from '@data/validators'
-import { generateWeatherTimeline, createRng, type WeatherState } from '@engine/index'
+import { openingTimeline, type WeatherState } from '@engine/index'
 import type { Compound, AttackLevel, QualifyingLap } from '@engine/index'
 import { useUiTap } from '@hooks/useUiTap'
 
@@ -27,10 +27,18 @@ const ATTACK_LABEL: Record<AttackLevel, string> = { conserve: 'CONSERVE', balanc
 // starting conditions the qualifying session itself will actually run under,
 // not a generic probability, so the compound chips offered here match what
 // the session needs.
-function computeQualifyingWeather(circuitId: string, laps: number, seed: number): WeatherState {
+/**
+ * dryStart MUST be passed, or this screen contradicts the race.
+ *
+ * This was the FOURTH copy of the weather derivation. It still said
+ * "TRACK WET - WETS ADVISED" on a real phone after RaceSetup had been fixed,
+ * for a round-1 race that starts DRY. It now goes through openingTimeline
+ * like everything else.
+ */
+export function computeQualifyingWeather(circuitId: string, laps: number, seed: number, dryStart: boolean): WeatherState {
   const spec = GAME_DATA.circuits[circuitId]
   if (!spec) return 'DRY'
-  const timeline = generateWeatherTimeline(laps, spec, GAME_DATA.tuning, createRng(seed + 999999))
+  const timeline = openingTimeline({ laps, circuit: spec, tuning: GAME_DATA.tuning, seed, dryStart })
   return timeline[0] ?? 'DRY'
 }
 
@@ -51,6 +59,9 @@ export function Qualifying() {
   const startRaceFromQualifying = useSeasonStore(s => s.startRaceFromQualifying)
   const currentSeed = useSeasonStore(s => s.currentSeed)
   const currentCircuitId = useSeasonStore(s => s.currentCircuitId)
+  // Round 1 opens dry -- see openingTimeline. Without this the screen says
+  // "TRACK WET" for a race that starts DRY.
+  const raceIndex = useSeasonStore(s => s.raceIndex)
   const difficulty = useSettingsStore(s => s.difficulty)
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const uiTap = useUiTap()
@@ -59,9 +70,9 @@ export function Qualifying() {
   const circuit = GAME_DATA.circuits[circuitId]
   const laps = circuit?.laps ?? 50
   const weather = useMemo(
-    () => computeQualifyingWeather(circuitId, laps, currentSeed()),
+    () => computeQualifyingWeather(circuitId, laps, currentSeed(), raceIndex === 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [circuitId, laps],
+    [circuitId, laps, raceIndex],
   )
 
   const availableCompounds = weather === 'DRY' ? DRY_COMPOUNDS : [...DRY_COMPOUNDS, ...WET_COMPOUNDS]
