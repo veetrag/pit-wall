@@ -44,13 +44,28 @@ function recommendedStartCompound(weather: WeatherState): Compound {
   return 'M'
 }
 
-// Real, seeded forecast for THIS specific attempt — not the circuit's base
-// probability. Uses the exact same seed derivation initRace() uses
-// (seed + 999999) so what's shown here is what the race actually opens with.
-function computeStartWeather(circuitId: string, laps: number, seed: number): WeatherState[] {
+/**
+ * Real, seeded forecast for THIS specific attempt -- not the circuit's base
+ * probability. Uses the exact same seed derivation initRace() uses
+ * (seed + 999999) so what is shown here is what the race actually opens with.
+ *
+ * `dryStart` MUST be passed the same value the race will be built with, or
+ * this screen lies. It is the THIRD place weather is derived, alongside
+ * initRace() and qualifying.ts, and it is the one that goes around
+ * buildRaceConfig entirely -- which is exactly how it was missed when
+ * dryStart was added. The round-1 opener then showed WET and pre-selected the
+ * wet tyre for a race that started DRY, which is worse than the bug dryStart
+ * was fixing: a player who trusts the screen starts on wets on a dry track.
+ *
+ * Exported solely so tests/ui/setupWeatherAgrees.test.ts can pin this against
+ * initRace across every circuit and round.
+ */
+export function computeStartWeather(
+  circuitId: string, laps: number, seed: number, dryStart = false,
+): WeatherState[] {
   const spec = GAME_DATA.circuits[circuitId]
   if (!spec) return ['DRY']
-  return generateWeatherTimeline(laps, spec, GAME_DATA.tuning, createRng(seed + 999999))
+  return generateWeatherTimeline(laps, spec, GAME_DATA.tuning, createRng(seed + 999999), dryStart)
 }
 
 // Minimum laps required between two planned stops (and from a stop to the flag).
@@ -116,9 +131,12 @@ export function RaceSetup() {
   // use — not just the circuit's base rain probability. This is what fixes
   // "the race starts wet and we had no idea": the player now sees it here.
   const seed = currentSeed()
+  // Round 1 opens dry -- the race is built with dryStart, so the preview must
+  // be too or this screen contradicts it. See computeStartWeather.
+  const dryStart = raceIndex === 0
   const weatherTimeline = useMemo(
-    () => computeStartWeather(circuitId, circuit.laps, seed),
-    [circuitId, circuit.laps, seed],
+    () => computeStartWeather(circuitId, circuit.laps, seed, dryStart),
+    [circuitId, circuit.laps, seed, dryStart],
   )
   const startingWeather = weatherTimeline[0] ?? 'DRY'
 
@@ -196,7 +214,7 @@ export function RaceSetup() {
                     setSelectedIdx(i)
                     setPitLap1(Math.round(c.laps * (stopCount === 2 ? 0.33 : 0.45)))
                     setPitLap2(Math.round(c.laps * 0.7))
-                    const newWeather = computeStartWeather(cId, c.laps, seed)[0] ?? 'DRY'
+                    const newWeather = computeStartWeather(cId, c.laps, seed, dryStart)[0] ?? 'DRY'
                     setStartCompound(recommendedStartCompound(newWeather))
                   }}
                   style={{
