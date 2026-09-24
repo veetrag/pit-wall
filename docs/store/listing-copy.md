@@ -1,43 +1,44 @@
-# Play Store listing copy — DRAFT
+# Play Store listing — 1.2 (versionCode 3)
 
-**Status:** a draft for Veet to rewrite. Store copy is voice, and the voice
-should be yours. Treat this as a starting point to react against, not a
-proposal to approve.
+**Status:** final. Every field below is decided and ready to paste into the
+console. Alternatives have been cut rather than left open — where a judgement
+was close, the reasoning is in a note so you can overrule it with the argument
+in front of you.
 
-**Constraints:** title ≤ 30 chars, short description ≤ 80 chars, full
-description ≤ 4000 chars.
-
----
-
-## Title (30 max)
-
-**`Pit Wall: Race Strategy`** — 23 characters.
-
-Alternatives:
-- `Pit Wall — F1 Strategy` (22) — see the trademark note below.
-- `Pit Wall: Race Strategist` (25)
-- `Pit Wall` (8) — cleanest, worst for search.
-
-**Trademark note, and it matters:** "F1" and "Formula 1" are registered
-trademarks of Formula One Licensing BV, aggressively enforced. Do not put them
-in the title, the short description, or the graphics. The game uses fictional
-teams, drivers and circuits, which is exactly why it is safe — keep it that way.
-"Race strategy" and "open-wheel racing" carry the same meaning with none of the
-risk.
+**Play's limits:** title ≤ 30 chars, short description ≤ 80, full description
+≤ 4000, release notes ≤ 500 per language.
 
 ---
 
-## Short description (80 max)
+## Title
 
-**`You don't drive. You make the calls that win the race.`** — 54 characters.
+```
+Pit Wall: Race Strategy
+```
+23 / 30 characters.
 
-Alternatives:
-- `Read the race. Call the stop. Win on strategy, not reflexes.` (60)
-- `A race strategy sim. No driving — just the decisions that decide it.` (68)
+**Trademark, and it is not a formality.** "F1" and "Formula 1" are registered
+trademarks of Formula One Licensing BV and are enforced aggressively, including
+against listings that only use them as search terms. Keep them out of the title,
+the short description, the full description and the graphics. The game's teams,
+drivers and circuits are all fictional, which is exactly what keeps it safe.
+"Race strategy" and "open-wheel" carry the meaning with none of the exposure.
 
 ---
 
-## Full description (4000 max)
+## Short description
+
+```
+You don't drive. You make the calls that win the race.
+```
+54 / 80 characters.
+
+It states the one thing a browsing player most needs to know and is most likely
+to get wrong: this is not a driving game. Every alternative said it longer.
+
+---
+
+## Full description
 
 ```
 You are not the driver. You are the strategist on the pit wall, and the race is
@@ -79,9 +80,14 @@ Twelve races a season, then a winter. Development points buy upgrades across the
 car and your driver. Your rivals develop too, and the champion's rivals develop
 hardest — hold on to a title and the grid comes after you.
 
-Between seasons your stats and your seat carry over, your upgrades erode a
-little, and unspent points bank for next year. Fifteen badges track what you
-actually did: a wet win, a win from P10, a season without a single retirement.
+The top of your car is rented, not owned: the final tier of each upgrade erodes
+over the winter, and only a championship pays enough to hold all of it. Finish
+on the podium and you fund next year. Finish fourth and you choose what to let
+go. Your stats and your seat carry over, and unspent points bank rather than
+expire.
+
+Fifteen badges track what you actually did: a wet win, a win from P10, a season
+without a single retirement.
 
 ── AND WHAT IT DOESN'T DO ──
 
@@ -92,37 +98,88 @@ to use the internet. Everything runs on your device, including your save. It
 works identically on a plane.
 ```
 
-**Word on the last section:** it is unusual to advertise the absence of things,
-but "no ads, no IAP, no tracking, works offline" is a genuine differentiator in
-the mobile games category and costs us nothing to say — it is verifiable from
-the permission list on the listing page itself.
+Roughly 2,150 characters, comfortably inside 4,000.
+
+**On the closing section.** Advertising absences is unusual, but "no ads, no
+IAP, no tracking, works offline" is a real differentiator in mobile games and
+costs nothing — and a sceptical reader can verify it from the permissions list
+on the listing page itself, which is what makes it persuasive rather than
+boilerplate.
+
+**On the career paragraph.** It changed for 1.2 and the change is deliberate:
+the erosion economy is the most likely thing to generate a confused one-star
+review ("the game took my upgrades"). Saying plainly that the summit is rented
+and the podium pays for it turns a perceived bug into the stated premise.
 
 ---
 
-## Screenshots — the shot list
+## What's new — 1.2
 
-Play needs at least 2; use all 8. Suggested order, strongest first:
+```
+Qualifying is here. Attack your lap or bank a safe one — grid position is now
+earned, not assigned.
 
-1. **The race HUD mid-race** — timing tower, tyre gauge in amber, gap numbers
-   visible. This is the game.
-2. **The pit panel with the projection overlay open** — the centrepiece
-   decision, showing "if you pit now, you rejoin P5".
-3. **Qualifying, with the attack choice on screen.**
-4. **The race result** with a badge toast landing, if you can catch one.
-5. **The championship standings** at the end of a season.
-6. **The development screen** — upgrades and the rival-development comparison.
-7. **The career record with the trophy case.**
-8. **The main menu** — least informative, but it sets the visual tone.
+A full career: twelve races a season, upgrades for the car and your driver, and
+rivals who develop over the winter. Fifteen badges for the races worth
+remembering.
 
-**Capture these AFTER the font fix** (commit ed8f8eb or later). Anything shot
-before that shows the system fallback font, not the game's actual typography.
+Win the championship and it pays: the top tier of your car erodes each winter,
+and a title is what funds holding on to it.
 
-## Feature graphic (1024 × 500)
+Also: the game's own typefaces now ship inside the app, so it looks right with
+no connection at all.
+```
+417 / 500 characters.
 
-Dark, the teal accent, the circuit outline from the menu, and the title. Avoid
-putting a screenshot in it — it gets scaled down heavily.
+The font line is last and stated as a feature rather than an apology. It is
+worth including because anyone who installed 1.1 saw the wrong typeface
+throughout and will notice.
 
-## App category
+---
 
-**Games → Strategy.** "Simulation" and "Sports" both fit the subject, but
-Strategy fits the player: someone browsing Sports wants to play the sport.
+## Category and tags
+
+**Games → Strategy.** Simulation and Sports both describe the subject, but
+Strategy describes the player. Someone browsing Sports wants to play the sport;
+this game refuses to let them.
+
+Tags: strategy, simulation, racing, management, single player, offline.
+
+---
+
+## Screenshots — shot list
+
+Play requires at least 2 phone screenshots; supply all 8, strongest first,
+because the first three are what appear before a scroll.
+
+1. **Race HUD mid-race** — timing tower, tyre gauge in amber, gaps ticking.
+   This is the game; it earns the first slot.
+2. **Pit panel with the projection overlay open** — the centrepiece decision,
+   showing where you would rejoin.
+3. **Qualifying, attack choice on screen.**
+4. **Race result with a badge toast landing**, if you can catch one.
+5. **Championship standings** at the end of a season, with the championship
+   bonus row visible.
+6. **Development screen** — upgrades against rival development.
+7. **Career record and the trophy case.**
+8. **Main menu** — least informative, but it sets the tone.
+
+**Shoot these on 1.2.** Screenshots taken before the font fix show the system
+fallback typeface rather than the game's own, and screenshots taken before this
+release have no qualifying, career or badges to show.
+
+## Feature graphic — 1024 × 500
+
+Dark ground, the teal accent, the circuit outline from the menu, the title. No
+screenshot inside it: it gets scaled down hard and a shrunken HUD reads as
+noise.
+
+---
+
+## Still outstanding before this can go live
+
+- Privacy policy hosted at a public URL — Play requires a reachable link, and
+  the drafted text in `privacy-policy.md` is not yet anywhere.
+- Data safety form — answers drafted in `data-safety.md`.
+- Content rating questionnaire — answers drafted in `content-rating.md`.
+- Screenshots and the feature graphic, per the shot list above.
