@@ -54,13 +54,26 @@ const FRESH: CareerRecord = {
   racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [],
 }
 
-/** Each attribute drops by at most `decay` tiers, floored at 0. */
+/**
+ * Each attribute drops by at most `decay` tiers, but never below `floor`.
+ *
+ * The floor is what stops erosion from being a flat tax on everyone. With
+ * tierCosts [10, 18, 27] and 120 points of race income a season, a decay that
+ * reaches every tier bills a climbing player for ground they are still paying
+ * off, and the Development screen becomes "rebuy what you lost" for the whole
+ * career. A floor of 2 taxes only the summit: tier 3 slips to 2, and tiers 1
+ * and 2 are yours to keep.
+ *
+ * It cannot RAISE a tier. An attribute already below the floor is untouched --
+ * hence the Math.min, without which floor 2 would gift a tier-1 attribute a
+ * free upgrade every winter.
+ */
 export function erodeTiers(
-  tiers: Record<string, number>, decay: number,
+  tiers: Record<string, number>, decay: number, floor = 0,
 ): Record<string, number> {
   const out: Record<string, number> = {}
   for (const [id, owned] of Object.entries(tiers)) {
-    out[id] = Math.max(0, owned - decay)
+    out[id] = Math.max(Math.min(owned, floor), owned - decay, 0)
   }
   return out
 }
@@ -118,8 +131,13 @@ interface CareerStore extends CareerRecord {
    *
    * It deliberately does NOT advance seasonNumber: that feeds seedFor(), and
    * moving it would shift every seed in the game.
+   *
+   * Returns whether it actually banked. The idempotency guard below is the
+   * only place that knows a season was already recorded, so the caller needs
+   * that answer to keep its own once-per-season side effects -- the season-end
+   * development bonus -- from firing twice on a re-entry.
    */
-  recordSeasonEnd: (s: SeasonSummary) => void
+  recordSeasonEnd: (s: SeasonSummary) => boolean
   /**
    * Starts the next season. Takes the player's current tiers and returns the
    * eroded ones -- it never reads or writes seasonStore, which is what keeps
@@ -182,7 +200,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
      * the rarest thing in the game; double-counting one is worse than
      * missing one.
      */
-    if (s.seasonHistory.some(h => h.seasonNumber === summary.seasonNumber)) return
+    if (s.seasonHistory.some(h => h.seasonNumber === summary.seasonNumber)) return false
 
     // Built as a whole record, same as recordRace, so newlyEarned compares two
     // complete states. titles is bumped here and ONLY here -- a season win is
@@ -208,14 +226,15 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     }
 
     set({ ...next, justEarned: newlyEarned(s, next) })
+    return true
   },
 
   rollOverSeason(tiers) {
-    const { tierDecayPerSeason } = loadGameData().tuning.career
+    const { tierDecayPerSeason, tierDecayFloor } = loadGameData().tuning.career
     // Only the season counter and the tier erosion remain here. The title and
     // the history entry were banked by recordSeasonEnd when the season ended.
     set({ seasonNumber: get().seasonNumber + 1 })
-    return { erodedTiers: erodeTiers(tiers, tierDecayPerSeason) }
+    return { erodedTiers: erodeTiers(tiers, tierDecayPerSeason, tierDecayFloor) }
   },
 
   beginCareer() { set({ ...FRESH, hasCareer: true, justEarned: [] }) },

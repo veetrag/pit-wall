@@ -9,6 +9,10 @@ import { loadGameData, type UpgradeAttribute } from '@data/validators'
 const GAME = loadGameData()
 const TUNING = GAME.tuning
 const UPGRADES = GAME.upgrades
+// The podium bonus belongs on this screen: it is the only other source of
+// development points, and a player deciding what to buy should know the
+// championship is worth more than a race.
+const CAREER = TUNING.career
 const MAX_TIERS = UPGRADES.tierCosts.length
 
 // ---------------------------------------------------------------------------
@@ -537,7 +541,7 @@ export function Development() {
         }}>
           {devPoints > 0
             ? `${devPoints} unspent points carry over to the next round`
-            : `+${UPGRADES.income.perRace} points after every race`}
+            : `+${UPGRADES.income.perRace} points after every race · +${CAREER.seasonEndBonus[0]} for the title`}
         </div>
         <motion.button
           type="button"

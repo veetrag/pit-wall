@@ -118,6 +118,29 @@ describe('careerStore', () => {
     expect(erodeTiers({ power: 1 }, 5)).toEqual({ power: 0 })
   })
 
+  it('THE FLOOR PROTECTS THE TIERS BELOW IT', () => {
+    // Floor 2 means only the top tier is ever lost: 3 slips to 2, and an
+    // attribute already at or below 2 is untouched.
+    expect(erodeTiers({ power: 3, aero: 2, handling: 1, reliability: 0 }, 1, 2))
+      .toEqual({ power: 2, aero: 2, handling: 1, reliability: 0 })
+  })
+
+  it('THE FLOOR CANNOT GIFT A TIER', () => {
+    /*
+     * The bug a naive Math.max(floor, owned - decay) would ship: an attribute
+     * at tier 1 would be RAISED to the floor every winter, so a player who
+     * bought nothing would be handed tier 2 in everything for free. The
+     * Math.min in erodeTiers is what prevents it, and nothing else tests it --
+     * the other floor case starts above the floor.
+     */
+    expect(erodeTiers({ power: 1, aero: 0 }, 1, 3))
+      .toEqual({ power: 1, aero: 0 })
+  })
+
+  it('A DECAY LARGER THAN THE GAP STILL STOPS AT THE FLOOR', () => {
+    expect(erodeTiers({ power: 3 }, 99, 2)).toEqual({ power: 2 })
+  })
+
   it('A MAXED PLAYER CANNOT RE-MAX IN ONE SEASON', () => {
     /*
      * This is the arithmetic the whole feature balances on, asserted in code
@@ -126,9 +149,11 @@ describe('careerStore', () => {
      * earns, so the player must choose what to keep at the top.
      */
     const { tierCosts, attributes, income } = loadGameData().upgrades
-    const { tierDecayPerSeason } = loadGameData().tuning.career
+    const { tierDecayPerSeason, tierDecayFloor } = loadGameData().tuning.career
     const maxed = Object.fromEntries(attributes.map(a => [a.id, tierCosts.length]))
-    const eroded = erodeTiers(maxed, tierDecayPerSeason)
+    // The floor must be passed, or this asserts against an erosion the game
+    // does not actually perform.
+    const eroded = erodeTiers(maxed, tierDecayPerSeason, tierDecayFloor)
 
     // Cost to buy back from the eroded level to the top, per attribute.
     let rebuy = 0

@@ -89,6 +89,23 @@ const TuningSchema = z.object({
   }),
   career: z.object({
     tierDecayPerSeason: z.number().int().min(0),
+    /**
+     * An attribute never decays BELOW this tier. With a floor of 2 only the
+     * top tier is lost, so erosion taxes the summit and leaves the foundation
+     * alone -- a player still climbing does not lose ground they have not yet
+     * finished paying for.
+     */
+    tierDecayFloor: z.number().int().min(0),
+    /**
+     * Development points awarded at season end for finishing P1/P2/P3 in the
+     * championship. Everyone else gets nothing.
+     *
+     * Race income is flat, so before this existed a champion and a backmarker
+     * earned identically -- while `rivalCatchUp.championBonus` gave the
+     * champion a HARDER winter. Winning the title made the next season worse
+     * at the same pay. This is the counterweight.
+     */
+    seasonEndBonus: z.array(z.number().int().min(0)).length(3),
     rivalCatchUp: z.object({
       base: z.number().min(0),
       championBonus: z.number().min(0),

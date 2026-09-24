@@ -9,6 +9,21 @@ describe('tuning.career', () => {
     expect(career.seedStride).toBe(100000)
     expect(career.rivalCatchUp.base).toBeGreaterThanOrEqual(0)
     expect(career.rivalCatchUp.championBonus).toBeGreaterThanOrEqual(0)
+    expect(career.tierDecayFloor).toBeGreaterThanOrEqual(0)
+    expect(career.seasonEndBonus).toHaveLength(3)
+  })
+
+  it('THE DECAY FLOOR LEAVES SOMETHING TO ERODE', () => {
+    /*
+     * A floor at or above the top tier means erosion can never bite: every
+     * attribute sits at or below the floor and the winter does nothing. The
+     * career flattens into a victory lap, silently, with every test that
+     * exercises erodeTiers directly still passing. zod cannot express a bound
+     * that depends on another data file.
+     */
+    const { tierCosts } = loadGameData().upgrades
+    const { tierDecayFloor } = loadGameData().tuning.career
+    expect(tierDecayFloor).toBeLessThan(tierCosts.length)
   })
 
   it('EROSION CANNOT EXCEED THE TIER LADDER', () => {

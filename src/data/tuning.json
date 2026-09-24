@@ -39,6 +39,8 @@
   },
   "career": {
     "tierDecayPerSeason": 1,
+    "tierDecayFloor": 2,
+    "seasonEndBonus": [40, 25, 15],
     "rivalCatchUp": { "base": 0.5, "championBonus": 0.5 },
     "seedStride": 100000
   },

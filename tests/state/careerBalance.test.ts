@@ -13,11 +13,12 @@ describe('an endless career does not flatten out', () => {
     const { attributes, tierCosts, income } = loadGameData().upgrades
     const { tierDecayPerSeason } = loadGameData().tuning.career
     const maxTotal = attributes.length * tierCosts.length
+    const { tierDecayFloor } = loadGameData().tuning.career
     let tiers = Object.fromEntries(attributes.map(a => [a.id, tierCosts.length]))
 
     let everBelowMax = false
     for (let season = 0; season < 10; season++) {
-      tiers = erodeTiers(tiers, tierDecayPerSeason)
+      tiers = erodeTiers(tiers, tierDecayPerSeason, tierDecayFloor)
       let budget = income.perRace * 12
       for (;;) {
         const pick = attributes
@@ -47,6 +48,52 @@ describe('an endless career does not flatten out', () => {
     for (let i = 1; i < totals.length; i++) {
       expect(totals[i]!).toBeGreaterThan(totals[i - 1]!)
     }
+  })
+})
+
+describe('the summit is rented, not owned', () => {
+  /*
+   * The shape the podium bonus buys, stated as arithmetic.
+   *
+   * Erosion exists so that a maxed car cannot be held on flat race income --
+   * that is the test above. The bonus exists so that it CAN be held by a
+   * player who keeps winning the championship. Those two together are the
+   * intended endgame: the plateau is re-earned every season rather than
+   * reached once and kept. If either half stops holding, the career either
+   * flattens into a victory lap or punishes the champion, which are the two
+   * failures this economy was tuned to avoid.
+   */
+  const { attributes, tierCosts, income } = loadGameData().upgrades
+  const { tierDecayPerSeason, tierDecayFloor, seasonEndBonus } = loadGameData().tuning.career
+
+  /** What it costs to put a maxed car back on top after one winter. */
+  function rebuyFromMaxed(): number {
+    const maxed = Object.fromEntries(attributes.map(a => [a.id, tierCosts.length]))
+    const eroded = erodeTiers(maxed, tierDecayPerSeason, tierDecayFloor)
+    let cost = 0
+    for (const a of attributes) {
+      for (let t = eroded[a.id]!; t < tierCosts.length; t++) cost += tierCosts[t]!
+    }
+    return cost
+  }
+
+  const raceIncome = income.perRace * 12
+
+  it('THE CHAMPION CAN AFFORD TO STAY AT THE TOP', () => {
+    const rebuy = rebuyFromMaxed()
+    const championIncome = raceIncome + seasonEndBonus[0]!
+    expect(championIncome, `champion earns ${championIncome}, rebuy costs ${rebuy}`)
+      .toBeGreaterThanOrEqual(rebuy)
+  })
+
+  it('A DRIVER OFF THE PODIUM CANNOT', () => {
+    // The same assertion as 'A MAXED PLAYER CANNOT HOLD THE MAXIMUM FOREVER',
+    // narrowed to the specific claim that the bonus is what makes the
+    // difference -- so a future rise in perRace income cannot quietly hand
+    // everyone a permanent maximum while that test goes on passing.
+    const rebuy = rebuyFromMaxed()
+    expect(raceIncome, `flat income ${raceIncome} must not cover a rebuy of ${rebuy}`)
+      .toBeLessThan(rebuy)
   })
 })
 

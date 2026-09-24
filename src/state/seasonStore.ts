@@ -43,6 +43,24 @@ function pointsFor(position: number): number {
   return POINTS_TABLE[position - 1] ?? 0
 }
 
+/**
+ * Development points paid at season end for a championship podium.
+ *
+ * Race income is flat -- every driver banks `income.perRace` whatever they
+ * finish -- so without this a champion and a backmarker funded their winter
+ * identically, while escalateRivals handed the champion a BIGGER rival boost
+ * for having won. Winning the title strictly worsened the next season.
+ *
+ * It is also the only thing that makes a full car sustainable: holding all
+ * five attributes at the top tier bills 5 x 27 = 135 a winter against 120 of
+ * race income, so the summit is affordable only to a player who keeps winning
+ * the championship. That is the intended shape -- the plateau is earned every
+ * season, not reached once.
+ */
+export function seasonEndBonusFor(championshipPosition: number): number {
+  return loadGameData().tuning.career.seasonEndBonus[championshipPosition - 1] ?? 0
+}
+
 export function raceHeadline(pos: number, events: RaceEventSummary): string {
   const { pitsDone, overtakesGained, hadRain } = events
   if (pos === 1) {
@@ -126,6 +144,13 @@ interface SeasonStore {
   devPoints: number
   purchasedTiers: Record<string, number>
   rivalDevelopment: Record<string, number>
+  /**
+   * The season-end podium bonus just paid, for the championship screen to
+   * show. UI-only and deliberately NOT persisted: it is an announcement of a
+   * transition, and a restored save reopening on the championship screen
+   * should not re-announce a payment made before the app closed.
+   */
+  lastSeasonBonus: number
 
   tierCost: (attributeId: string) => number | null
   canAfford: (attributeId: string) => boolean
@@ -218,6 +243,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   devPoints: 0,
   purchasedTiers: {},
   rivalDevelopment: {},
+  lastSeasonBonus: 0,
 
   tierCost(attributeId) {
     const { tierCosts, attributes } = loadGameData().upgrades
@@ -280,7 +306,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   startNewSeason() {
     useCareerStore.getState().beginCareer()
-    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {} })
+    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {}, lastSeasonBonus: 0 })
   },
 
   selectTeam(id) { set({ selectedTeamId: id, playerDriverId: null }) },
@@ -412,17 +438,22 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       // Champion badge be announced there rather than a screen later.
       const career = useCareerStore.getState()
       const standing = get().standings.findIndex(x => x.driverId === get().playerDriverId)
-      career.recordSeasonEnd({
+      const finishedPosition = standing >= 0 ? standing + 1 : get().standings.length
+      const banked = career.recordSeasonEnd({
         seasonNumber: career.seasonNumber,
         teamId: get().selectedTeamId ?? '',
         driverId: get().playerDriverId ?? '',
-        championshipPosition: standing >= 0 ? standing + 1 : get().standings.length,
+        championshipPosition: finishedPosition,
         points: get().standings.find(x => x.driverId === get().playerDriverId)?.points ?? 0,
         // Overwritten by careerStore from its own season-scoped counter --
         // seasonStore does not track wins, so it must not guess at them.
         wins: 0,
       })
-      set({ phase: 'championship' })
+      // Paid only when recordSeasonEnd actually banked. Re-entering this path
+      // for a season already recorded must not pay the bonus twice, for the
+      // same reason it must not award the title twice.
+      const bonus = banked ? seasonEndBonusFor(finishedPosition) : 0
+      set({ phase: 'championship', devPoints: get().devPoints + bonus, lastSeasonBonus: bonus })
     } else {
       const nextCircuit = CIRCUIT_ORDER[next % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
       set({ raceIndex: next, phase: 'development', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit, playerStrategy: null, attemptNonce: 0 })
@@ -463,6 +494,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       // which is the outcome erosion was introduced to prevent, arriving by a
       // different route. Banking them instead climbs 8 -> 10 -> 12 -> 13 and
       // is still rising at season 10, while erosion still stops a max-out.
+      lastSeasonBonus: 0,
       purchasedTiers: erodedTiers,
       rivalDevelopment: escalateRivals(s.rivalDevelopment, standing === 0),
       // playerDriverId and selectedTeamId are deliberately NOT reset.
@@ -477,6 +509,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       standings: [], lastRaceResults: null, lastRaceEvents: null,
       selectedCircuitId: null, playerStrategy: null, qualifyingResult: null,
       attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {},
+      lastSeasonBonus: 0,
     })
   },
 

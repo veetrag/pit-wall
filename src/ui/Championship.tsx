@@ -16,16 +16,19 @@ function driverName(id: string): string {
 }
 
 export function Championship() {
-  const { standings, playerDriverId, purchasedTiers, startNextSeason, endCareer } = useSeasonStore()
+  const { standings, playerDriverId, purchasedTiers, lastSeasonBonus, startNextSeason, endCareer } = useSeasonStore()
   const seasonNumber = useCareerStore(s => s.seasonNumber)
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const uiTap = useUiTap()
   const [confirmingEnd, setConfirmingEnd] = useState(false)
 
   const { tierCosts, attributes } = loadGameData().upgrades
-  const { tierDecayPerSeason } = loadGameData().tuning.career
+  const { tierDecayPerSeason, tierDecayFloor } = loadGameData().tuning.career
   const maxTiers = attributes.length * tierCosts.length
-  const erodedTiers = erodeTiers(purchasedTiers, tierDecayPerSeason)
+  // Must pass the floor. This is a PREVIEW of what rollOverSeason will do, so
+  // an argument list that drifts from that call site makes the screen promise
+  // one number and the winter deliver another.
+  const erodedTiers = erodeTiers(purchasedTiers, tierDecayPerSeason, tierDecayFloor)
   const keptTiers = Object.values(erodedTiers).reduce((sum, n) => sum + n, 0)
 
   const winner = standings[0]
@@ -159,6 +162,30 @@ export function Championship() {
 
       {/* Season boundary */}
       <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/*
+          The podium bonus. Shown only when it was paid -- a "+0 POINTS" row
+          for a midfield season would read as a taunt, and an absent row says
+          the same thing without the sneer.
+        */}
+        {lastSeasonBonus > 0 && (
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              background: 'rgba(61,220,132,0.08)', border: '1px solid var(--positive)',
+              borderRadius: 10, padding: '10px 14px',
+            }}
+          >
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: 'var(--positive)', letterSpacing: '0.1em' }}>
+              CHAMPIONSHIP BONUS
+            </span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 700, color: 'var(--positive)', fontVariantNumeric: 'tabular-nums' }}>
+              +{lastSeasonBonus} PTS
+            </span>
+          </motion.div>
+        )}
         <motion.button
           whileTap={reducedMotion ? undefined : { scale: 0.97 }}
           onClick={() => { uiTap(); startNextSeason() }}
