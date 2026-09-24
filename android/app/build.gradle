@@ -21,17 +21,19 @@ android {
         applicationId "com.veetrag.pitwall"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // 2 is the AAB currently in review at Google; Play rejects a duplicate
-        // versionCode, so the next binary release must be 3.
+        // 2 is live in production at Google (submitted as versionName 1.0 --
+        // the 1.1 bump in 35305ac landed AFTER that bundle was built, so 1.1
+        // was never released). Play rejects a duplicate versionCode, so this
+        // release is 3, and the next must be 4.
         versionCode 3
         // MUST match package.json's version -- pinned by
         // tests/data/appVersion.test.ts, because gradle cannot import JSON and
         // nothing else in the toolchain reads Android config.
         //
-        // 1.2, not 2.0: since 1.1 (race incidents, currently the versionCode 2
-        // AAB at Google) this adds qualifying, the multi-season career, badges
-        // and the font fix. That is a substantial content release, not a change
-        // to what the game IS -- 2.0 is worth keeping for that.
+        // 1.2, not 2.0: over the live 1.0 this adds race incidents, qualifying,
+        // the multi-season career, badges, the career economy and the font fix.
+        // That is a substantial content release, not a change to what the game
+        // IS -- 2.0 is worth keeping for that.
         versionName "1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
