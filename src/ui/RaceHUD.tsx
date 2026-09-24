@@ -174,23 +174,34 @@ export function useRetireCoachTutorial(): void {
  *
  * The cliff and the projection are requested by the things that cause them
  * (TelemetryZone, PitPanel). The tower and the pace trade are always on
- * screen, so they are keyed to the lap instead: the tower at lights-out,
- * because it is the first thing a new player has to read, and the pace trade
- * once the race is actually running and the tyres have started to go off.
+ * screen, so they are keyed to the lap instead: the tower as soon as the race
+ * is running, because it is the first thing a new player has to read, and the
+ * pace trade once the tyres have started to go off.
+ *
+ * `racePhase === 'racing'` IS LOAD-BEARING, and is not the same as seasonStore
+ * being in its racing phase (which useCoachingActive already checks).
+ *
+ * Without it, both marks were requested during the 'starting' phase, while the
+ * lights sequence was still running. CoachMark pauses by calling setSpeed(0)
+ * -- and StartLights calls setSpeed(simSpeed) when the lights go out, which
+ * happens AFTER. The pause was discarded and the card sat on screen while the
+ * race ran away underneath it. Measured on a real phone: READ THE TOWER was
+ * still up on LAP 18, tyres past the cliff, the race half-decided.
  *
  * Re-requesting on later laps is harmless and deliberate: coachStore refuses a
- * mark while another is active, so a request dropped at lap 1 is made again at
- * lap 2 rather than lost.
+ * mark while another is active, so a request dropped at lap 2 is made again at
+ * lap 3 rather than lost.
  */
 function useTutorialMarks(): void {
   const coaching = useCoachingActive()
+  const racePhase = useRaceStore(s => s.phase)
   const lap = useRaceStore(s => s.raceState?.lap ?? 0)
   const request = useCoachStore(s => s.request)
   useEffect(() => {
-    if (!coaching) return
-    if (lap >= 0) request('timing_tower')
+    if (!coaching || racePhase !== 'racing') return
+    request('timing_tower')
     if (lap >= 2) request('pace_modes')
-  }, [coaching, lap, request])
+  }, [coaching, racePhase, lap, request])
 }
 
 export function RaceHUD() {
