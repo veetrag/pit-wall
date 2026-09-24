@@ -119,17 +119,16 @@ and the podium pays for it turns a perceived bug into the stated premise.
 Qualifying is here. Attack your lap or bank a safe one — grid position is now
 earned, not assigned.
 
-A full career: twelve races a season, upgrades for the car and your driver, and
-rivals who develop over the winter. Fifteen badges for the races worth
+A full career: twelve races a season, upgrades for the car and your driver,
+rivals who develop over the winter, and fifteen badges for the races worth
 remembering.
 
-Win the championship and it pays: the top tier of your car erodes each winter,
-and a title is what funds holding on to it.
+Winning pays. The top tier of your car erodes each winter, and a championship
+is what funds holding on to it.
 
-Also: the game's own typefaces now ship inside the app, so it looks right with
-no connection at all.
+The game's typefaces now ship inside the app, so it looks right offline.
 ```
-417 / 500 characters.
+449 / 500 characters, counted with newlines — which is how Play counts them.
 
 The font line is last and stated as a feature rather than an apology. It is
 worth including because anyone who installed 1.1 saw the wrong typeface
