@@ -152,3 +152,61 @@ Checked against the repo and the Play Console on 2026-09-24.
       from `SettingsPanel.tsx`, which resets `coachStore` too.
 - [x] **Offline play** — the entire game, including saves, runs with no network.
 - [x] **Android App Bundle**, **target API 36**, **data safety form**.
+
+---
+
+## State as of 2026-09-26, end of day
+
+### Done since this list was written
+
+- **INTERNET permission decision: made.** Cloud save is being built, so the
+  permission is in, and the manifest guard now pins the exact permission set
+  rather than banning network access.
+- **Cloud save, steps 1 and 2: merged to main** (`41e5a47`, `e17dfaa`).
+  687 tests, the plugin confined behind an interface, conflict resolution and
+  the sync decision both pure and hard-tested.
+- **Play Games console setup: complete and published.** PGS project linked to
+  `pitwall-fc924`, saved games enabled, OAuth consent screen, two OAuth
+  clients and two credentials, both allow-lists filled, project published.
+
+### Blocked, waiting on Google
+
+- **Cloud save does not work on device yet.** Sign-in succeeds but Play Games
+  will not mint a player id. The publish dialog said provisioning "may take a
+  few hours". Retry with the command in the session notes; `snapshot calls`
+  above 0 means it is live. Nothing in the code or the console is known to be
+  wrong.
+
+### Next, in order
+
+1. **Retry cloud save on device.** Everything downstream assumes it works.
+2. **Step 3 — achievements.** 15 IDs, names, descriptions and 512x512 icons in
+   the Play Console, then the mapping in `src/sync/achievements.ts`.
+   **Note: published achievements cannot be deleted.** Get the ids and names
+   right the first time.
+3. **Step 3 — Crashlytics.** Needs a fresh `google-services.json`: the
+   committed copy still has `oauth_client: []` and predates the OAuth clients.
+   Downloads do not reach disk through browser automation (Chrome's "ask where
+   to save" setting), so this one has to be downloaded by hand.
+4. **Step 4 — In-App Review.** Trigger on the championship screen after a
+   title, once per career.
+5. **Step 5 — In-App Updates and Play Integrity.** Plumbing only; nothing
+   gated on integrity.
+6. **Step 6 — store paperwork.** The listing's "no network requests at all"
+   paragraph becomes false the moment 1.3 ships; data safety and the privacy
+   policy both change too.
+
+### Still Veet's, unchanged
+
+- **Screenshots.** The 7 in `store/screenshots/` are from August and
+  September: no qualifying, no career, no badges, and shot before the font
+  fix. The icon and feature graphic are fine and were reused for PGS.
+- **Privacy policy hosting.** Still not at a public URL, and 1.3 needs it to
+  say more than 1.2 did.
+- **1.2 review status.** Submitted 2026-09-24; unknown since.
+
+### Cleanup worth doing
+
+- `store/listing.md` and `docs/store/listing-copy.md` are two listing
+  documents. The second is current; the first predates it and should go, or
+  they will drift.
