@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { setCloudClient, pushCloudSave, readLocalSnapshot } from '@sync/storeBridge'
+import {
+  setCloudClient, pushCloudSave, readLocalSnapshot, startAchievementSync,
+} from '@sync/storeBridge'
+import { ACHIEVEMENTS } from '@sync/achievements'
 import { offlineClient, type PlayGamesClient } from '@sync/index'
 import { useCareerStore } from '@state/careerStore'
 
@@ -84,5 +87,50 @@ describe('readLocalSnapshot', () => {
     const snap = readLocalSnapshot()
     expect(snap?.career.seasonNumber).toBe(1)
     expect(snap?.savedAt).toBeGreaterThan(0)
+  })
+})
+
+describe('startAchievementSync', () => {
+  beforeEach(() => {
+    setCloudClient(offlineClient)
+    useCareerStore.getState().endCareer()
+  })
+
+  it('UNLOCKS WHEN A BADGE IS EARNED, WITHOUT ANY SCREEN BEING MOUNTED', async () => {
+    /*
+     * The reason this subscribes instead of firing from a component: the
+     * badge toast appears on two screens today. An unlock that depended on
+     * which one you were looking at would eventually be missed.
+     */
+    const unlocked: string[] = []
+    setCloudClient({
+      ...offlineClient,
+      unlockAchievement: async (id) => { unlocked.push(id) },
+    })
+    const stop = startAchievementSync()
+    useCareerStore.getState().beginCareer()
+    useCareerStore.getState().recordRace({
+      position: 1, retired: false, pole: false, round: 0, grid: 1,
+      stops: 1, overtakes: 0, wet: false,
+    })
+    await vi.waitFor(() => expect(unlocked.length).toBeGreaterThan(0))
+    // Winning from P1 earns rostrum, winner and one_stop_wonder; all three map.
+    expect(unlocked).toContain(ACHIEVEMENTS.winner)
+    expect(unlocked).toContain(ACHIEVEMENTS.rostrum)
+    stop()
+  })
+
+  it('STOPS UNLOCKING ONCE UNSUBSCRIBED', async () => {
+    const unlocked: string[] = []
+    setCloudClient({ ...offlineClient, unlockAchievement: async (id) => { unlocked.push(id) } })
+    const stop = startAchievementSync()
+    stop()
+    useCareerStore.getState().beginCareer()
+    useCareerStore.getState().recordRace({
+      position: 1, retired: false, pole: false, round: 0, grid: 1,
+      stops: 1, overtakes: 0, wet: false,
+    })
+    await new Promise(r => setTimeout(r, 30))
+    expect(unlocked).toEqual([])
   })
 })

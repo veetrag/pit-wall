@@ -9,6 +9,7 @@ import {
 import { CLOUD_SAVE_VERSION, type CloudSnapshot } from './cloudSave'
 import { syncAtStartup, pushSave, type SyncDeps, type SyncOutcome } from './cloudSync'
 import { offlineClient, type PlayGamesClient } from './types'
+import { unlockFor } from './achievements'
 
 /**
  * The join between cloud save and this game's stores.
@@ -94,6 +95,27 @@ export async function startCloudSync(): Promise<SyncOutcome> {
   if (career) useCareerStore.getState().resumeCareer(career)
   if (season) useSeasonStore.getState().resumeSeason(season)
   return syncAtStartup(deps())
+}
+
+/**
+ * Mirror newly-earned badges to Play Games achievements.
+ *
+ * Subscribes to careerStore rather than being called from a screen, for the
+ * same reason the save autosubscribes: the toast fires on two different
+ * screens today and a third tomorrow, and an unlock that depends on which
+ * screen you were looking at is an unlock that will eventually be missed.
+ *
+ * `justEarned` is the same signal BadgeToast reads, so the in-game surface
+ * and the Play Games profile cannot disagree about what was earned.
+ */
+export function startAchievementSync(): () => void {
+  let last: readonly string[] = []
+  return useCareerStore.subscribe((state) => {
+    const earned = state.justEarned
+    if (earned === last || earned.length === 0) return
+    last = earned
+    void unlockFor(activeClient, earned)
+  })
 }
 
 /** Push at a save point. Fire-and-forget; failures are never the player's problem. */

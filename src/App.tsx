@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from './state/seasonStore'
 import { startSeasonAutosave } from './state/seasonPersistence'
 import { startCareerAutosave } from './state/careerPersistence'
-import { setCloudClient, startCloudSync } from './sync/storeBridge'
+import { setCloudClient, startCloudSync, startAchievementSync } from './sync/storeBridge'
 import { playGamesClient } from './sync/playGamesClient'
 import { setPlatformClients, startCrashReporting, checkForUpdate } from './sync/platformBridge'
 import { crashReporter, reviewPrompter, updateChecker, integrityChecker } from './sync/platform'
@@ -56,6 +56,11 @@ export default function App() {
     setCloudClient(playGamesClient)
     void startCloudSync()
   }, [])
+
+  // Mirrors newly-earned badges to Play Games. Subscribes rather than firing
+  // from a screen, so an unlock cannot be missed because the toast happened
+  // to appear somewhere this effect does not run.
+  useEffect(() => startAchievementSync(), [])
 
   // Crash reporting and the update check. Same shape as cloud save: this
   // module is the only one that imports the plugins, everything downstream
