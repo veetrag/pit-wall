@@ -9,6 +9,13 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
         classpath 'com.google.gms:google-services:4.4.4'
+        // Crashlytics needs BOTH the SDK and this Gradle plugin. Without the
+        // plugin the SDK throws on startup -- "The Crashlytics build ID is
+        // missing" -- and takes the whole app with it, because it initialises
+        // from a ContentProvider before any of our code runs. Verified the
+        // hard way on 2026-09-26: a release build that passed 698 tests and
+        // did not start on a phone.
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.6'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
