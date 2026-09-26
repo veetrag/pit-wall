@@ -337,3 +337,69 @@ The PGS summary still reads "Firebase not linked" even though both sit on
 cloud project `pitwall-fc924`. That flag concerns Firebase-specific PGS
 features rather than the sign-in path cloud save uses. Revisit only if
 sign-in misbehaves after credentials exist.
+
+---
+
+## 12. Device pass, 2026-09-26 — partial
+
+Pixel 10 Pro XL, release APK sideloaded. **The app-side wiring is proven; Play
+Games account provisioning is not yet working.**
+
+### Proven on device
+
+- The plugin is reached with our exact snapshot name. The first run logged
+  `PgsSnapshotAgent: Failed to open snapshot file pitwall.career status: 4000`
+  -- a "no such snapshot" from Google, which means the whole path from
+  App.tsx through storeBridge, cloudSync and playGamesClient executed and
+  asked Play Games the right question.
+- The signing-credential fix worked. Before it,
+  `GameNetworkException ... UNAUTHENTICATED`; after adding the upload-key
+  credential, `GamesConnectSignInOp: signIn: Returning SUCCESS`.
+- **Offline degradation is correct.** In the final run, with no player id,
+  `pitwall.career` appears zero times in the log: signIn reported signed-out
+  and the code stopped there rather than pressing on. That is the designed
+  behaviour, observed rather than assumed.
+- No crash, no fatal exception, and the game renders and plays normally.
+
+### The failure that remains
+
+```
+ScopedIdsTransformer: Fetching game player id for
+  (Account {name=veetrag@gmail.com}) (609398586580) failed
+PlayGamesServices[DataBroker]: No player ID found when refreshing
+```
+
+Sign-in succeeds at the broker, but Play Games will not mint a game player id
+for the account against this project. Two candidates, in order:
+
+1. **Propagation.** Every piece of this configuration -- consent screen, both
+   OAuth clients, both PGS credentials, the OAuth test user -- was created
+   within about fifteen minutes of the test. Google documents these as taking
+   minutes to hours. Retry before changing anything.
+2. **The PGS project is still Draft.** "Publish your project" is the one
+   remaining unticked setup item. Google's documentation says testers of an
+   unpublished project can sign in, which is why this is second rather than
+   first -- but it is the only structural difference left.
+
+### What was fixed during the pass
+
+- A **second PGS credential** for the upload-key OAuth client. The sideloaded
+  APK is signed with the upload key (verified: apksigner reports
+  `ab83663e...`), and the only credential was bound to the Play app signing
+  key. This is exactly the failure §11 predicted in writing, arriving on
+  schedule.
+  "Use this credential for new installs" was left unchecked, so production
+  installs still use the app-signing credential.
+- **veetrag@gmail.com added as an OAuth test user.** The Audience page had
+  "No rows to display" while publishing status is Testing, which restricts
+  access to listed test users. This is a SECOND allow-list, separate from the
+  PGS tester list, and having one without the other is silent.
+
+### Ruled out
+
+- PGS tester list: contains veetrag@gmail.com, the same account signed in on
+  the phone.
+- The games APP_ID: the credential page reports Application ID 609398586580,
+  matching `game_services_project_id` in strings.xml.
+- App permissions: the merged-manifest guard still passes, so the plugin
+  added none of its own.
