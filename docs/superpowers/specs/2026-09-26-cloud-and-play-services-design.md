@@ -270,8 +270,14 @@ from the repo.
 - **Firebase project** `pitwall-fc924` (project number 609398586580).
 - **Firebase Android app** registered: `com.veetrag.pitwall`, nickname
   "Pit Wall". `google-services.json` is at `android/app/`, committed.
-- **Upload key SHA-1** added to the Firebase app:
-  `AB:83:66:3E:33:E7:5A:07:57:78:04:27:95:1E:D8:E7:A9:08:8D:0D`
+- **Both SHA-1 fingerprints** added to the Firebase app:
+  - upload key `AB:83:66:3E:33:E7:5A:07:57:78:04:27:95:1E:D8:E7:A9:08:8D:0D`
+  - app signing key `C3:02:B5:4D:BD:CB:8E:1A:42:4F:1C:7D:C6:FD:85:DA:EF:58:BF:22`
+
+  Both are needed. The app signing key is what Play-installed builds present;
+  the upload key is what a local release build presents. With only one
+  registered, sign-in works in exactly one of those two situations and the
+  failure looks like a code bug.
 - **Play Games Services project created** and linked to the same cloud
   project, `pitwall-fc924`. PGS project ID 609398586580.
 - **Saved games: enabled.** Cloud save cannot work without it, and the console
@@ -280,20 +286,20 @@ from the repo.
 
 ### Outstanding, in order
 
-1. **App signing key SHA-1** — from Play Console, Protected with Play, App
-   signing, *Classical key*. Sits behind a copy-to-clipboard button that does
-   not expose its text, so it needs a human click. Add it to the Firebase app
-   alongside the upload key. Without BOTH, sign-in works for exactly one of
-   "installed from Play" and "installed from a local release build", and the
-   failure looks like a code bug.
-2. **OAuth consent screen** in Google Cloud Platform. Needs a user support
-   email and a developer contact email, both shown to players.
-3. **Create credentials** — the Android OAuth client. Blocked on 1 and 2.
-4. **Publish the PGS project** — until then only listed testers can sign in.
+1. **OAuth consent screen** in Google Cloud Platform. The PGS credentials
+   panel refuses to accept a credential until this exists, in as many words:
+   "Configure your OAuth consent screen before adding credentials." It needs a
+   user support email and a developer contact email, and both are shown to
+   every player who signs in, so the address is a product decision rather than
+   a form field.
+2. **Create credentials** — the Android OAuth client. Blocked on 1.
+3. **Publish the PGS project** — until then only listed testers can sign in.
    This is deliberate: do it when 1.3 is ready, not before.
 
 `google-services.json` currently has **no `oauth_client` entry**, which is the
-observable symptom of 1-3 being incomplete. It must be re-downloaded once
+observable symptom of 1-2 being incomplete. Adding the fingerprints was
+necessary but not sufficient: the entry appears only once a credential exists,
+and a credential cannot be created before the consent screen. It must be re-downloaded once
 credentials exist, or sign-in will fail at runtime with nothing in the file to
 explain why.
 
