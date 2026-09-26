@@ -284,15 +284,43 @@ from the repo.
   warns it *cannot be turned off after publishing*.
 - Display name corrected from "Pitwall" to "Pit Wall", matching the app.
 
+- **OAuth consent screen** created on the Google Auth Platform for
+  `pitwall-fc924`: app name "Pit Wall", user support and developer contact
+  both `veetrag@gmail.com`, audience **External**, publishing status
+  **Testing**.
+
+  External is the only valid choice: Internal requires a Google Workspace
+  organisation and this is a personal account. Testing status means only
+  listed test users can sign in, which is what we want until 1.3.
+
+- **Two Android OAuth clients** created, because an Android OAuth client binds
+  exactly one SHA-1 and we have two signing identities:
+  - `Pit Wall (Play app signing key)` — cert C3:02:B5:... — what Play installs
+    present.
+  - `Pit Wall (upload key, dev builds)` — cert AB:83:66:... — what a local
+    release build presents.
+
+- **PGS Android credential** created, authorised by the Play app signing
+  client. Anti-piracy left **Off**: it is a licensing check that exists to
+  protect paid apps, and on a free offline game it can only ever block a
+  legitimate player.
+
+PGS setup is now **4 of 6**. The two remaining are "add the SDK to your
+production APK", which is implementation work, and "publish your project",
+which is deliberately deferred to 1.3.
+
 ### Outstanding, in order
 
-1. **OAuth consent screen** in Google Cloud Platform. The PGS credentials
-   panel refuses to accept a credential until this exists, in as many words:
-   "Configure your OAuth consent screen before adding credentials." It needs a
-   user support email and a developer contact email, and both are shown to
-   every player who signs in, so the address is a product decision rather than
-   a form field.
-2. **Create credentials** — the Android OAuth client. Blocked on 1.
+1. **A fresh `google-services.json`.** The committed copy predates the OAuth
+   clients and still has `oauth_client: []`. File downloads stopped reaching
+   disk through browser automation partway through this setup, so this one has
+   to be downloaded by hand from the Firebase console and dropped into
+   `android/app/`. **Verify `oauth_client` is non-empty before starting step
+   2** -- the whole chain has been "necessary but not sufficient" twice, and
+   an empty array is the symptom every time.
+2. **A second PGS credential** for the upload-key OAuth client, if sideloaded
+   release builds need to sign in during development. The client exists; only
+   the PGS credential linking it does not.
 3. **Publish the PGS project** — until then only listed testers can sign in.
    This is deliberate: do it when 1.3 is ready, not before.
 
