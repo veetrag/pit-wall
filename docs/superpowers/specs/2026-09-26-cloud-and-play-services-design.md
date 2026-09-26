@@ -403,3 +403,41 @@ for the account against this project. Two candidates, in order:
   matching `game_services_project_id` in strings.xml.
 - App permissions: the merged-manifest guard still passes, so the plugin
   added none of its own.
+
+### Second pass, 11:07 — still failing, and two hypotheses killed
+
+**Propagation (suspect 1): weakened.** Retried 25 minutes after the last
+config change, on a cleared app. Identical result, and `pitwall.career`
+appears zero times -- the code still correctly stops at a signed-out signIn.
+
+**Publishing (suspect 2): ruled out by reading.** The PGS publishing page
+says in as many words: "When changes are made to your game project, they're
+automatically made available to authorized testers. Publishing the changes
+makes them available to all public users of your game." The test account is
+already an authorised tester, so publishing cannot affect it. Publishing is
+also blocked on four unset properties (description, game category, icon,
+feature graphic) -- two of which are images that do not exist yet, and one of
+which is the same 1024x500 feature graphic the store listing needs.
+
+**Interactive sign-in: tested and disproven.** The log line
+`SignInPerformer: returning true for shouldShowWelcomePopup` suggested the
+account had no Play Games profile and that `silent: true` was suppressing the
+creation UI. A throwaway build with `silent: false` behaved identically: no
+popup, same failure. The build really did contain the change -- the shipped
+bundle was checked for `silent:!1` rather than assumed, after the stale-build
+mistake earlier in this project. The change has been reverted.
+
+### What is left
+
+Server-side provisioning of a brand-new PGS project. Everything verifiable
+from here checks out: both credentials accepted, the APP_ID matches, the PGS
+tester list and the OAuth test-user list both contain the account, and the app
+is signed with a key that has its own credential.
+
+`ScopedIdsTransformer: Fetching game player id ... failed` is Google declining
+to mint a player id, and nothing in either console contradicts the
+configuration. The next honest step is elapsed time -- hours, not minutes --
+and a retry, not more console changes.
+
+Nothing about this is a code defect. The feature degrades exactly as designed
+and the game is unaffected.
