@@ -22,6 +22,7 @@ export default defineConfig({
       '@ui': resolve(__dirname, './src/ui'),
       '@audio': resolve(__dirname, './src/audio'),
       '@hooks': resolve(__dirname, './src/hooks'),
+      '@sync': resolve(__dirname, './src/sync'),
     },
   },
   test: {

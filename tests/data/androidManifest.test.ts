@@ -150,30 +150,34 @@ describe('Capacitor gradle paths point at this checkout', () => {
   })
 })
 
-describe('the app requests no network access', () => {
+describe('the app declares exactly the permissions it means to', () => {
   /*
-   * Pit Wall talks to nobody. The simulation is local, the save is local, there
-   * is no analytics, no ads and no IAP -- so the app declares no INTERNET
-   * permission, and the Play Store data-safety declaration says it collects and
-   * transmits nothing.
+   * Until 2026-09-26 this guard said "no INTERNET permission at all", and the
+   * store listing advertised that. Cloud save changed the decision, and the
+   * old comment predicted exactly how: "adding INTERNET is a legitimate
+   * decision, not a forbidden one -- but it is a PRODUCT decision with a
+   * store-disclosure consequence, so it should fail here and be made
+   * deliberately rather than arrive inside a dependency."
    *
-   * That claim is only as good as this guard. It is also load-bearing in the
-   * other direction: because there is no INTERNET permission, ANY remote asset
-   * fails silently on device while working in the dev browser. Three Google
-   * Fonts <link> tags survived that way from Phase 0 until they were measured
-   * on an emulator (see src/styles/fonts.css). tests/ui/noRemoteAssets.test.ts
-   * guards the other half of the same invariant.
+   * That is what happened, so the guard changes shape rather than being
+   * deleted. It now pins the EXACT permission set. The value was never "no
+   * network" as such -- it was that a permission has to be argued for in a
+   * diff instead of arriving inside somebody's transitive dependency, and
+   * five new plugins is precisely when that protection is worth the most.
    *
-   * Adding INTERNET is a legitimate decision, not a forbidden one -- but it is
-   * a PRODUCT decision with a store-disclosure consequence, so it should fail
-   * here and be made deliberately rather than arrive inside a dependency.
+   * tests/ui/noRemoteAssets.test.ts still guards the other half, and its job
+   * got harder: a remote asset used to fail loudly on device because nothing
+   * could reach the network. Now it will quietly work for an online player and
+   * break for an offline one, which is worse.
    */
   const PERMISSION = /uses-permission[^>]*android:name\s*=\s*"([^"]+)"/g
 
-  it('DOES NOT DECLARE android.permission.INTERNET', () => {
+  it('DECLARES INTERNET, AND NOTHING ELSE, IN THE APP MANIFEST', () => {
     const manifest = readFileSync(join(ANDROID, 'AndroidManifest.xml'), 'utf8')
     const declared = [...manifest.matchAll(PERMISSION)].map(m => m[1])
-    expect(declared, 'the app manifest must not request network access').not.toContain('android.permission.INTERNET')
+    expect(declared.sort(), 'a permission was added or removed by hand').toEqual([
+      'android.permission.INTERNET',
+    ])
   })
 
   it('no dependency slips INTERNET into the MERGED manifest', () => {
@@ -201,6 +205,7 @@ describe('the app requests no network access', () => {
     // Assert the whole set, not just the absence: a new permission of any kind
     // is a store-disclosure question and should be looked at deliberately.
     expect(declared.sort()).toEqual([
+      'android.permission.INTERNET',
       'android.permission.VIBRATE',
       'com.veetrag.pitwall.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION',
     ])

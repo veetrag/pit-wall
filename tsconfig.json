@@ -20,7 +20,8 @@
       "@canvas/*": ["./src/canvas/*"],
       "@ui/*": ["./src/ui/*"],
       "@audio/*": ["./src/audio/*"],
-      "@hooks/*": ["./src/hooks/*"]
+      "@hooks/*": ["./src/hooks/*"],
+      "@sync/*": ["./src/sync/*"]
     }
   },
   "include": ["src", "tests"],

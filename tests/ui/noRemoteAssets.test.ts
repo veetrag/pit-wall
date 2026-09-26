@@ -3,18 +3,24 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 
 /*
- * The app must fetch NOTHING at runtime.
+ * The app must fetch NOTHING to render or to play.
  *
- * This is not a style preference, it is the floor the whole ship position
- * stands on. The Android app declares no INTERNET permission (guarded in
- * tests/data/androidManifest.test.ts), so any remote asset silently fails on
- * device while working perfectly in the dev browser -- which is exactly how
- * three Google Fonts <link> tags survived in index.html from Phase 0 until
- * they were measured on an emulator. Every timing number in the game rendered
- * in the system sans for that entire time.
+ * Originally this guard leaned on the manifest: with no INTERNET permission,
+ * a remote asset failed on device while working perfectly in the dev browser.
+ * That is exactly how three Google Fonts <link> tags survived in index.html
+ * from Phase 0 until they were measured on an emulator, with every timing
+ * number in the game rendering in the system sans for the whole time.
  *
- * It is also what makes the Play Store data-safety declaration honest: an app
- * that makes no requests transmits no IP addresses to anyone.
+ * Cloud save added the INTERNET permission on 2026-09-26, and that makes this
+ * file MORE important rather than less. The failure it catches used to be
+ * loud: broken for everyone, including the developer, the moment it shipped.
+ * Now a remote asset will load perfectly for an online player and fail only
+ * for someone on a plane -- the exact user the offline promise is for, and the
+ * one least able to report what went wrong.
+ *
+ * Play Games traffic is the ONE exception, and it does not belong to any
+ * screen: it is a background sync that no frame waits on. Nothing the player
+ * looks at may depend on a request.
  */
 const ROOT = resolve(process.cwd())
 const SRC = join(ROOT, 'src')

@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        Added 2026-09-26 for cloud save (Play Games Saved Games). This is a
+        PRODUCT decision with a store-disclosure consequence, not a technical
+        detail. It changes the data-safety declaration and it falsifies the
+        closing paragraph of the store listing, which must be rewritten before
+        1.3 is submitted. See
+        docs/superpowers/specs/2026-09-26-cloud-and-play-services-design.md §1.
+
+        The game must still run entirely offline. Nothing here may become a
+        requirement to be online, and tests/ui/noRemoteAssets.test.ts still
+        bans remote assets. They no longer fail loudly, which makes them MORE
+        dangerous rather than less.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
