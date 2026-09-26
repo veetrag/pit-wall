@@ -257,3 +257,49 @@ Steps 2 onward are blocked on console setup that only Veet can do: the Play
 Games Services project, the OAuth consent screen, the achievement IDs and
 icons, and the Firebase project with its `google-services.json`. Step 1 needs
 none of it and can start immediately.
+
+---
+
+## 11. Console setup — state as of 2026-09-26
+
+Recorded because it is spread across three consoles and none of it is visible
+from the repo.
+
+### Done
+
+- **Firebase project** `pitwall-fc924` (project number 609398586580).
+- **Firebase Android app** registered: `com.veetrag.pitwall`, nickname
+  "Pit Wall". `google-services.json` is at `android/app/`, committed.
+- **Upload key SHA-1** added to the Firebase app:
+  `AB:83:66:3E:33:E7:5A:07:57:78:04:27:95:1E:D8:E7:A9:08:8D:0D`
+- **Play Games Services project created** and linked to the same cloud
+  project, `pitwall-fc924`. PGS project ID 609398586580.
+- **Saved games: enabled.** Cloud save cannot work without it, and the console
+  warns it *cannot be turned off after publishing*.
+- Display name corrected from "Pitwall" to "Pit Wall", matching the app.
+
+### Outstanding, in order
+
+1. **App signing key SHA-1** — from Play Console, Protected with Play, App
+   signing, *Classical key*. Sits behind a copy-to-clipboard button that does
+   not expose its text, so it needs a human click. Add it to the Firebase app
+   alongside the upload key. Without BOTH, sign-in works for exactly one of
+   "installed from Play" and "installed from a local release build", and the
+   failure looks like a code bug.
+2. **OAuth consent screen** in Google Cloud Platform. Needs a user support
+   email and a developer contact email, both shown to players.
+3. **Create credentials** — the Android OAuth client. Blocked on 1 and 2.
+4. **Publish the PGS project** — until then only listed testers can sign in.
+   This is deliberate: do it when 1.3 is ready, not before.
+
+`google-services.json` currently has **no `oauth_client` entry**, which is the
+observable symptom of 1-3 being incomplete. It must be re-downloaded once
+credentials exist, or sign-in will fail at runtime with nothing in the file to
+explain why.
+
+### Not a blocker, but noted
+
+The PGS summary still reads "Firebase not linked" even though both sit on
+cloud project `pitwall-fc924`. That flag concerns Firebase-specific PGS
+features rather than the sign-in path cloud save uses. Revisit only if
+sign-in misbehaves after credentials exist.
