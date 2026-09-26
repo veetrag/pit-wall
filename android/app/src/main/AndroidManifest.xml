@@ -24,6 +24,16 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!--
+            Play Games Services. The SDK reads the project id from here at
+            startup; without it sign-in fails on device while every test and
+            the dev browser stay perfectly green, because nothing off-device
+            ever reads this file.
+        -->
+        <meta-data
+            android:name="com.google.android.gms.games.APP_ID"
+            android:value="@string/game_services_project_id" />
+
         <activity
             android:configChanges="keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"

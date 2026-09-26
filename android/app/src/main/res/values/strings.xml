@@ -4,4 +4,14 @@
     <string name="title_activity_main">Pit Wall</string>
     <string name="package_name">com.veetrag.pitwall</string>
     <string name="custom_url_scheme">com.veetrag.pitwall</string>
+    <!--
+        The Play Games Services project id, which the PGS SDK reads through the
+        com.google.android.gms.games.APP_ID meta-data in AndroidManifest.xml.
+        It is the PGS project number, NOT the package name and NOT an OAuth
+        client id. Sign-in fails at runtime with an unhelpful error when this
+        is wrong, so it is pinned by tests/data/playGamesConfig.test.ts.
+
+        translatable: this is an identifier, not copy.
+    -->
+    <string name="game_services_project_id" translatable="false">609398586580</string>
 </resources>

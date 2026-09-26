@@ -4,6 +4,8 @@ import { AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from './state/seasonStore'
 import { startSeasonAutosave } from './state/seasonPersistence'
 import { startCareerAutosave } from './state/careerPersistence'
+import { setCloudClient, startCloudSync } from './sync/storeBridge'
+import { playGamesClient } from './sync/playGamesClient'
 import { useSettingsStore, startReducedMotionWatch } from './state/settingsStore'
 import { MainMenu } from './ui/MainMenu'
 import { GridStats } from './ui/GridStats'
@@ -42,6 +44,16 @@ export default function App() {
   // how the previous attempt at saving ended up dead. See seasonPersistence.ts.
   useEffect(() => startSeasonAutosave(), [])
   useEffect(() => startCareerAutosave(), [])
+
+  // Cloud save. This is the only module that imports the Play Games plugin
+  // into the app graph -- see the note on setCloudClient. It hydrates from
+  // local storage first and only then reconciles, and every failure path
+  // inside it degrades to "the game works offline", so nothing here is
+  // awaited or surfaced.
+  useEffect(() => {
+    setCloudClient(playGamesClient)
+    void startCloudSync()
+  }, [])
 
   // Follows the OS accessibility preference while the app is open. It only
   // applies while the player has made no explicit choice of their own -- see

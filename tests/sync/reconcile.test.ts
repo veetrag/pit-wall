@@ -75,7 +75,9 @@ describe('the offline client', () => {
   it('SWALLOWS EVERY OPERATION WITHOUT THROWING', async () => {
     // No caller should need a try/catch to stay alive on the offline path.
     await expect(offlineClient.loadSnapshot('career')).resolves.toBeNull()
-    await expect(offlineClient.saveSnapshot('career', '{}', 'x')).resolves.toBeUndefined()
+    await expect(offlineClient.saveSnapshot({
+      name: 'career', data: '{}', description: 'x', progress: 0,
+    })).resolves.toBeUndefined()
     await expect(offlineClient.unlockAchievement('anything')).resolves.toBeUndefined()
   })
 })

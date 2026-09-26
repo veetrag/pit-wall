@@ -34,7 +34,17 @@ export interface PlayGamesClient {
   signIn(): Promise<PlayGamesStatus>
   /** The raw payload, or null when there is no cloud save or it cannot be read. */
   loadSnapshot(name: string): Promise<string | null>
-  saveSnapshot(name: string, data: string, description: string): Promise<void>
+  /**
+   * `progress` is not decoration. Play Games resolves a server-side conflict
+   * between two writes that never saw each other, and the plugin does not
+   * expose manual resolution -- it picks a policy. We ask for "highest
+   * progress" and hand it this number, so the automatic resolution agrees
+   * with pickFurther instead of quietly doing the one thing that design
+   * forbids (letting a recent short career beat a long one).
+   */
+  saveSnapshot(opts: {
+    name: string; data: string; description: string; progress: number
+  }): Promise<void>
   unlockAchievement(achievementId: string): Promise<void>
 }
 

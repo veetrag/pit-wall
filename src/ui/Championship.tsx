@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useCareerStore, erodeTiers } from '@state/careerStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { BadgeToast } from './BadgeToast'
 import { useUiTap } from '@hooks/useUiTap'
+import { pushCloudSave } from '@sync/storeBridge'
 import { loadGameData } from '@data/validators'
 import driversData from '@data/drivers.json'
 
@@ -23,6 +24,20 @@ export function Championship() {
   const [confirmingEnd, setConfirmingEnd] = useState(false)
 
   const { tierCosts, attributes } = loadGameData().upgrades
+  /*
+   * The cloud save points, both of them, and they are here rather than in the
+   * store on purpose: seasonStore must not import sync/, or every test that
+   * touches a season drags a native plugin in behind it.
+   *
+   * On mount, because reaching this screen is the moment recordSeasonEnd
+   * banked a title -- the single most painful thing in the game to lose.
+   * Again after NEXT SEASON, because rollOverSeason erodes tiers and advances
+   * the season, and a crash between the two would leave the cloud a season
+   * behind. Both are fire-and-forget; a failed write is never the player's
+   * problem.
+   */
+  useEffect(() => { pushCloudSave() }, [])
+
   const { tierDecayPerSeason, tierDecayFloor } = loadGameData().tuning.career
   const maxTiers = attributes.length * tierCosts.length
   // Must pass the floor. This is a PREVIEW of what rollOverSeason will do, so
@@ -188,7 +203,7 @@ export function Championship() {
         )}
         <motion.button
           whileTap={reducedMotion ? undefined : { scale: 0.97 }}
-          onClick={() => { uiTap(); startNextSeason() }}
+          onClick={() => { uiTap(); startNextSeason(); pushCloudSave() }}
           style={{
             width: '100%', border: 'none', borderRadius: 10, padding: '14px 16px',
             background: 'var(--accent)', color: 'var(--bg-deep)',

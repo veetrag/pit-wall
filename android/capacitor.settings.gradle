@@ -10,3 +10,6 @@ project(':capacitor-haptics').projectDir = new File('../node_modules/@capacitor/
 
 include ':capacitor-preferences'
 project(':capacitor-preferences').projectDir = new File('../node_modules/@capacitor/preferences/android')
+
+include ':modbender-capacitor-play-games'
+project(':modbender-capacitor-play-games').projectDir = new File('../node_modules/@modbender/capacitor-play-games/android')
