@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "609398586580",
+    "project_id": "pitwall-fc924",
+    "storage_bucket": "pitwall-fc924.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:609398586580:android:b0c461b671fbce5b62cf41",
+        "android_client_info": {
+          "package_name": "com.veetrag.pitwall"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzqWiYca047Ji_UhNFPOuYuCwTY1pAXDQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
