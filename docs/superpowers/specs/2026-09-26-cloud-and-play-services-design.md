@@ -1,0 +1,259 @@
+# Cloud save and Play services — design
+
+**Status:** for review.
+**Decided by Veet, 2026-09-26:** Crashlytics scoped to crashes only; all 15
+badges mirrored as Play Games achievements; save conflicts resolved by keeping
+the further career.
+
+---
+
+## 1. What this is, and the one thing it costs
+
+Five things from `docs/V2-CHECKLIST.md` Tier 2, built together because they
+share a single prerequisite: the `android.permission.INTERNET` permission.
+
+Cloud save is the reason. The rest are cheap once the permission is paid.
+
+The permission is not a technicality. `tests/data/androidManifest.test.ts:167`
+states the standing position: adding it "is a legitimate decision, not a
+forbidden one -- but it is a PRODUCT decision with a store-disclosure
+consequence". Three things follow, and none of them are optional:
+
+1. The data-safety declaration changes from "collects nothing" to declaring a
+   Play Games player ID, a Firebase installation ID, and crash logs.
+2. The privacy policy has to say the same, and it still is not hosted anywhere.
+3. **This paragraph of the live store listing becomes false and must be
+   rewritten before 1.3 ships:**
+
+   > Pit Wall makes no network requests at all -- it does not even request
+   > permission to use the internet.
+
+The replacement is not "delete the paragraph". Offline play is still true and
+still worth saying; what changes is the absolute claim about permissions. §8
+covers the rewrite.
+
+**Nothing here may make the game require a network.** The whole product runs
+offline today and must still run offline afterwards: signed out, declined,
+airplane mode, or on a device with no Play Games at all. Every feature in this
+spec is additive and every one of them degrades to a no-op.
+
+---
+
+## 2. Dependencies, and where the risk actually sits
+
+| Purpose | Package | Version | Downloads/mo |
+|---|---|---|---|
+| Play Games (sign-in, saved games, achievements) | `@modbender/capacitor-play-games` | 0.5.0 | 24k |
+| In-app review | `@capacitor-community/in-app-review` | 8.0.0 | 614k |
+| In-app updates | `@capawesome/capacitor-app-update` | 8.0.5 | 363k |
+| Crashlytics | `@capacitor-firebase/crashlytics` | 8.5.2 | 203k |
+| Play Integrity | `@capacitor-community/play-integrity` | 8.0.0 | — |
+
+Four of the five are mature and widely used. The fifth is not: there is **no
+official Play Games plugin for Capacitor**, and the best available option is
+pre-1.0, two weeks old, and maintained by one person.
+
+That is an uncomfortable shape -- the single feature justifying the permission
+rides the least mature dependency -- and §3 is the direct response to it. The
+plugin is isolated behind an interface we own, so replacing it (or writing a
+native plugin ourselves) is a change to one file rather than a change to the
+game.
+
+CLAUDE.md §2 asks for dependencies to be added sparingly and justified. Five at
+once is a lot; four of them are three-line integrations, and the justification
+for each is its row above.
+
+---
+
+## 3. Architecture
+
+A new `src/sync/` directory. It may import from `state/`; nothing in `engine/`
+changes or is imported by it, so CLAUDE.md §3 is untouched.
+
+```
+src/sync/
+  types.ts          # the interfaces below -- no plugin imports
+  playGamesClient.ts# THE ONLY file that imports @modbender/capacitor-play-games
+  cloudSave.ts      # payload shape, conflict resolution -- pure
+  achievements.ts   # badge id -> PGS achievement id -- pure mapping
+  review.ts         # in-app review trigger policy
+  appUpdate.ts      # update check policy
+  index.ts          # public surface consumed by state/ and ui/
+```
+
+**The rule that makes this testable:** every plugin lives behind an interface
+declared in `types.ts`, and exactly one file imports each plugin. Vitest cannot
+run a native Android plugin, so all real logic -- conflict resolution, payload
+migration, the achievement mapping, the review trigger policy -- is pure and
+tested against a fake client. The plugin wrappers stay thin enough that reading
+them is sufficient review, and they are verified on the device pass instead.
+
+This is the same separation the engine already has from the UI, applied to a
+different boundary and for the same reason.
+
+---
+
+## 4. Cloud save
+
+### 4.1 Payload
+
+One snapshot containing both existing save shapes:
+
+```ts
+interface CloudSnapshot {
+  v: number                    // CLOUD_SAVE_VERSION
+  career: CareerSnapshot       // from careerPersistence.ts
+  season: SeasonSnapshot | null// from seasonPersistence.ts; null between seasons
+  savedAt: number              // epoch ms, for display only -- NOT for conflicts
+}
+```
+
+It reuses the existing zod schemas rather than defining new ones. A second
+description of the save format would drift from the first.
+
+**Loading a cloud snapshot goes through `migrateSave` exactly as a local load
+does.** This is the easiest thing in the whole spec to get wrong: a cloud save
+written by an older version of the app outlives the device it came from, so
+cloud is *more* likely to hand us an old format than local storage is, not
+less.
+
+### 4.2 Conflict resolution
+
+Play Games surfaces a conflict when two devices wrote independently. Decided
+policy: **keep the further career.**
+
+```ts
+export function pickFurther(a: CloudSnapshot, b: CloudSnapshot): CloudSnapshot
+```
+
+Ordering, in sequence, first difference wins:
+
+1. `career.seasonNumber` -- more seasons is further
+2. `career.racesStarted` -- more races is further
+3. `savedAt` -- newest, purely to break an exact tie deterministically
+
+Pure, total, and deterministic. It never loses the larger investment, needs no
+UI, and handles the overwhelmingly common real case (a new phone replacing an
+old one) correctly without asking a question at the worst possible moment.
+
+The known cost, stated plainly: a player who deliberately starts a short new
+career on a second device will have it beaten by their long career from the
+first. That is the right trade -- the alternative silently destroys years of
+progress -- and it is why `savedAt` is deliberately NOT the primary key.
+
+### 4.3 When it syncs
+
+- On sign-in at app start: fetch, compare with local, resolve, apply.
+- After `recordSeasonEnd` and after `startNextSeason`: write.
+- Never mid-race. A race is not a save point today and this does not make it
+  one.
+
+Local storage stays the source of truth during play. Cloud is a mirror, not a
+dependency: every write is fire-and-forget and a failure is logged, never
+surfaced as an error the player has to dismiss.
+
+---
+
+## 5. Achievements
+
+All 15 badges in `src/state/badges.ts` get a Play Games achievement.
+
+`achievements.ts` holds a `Record<BadgeId, string>` mapping to the console's
+achievement IDs. A test asserts the map is **total over the badge list** -- add
+a badge later and the test fails until the mapping exists, which is the only
+thing that stops the two lists drifting.
+
+The unlock hook already exists: `careerStore.justEarned` is computed by
+`newlyEarned(before, after)` and is already the signal the toast listens to.
+Achievements listen to the same signal. No new game logic, no new balance
+question, and the in-game trophy case remains the primary surface.
+
+**Your console work, and it is the real cost here:** 15 achievement IDs, each
+needing a name, a description, and a **512x512 icon**. That is 15 pieces of
+art, and it is the largest non-code task in this spec.
+
+---
+
+## 6. In-app review
+
+Trigger: the championship screen, only after winning a title, and only once per
+career. Google throttles the actual prompt independently, so our job is to ask
+at a moment the player is happy rather than to ask often.
+
+Explicitly not triggered: after a loss, on launch, after a retirement, or
+anywhere in the first race.
+
+---
+
+## 7. In-app updates and Play Integrity
+
+**Updates:** a flexible (non-blocking) update check on app start. Immediate/
+forced updates are deliberately not implemented -- there is no server contract
+to break, so nothing justifies blocking a player from a game they already have.
+
+**Integrity:** the plumbing goes in, and **nothing is gated on it**. Integrity
+exists to protect leaderboards and purchases; this game has neither. Wiring it
+now means a later leaderboard does not have to retrofit it. Failing an
+integrity check must never prevent play.
+
+---
+
+## 8. Store paperwork
+
+All three need updating before 1.3 is submitted, and they are listed here so
+they are not discovered at submission time:
+
+- **Listing full description** -- rewrite the closing paragraph. Keep "no ads,
+  no in-app purchases, no analytics beyond crash reports", keep offline play,
+  drop the absolute no-permission claim.
+- **Data safety form** -- declare: Play Games player ID (account linking, for
+  cloud save), Firebase installation ID, crash logs. Not linked to advertising,
+  not sold, not shared.
+- **Privacy policy** -- same three items, and it still needs hosting at a public
+  URL. Already outstanding from before this work.
+
+---
+
+## 9. Testing
+
+Pure and tested in vitest:
+
+- `pickFurther` -- ordering, each tiebreak level, exact ties, and specifically
+  that a newer-but-shorter career loses.
+- Cloud payload round-trip through the zod schemas.
+- Cloud load through `migrateSave`, including an old-version snapshot.
+- The achievement map is total over `badges.ts`.
+- Review trigger policy: fires on a title, not on a loss, once per career.
+- Every feature no-ops when the client reports signed-out.
+
+Changed guards:
+
+- `androidManifest.test.ts` flips from "must not contain INTERNET" to pinning
+  the **exact** permission set, so the guard keeps its value: one deliberate
+  addition, and nothing else slips in behind it.
+- `noRemoteAssets.test.ts` **stays**. Its rationale changes -- remote assets no
+  longer fail silently, they now work in dev and break offline play, which is
+  worse -- but the ban is still correct.
+
+Device pass, because none of it can run in CI: sign-in, a real cloud save
+round-trip across two installs, a forced conflict, an achievement unlock, and
+airplane-mode play with sign-in unavailable.
+
+---
+
+## 10. Staging
+
+Six reviewable steps, in dependency order:
+
+1. Permission, manifest guard flip, `src/sync/` boundary, and conflict
+   resolution -- all pure, all tested, no plugin yet.
+2. Play Games client and cloud save end-to-end.
+3. Achievements.
+4. In-app review.
+5. In-app updates and Play Integrity.
+6. Store paperwork.
+
+Steps 2 onward are blocked on console setup that only Veet can do: the Play
+Games Services project, the OAuth consent screen, the achievement IDs and
+icons, and the Firebase project with its `google-services.json`. Step 1 needs
+none of it and can start immediately.
