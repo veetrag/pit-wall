@@ -1,46 +1,79 @@
 # Privacy Policy — Pit Wall
 
-**Last updated: 19 September 2026**
+**Last updated: 26 September 2026**
 
-Pit Wall does not collect, store, or share any personal data.
+Pit Wall is a single-player game. It has no advertising, no in-app purchases,
+no account of its own, and no analytics. It does use three Google services,
+and this policy says exactly what each one involves.
 
-## What we collect
+**This policy covers version 1.3 and later.** Versions up to 1.2 made no
+network requests at all and did not request the `INTERNET` permission.
 
-Nothing. The app has no analytics, no advertising, no crash reporting, no
-account system, and no login.
+## What leaves your device
 
-## Network access
+Three things, all optional in the sense that the game is fully playable
+without any of them:
 
-Pit Wall makes no network requests of any kind. The Android app does not request
-the `INTERNET` permission, so it is technically incapable of sending or
-receiving data over a network. The entire game — the race simulation, your
-season, and your career — runs on your device.
+**Google Play Games — your player ID.** If you are signed in to Play Games,
+the game saves your career to Google's Saved Games so it survives a lost or
+replaced phone. That involves your Play Games player ID, which is an
+identifier Google issues for this game; it is not your email address or your
+real name. The save itself contains only game progress: seasons, titles,
+wins, poles, races run and the badges you have earned. If you are not signed
+in to Play Games, none of this happens and the game works exactly as before.
 
-## What is stored on your device
+**Crash reports — Firebase Crashlytics.** When the game crashes, a report is
+sent so the crash can be fixed. It contains the crash itself, the device
+model and Android version, and a Firebase installation ID — a random
+identifier for this installation of the app, not for you. **Firebase
+Analytics is switched off**, which is enforced in the app's manifest and
+asserted by an automated test, so no usage or behavioural data is collected.
 
-The app saves your current season and your career record (titles, wins, podiums,
-poles, races started, and a log of the races you have run, which is used to work
-out which badges you have earned). This is stored in the app's own private
-storage on your device. It is not accessible to other apps, it is never
-transmitted anywhere, and it is deleted when you uninstall the app.
+**Play's update check.** The app asks Google Play whether a newer version
+exists, so it can offer an update. Nothing about you is sent.
+
+## What stays on your device
+
+Everything else. Your settings, your current season and your career record
+are stored in the app's own private storage. Other apps cannot read it, and
+uninstalling removes it.
+
+## What we never do
+
+No advertising. No in-app purchases. No usage analytics. No profiling. No
+selling or sharing of data with anyone. Nothing is used to identify you as a
+person, and no data is collected for advertising.
 
 ## Permissions
 
-The app requests one permission: `VIBRATE`, used for haptic feedback when you
-make a call on the pit wall. You can turn haptics off in Settings.
+- `INTERNET` and `ACCESS_NETWORK_STATE` — for the three services above.
+  `ACCESS_NETWORK_STATE` lets Crashlytics avoid trying to upload a report
+  when there is no connection.
+- `VIBRATE` — haptic feedback, which you can turn off in Settings.
+
+The complete permission list is pinned by an automated test, so a permission
+cannot arrive unnoticed through a dependency.
+
+## Playing offline
+
+The game runs fully offline. With no network, no Play Games and no Google
+account, you lose cloud save and crash reporting and nothing else.
 
 ## Children
 
-The app collects no data from anyone, including children.
+No data is collected for advertising or profiling, from anyone. If a child
+plays while signed in to Play Games, the same Play Games player ID applies as
+for any player, under Google's own terms for that service.
 
-## Changes
+## Deleting your data
 
-If this ever changes — for example if a future version adds an optional feature
-that needs a network connection — this policy will be updated before that
-version is released, and the change will be described here.
+Uninstalling removes everything stored on your device. A cloud save can be
+deleted from the Play Games app, under this game's saved games. Crash reports
+are held by Google under Firebase's own retention policy and are not linked
+to an account we hold.
 
 ## Contact
 
-<!-- TODO(Veet): put the contact address you want public here. Play requires a
-     way for users to reach you. Do not use a personal address you do not want
-     indexed. -->
+<!-- TODO(Veet): a contact address is REQUIRED by Play and this policy cannot
+     be published without one. It is the only thing still missing. -->
+_Contact address to be added before publication._

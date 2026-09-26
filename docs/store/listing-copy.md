@@ -91,25 +91,48 @@ without a single retirement.
 
 ── AND WHAT IT DOESN'T DO ──
 
-No ads. No in-app purchases. No account. No analytics.
+No ads. No in-app purchases. No usage tracking. Nothing to buy, ever.
 
-Pit Wall makes no network requests at all — it does not even request permission
-to use the internet. Everything runs on your device, including your save. It
-works identically on a plane.
+The whole game runs on your device — the simulation, your season, your career.
+Sign in to Play Games and your career is backed up and your achievements
+unlock; stay signed out and everything works exactly the same, minus the
+backup. It plays identically on a plane.
 ```
 
-Roughly 2,150 characters, comfortably inside 4,000.
+2,425 characters, comfortably inside 4,000.
 
-**On the closing section.** Advertising absences is unusual, but "no ads, no
-IAP, no tracking, works offline" is a real differentiator in mobile games and
-costs nothing — and a sceptical reader can verify it from the permissions list
-on the listing page itself, which is what makes it persuasive rather than
-boilerplate.
+**On the closing section, rewritten for 1.3.** The 1.2 version said "Pit Wall
+makes no network requests at all — it does not even request permission to use
+the internet." Cloud save made that false, and it had to go: a listing claim
+that a sceptical reader can disprove from the permissions list on the same
+page is worse than no claim at all.
+
+What survives is what is still true and still unusual — no ads, nothing to
+buy, no usage tracking — plus the thing that replaces the old promise: the
+game is whole without signing in. That is the honest version of "works on a
+plane", and it is a real differentiator against games that open to a login
+wall.
 
 **On the career paragraph.** It changed for 1.2 and the change is deliberate:
 the erosion economy is the most likely thing to generate a confused one-star
 review ("the game took my upgrades"). Saying plainly that the summit is rented
 and the podium pays for it turns a perceived bug into the stated premise.
+
+---
+
+## What's new — 1.3
+
+```
+Your career now follows you. Sign in to Play Games and it is backed up, so a
+new phone picks up where the old one left off.
+
+Eight achievements for the races worth remembering: a wet win, a win from the
+back, a one-stop victory, a championship.
+
+Crash reporting, so the ones that slip through get fixed rather than guessed
+at. Nothing else is tracked.
+```
+351 / 500 characters, counted with newlines — as Play counts them.
 
 ---
 

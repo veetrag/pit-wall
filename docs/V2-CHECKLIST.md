@@ -210,3 +210,31 @@ Checked against the repo and the Play Console on 2026-09-24.
 - `store/listing.md` and `docs/store/listing-copy.md` are two listing
   documents. The second is current; the first predates it and should go, or
   they will drift.
+
+---
+
+## 2026-09-26, later: Tier 2 is done bar the device proof
+
+- **Steps 3b, 4, 5 merged** (`e7f20cb`, `2221218`): Crashlytics scoped to
+  crashes only, in-app review on a title, flexible updates, integrity
+  plumbing. The device pass found a crash-on-launch the whole test suite had
+  missed — Crashlytics without its Gradle plugin — now guarded.
+- **Step 3a merged** (`b2efe8f`): eight Play Games achievements created in the
+  console with generated icons, and mirrored from the badge system.
+- **Step 6 drafted**: privacy policy, data-safety answers and the listing
+  copy all rewritten for 1.3.
+
+### What is left
+
+1. **Cloud save has never worked on a device.** Google has not minted a
+   player id for the account. Until it does, no achievement can unlock and no
+   save can sync, so nothing in Tier 2 is proven end to end.
+2. **Publish the eight achievements.** They are drafts, which is the
+   reversible state. A published achievement cannot be deleted, so read the
+   names once more first.
+3. **A contact address for the privacy policy**, and hosting for it. Play
+   will not accept the policy without an address, and 1.3 cannot ship without
+   the policy.
+4. **Screenshots.** Still August and September: no qualifying, no career, no
+   badges, shot before the font fix.
+5. **1.2's review status**, still unknown.
