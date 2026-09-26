@@ -6,6 +6,7 @@ import { useSettingsStore } from '@state/settingsStore'
 import { BadgeToast } from './BadgeToast'
 import { useUiTap } from '@hooks/useUiTap'
 import { pushCloudSave } from '@sync/storeBridge'
+import { maybeAskForReview } from '@sync/platformBridge'
 import { loadGameData } from '@data/validators'
 import driversData from '@data/drivers.json'
 
@@ -38,6 +39,7 @@ export function Championship() {
    */
   useEffect(() => { pushCloudSave() }, [])
 
+
   const { tierDecayPerSeason, tierDecayFloor } = loadGameData().tuning.career
   const maxTiers = attributes.length * tierCosts.length
   // Must pass the floor. This is a PREVIEW of what rollOverSeason will do, so
@@ -49,6 +51,16 @@ export function Championship() {
   const winner = standings[0]
   const playerStanding = standings.find(s => s.driverId === playerDriverId)
   const playerRank = standings.findIndex(s => s.driverId === playerDriverId) + 1
+  /*
+   * The review prompt, at the only moment in the game a player is reliably
+   * pleased: the screen that tells them they won the championship. The policy
+   * itself lives in reviewPolicy.ts and refuses everything else -- a loss, a
+   * retirement, a launch. Asking at the wrong moment turns a good race into a
+   * one-star review, which is worse than never asking.
+   */
+  useEffect(() => {
+    if (playerRank === 1) void maybeAskForReview(playerRank)
+  }, [playerRank])
 
   return (
     <motion.div

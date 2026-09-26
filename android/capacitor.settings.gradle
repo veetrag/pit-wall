@@ -2,6 +2,15 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
+include ':capacitor-community-in-app-review'
+project(':capacitor-community-in-app-review').projectDir = new File('../node_modules/@capacitor-community/in-app-review/android')
+
+include ':capacitor-community-play-integrity'
+project(':capacitor-community-play-integrity').projectDir = new File('../node_modules/@capacitor-community/play-integrity/android')
+
+include ':capacitor-firebase-crashlytics'
+project(':capacitor-firebase-crashlytics').projectDir = new File('../node_modules/@capacitor-firebase/crashlytics/android')
+
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
 
@@ -10,6 +19,9 @@ project(':capacitor-haptics').projectDir = new File('../node_modules/@capacitor/
 
 include ':capacitor-preferences'
 project(':capacitor-preferences').projectDir = new File('../node_modules/@capacitor/preferences/android')
+
+include ':capawesome-capacitor-app-update'
+project(':capawesome-capacitor-app-update').projectDir = new File('../node_modules/@capawesome/capacitor-app-update/android')
 
 include ':modbender-capacitor-play-games'
 project(':modbender-capacitor-play-games').projectDir = new File('../node_modules/@modbender/capacitor-play-games/android')

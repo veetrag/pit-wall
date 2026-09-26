@@ -204,7 +204,22 @@ describe('the app declares exactly the permissions it means to', () => {
     const declared = [...readFileSync(merged, 'utf8').matchAll(PERMISSION)].map(m => m[1])
     // Assert the whole set, not just the absence: a new permission of any kind
     // is a store-disclosure question and should be looked at deliberately.
+    /*
+     * ACCESS_NETWORK_STATE is here on purpose, and it is worth recording how
+     * it arrived: NOT from an edit to our manifest, but from
+     * com.google.firebase:firebase-installations, pulled in transitively by
+     * Crashlytics. The manifest-merger report names it. This guard existed
+     * precisely to make that visible in a diff instead of shipping unnoticed,
+     * and on 2026-09-26 it did exactly that.
+     *
+     * Accepted because it is a normal-protection permission that reads
+     * whether the device has connectivity and collects nothing -- Crashlytics
+     * uses it to avoid uploading a report with no network. It needs no
+     * runtime prompt and adds nothing to the data-safety declaration beyond
+     * the crash logs already declared.
+     */
     expect(declared.sort()).toEqual([
+      'android.permission.ACCESS_NETWORK_STATE',
       'android.permission.INTERNET',
       'android.permission.VIBRATE',
       'com.veetrag.pitwall.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION',

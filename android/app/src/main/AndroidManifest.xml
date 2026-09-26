@@ -34,6 +34,21 @@
             android:name="com.google.android.gms.games.APP_ID"
             android:value="@string/game_services_project_id" />
 
+        <!--
+            Crash reporting only. Veet's decision on 2026-09-26 was
+            Crashlytics with analytics collection off, and this is what makes
+            that structural rather than a promise: adding the Crashlytics SDK
+            pulls in Firebase Analytics as a transitive dependency, and it
+            collects by default. Without this flag the app would quietly start
+            gathering analytics that the data-safety declaration does not
+            mention.
+
+            Guarded by tests/data/playGamesConfig.test.ts.
+        -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
+
         <activity
             android:configChanges="keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"

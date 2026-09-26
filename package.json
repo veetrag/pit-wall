@@ -27,11 +27,15 @@
     "vitest": "^4.1.9"
   },
   "dependencies": {
+    "@capacitor-community/in-app-review": "^8.0.0",
+    "@capacitor-community/play-integrity": "^8.0.0",
+    "@capacitor-firebase/crashlytics": "^8.5.2",
     "@capacitor/android": "^8.4.1",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/preferences": "^8.0.1",
+    "@capawesome/capacitor-app-update": "^8.0.5",
     "@modbender/capacitor-play-games": "^0.5.0",
     "framer-motion": "^12.42.0",
     "pixi.js": "^8.19.0",

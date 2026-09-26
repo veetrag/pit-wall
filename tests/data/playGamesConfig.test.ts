@@ -37,6 +37,36 @@ describe('the Play Games Android configuration', () => {
     expect(match?.[1], 'game_services_project_id is missing from strings.xml').toBe(PGS_PROJECT_ID)
   })
 
+  it('AGREES WITH THE COPY IN TYPESCRIPT', async () => {
+    /*
+     * The project number lives twice: strings.xml, which the Games SDK reads
+     * and TypeScript cannot see, and CLOUD_PROJECT_NUMBER in platform.ts,
+     * which Play Integrity requires as a number. Nothing makes them agree
+     * except this test, and a mismatch fails only on a device.
+     *
+     * platform.ts imports native plugins, so the constant is read from source
+     * rather than imported -- importing it here would drag a Capacitor plugin
+     * into vitest, which is exactly the failure that shaped src/sync.
+     */
+    const src = readFileSync(resolve(process.cwd(), 'src/sync/platform.ts'), 'utf8')
+    const match = src.match(/CLOUD_PROJECT_NUMBER\s*=\s*(\d+)/)
+    expect(match?.[1], 'CLOUD_PROJECT_NUMBER is missing from platform.ts').toBe(PGS_PROJECT_ID)
+  })
+
+  it('DISABLES FIREBASE ANALYTICS COLLECTION', () => {
+    /*
+     * The "crashes only, no analytics" decision, asserted rather than
+     * trusted. Crashlytics pulls Firebase Analytics in transitively and it
+     * collects by default, so the absence of this flag is not "no analytics"
+     * -- it is analytics nobody declared. The data-safety form says crash
+     * logs and an installation id, and this is what keeps that true.
+     */
+    const manifest = readFileSync(join(ANDROID, 'AndroidManifest.xml'), 'utf8')
+    expect(manifest).toMatch(
+      /<meta-data\s+android:name="firebase_analytics_collection_enabled"\s+android:value="false"\s*\/>/,
+    )
+  })
+
   it('DOES NOT CONFUSE THE PROJECT ID WITH THE PACKAGE NAME', () => {
     // The two sit next to each other in strings.xml and one is a plausible
     // typo for the other. A package name here fails only on device.

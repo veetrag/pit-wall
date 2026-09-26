@@ -6,6 +6,8 @@ import { startSeasonAutosave } from './state/seasonPersistence'
 import { startCareerAutosave } from './state/careerPersistence'
 import { setCloudClient, startCloudSync } from './sync/storeBridge'
 import { playGamesClient } from './sync/playGamesClient'
+import { setPlatformClients, startCrashReporting, checkForUpdate } from './sync/platformBridge'
+import { crashReporter, reviewPrompter, updateChecker, integrityChecker } from './sync/platform'
 import { useSettingsStore, startReducedMotionWatch } from './state/settingsStore'
 import { MainMenu } from './ui/MainMenu'
 import { GridStats } from './ui/GridStats'
@@ -53,6 +55,15 @@ export default function App() {
   useEffect(() => {
     setCloudClient(playGamesClient)
     void startCloudSync()
+  }, [])
+
+  // Crash reporting and the update check. Same shape as cloud save: this
+  // module is the only one that imports the plugins, everything downstream
+  // takes an interface, and every failure inside degrades to doing nothing.
+  useEffect(() => {
+    setPlatformClients({ crash: crashReporter, review: reviewPrompter, updates: updateChecker, integrity: integrityChecker })
+    void startCrashReporting()
+    void checkForUpdate()
   }, [])
 
   // Follows the OS accessibility preference while the app is open. It only
