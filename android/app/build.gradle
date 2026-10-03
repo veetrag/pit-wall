@@ -21,20 +21,17 @@ android {
         applicationId "com.veetrag.pitwall"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // 2 is live in production at Google (submitted as versionName 1.0 --
-        // the 1.1 bump in 35305ac landed AFTER that bundle was built, so 1.1
-        // was never released). Play rejects a duplicate versionCode, so this
-        // release is 3, and the next must be 4.
-        versionCode 3
+        // 3 (1.2) went live in production on 1 Oct 2026. Play rejects a
+        // duplicate versionCode, so this release is 4, and the next must be 5.
+        versionCode 4
         // MUST match package.json's version -- pinned by
         // tests/data/appVersion.test.ts, because gradle cannot import JSON and
         // nothing else in the toolchain reads Android config.
         //
-        // 1.2, not 2.0: over the live 1.0 this adds race incidents, qualifying,
-        // the multi-season career, badges, the career economy and the font fix.
-        // That is a substantial content release, not a change to what the game
-        // IS -- 2.0 is worth keeping for that.
-        versionName "1.2"
+        // 1.3 over the live 1.2: cloud save via Play Games, achievements,
+        // crash reporting and the in-app review prompt. Infrastructure, not
+        // new gameplay -- hence a point release.
+        versionName "1.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
