@@ -284,15 +284,9 @@ export function TimingTower() {
       overflow: 'hidden', display: 'flex', flexDirection: 'column',
     }}>
       <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+        display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8,
         padding: '0 12px', flexShrink: 0,
       }}>
-        <span style={{
-          fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 16,
-          color: 'var(--white)', letterSpacing: 0.5,
-        }}>
-          LAP {raceState.lap + 1}<span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span>
-        </span>
         <span style={{ display: 'flex', gap: 6 }}>
           <motion.button
             type="button"
@@ -326,7 +320,7 @@ export function TimingTower() {
       <div style={{
         flex: 1, overflowY: expanded ? 'auto' : 'hidden', minHeight: 0,
         display: 'flex', flexDirection: 'column', gap: 3, padding: '2px 8px 8px',
-        justifyContent: expanded ? 'flex-start' : 'center',
+        justifyContent: 'flex-start',
       }}>
         <AnimatePresence initial={false}>
           {rows.map((row) =>

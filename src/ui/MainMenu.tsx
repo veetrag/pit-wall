@@ -69,6 +69,10 @@ export function MainMenu() {
   const teamId = saved?.selectedTeamId ?? null
   const team = teamId ? data.cars.teams.find(t => t.id === teamId) : undefined
   const livery = liveryOf(teamId ?? 'apex')
+  // Car on a team-coloured band: ink body with coloured accents (matches the canvas).
+  const INK = '#120E2B'
+  const carAccent = !saved || livery.accent.toLowerCase() === livery.primary.toLowerCase() || livery.accent.toLowerCase() === INK.toLowerCase()
+    ? '#FFFFFF' : livery.accent
   const calendarId = saved ? CIRCUIT_ORDER[saved.raceIndex % CIRCUIT_ORDER.length] : undefined
   const circuitName = saved
     ? (saved.selectedCircuitId ? data.circuits[saved.selectedCircuitId]?.name : undefined)
@@ -119,10 +123,10 @@ export function MainMenu() {
         </motion.div>
 
         {/* Hero */}
-        <motion.div {...next()} style={{ position: 'relative', height: 262, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <motion.div {...next()} style={{ position: 'relative', height: 262, margin: '0 -20px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <HeroBand color={saved ? livery.primary : 'var(--volt)'} height={290} top={-40} />
           <div style={{ position: 'relative', width: 300, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CarArt primary={livery.primary} accent={livery.accent} height={300} heading="left"
+            <CarArt primary={saved ? INK : livery.primary} accent={saved ? carAccent : livery.accent} height={300} heading="left"
               label={`${team?.name ?? 'Apex Racing'} car`} />
           </div>
         </motion.div>

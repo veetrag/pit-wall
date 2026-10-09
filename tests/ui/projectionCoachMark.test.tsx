@@ -36,7 +36,7 @@ function openPanel(projectionResult: ProjectionResult | null) {
 }
 
 beforeEach(() => {
-  useRaceStore.setState({ pitPanelOpen: false, raceState: null, config: null, projectionResult: null })
+  useRaceStore.setState({ pitPanelOpen: false, raceState: null, config: null, projectionResult: null, updateProjection: () => {} })
   useCoachStore.setState({ active: null, done: {} })
   useSettingsStore.setState({ coachMarksSeen: false })
   useSeasonStore.setState({ phase: 'racing' })

@@ -164,6 +164,11 @@ function PitPanelDrawer() {
     hasSets('M') ? 'M' : availableCompounds.find(c => hasSets(c.id))?.id ?? 'M')
   const selectedLabel = ALL_COMPOUNDS.find(c => c.id === selected)?.label ?? selected
 
+  // Show the rejoin for the default compound straight away, not only after a tap.
+  useEffect(() => {
+    if (!projectionResult && anySets) updateProjection(selected)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   function handleSelect(c: Compound) {
     if (!hasSets(c)) return
     uiTap()

@@ -16,7 +16,7 @@ export function TyreMeter({ compound, wear, lapsOnTyre, cliffLaps, pastCliff = f
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, fontSize: 14 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><TyreChip compound={compound} size={22} />{pct}% worn · {lapsOnTyre} laps</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><TyreChip compound={compound} size={22} />{pct}% worn · {lapsOnTyre} {lapsOnTyre === 1 ? 'lap' : 'laps'}</span>
         <span style={{ color: urgent ? 'var(--hot)' : 'var(--lilac)' }}>{pastCliff ? '⚠ PAST CLIFF' : cliffLaps === null ? '' : `CLIFF ~${cliffLaps}L`}</span>
       </div>
       <div role="meter" aria-label="Tyre wear" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}

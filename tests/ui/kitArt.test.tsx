@@ -23,6 +23,12 @@ describe('art kit', () => {
     expect(container.querySelectorAll('[data-lit="true"]').length).toBe(7)
     expect(screen.getByText(/CLIFF ~8L/)).toBeTruthy()
   })
+  it('TyreMeter pluralises laps', () => {
+    const { rerender } = render(<TyreMeter compound="M" wear={0.1} lapsOnTyre={1} cliffLaps={8} />)
+    expect(screen.getByText(/· 1 lap$/)).toBeTruthy()
+    rerender(<TyreMeter compound="M" wear={0.1} lapsOnTyre={2} cliffLaps={8} />)
+    expect(screen.getByText(/· 2 laps$/)).toBeTruthy()
+  })
   it('TyreMeter says when the tyre is past the cliff', () => {
     render(<TyreMeter compound="S" wear={1} lapsOnTyre={20} cliffLaps={null} pastCliff />)
     expect(screen.getByText(/PAST CLIFF/)).toBeTruthy()

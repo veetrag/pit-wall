@@ -51,7 +51,7 @@ const PROJ: ProjectionResult = {
 
 beforeEach(() => {
   useSettingsStore.setState({ reducedMotion: true, hapticsEnabled: true })
-  useRaceStore.setState({ pitPanelOpen: false, raceState: null, config: null, projectionResult: null })
+  useRaceStore.setState({ pitPanelOpen: false, raceState: null, config: null, projectionResult: null, updateProjection: () => {} })
   vi.mocked(Haptics.impact).mockClear()
 })
 
@@ -78,6 +78,14 @@ describe('pit sheet (hero 2b)', () => {
     expect(hard.textContent).toMatch(/0 sets/)
     expect(medium.getAttribute('aria-checked')).toBe('true')
     expect(soft.getAttribute('aria-checked')).toBe('false')
+  })
+
+  it('opening the sheet projects the default compound without a tap', () => {
+    const updateProjection = vi.fn()
+    useRaceStore.setState({ updateProjection })
+    render(<PitPanel />)
+    open()
+    expect(updateProjection).toHaveBeenCalledWith('M')
   })
 
   it('a 0-set compound is aria-disabled and cannot be picked', () => {

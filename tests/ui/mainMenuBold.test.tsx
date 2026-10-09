@@ -40,6 +40,14 @@ describe('MainMenu — Race Day Bold', () => {
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
   })
 
+  it('draws the car with an ink body on the team band when a save exists', async () => {
+    mem.set(SAVE_KEY, JSON.stringify(SAVED))
+    const { container } = render(<MainMenu />)
+    await screen.findByText(/ROUND 4 OF 12/)
+    const body = container.querySelector('svg[role="img"] path')
+    expect(body?.getAttribute('fill')).toBe('#120E2B')
+  })
+
   it('falls back to the calendar circuit when the save has no selectedCircuitId', async () => {
     mem.set(SAVE_KEY, JSON.stringify({ ...SAVED, selectedCircuitId: null }))
     render(<MainMenu />)

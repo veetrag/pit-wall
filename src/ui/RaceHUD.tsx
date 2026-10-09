@@ -110,7 +110,7 @@ function StatusBar() {
         }}>
           {/* Big Shoulders has no tabular figures (tnum is a no-op): a box sized
               to the total's digit count keeps "/58" from twitching each lap. */}
-          L<span style={{ display: 'inline-block', minWidth: `${String(raceState.totalLaps).length}ch`, textAlign: 'right' }}>{raceState.lap + 1}</span><span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span>
+          L<span style={{ display: 'inline-block', minWidth: `${String(raceState.totalLaps).length * 0.55}em`, textAlign: 'right' }}>{raceState.lap + 1}</span><span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span>
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
