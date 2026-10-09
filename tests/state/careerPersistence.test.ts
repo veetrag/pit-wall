@@ -5,7 +5,7 @@ import { useCareerStore } from '@state/careerStore'
 
 const FRESH_FOR_TEST = {
   seasonNumber: 1, titles: 0, wins: 0, seasonWins: 0, podiums: 0, poles: 0,
-  racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [],
+  racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [], teamTiers: {},
 }
 
 describe('career persistence', () => {

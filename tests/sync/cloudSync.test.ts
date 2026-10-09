@@ -10,7 +10,7 @@ function snap(o: { seasonNumber?: number; racesStarted?: number; titles?: number
     career: {
       v: 1, seasonNumber: o.seasonNumber ?? 1, titles: o.titles ?? 0, wins: 0,
       seasonWins: 0, podiums: 0, poles: 0, racesStarted: o.racesStarted ?? 0,
-      bestFinish: null, seasonHistory: [], raceLog: [],
+      bestFinish: null, seasonHistory: [], raceLog: [], teamTiers: {},
     },
     season: null,
     savedAt: o.savedAt ?? 1000,
