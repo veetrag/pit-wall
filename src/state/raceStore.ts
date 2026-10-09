@@ -5,6 +5,7 @@ import {
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
+import { pitStopTime } from '@engine/pitStop'
 import type { AlertMessage } from '../ui/HudAlert'
 import { processRadioTick, makeRadioState, type RadioState } from './radioMapper'
 import type { Difficulty } from './settingsStore'
@@ -119,18 +120,31 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const nextState = stepSector(config, raceState, rng)
     const finished = nextState.lap >= nextState.totalLaps && nextState.sector === 0
 
-    const playerNow = nextState.cars.find(c => c.isPlayer)?.raceTime ?? 0
+    const before = raceState.cars.find(c => c.isPlayer)
+    const after = nextState.cars.find(c => c.isPlayer)
+    const autoStopped = !!before && !!after && after.pitsDone > before.pitsDone
+
+    const playerNow = after?.raceTime ?? 0
     // Same effective loss the stop itself was charged, so a stop taken under
     // yellow is not held "in the pit lane" for the full green-flag duration.
-    const stillInPit = playerInPit &&
-      playerNow < pitEndTime + effectivePitLaneLoss(config.circuit, nextState.safetyCar, config.tuning)
+    const stillInPit = autoStopped || (playerInPit &&
+      playerNow < pitEndTime + effectivePitLaneLoss(config.circuit, nextState.safetyCar, config.tuning))
 
     const nextRadio = processRadioTick(nextState, config, radioState, (msg, severity) => {
       const id = `alert-${++alertCounter}`
       set(s => ({ hudAlerts: [...s.hudAlerts, { id, severity, category: 'RADIO', message: msg, icon: '📻' }] }))
     })
 
-    set({ raceState: nextState, phase: finished ? 'finished' : 'racing', playerInPit: stillInPit, radioState: nextRadio })
+    set(s => ({
+      raceState: nextState,
+      phase: finished ? 'finished' : 'racing',
+      playerInPit: stillInPit,
+      radioState: nextRadio,
+      ...(autoStopped && after ? {
+        pitEndTime: after.raceTime,
+        hudAlerts: [...s.hudAlerts, { id: `alert-${++alertCounter}`, severity: 'caution' as const, category: 'RADIO', message: 'Box box -- plan stop.', icon: '📻' }],
+      } : {}),
+    }))
   },
 
   pitNow(compound: Compound) {
@@ -149,9 +163,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       return
     }
 
-    const { stopMean, stopSigma } = config.tuning.pit
-    const stopTime = effectivePitLaneLoss(config.circuit, raceState.safetyCar, config.tuning) +
-      stopMean + (rng() - 0.5) * 2 * stopSigma
+    const stopTime = pitStopTime(config, player.teamId, raceState.safetyCar, rng)
 
     const updatedCars = raceState.cars.map(car => {
       if (!car.isPlayer) return car

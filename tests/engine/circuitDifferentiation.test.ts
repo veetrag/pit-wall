@@ -324,10 +324,12 @@ describe('circuits: pit lane loss comes from the circuit', () => {
         projectedStopTime,
         `${circuitId}: projection must price the stop identically to the race`,
       ).toBeCloseTo(actualStopTime, 9)
+      const crewFactor = zeroNoiseConfig.teams.find(t => t.id === player.teamId)!.facets.pitCrew / 100
+      const crewAwareStopMean = zeroNoiseConfig.tuning.pit.stopMean - crewFactor * zeroNoiseConfig.tuning.pit.pitCrewMeanRelief
       expect(
         actualStopTime,
         `${circuitId}: deterministic stop cost is pitLaneTimeLoss + stopMean`,
-      ).toBeCloseTo(GAME.circuits[circuitId]!.pitLaneTimeLoss + zeroNoiseConfig.tuning.pit.stopMean, 9)
+      ).toBeCloseTo(GAME.circuits[circuitId]!.pitLaneTimeLoss + crewAwareStopMean, 9)
     }
   }, 60_000)
 })
