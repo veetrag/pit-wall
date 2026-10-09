@@ -2,7 +2,8 @@ import { useRef, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
-import type { CarState, Compound, CompoundSpec } from '@engine/types'
+import type { CarState } from '@engine/types'
+import { TyreChip } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSafetyCarDeployCount } from '@hooks/useSafetyCar'
 
@@ -11,67 +12,26 @@ import { useSafetyCarDeployCount } from '@hooks/useSafetyCar'
 // of 2-3 rows adrift in empty space. Full field is one tap away, not gone.
 const COMPACT_WINDOW_SIZE = 6
 
-// Literal hex, not CSS var() — these get alpha suffixes concatenated on
-// below (glow), which only works with a real hex string.
-const COMPOUND_COLORS: Record<Compound, string> = {
-  S: '#E8344E',
-  M: '#F2C94C',
-  H: '#EAEAEA',
-  I: '#39B54A',
-  W: '#4DA6FF',
-}
+// Race Day Bold row grid (spec §6): position | team slash | code | gap | tyre.
+// Full-name mode trades the fixed code column for the flexible one.
+const GRID = '26px 5px 46px 1fr 30px'
+const GRID_WIDE = '26px 5px minmax(0, 1fr) 56px 30px'
+const ROW_SPRING = { type: 'spring', stiffness: 450, damping: 38 } as const
 
 function formatGap(gap: number, position: number): string {
   if (position === 1) return 'LEAD'
   return `+${gap.toFixed(1)}`
 }
 
-function WearBar({ compound, age, spec, fresh }: { compound: Compound; age: number; spec: CompoundSpec; fresh?: boolean }) {
-  const fraction = spec.cliff > 0 ? Math.min(age / spec.cliff, 1.2) : 0
-  const fillPct = Math.min(fraction * 100, 100)
-  const color = fraction >= 1.0
-    ? '#FF4D5E'
-    : fraction >= 0.55
-    ? '#F2C94C'
-    : '#3DDC84'
-  const dotColor = COMPOUND_COLORS[compound]
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{
-        width: 8, height: 8, borderRadius: '50%',
-        background: dotColor, flexShrink: 0,
-        boxShadow: fresh ? `0 0 8px ${dotColor}, 0 0 14px ${dotColor}88` : fraction < 0.55 ? `0 0 4px ${dotColor}` : 'none',
-        transition: 'box-shadow 1.2s ease',
-      }} />
-      <div style={{
-        width: 32, height: 5, borderRadius: 2,
-        background: '#0A0E1A', overflow: 'hidden', flexShrink: 0,
-      }}>
-        <div style={{
-          height: '100%', borderRadius: 2,
-          width: `${fillPct}%`,
-          background: `linear-gradient(90deg, ${color}99 0%, ${color} 100%)`,
-          boxShadow: fraction >= 0.55 ? `0 0 4px ${color}` : 'none',
-          transition: 'width 0.5s ease, box-shadow 0.5s ease',
-        }} />
-      </div>
-    </div>
-  )
-}
-
-function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamColor, wide, compressed }: {
+function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed }: {
   car: CarState
   leaderTime: number
-  compounds: Record<string, CompoundSpec>
-  driverFlag?: string
   displayName?: string
   teamColor?: string
   wide?: boolean
   compressed?: boolean
 }) {
   const gap = car.raceTime - leaderTime
-  const spec = compounds[car.compound]
   const driverCode = displayName ?? car.driverId.replace('d_', '').toUpperCase().slice(0, 3)
 
   const prevPosRef = useRef(car.position)
@@ -103,7 +63,6 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
     prevAgeRef.current = car.tyreAge
   }, [car.tyreAge])
 
-  const gapColor = car.position === 1 ? 'var(--text-dim)' : 'var(--text-mid)'
   // The compression flash wins over the player highlight for its ~1.2s: the
   // field collapsing is the more urgent thing to communicate, and the row
   // returns to its normal state immediately after.
@@ -118,75 +77,80 @@ function TowerRow({ car, leaderTime, compounds, driverFlag, displayName, teamCol
     ? 'rgba(var(--caution-rgb), 0.22)'
     : car.isPlayer
     ? fresh
-      ? 'rgba(0,229,208,0.14)'
-      : 'rgba(0,229,208,0.07)'
-    : 'transparent'
-  const nameColor = car.retired ? 'var(--text-dim)' : (car.isPlayer ? 'var(--accent)' : 'var(--text-hi)')
+      // Fresh-tyre shimmer: the volt row washes out toward its right edge
+      // for 1.8s after a stop, then settles back to solid volt.
+      ? 'linear-gradient(90deg, var(--volt) 40%, rgba(var(--volt-rgb), 0.55) 100%)'
+      : 'var(--volt)'
+    : 'var(--grape)'
+  const textColor = car.retired ? 'var(--lilac-dim)' : car.isPlayer && !compressed ? 'var(--ink)' : 'var(--white)'
 
   return (
     <motion.div
       layout
       layoutId={car.driverId}
       data-tower-row
-      transition={{ type: 'spring', stiffness: 450, damping: 38 }}
+      className="slant-row"
+      transition={ROW_SPRING}
       style={{
         display: 'grid',
-        gridTemplateColumns: wide ? '18px 1fr 46px 44px' : '18px 54px 1fr 44px',
+        gridTemplateColumns: wide ? GRID_WIDE : GRID,
         alignItems: 'center',
-        gap: 4,
-        padding: '5px 10px',
+        columnGap: 6,
+        height: car.isPlayer ? 46 : 36,
+        padding: '0 12px',
+        flexShrink: 0,
         background: rowBg,
-        borderLeft: car.isPlayer ? '2px solid var(--accent)' : `2px solid ${teamColor ? teamColor + '44' : 'transparent'}`,
-        borderBottom: '0.5px solid #141a2b',
+        color: textColor,
+        opacity: car.retired ? 0.6 : 1,
         transition: 'background 0.4s ease',
       }}
     >
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 10,
-        color: flash === 'gain' ? 'var(--positive)' : flash === 'loss' ? 'var(--negative)' : 'var(--text-dim)',
-        fontVariantNumeric: 'tabular-nums', transition: 'color 0.3s',
+        fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 20,
+        fontVariantNumeric: 'tabular-nums', lineHeight: 1,
       }}>
         {car.position}
       </span>
+      <span aria-hidden="true" style={{
+        width: 5, height: 20, transform: 'skewX(-14deg)',
+        background: car.retired ? 'var(--lilac-dim)' : (teamColor ?? 'var(--lilac-dim)'),
+      }} />
       <span style={{
-        fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-        color: nameColor, letterSpacing: '0.04em', opacity: car.retired ? 0.6 : 1,
-        display: 'flex', alignItems: 'center', gap: 4, minWidth: 0,
+        fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 15, letterSpacing: 0.5,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
       }}>
-        <span style={{
-          width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-          background: car.retired ? 'var(--text-dim)' : (car.isPlayer ? 'var(--accent)' : (teamColor ?? 'var(--text-dim)')),
-        }} />
-        {driverFlag && <span style={{ fontSize: 9, lineHeight: 1, flexShrink: 0 }}>{driverFlag}</span>}
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{driverCode}</span>
+        {driverCode}
       </span>
       {car.retired ? (
         <>
-          <span style={{
-            fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--accent-warm)',
-            letterSpacing: '0.06em', fontWeight: 700,
-          }}>
-            DNF
-          </span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>
-            OUT
-          </span>
+          <span style={{ fontWeight: 700, fontSize: 14, textAlign: 'right', color: 'var(--hot)' }}>DNF</span>
+          <span style={{ fontWeight: 700, fontSize: 11, textAlign: 'center' }}>OUT</span>
         </>
       ) : (
         <>
           <span style={{
-            fontFamily: 'var(--font-mono)', fontSize: 10, color: gapColor,
-            fontVariantNumeric: 'tabular-nums', minWidth: 0,
+            fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, textAlign: 'right',
+            fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', minWidth: 0,
           }}>
+            {/* Colour is never the only signal (CLAUDE.md 6.3): the glyph carries direction. */}
+            {flash && (
+              <span
+                aria-label={flash === 'gain' ? 'gained a place' : 'lost a place'}
+                style={{ color: flash === 'gain' ? 'var(--gain)' : 'var(--hot)', marginRight: 4 }}
+              >
+                {flash === 'gain' ? '▲' : '▼'}
+              </span>
+            )}
             {formatGap(gap, car.position)}
           </span>
-          {spec ? (
-            <WearBar compound={car.compound} age={car.tyreAge} spec={spec} fresh={fresh && car.isPlayer} />
-          ) : (
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>
-              {car.compound}
-            </span>
-          )}
+          <span style={{
+            display: 'inline-flex', justifySelf: 'center', borderRadius: 999,
+            // On the volt row the chip sits on an ink disc so the compound
+            // colour and white letter keep their contrast.
+            background: car.isPlayer ? 'var(--ink)' : 'transparent',
+          }}>
+            <TyreChip compound={car.compound} size={24} />
+          </span>
         </>
       )}
     </motion.div>
@@ -198,39 +162,32 @@ function GhostRow({ position, code, wide }: { position: number; code: string; wi
     <motion.div
       layout
       layoutId="ghost-player"
+      className="slant-row"
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -10 }}
-      transition={{ type: 'spring', stiffness: 450, damping: 38 }}
+      transition={ROW_SPRING}
       style={{
         display: 'grid',
-        gridTemplateColumns: wide ? '18px 1fr 46px 44px' : '18px 54px 1fr 44px',
+        gridTemplateColumns: wide ? GRID_WIDE : GRID,
         alignItems: 'center',
-        gap: 4,
-        padding: '5px 10px',
-        background: 'rgba(0,229,208,0.04)',
-        borderLeft: '2px dashed var(--accent)',
-        borderBottom: '0.5px solid #141a2b',
-        opacity: 0.55,
+        columnGap: 6,
+        height: 36,
+        padding: '0 12px',
+        flexShrink: 0,
+        background: 'rgba(var(--volt-rgb), 0.18)',
+        color: 'var(--volt)',
       }}
     >
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 20, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
         {position}
       </span>
-      <span style={{
-        fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.04em',
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
-      }}>
+      <span aria-hidden="true" style={{ width: 5, height: 20, transform: 'skewX(-14deg)', background: 'var(--volt)' }} />
+      <span style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
         {code}
       </span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--accent)', letterSpacing: '0.05em' }}>
-        PIT→
-      </span>
-      <span style={{
-        width: 8, height: 8, borderRadius: '50%',
-        background: 'var(--accent)', alignSelf: 'center',
-        boxShadow: '0 0 6px var(--accent)',
-      }} />
+      <span style={{ fontWeight: 700, fontSize: 12, textAlign: 'right', letterSpacing: 1 }}>PIT→</span>
+      <span />
     </motion.div>
   )
 }
@@ -240,9 +197,9 @@ export function TimingTower() {
   const config = useRaceStore(s => s.config)
   const pitPanelOpen = useRaceStore(s => s.pitPanelOpen)
   const projectionResult = useRaceStore(s => s.projectionResult)
-  // Full field is the default — "not just top few" per feedback; NEARBY
-  // remains one tap away for players who prefer a tighter battle context.
-  const [expanded, setExpanded] = useState(true)
+  // Compact (six rows around you) is the default per the Race Day Bold spec
+  // §6; the full field is one tap away.
+  const [expanded, setExpanded] = useState(false)
   const nameFormat = useSettingsStore(s => s.driverNameFormat)
   const setDriverNameFormat = useSettingsStore(s => s.setDriverNameFormat)
   const uiTap = useUiTap()
@@ -315,63 +272,52 @@ export function TimingTower() {
 
   return (
     <div style={{
-      background: 'var(--bg-elevated)', borderRadius: 10,
-      width: '100%', height: '100%', border: '1px solid var(--line-hair)',
+      background: 'var(--night)', width: '100%', height: '100%',
       overflow: 'hidden', display: 'flex', flexDirection: 'column',
     }}>
       <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '7px 10px 5px',
-        borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+        padding: '8px 12px 6px', flexShrink: 0,
       }}>
         <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
-          color: 'var(--accent)', letterSpacing: '0.14em',
+          fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 16,
+          color: 'var(--white)', letterSpacing: 0.5,
         }}>
-          RACE LEADERBOARD
+          LAP {raceState.lap + 1}<span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span>
         </span>
-        <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
-          color: 'var(--text-mid)', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.06em',
-        }}>
-          L{raceState.lap + 1}/{raceState.totalLaps}
+        <span style={{ display: 'flex', gap: 6 }}>
+          <motion.button
+            type="button"
+            className="slant-sm kit-focus"
+            whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+            onClick={() => { uiTap(); setExpanded(v => !v) }}
+            style={{
+              minHeight: 32, padding: '0 14px', border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 0.5,
+              background: 'var(--grape)', color: 'var(--white)', whiteSpace: 'nowrap',
+            }}
+          >
+            {expanded ? 'NEARBY ↑' : 'FULL FIELD ↓'}
+          </motion.button>
+          <motion.button
+            type="button"
+            className="slant-sm kit-focus"
+            whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+            onClick={() => { uiTap(); setDriverNameFormat(wide ? 'code' : 'full') }}
+            title="Toggle full name / code"
+            style={{
+              minHeight: 32, padding: '0 14px', border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 0.5,
+              background: 'transparent', color: 'var(--lilac)', whiteSpace: 'nowrap',
+            }}
+          >
+            {wide ? 'ABC' : 'FULL NAME'}
+          </motion.button>
         </span>
-      </div>
-      <div style={{
-        display: 'flex', gap: 6, padding: '4px 8px',
-        borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
-      }}>
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={() => { uiTap(); setExpanded(v => !v) }}
-          style={{
-            flex: 1, padding: '5px 8px', borderRadius: 6,
-            fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 600, letterSpacing: '0.06em',
-            color: expanded ? 'var(--bg-deep)' : 'var(--text-dim)',
-            background: expanded ? 'var(--accent)' : 'var(--bg-elevated)',
-            border: expanded ? 'none' : '1px solid var(--line-hair)',
-            cursor: 'pointer',
-          }}
-        >
-          {expanded ? `FULL FIELD (${totalCars})` : 'NEARBY ▾'}
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={() => { uiTap(); setDriverNameFormat(wide ? 'code' : 'full') }}
-          style={{
-            padding: '5px 10px', borderRadius: 6,
-            fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 600, letterSpacing: '0.06em',
-            color: 'var(--text-dim)', background: 'var(--bg-elevated)',
-            border: '1px solid var(--line-hair)', cursor: 'pointer', flexShrink: 0,
-          }}
-          title="Toggle full name / code"
-        >
-          {wide ? 'ABC' : 'FULL NAME'}
-        </motion.button>
       </div>
       <div style={{
         flex: 1, overflowY: expanded ? 'auto' : 'hidden', minHeight: 0,
-        display: 'flex', flexDirection: 'column',
+        display: 'flex', flexDirection: 'column', gap: 3, padding: '2px 8px 8px',
         justifyContent: expanded ? 'flex-start' : 'center',
       }}>
         <AnimatePresence initial={false}>
@@ -383,8 +329,6 @@ export function TimingTower() {
                 key={row.car.driverId}
                 car={row.car}
                 leaderTime={leaderTime}
-                compounds={config.compounds}
-                driverFlag={(driverMap.get(row.car.driverId) as { flag?: string } | undefined)?.flag}
                 displayName={wide ? driverMap.get(row.car.driverId)?.name : driverMap.get(row.car.driverId)?.code}
                 teamColor={teamColorMap.get(row.car.teamId)}
                 wide={wide}

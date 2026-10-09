@@ -10,6 +10,7 @@ import { effectivePitLaneLoss } from '@engine/incidents'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { useSafetyCar } from '@hooks/useSafetyCar'
 import { soundService } from '@audio/soundService'
+import { KitButton, useReducedMotion } from '@ui/kit'
 
 function driverCode(id: string | null, drivers: { id: string; code: string }[]): string {
   if (!id) return '---'
@@ -274,6 +275,7 @@ export function PitButton() {
   const raceState = useRaceStore(s => s.raceState)
   const config = useRaceStore(s => s.config)
   const projectionResult = useRaceStore(s => s.projectionResult)
+  const reducedMotion = useReducedMotion()
 
   if (phase !== 'racing') return null
 
@@ -288,25 +290,28 @@ export function PitButton() {
     ? `PIT — P${projectionResult.rejoinPosition}`
     : 'PIT'
 
+  // Opacity-only pulse on a wrapper (KitButton owns its own press scale), and
+  // none at all under reduced motion -- the hot fill already says "urgent".
+  const pulse = isUrgent && !reducedMotion
   return (
-    <motion.button
-      whileTap={{ scale: 0.96 }}
-      animate={isUrgent ? { opacity: [1, 0.7, 1] } : { opacity: 1 }}
-      transition={isUrgent ? { duration: 0.9, repeat: Infinity, ease: 'easeInOut' } : {}}
-      onClick={openPitPanel}
-      style={{
-        border: isUrgent ? 'none' : '2px solid var(--accent)',
-        borderRadius: 8, padding: '8px 16px',
-        background: isUrgent ? 'var(--accent-warm)' : 'transparent',
-        color: isUrgent ? 'var(--bg-deep)' : 'var(--accent)',
-        fontFamily: 'var(--font-display)',
-        fontSize: 14, fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer',
-        whiteSpace: 'nowrap', transition: 'background 0.4s, border 0.4s, color 0.4s',
-        boxShadow: isUrgent ? '0 0 16px rgba(255,77,94,0.5)' : 'none',
-      }}
+    <motion.div
+      animate={pulse ? { opacity: [1, 0.7, 1] } : { opacity: 1 }}
+      transition={pulse ? { duration: 0.9, repeat: Infinity, ease: 'easeInOut' } : { duration: 0 }}
+      style={{ flexShrink: 0, display: 'flex' }}
     >
-      {projLabel}
-    </motion.button>
+      <KitButton
+        variant="urgent"
+        size="lg"
+        onClick={openPitPanel}
+        style={{
+          width: 112, padding: '0 8px', whiteSpace: 'nowrap',
+          // "PIT — P12" does not fit 112px at the lg display size.
+          fontSize: projectionResult ? 18 : 30,
+        }}
+      >
+        {projLabel}
+      </KitButton>
+    </motion.div>
   )
 }
 
