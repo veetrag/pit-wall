@@ -1,3 +1,4 @@
+import { createRng } from './rng'
 import type { CircuitSpec, RaceConfig, SectorIndex, TuningConstants, WeatherState } from './types'
 
 /** Rear-wing level. 1 = lowest downforce (fast on straights), 5 = highest. */
@@ -59,4 +60,23 @@ export function expectedBestWing(circuit: CircuitSpec, t: TuningConstants, rainC
   const order: Wing[] = [3, 2, 4, 1, 5]
   return order.reduce((b, w) =>
     expectedLapDelta(circuit, t, w, rainChance) < expectedLapDelta(circuit, t, b, rainChance) ? w : b)
+}
+
+/**
+ * Rival (and teammate) wing choices: the circuit's expected best, nudged one
+ * level up or down with probability aiNoise. Its own rng stream (seed +
+ * setup.seedOffset), so no existing stream shifts.
+ */
+export function aiSetups(config: RaceConfig): Record<string, Wing> {
+  const t = config.tuning
+  const best = expectedBestWing(config.circuit, t, config.circuit.rainProbability ?? 0)
+  const rng = createRng(config.seed + t.setup.seedOffset)
+  const out: Record<string, Wing> = {}
+  for (const d of config.drivers) {
+    if (d.id === config.playerDriverId) continue
+    let w: number = best
+    if (rng() < t.setup.aiNoise) w += rng() < 0.5 ? -1 : 1
+    out[d.id] = Math.min(5, Math.max(1, w)) as Wing
+  }
+  return out
 }

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { CIRCUIT_ORDER } from './raceStore'
 import { buildRaceConfig } from './buildRaceConfig'
 import { runQualifying, qualifyingRng, type Compound, type PitStop, type QualifyingCall, type QualifyingResult } from '@engine/index'
+import type { Wing } from '@engine/setup'
 import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
 import { useCareerStore, escalateRivals, previewRaceBadges, type RaceRecordInput } from './careerStore'
@@ -36,6 +37,7 @@ export interface RaceEventSummary {
 export interface PlayerStrategyChoice {
   startCompound: Compound
   plannedStops: PitStop[]
+  wing?: Wing
 }
 
 export const TOTAL_RACES = 12
