@@ -312,3 +312,14 @@ replied inside the Capacitor WebView on the Pixel 10 Pro XL
   - Scroll stutter during the worker run: NOT checkable for the same
     reason; scrolling the finished result screen looked smooth.
   - NEXT RACE during "reviewing...": not checked. Left on a result screen.
+
+## Car setup — device pass (2026-10-09, Pixel, release build of feat/car-setup)
+
+- WING row renders at phone width, no horizontal scroll; five bars, selected bar filled teal, best-level dot under the bar.
+- Silverpark: best dot on 3 ("Aero track · S2 weighted"); tapping 1 shows `+0.81 s/lap vs best · Straights ▲ · Rain +0.4 s` with the lap figure in red; PLAN line updates to `· W1`.
+- Switching circuit to Veloce re-seeds the wing to its best (1, "Power track · S1 weighted", `+0.00 s/lap vs best`).
+- Qualifying ran with the wing (P14 at Veloce on Mediums, Tier -1 car).
+- In race: `W1` chip legible at the top-left of the tyre gauge.
+- Race turned wet; finished P2. Debrief card: "3 judged · 8 futures" — ✓ PLAN · START ON MEDIUM, ✓ SETUP · WING 1, ✓ PLAN · PIT L15 → HARD, all GOOD CALL.
+- Not observed: the low-wing rain radio line (the race ran at 4× and the banner was not caught), and the remembered wing on a return visit (Veloce's remembered and best level are both 1, so it cannot show the difference). Both are unit-tested.
+- Unspecced observation: unselected bars are outline-only and the level-1 bar is very small; fine at arm's length but worth a look.
