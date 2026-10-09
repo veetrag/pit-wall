@@ -26,6 +26,7 @@ import { SettingsScreen } from './ui/SettingsPanel'
 import { ScenarioSelect } from './ui/ScenarioSelect'
 import { ScenarioResult } from './ui/ScenarioResult'
 import { useAndroidBackButton } from './hooks/useAndroidBackButton'
+import { useAppVisibility } from './hooks/useAppVisibility'
 import { AppErrorBoundary } from './ui/AppErrorBoundary'
 
 export default function App() {
@@ -35,6 +36,9 @@ export default function App() {
   // Android hardware back button — without this it finishes the activity and
   // silently destroys an in-progress race.
   useAndroidBackButton()
+  // Pause the race when the app leaves the screen -- the sim's timer keeps
+  // running in the background otherwise.
+  useAppVisibility()
 
   useEffect(() => {
     void loadSettings()

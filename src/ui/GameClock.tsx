@@ -8,6 +8,7 @@ const INTERVALS: Record<number, number> = { 1: 2000, 2: 500, 4: 100 }
 
 export function GameClock() {
   const speed = useClockStore(s => s.speed)
+  const appVisible = useClockStore(s => s.appVisible)
   const step = useRaceStore(s => s.step)
   const phase = useRaceStore(s => s.phase)
   const weatherState = useRaceStore(s => s.raceState?.weatherState)
@@ -25,10 +26,10 @@ export function GameClock() {
   // Engine/crowd/rain ambience — live for the whole race (incl. the start
   // sequence), torn down once it ends or if the player mutes sound mid-race.
   useEffect(() => {
-    const active = (phase === 'starting' || phase === 'racing') && soundEnabled
+    const active = (phase === 'starting' || phase === 'racing') && soundEnabled && appVisible
     if (active) soundService.startAmbience()
     else soundService.stopAmbience()
-  }, [phase, soundEnabled])
+  }, [phase, soundEnabled, appVisible])
 
   useEffect(() => {
     if (weatherState) soundService.setWeather(weatherState)
@@ -36,11 +37,13 @@ export function GameClock() {
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current)
-    if (speed === 0 || phase !== 'racing') return
+    // appVisible: Capacitor's WebView keeps JS timers running in the
+    // background, so without this the race carried on unseen. See clockStore.
+    if (speed === 0 || phase !== 'racing' || !appVisible) return
     const ms = INTERVALS[speed] ?? 2000
     timerRef.current = setInterval(step, ms)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [speed, phase, step])
+  }, [speed, phase, step, appVisible])
 
   return null
 }
