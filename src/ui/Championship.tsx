@@ -4,6 +4,7 @@ import { useSeasonStore } from '@state/seasonStore'
 import { useCareerStore, erodeTiers } from '@state/careerStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { BadgeToast } from './BadgeToast'
+import { LadderReveal, ConstructorsList } from './LadderReveal'
 import { useUiTap } from '@hooks/useUiTap'
 import { pushCloudSave } from '@sync/storeBridge'
 import { maybeAskForReview } from '@sync/platformBridge'
@@ -18,11 +19,12 @@ function driverName(id: string): string {
 }
 
 export function Championship() {
-  const { standings, playerDriverId, purchasedTiers, lastSeasonBonus, startNextSeason, endCareer } = useSeasonStore()
+  const { standings, playerDriverId, purchasedTiers, lastSeasonBonus, startNextSeason, endCareer, lastLadder, selectedTeamId } = useSeasonStore()
   const seasonNumber = useCareerStore(s => s.seasonNumber)
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const uiTap = useUiTap()
   const [confirmingEnd, setConfirmingEnd] = useState(false)
+  const [table, setTable] = useState<'drivers' | 'constructors'>('drivers')
 
   const { tierCosts, attributes } = loadGameData().upgrades
   /*
@@ -154,11 +156,27 @@ export function Championship() {
           </motion.div>
         )}
 
+        {lastLadder && selectedTeamId && (
+          <LadderReveal moves={lastLadder} playerTeamId={selectedTeamId} />
+        )}
         {/* Full standings */}
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 8 }}>
-          FINAL STANDINGS
+        <div role="tablist" style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+          {(['drivers', 'constructors'] as const).map(k => (
+            <button key={k} role="tab" aria-selected={table === k} onClick={() => { uiTap(); setTable(k) }}
+              style={{
+                background: table === k ? 'var(--bg-elevated)' : 'transparent',
+                border: '1px solid var(--line-hair)', borderRadius: 999, padding: '4px 10px', cursor: 'pointer',
+                fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.15em',
+                color: table === k ? 'var(--text-hi)' : 'var(--text-dim)',
+              }}>
+              {k === 'drivers' ? 'DRIVERS' : "CONSTRUCTORS'"}
+            </button>
+          ))}
         </div>
-        {standings.map((s, i) => (
+        {table === 'constructors' && selectedTeamId && (
+          <ConstructorsList standings={standings} playerTeamId={selectedTeamId} />
+        )}
+        {table === 'drivers' && standings.map((s, i) => (
           <motion.div
             key={s.driverId}
             initial={{ opacity: 0, x: -8 }}
