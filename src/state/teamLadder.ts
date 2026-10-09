@@ -1,3 +1,6 @@
+import { loadGameData } from '@data/validators'
+import { effectiveTeams } from './buildRaceConfig'
+import type { UpgradeOverlayInput } from './upgradeOverlay'
 /**
  * The team ladder: at each season end every team, the player's included,
  * climbs or slips one tier according to whether it beat the constructors'
@@ -109,4 +112,24 @@ export function settleTeamTiers(
     moves.push({ teamId, deserved: deservedPos, finished, before, after })
   })
   return { tiers: out, moves }
+}
+
+/**
+ * Settles one season: builds the constructors' table from the drivers'
+ * standings, rates every car with the SAME overlay that built the races, and
+ * applies the rule. Called by seasonStore once, when a season is banked.
+ */
+export function settleSeason(args: {
+  standings: readonly { driverId: string; points: number }[]
+  playerDriverId: string
+  overlay: UpgradeOverlayInput
+  tiers: Readonly<Record<string, number>>
+}): { tiers: Record<string, number>; moves: LadderMove[] } {
+  const data = loadGameData()
+  const driverTeam = new Map(data.drivers.drivers.map(d => [d.id, d.teamId] as [string, string]))
+  const finished = constructorsTable(args.standings, driverTeam).map(r => r.teamId)
+  const teams = effectiveTeams(args.playerDriverId, { ...args.overlay, teamTiers: args.tiers })
+  const ratings = Object.fromEntries(teams.map(t => [t.id, meanFacet(t.facets)]))
+  const base = Object.fromEntries(data.cars.teams.map(t => [t.id, meanFacet(t.facets)]))
+  return settleTeamTiers(finished, deservedOrder(ratings, base), args.tiers, data.tuning.career.teamTiers)
 }
