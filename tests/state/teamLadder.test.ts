@@ -60,7 +60,6 @@ describe('settleTeamTiers', () => {
     settleTeamTiers(finished, deserved, tiers, T)
 
   it('steps up exactly at the threshold, holds just below it', () => {
-    // e deserved P5, finished P3: +2 places -> up. d deserved P4, finished P3? see below.
     const r = move(['a', 'b', 'e', 'c', 'd'], ['a', 'b', 'c', 'd', 'e'])
     expect(r.tiers.e).toBe(1)   // deserved 5, finished 3: delta +2
     expect(r.tiers.c).toBe(0)   // deserved 3, finished 4: delta -1

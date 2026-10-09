@@ -477,9 +477,10 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       // for a season already recorded must not pay the bonus twice, for the
       // same reason it must not award the title twice.
       const bonus = banked ? seasonEndBonusFor(finishedPosition) : 0
-      // The ladder is judged on the cars this season was raced with, so it is
-      // settled HERE, before startNextSeason erodes upgrades and resets rival
-      // development. Only when the season actually banked: a re-entry must not
+      // The ladder is judged on the end-of-season state: rival pools after the
+      // final race's development, the player's upgrade tiers before winter
+      // erosion. That is what spec section 5 specifies, so it is settled HERE,
+      // before startNextSeason erodes or resets anything. Only when the season actually banked: a re-entry must not
       // move every team a second time.
       let lastLadder = get().lastLadder
       if (banked && get().playerDriverId) {

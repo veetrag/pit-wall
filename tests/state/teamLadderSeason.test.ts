@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useSeasonStore, TOTAL_RACES } from '@state/seasonStore'
-import { useCareerStore, escalateRivals } from '@state/careerStore'
+import { useCareerStore, escalateRivals, erodeTiers } from '@state/careerStore'
 import { buildRaceConfig, effectiveTeams } from '@state/buildRaceConfig'
 import { settleSeason, meanFacet } from '@state/teamLadder'
 import { loadGameData } from '@data/validators'
@@ -45,7 +45,7 @@ describe('settling the ladder at season end', () => {
     expect(useCareerStore.getState().teamTiers.terra).toBe(1)
   })
 
-  it('judges the cars the season was raced with', () => {
+  it('builds the race cars and the ladder rating from the same overlay', () => {
     // The coupling the spec warns about: deserved rank must come from the
     // same overlay that built the races, including end-of-season rival pools.
     const s = useSeasonStore.getState()
@@ -62,9 +62,30 @@ describe('settling the ladder at season end', () => {
 
 describe('the season boundary', () => {
   it('settles BEFORE erosion and the rival reset', () => {
-    // If settlement ran after the reset, rivals would be judged on next
-    // season's (weaker) cars and look like over-performers.
+    // Big end-of-season pools for some rivals and none for others, so the
+    // deserved order on that overlay differs from the one on the reset overlay.
+    useSeasonStore.setState({
+      rivalDevelopment: { apex: 60, meridian: 60, vector: 40 },
+      purchasedTiers: { power: 3 },
+    })
+    const s = useSeasonStore.getState()
+    const { tierDecayPerSeason, tierDecayFloor } = loadGameData().tuning.career
+    const endOverlay = s.overlayInput()
+    const expected = settleSeason({ standings, playerDriverId: player, overlay: endOverlay, tiers: {} })
+    const wrongOrder = settleSeason({
+      standings, playerDriverId: player, tiers: {},
+      overlay: {
+        purchasedTiers: erodeTiers(s.purchasedTiers, tierDecayPerSeason, tierDecayFloor),
+        rivalDevelopment: escalateRivals({}, true),
+        teamTiers: {},
+      },
+    })
+    const differs = expected.moves.some(m => m.deserved !== wrongOrder.moves.find(w => w.teamId === m.teamId)!.deserved)
+    expect(differs, 'fixture must make end-of-season and post-reset deserved orders differ, or this test cannot fail').toBe(true)
+
     useSeasonStore.getState().nextRace()
+    expect(useSeasonStore.getState().lastLadder).toEqual(expected.moves)
+
     const settled = { ...useCareerStore.getState().teamTiers }
     useSeasonStore.getState().startNextSeason()
     expect(useCareerStore.getState().teamTiers, 'rollover must not re-settle').toEqual(settled)

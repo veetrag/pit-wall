@@ -19,9 +19,9 @@ function applyBrainProfile(baseBrain: StrategyBrain, profile: DifficultyProfile)
  * The ten cars as a race would receive them: authored facets, the ladder
  * offset, then the player's upgrades or a rival's development.
  *
- * Exported because the team ladder must judge teams by EXACTLY the cars
- * they raced with. Building both from this one function is what stops the
- * ladder measuring something subtly different from what was simulated.
+ * Exported so the team ladder rates teams with this same function that
+ * builds the race cars. One builder for both means the ladder's ratings and
+ * the simulated cars cannot be computed by two diverging code paths.
  */
 export function effectiveTeams(
   playerDriverId: string,
