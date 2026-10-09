@@ -14,12 +14,18 @@ import { BADGES } from '@state/badges'
  * without an `announced` flag to keep in sync, and why it does not re-fire
  * when the app is reopened -- justEarned is never saved.
  *
+ * `ids`, when given, overrides justEarned. The result screen passes the
+ * badges keeping the race WOULD award: a race is only recorded when the
+ * player keeps it (seasonStore.keepResult), so at that screen justEarned
+ * does not yet hold this race's badges.
+ *
  * Haptic via useHaptics directly and NOT useUiTap: that helper also plays the
  * navTap sound, which is the acknowledgement of a press. A badge arriving is
  * not a press.
  */
-export function BadgeToast() {
-  const justEarned = useCareerStore(s => s.justEarned)
+export function BadgeToast({ ids }: { ids?: readonly string[] } = {}) {
+  const storeEarned = useCareerStore(s => s.justEarned)
+  const justEarned = ids ?? storeEarned
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const { impact } = useHaptics()
 

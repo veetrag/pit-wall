@@ -117,6 +117,17 @@ export const SeasonSnapshotSchema = z.object({
   rivalDevelopment: z.record(z.string(), z.number()),
   lastRaceResults: z.array(SeasonResultSchema).nullable(),
   lastRaceEvents: RaceEventSummarySchema.nullable(),
+  /*
+   * A race shown on the result screen but not yet kept (see
+   * seasonStore.resultPending). Both .default()ed and NOT a version bump: a
+   * save from before this existed had already counted its race at the flag,
+   * so "nothing pending" is exactly true for it, and a bump would discard it.
+   */
+  resultPending: z.boolean().default(false),
+  pendingRace: z.object({
+    position: z.number(), retired: z.boolean(), pole: z.boolean(), round: z.number(),
+    grid: z.number(), stops: z.number(), overtakes: z.number(), wet: z.boolean(),
+  }).nullable().default(null),
 })
 
 export type SeasonSnapshot = z.infer<typeof SeasonSnapshotSchema>
@@ -152,6 +163,8 @@ export function snapshotFrom(s: SeasonState): SeasonSnapshot | null {
     rivalDevelopment: s.rivalDevelopment,
     lastRaceResults: s.lastRaceResults,
     lastRaceEvents: s.lastRaceEvents,
+    resultPending: s.resultPending,
+    pendingRace: s.pendingRace,
   }
 }
 

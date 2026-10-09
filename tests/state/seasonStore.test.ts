@@ -53,7 +53,7 @@ describe('seasonStore', () => {
     expect(useSeasonStore.getState().currentSeed()).toBe(2042)
   })
 
-  it('recordRaceResult accumulates points and transitions to result', () => {
+  it('recordRaceResult transitions to result; keeping it accumulates points', () => {
     useSeasonStore.setState({ phase: 'racing', playerDriverId: 'd_ver', raceIndex: 0, standings: [], lastRaceResults: null })
     const positions = [
       { driverId: 'd_ver', position: 1 },
@@ -61,8 +61,10 @@ describe('seasonStore', () => {
       { driverId: 'd_lec', position: 3 },
     ]
     useSeasonStore.getState().recordRaceResult(positions, { overtakesGained: 0, pitsDone: 1, hadRain: false })
+    expect(useSeasonStore.getState().phase).toBe('result')
+    // Points count when the race is kept, not at the flag (see retryDiscards.test.ts).
+    useSeasonStore.getState().keepResult()
     const s = useSeasonStore.getState()
-    expect(s.phase).toBe('result')
     const verStanding = s.standings.find(st => st.driverId === 'd_ver')
     expect(verStanding?.points).toBe(25)
   })

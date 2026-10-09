@@ -129,6 +129,7 @@ describe('the race log records what actually happened', () => {
       [{ driverId: 'd_voss', position: 4 }],
       { overtakesGained: 8, pitsDone: 2, hadRain: true },
     )
+    useSeasonStore.getState().keepResult()  // a race counts when it is kept
     const fact = useCareerStore.getState().raceLog[0]
     expect(fact?.grid, 'grid must come from qualifyingResult.order').toBe(12)
     expect(fact?.finish).toBe(4)
@@ -144,6 +145,7 @@ describe('the race log records what actually happened', () => {
       [{ driverId: 'd_voss', position: 1 }],
       { overtakesGained: 0, pitsDone: 1, hadRain: false },
     )
+    useSeasonStore.getState().keepResult()  // a race counts when it is kept
     const fact = useCareerStore.getState().raceLog[0]
     expect(fact?.grid).toBe(1)
     expect(fact?.pole).toBe(true)
@@ -159,6 +161,7 @@ describe('the race log records what actually happened', () => {
       [{ driverId: 'd_voss', position: 6 }],
       { overtakesGained: 0, pitsDone: 1, hadRain: false },
     )
+    useSeasonStore.getState().keepResult()  // a race counts when it is kept
     expect(useCareerStore.getState().raceLog[0]?.grid).toBe(6)
   })
 })
