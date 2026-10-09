@@ -7,6 +7,9 @@ import type { PlayerStrategyChoice } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
 import { loadGameData } from '@data/validators'
 import { openingTimeline, type WeatherState } from '@engine/index'
+import { expectedBestWing, type Wing } from '@engine/setup'
+import { useCareerStore } from '@state/careerStore'
+import { WingSelector } from '@ui/WingSelector'
 import circuitsJson from '@data/circuits.json'
 import compoundsData from '@data/compounds.json'
 
@@ -20,6 +23,14 @@ type CircuitEntry = {
 const compounds = (compoundsData as unknown as { compounds: Record<string, CompoundEntry> }).compounds
 const allCircuits = (circuitsJson as unknown as { circuits: Record<string, CircuitEntry> }).circuits
 const GAME_DATA = loadGameData()
+
+/** The wing last kept at this circuit, else the circuit's expected best. */
+function defaultWing(circuitId: string): Wing {
+  const remembered = useCareerStore.getState().wingByCircuit[circuitId]
+  if (remembered) return remembered
+  const spec = GAME_DATA.circuits[circuitId]
+  return spec ? expectedBestWing(spec, GAME_DATA.tuning, spec.rainProbability ?? 0) : 3
+}
 
 const DRY_COMPOUNDS: Compound[] = ['S', 'M', 'H']
 const START_COMPOUNDS: Compound[] = ['S', 'M', 'H', 'I', 'W']
@@ -141,6 +152,14 @@ export function RaceSetup() {
   const startingWeather = weatherTimeline[0] ?? 'DRY'
 
   const [startCompound, setStartCompound] = useState<Compound>(() => recommendedStartCompound(startingWeather))
+  const [wing, setWing] = useState<Wing>(() => defaultWing(circuitId))
+  // Re-seed the wing when the circuit changes (not on mount, which useState covers).
+  const wingCircuitRef = useRef(circuitId)
+  useEffect(() => {
+    if (wingCircuitRef.current === circuitId) return
+    wingCircuitRef.current = circuitId
+    setWing(defaultWing(circuitId))
+  }, [circuitId])
   const [stopCount, setStopCount] = useState<1 | 2>(1)
   const [pitLap1, setPitLap1] = useState(Math.round(circuit.laps * 0.45))
   const [pitCompound1, setPitCompound1] = useState<Compound>('H')
@@ -379,6 +398,14 @@ export function RaceSetup() {
           </div>
         </div>
 
+        {/* Wing */}
+        <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--line-hair)' }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 12 }}>
+            WING
+          </div>
+          <WingSelector circuitId={circuitId} value={wing} onChange={setWing} />
+        </div>
+
         {/* Pit Stop Plan */}
         <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--line-hair)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -468,6 +495,7 @@ export function RaceSetup() {
           }}>
             PLAN: {startCompound} → {pitCompound1} on lap {pitLap1}
             {stopCount === 2 && <> → {pitCompound2} on lap {pitLap2}</>}
+            {' · W'}{wing}
             <br />
             <span style={{ color: 'var(--text-mid)' }}>Stops run automatically. Pit earlier live if you need to — a planned stop can be brought forward, not delayed.</span>
           </div>
@@ -483,7 +511,7 @@ export function RaceSetup() {
             const plannedStops = stopCount === 2
               ? [{ lap: pitLap1, compound: pitCompound1 }, { lap: pitLap2, compound: pitCompound2 }]
               : [{ lap: pitLap1, compound: pitCompound1 }]
-            const strategy: PlayerStrategyChoice = { startCompound, plannedStops }
+            const strategy: PlayerStrategyChoice = { startCompound, plannedStops, wing }
             confirmRaceSetup(circuitId, strategy)
           }}
           style={{
