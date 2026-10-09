@@ -26,6 +26,20 @@ function seedP2FromGrid14() {
   useSeasonStore.setState({ pendingRace: { ...pending, grid: 14 } })
 }
 
+/** A pending result for the player with the given finish (no grid). */
+function seedPlayerFinish(position: number, retired = false) {
+  useCareerStore.getState().beginCareer()
+  useSeasonStore.getState().startNewSeason()
+  useSeasonStore.setState({
+    playerDriverId: 'd_voss', selectedTeamId: 'apex', phase: 'racing',
+    raceIndex: 0, standings: [{ driverId: 'd_voss', points: 0 }, { driverId: 'd_rossi', points: 0 }],
+  })
+  useSeasonStore.getState().recordRaceResult(
+    [{ driverId: 'd_rossi', position: 1 }, { driverId: 'd_voss', position, retired, retiredCause: retired ? 'mechanical' : null }],
+    { overtakesGained: 0, pitsDone: 1, hadRain: false },
+  )
+}
+
 describe('race result in Race Day Bold (hero 3)', () => {
   beforeEach(() => {
     cleanup()
@@ -65,5 +79,27 @@ describe('race result in Race Day Bold (hero 3)', () => {
     useSeasonStore.setState({ resultPending: false, pendingRace: null })
     render(<RaceResult />)
     expect(screen.queryByText(/on the grid/)).toBeNull()
+  })
+
+  it('says NO POINTS instead of +0 PTS when the finish scores nothing', () => {
+    cleanup()
+    seedPlayerFinish(11)
+    render(<RaceResult />)
+    expect(screen.getByText('P11')).toBeTruthy()
+    expect(screen.getByText('NO POINTS')).toBeTruthy()
+    expect(screen.queryByText(/\+0/)).toBeNull()
+  })
+
+  it('a retirement puts DNF on a grape hero band with white text, not volt', () => {
+    cleanup()
+    seedPlayerFinish(2, true)
+    render(<RaceResult />)
+    expect(screen.getByText('DNF')).toBeTruthy()
+    expect(screen.getByText('NO POINTS')).toBeTruthy()
+    const band = document.querySelector('.hero-band') as HTMLElement
+    expect(band.style.backgroundColor).toContain('--grape')
+    expect(band.style.backgroundColor).not.toContain('--volt')
+    const hero = screen.getByText('DNF').closest('[data-hero-text]') as HTMLElement
+    expect(hero.style.color).toContain('--white')
   })
 })

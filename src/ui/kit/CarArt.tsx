@@ -1,8 +1,16 @@
 import { loadGameData } from '@data/validators'
 
-export function liveryOf(teamId: string): { primary: string; accent: string } {
-  const t = loadGameData().cars.teams.find(x => x.id === teamId)
-  return t ? { primary: t.colorPrimary, accent: t.liveryAccent ?? t.colorSecondary } : { primary: 'var(--volt)', accent: 'var(--ink)' }
+type Livery = { primary: string; accent: string }
+// Built on first call: loadGameData() re-parses and re-validates every JSON
+// file, and liveryOf runs per row/per podium slot on every render.
+let LIVERIES: Map<string, Livery> | null = null
+
+export function liveryOf(teamId: string): Livery {
+  if (!LIVERIES) {
+    LIVERIES = new Map(loadGameData().cars.teams.map(t =>
+      [t.id, { primary: t.colorPrimary, accent: t.liveryAccent ?? t.colorSecondary }] as [string, Livery]))
+  }
+  return LIVERIES.get(teamId) ?? { primary: 'var(--volt)', accent: 'var(--ink)' }
 }
 
 const ROT = { up: 0, right: 90, left: -90 } as const

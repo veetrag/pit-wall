@@ -21,7 +21,9 @@
   --bg-deep:      #120E2B;
   --bg-panel:     #2A2160;
   --bg-elevated:  #3A2F7A;
-  --line-hair:    #3A2F7A;
+  /* Distinct from --bg-elevated (#3A2F7A): a hairline the same colour as the
+     elevated surface it outlines vanishes. Lighter so borders read on dusk. */
+  --line-hair:    #4A3D96;
   --text-hi:      #FFFFFF;
   --text-mid:     #CFC8F2;
   --text-dim:     #A99FDB;

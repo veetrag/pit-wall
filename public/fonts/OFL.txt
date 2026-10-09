@@ -10,7 +10,7 @@ Barlow
   Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
 
 Big Shoulders Display
-  Copyright Google Inc. (as stated in the @fontsource/big-shoulders-display 5.3.0 LICENSE)
+  Copyright 2019 The Big Shoulders Project Authors (https://github.com/xotypeco/big_shoulders)
 
 -----------------------------------------------------------
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007

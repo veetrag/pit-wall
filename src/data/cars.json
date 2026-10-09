@@ -58,7 +58,7 @@
     },
     {
       "id": "nimbus", "name": "Nimbus Grand Prix",
-      "colorPrimary": "#B0B6C8", "colorSecondary": "#0A0E1A", "liveryAccent": "#FF2E63",
+      "colorPrimary": "#B0B6C8", "colorSecondary": "#0A0E1A", "liveryAccent": "#FF4F84",
       "archetype": "Lower midfield — decent crew keeps them in the fight",
       "facets": { "power": 86, "aero": 84, "handling": 85, "reliability": 84, "pitCrew": 86 },
       "developmentRate": 1.0, "nationality": "Austrian", "flag": "🇦🇹",

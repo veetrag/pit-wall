@@ -10,7 +10,7 @@ import { effectivePitLaneLoss } from '@engine/incidents'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { useSafetyCar } from '@hooks/useSafetyCar'
 import { soundService } from '@audio/soundService'
-import { KitButton, Pill, TyreChip, EASE, useReducedMotion } from '@ui/kit'
+import { KitButton, Pill, TyreChip, EASE, useReducedMotion, PRESS } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 
 function driverCode(id: string | null, drivers: { id: string; code: string }[]): string {
@@ -215,7 +215,7 @@ function PitPanelDrawer() {
         <motion.button
           type="button"
           className="kit-focus"
-          whileTap={reduced ? undefined : { scale: 0.96 }}
+          whileTap={reduced ? undefined : { scale: 0.96 }} transition={PRESS}
           onClick={() => { uiTap(); closePitPanel() }}
           style={{
             minHeight: 48, minWidth: 48, padding: '0 18px', borderRadius: 999, border: 'none',
@@ -244,7 +244,7 @@ function PitPanelDrawer() {
               aria-checked={active}
               aria-disabled={empty || undefined}
               className="slant-sm kit-focus"
-              whileTap={reduced || empty ? undefined : { scale: 0.96 }}
+              whileTap={reduced || empty ? undefined : { scale: 0.96 }} transition={PRESS}
               onClick={() => handleSelect(id)}
               style={{
                 flex: '1 1 calc(33% - 6px)', minWidth: 72, minHeight: 64,

@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
-import { useReducedMotion } from './motion'
+import { useReducedMotion, PRESS } from './motion'
 
 type Variant = 'primary' | 'urgent' | 'secondary'
 const FILL: Record<Variant, string> = { primary: 'var(--volt)', urgent: 'var(--hot)', secondary: 'var(--grape)' }
@@ -27,7 +27,7 @@ export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, 
       aria-label={ariaLabel}
       disabled={disabled}
       className={`${SLANT[size]} kit-focus`}
-      whileTap={reduced || disabled ? undefined : { scale: 0.96 }}
+      whileTap={reduced || disabled ? undefined : { scale: 0.96 }} transition={PRESS}
       onClick={() => {
         if (haptic) { if (variant === 'secondary') uiTap(); else impact(ImpactStyle.Medium) }
         onClick()

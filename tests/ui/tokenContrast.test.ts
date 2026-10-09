@@ -22,11 +22,13 @@ const ratio = (a: string, b: string) => {
   return (x! + 0.05) / (y! + 0.05)
 }
 
+// hot text on --dusk / --bg-elevated is NOT allowed (3.6:1); put hot text on ink, night or grape.
 // [text, surface, minimum]. 4.5 = body text; 3 = display text >= 24px only.
 const PAIRS: [string, string, number][] = [
   ...['white', 'lilac', 'lilac-dim', 'volt', 'hot', 'gain', 'caution'].flatMap(t =>
     ['ink', 'night', 'grape'].map(s => [t, s, 4.5] as [string, string, number])),
   ['white', 'dusk', 4.5], ['lilac', 'dusk', 4.5], ['lilac-dim', 'dusk', 4.5],
+  ['volt', 'dusk', 4.5], ['gain', 'dusk', 4.5], ['caution', 'dusk', 4.5],
   ['ink', 'volt', 4.5], ['ink', 'hot', 4.5], ['ink', 'caution', 4.5], ['ink', 'gain', 4.5], ['ink', 'white', 4.5],
 ]
 

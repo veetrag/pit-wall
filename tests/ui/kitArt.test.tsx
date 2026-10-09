@@ -13,6 +13,8 @@ describe('art kit', () => {
   it('liveryOf reads the team data', () => {
     expect(liveryOf('apex').primary).toBe('#00E5D0')
     expect(liveryOf('nope').primary).toBe('var(--volt)')
+    // Cached at module level: the second lookup reuses the first, not a re-parse.
+    expect(liveryOf('apex')).toBe(liveryOf('apex'))
   })
   it('TyreMeter exposes wear and lights segments in proportion', () => {
     const { container } = render(<TyreMeter compound="M" wear={0.65} lapsOnTyre={13} cliffLaps={8} />)

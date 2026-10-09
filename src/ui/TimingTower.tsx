@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
 import type { CarState } from '@engine/types'
-import { TyreChip } from '@ui/kit'
+import { TyreChip, PRESS } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSafetyCarDeployCount } from '@hooks/useSafetyCar'
 
@@ -103,8 +103,9 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed }:
         padding: '0 12px',
         flexShrink: 0,
         background: rowBg,
+        // Retired rows dim through text colour, not opacity: --lilac-dim name,
+        // --hot DNF/OUT, both >= 4.5:1 on --grape (an opacity fade drops them below).
         color: textColor,
-        opacity: car.retired ? 0.6 : 1,
         transition: 'background 0.4s ease',
       }}
     >
@@ -127,7 +128,7 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed }:
       {car.retired ? (
         <>
           <span style={{ fontWeight: 700, fontSize: 14, textAlign: 'right', color: 'var(--hot)' }}>DNF</span>
-          <span style={{ fontWeight: 700, fontSize: 11, textAlign: 'center' }}>OUT</span>
+          <span style={{ fontWeight: 700, fontSize: 11, textAlign: 'center', color: 'var(--hot)' }}>OUT</span>
         </>
       ) : (
         <>
@@ -296,7 +297,7 @@ export function TimingTower() {
           <motion.button
             type="button"
             className="slant-sm kit-focus"
-            whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+            whileTap={reducedMotion ? undefined : { scale: 0.96 }} transition={PRESS}
             onClick={() => { uiTap(); setExpanded(v => !v) }}
             style={{
               minHeight: 48, padding: '0 14px', border: 'none', cursor: 'pointer',
@@ -309,7 +310,7 @@ export function TimingTower() {
           <motion.button
             type="button"
             className="slant-sm kit-focus"
-            whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+            whileTap={reducedMotion ? undefined : { scale: 0.96 }} transition={PRESS}
             onClick={() => { uiTap(); setDriverNameFormat(wide ? 'code' : 'full') }}
             title="Toggle full name / code"
             style={{

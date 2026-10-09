@@ -116,6 +116,9 @@ export function RaceResult() {
   const circuitName = (data.circuits[currentCircuitId()]?.name ?? '').toUpperCase()
   const heroLabel = `${circuitName ? `${circuitName} · ` : ''}ROUND ${raceIndex + 1}${lastRaceEvents?.hadRain ? ' · WET' : ''}`
   const points = useCountUp(playerResult?.points ?? 0)
+  const scored = (playerResult?.points ?? 0) > 0
+  const retired = playerResult?.retired ?? false
+  const heroInk = retired ? 'var(--white)' : 'var(--ink)'
   const positionText = !playerResult ? '—' : playerResult.retired ? 'DNF' : `P${playerResult.position}`
 
   // Grid is only known while the result is pending (pendingRace). A restored
@@ -184,16 +187,21 @@ export function RaceResult() {
             line of ink text on the volt (label below the left top edge,
             two-line summary above the right bottom edge). */}
         <div style={{ position: 'relative', overflow: 'hidden', minHeight: 286, padding: '44px 22px 24px' }}>
-          <HeroBand color="var(--volt)" height={250} top={12} />
-          <div style={{ position: 'relative', color: 'var(--ink)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <motion.div {...next()} style={{ ...label, color: 'var(--ink)' }}>{heroLabel}</motion.div>
+          {/* A retirement is not a celebration: the band drops volt for grape and the text goes white. */}
+          <HeroBand color={retired ? 'var(--grape)' : 'var(--volt)'} height={250} top={12} />
+          <div data-hero-text style={{ position: 'relative', color: heroInk, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <motion.div {...next()} style={{ ...label, color: heroInk }}>{heroLabel}</motion.div>
             <motion.div {...next()} style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 150, lineHeight: 0.85, ...numeric }}>
                 {positionText}
               </span>
               <span style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 10, minWidth: 0 }}>
                 <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 36, lineHeight: 1, ...numeric }}>
-                  +{points} PTS
+                  {scored
+                    // Big Shoulders has no tabular figures: a fixed 2ch box keeps
+                    // the count-up from shifting PTS sideways as digits change.
+                    ? <>+<span style={{ display: 'inline-block', minWidth: '2ch', textAlign: 'right' }}>{points}</span> PTS</>
+                    : 'NO POINTS'}
                 </span>
                 {gridLine && (
                   <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13 }}>{gridLine}</span>

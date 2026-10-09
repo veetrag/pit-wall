@@ -22,7 +22,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { PitTimer } from './PitTimer'
 import { Component, type ReactNode } from 'react'
 import { useUiTap } from '@hooks/useUiTap'
-import { useReducedMotion } from '@ui/kit'
+import { useReducedMotion, PRESS } from '@ui/kit'
 
 class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
   constructor(props: { children: ReactNode }) { super(props); this.state = { error: null } }
@@ -65,7 +65,7 @@ function SpeedControl() {
             aria-label={aria}
             aria-pressed={on}
             className="slant-sm kit-focus"
-            whileTap={reduced ? undefined : { scale: 0.96 }}
+            whileTap={reduced ? undefined : { scale: 0.96 }} transition={PRESS}
             onClick={() => { uiTap(); setSpeed(v) }}
             style={{
               width: 48, height: 48, border: 'none', padding: 0, cursor: 'pointer',
@@ -108,7 +108,9 @@ function StatusBar() {
           fontFamily: 'var(--font-display)', fontSize: 40, fontWeight: 900, fontStyle: 'italic',
           color: 'var(--white)', lineHeight: 1, fontVariantNumeric: 'tabular-nums',
         }}>
-          L{raceState.lap + 1}<span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span>
+          {/* Big Shoulders has no tabular figures (tnum is a no-op): a box sized
+              to the total's digit count keeps "/58" from twitching each lap. */}
+          L<span style={{ display: 'inline-block', minWidth: `${String(raceState.totalLaps).length}ch`, textAlign: 'right' }}>{raceState.lap + 1}</span><span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span>
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>

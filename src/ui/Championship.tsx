@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import { PRESS } from '@ui/kit'
 import { useSeasonStore } from '@state/seasonStore'
 import { useCareerStore, erodeTiers } from '@state/careerStore'
 import { useSettingsStore } from '@state/settingsStore'
@@ -185,8 +186,8 @@ export function Championship() {
             style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '10px 14px', borderRadius: 8,
-              background: s.driverId === playerDriverId ? 'rgba(var(--volt-rgb), 0.08)' : i === 0 ? 'rgba(242,201,76,0.06)' : 'transparent',
-              borderLeft: s.driverId === playerDriverId ? '2px solid var(--accent)' : i === 0 ? '2px solid var(--tyre-medium)' : '2px solid transparent',
+              background: s.driverId === playerDriverId ? 'rgba(var(--volt-rgb), 0.08)' : i === 0 ? 'rgba(var(--gain-rgb), 0.06)' : 'transparent',
+              borderLeft: s.driverId === playerDriverId ? '2px solid var(--accent)' : i === 0 ? '2px solid var(--gain)' : '2px solid transparent',
               marginBottom: 4,
             }}
           >
@@ -194,7 +195,7 @@ export function Championship() {
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', width: 20 }}>
                 {i + 1}
               </span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: s.driverId === playerDriverId ? 'var(--accent)' : i === 0 ? 'var(--tyre-medium)' : 'var(--text-hi)' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: s.driverId === playerDriverId ? 'var(--accent)' : i === 0 ? 'var(--white)' : 'var(--text-hi)' }}>
                 {driverName(s.driverId).toUpperCase()}
               </span>
             </div>
@@ -232,7 +233,7 @@ export function Championship() {
           </motion.div>
         )}
         <motion.button
-          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+          whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
           onClick={() => { uiTap(); startNextSeason(); pushCloudSave() }}
           style={{
             width: '100%', border: 'none', borderRadius: 10, padding: '14px 16px',
@@ -250,7 +251,7 @@ export function Championship() {
 
         {!confirmingEnd ? (
           <motion.button
-            whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+            whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
             onClick={() => { uiTap(); setConfirmingEnd(true) }}
             style={{
               width: '100%', borderRadius: 10, padding: '12px 16px',
@@ -268,7 +269,7 @@ export function Championship() {
             style={{ display: 'flex', gap: 8 }}
           >
             <motion.button
-              whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+              whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
               onClick={() => { uiTap(); setConfirmingEnd(false) }}
               style={{
                 flex: 1, borderRadius: 10, padding: '12px 16px',
@@ -280,7 +281,7 @@ export function Championship() {
               CANCEL
             </motion.button>
             <motion.button
-              whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+              whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
               onClick={() => { uiTap(); endCareer() }}
               style={{
                 flex: 2, borderRadius: 10, padding: '12px 16px',

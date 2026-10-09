@@ -53,6 +53,13 @@ describe('race HUD in Race Day Bold', () => {
     render(<PaceModeToggle />)
     expect(screen.getByRole('radiogroup', { name: 'Pace mode' })).toBeTruthy()
   })
+  it('pace options preview both the time and the tyre-wear consequence', () => {
+    render(<PaceModeToggle />)
+    const push = screen.getByRole('radio', { name: /PUSH/ })
+    expect(push.textContent).toMatch(/wear/)
+    expect(push.textContent).toContain('−0.15s · +30% wear')
+    expect(screen.getByRole('radio', { name: /SAVE/ }).textContent).toContain('+0.20s · −25% wear')
+  })
   it('the player flash glyph is ink on the volt row', () => {
     render(<TimingTower />)
     const base = useRaceStore.getState().raceState!

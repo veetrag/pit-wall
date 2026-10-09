@@ -3,6 +3,9 @@ import { useSettingsStore } from '@state/settingsStore'
 
 export const EASE = [0.2, 0, 0, 1] as const
 
+/** Press-state tween for every whileTap: precise, no spring overshoot (CLAUDE.md 6.4). */
+export const PRESS = { duration: 0.12, ease: EASE }
+
 export function useReducedMotion(): boolean {
   return useSettingsStore(s => s.reducedMotion)
 }
