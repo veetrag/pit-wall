@@ -3,6 +3,7 @@ import { useRaceStore } from '@state/raceStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useClockStore } from '@state/clockStore'
 import { useSettingsStore } from '@state/settingsStore'
+import { useDebriefStore } from '@state/debriefStore'
 import { useScenarioStore } from '@state/scenarioStore'
 import { goalMet } from '@engine/scenario'
 import type { RaceEventSummary } from '@state/seasonStore'
@@ -66,6 +67,13 @@ export function RaceWatcher() {
         overtakesGained: raceState.overtakeEvents.filter(e => e.overtakerId === player?.driverId).length,
         pitsDone: player?.pitsDone ?? 0,
         hadRain: raceState.weatherTimeline.some(w => w !== 'DRY'),
+      }
+      const { config: raceConfig, playerCalls } = useRaceStore.getState()
+      if (raceConfig) {
+        useDebriefStore.getState().start(
+          { config: raceConfig, seed: raceConfig.seed, calls: playerCalls },
+          `${raceConfig.seed}`,
+        )
       }
       recordRaceResult(positions, events)
       setTimeout(() => resetRace(), 1500)
