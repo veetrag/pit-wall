@@ -267,7 +267,7 @@ export function RaceResult() {
       <div style={{ padding: '12px 16px 0', flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); retryRace() }}
+          onClick={() => { uiTap(); useDebriefStore.getState().cancel(); retryRace() }}
           style={{
             width: '100%', marginBottom: 10,
             background: 'transparent', color: 'var(--text-dim)',

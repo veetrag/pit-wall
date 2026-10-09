@@ -145,6 +145,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       playerInPit: stillInPit,
       radioState: nextRadio,
       ...(autoStopped && after ? {
+        pitPanelOpen: false,      // a plan stop can land while the panel is open; confirming would charge a second stop
+        projectionResult: null,
         pitEndTime: after.raceTime,
         hudAlerts: [...s.hudAlerts, { id: `alert-${++alertCounter}`, severity: 'caution' as const, category: 'RADIO', message: 'Box box -- plan stop.', icon: '📻' }],
       } : {}),

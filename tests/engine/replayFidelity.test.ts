@@ -20,15 +20,41 @@ describe('replay reproduces the live race', () => {
       useRaceStore.setState({ phase: 'racing' })
       const compounds = ['S', 'M', 'H', 'I'] as const
       const modes = ['push', 'neutral', 'conserve'] as const
+      let n = 0
       while (r().phase === 'racing') {
         const u = pick()
-        if (u < 0.01) r().pitNow(compounds[Math.floor(pick() * 4)]!)
+        if (n === 12) r().pitNow('S')                  // every seed has at least one manual pit
+        else if (u < 0.01) r().pitNow(compounds[Math.floor(pick() * 4)]!)
         else if (u < 0.03) r().setPaceMode(modes[Math.floor(pick() * 3)]!)
         r().step()
+        n++
       }
       const live = r().raceState!
       const replayed = replay(r().config!, seed, r().playerCalls).state
       expect(replayed).toEqual(live)
+      const calls = r().playerCalls
+      expect(calls.length).toBeGreaterThan(0)
+      expect(calls.some(c => c.kind === 'pit')).toBe(true)
     })
   }
+
+  it('a pit call and a pace call at the same step replay exactly', () => {
+    const seed = 555
+    const r = () => useRaceStore.getState()
+    r().resetRace()
+    r().startSeasonRace('d_voss', seed, 'bengaluru', 'rookie',
+      { startCompound: 'M', plannedStops: [{ lap: 24, compound: 'H' }] }, null, undefined, false)
+    useRaceStore.setState({ phase: 'racing' })
+    let n = 0
+    while (r().phase === 'racing') {
+      if (n === 15) { r().setPaceMode('push'); r().pitNow('H') }
+      r().step()
+      n++
+    }
+    const calls = r().playerCalls
+    const same = calls.filter(c => c.step === calls.find(x => x.kind === 'pit')!.step)
+    expect(same.some(c => c.kind === 'pace')).toBe(true)
+    expect(same.some(c => c.kind === 'pit')).toBe(true)
+    expect(replay(r().config!, seed, calls).state).toEqual(r().raceState!)
+  })
 })

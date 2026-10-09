@@ -24,7 +24,11 @@ export const inProcessRunner: DebriefRunner = {
     setTimeout(() => {
       if (cancelled) return
       try {
-        const result = judgeCalls(job.config, job.seed, job.calls, (d, t) => { if (!cancelled) on.progress(d, t) })
+        let lastPct = -1
+        const result = judgeCalls(job.config, job.seed, job.calls, (d, t) => {
+          const pct = Math.floor((d / t) * 100)
+          if (!cancelled && (pct !== lastPct || d === t)) { lastPct = pct; on.progress(d, t) }
+        })
         if (!cancelled) on.done(result)
       } catch (e) {
         if (!cancelled) on.failed(String(e))

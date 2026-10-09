@@ -12,6 +12,7 @@ export type PlayerCall =
   | { step: number; kind: 'pit'; compound: Compound }
   | { step: number; kind: 'pace'; mode: PaceMode }
 
+/** The log stores the REQUESTED compound; replay re-resolves it identically via resolveAllocatedCompound. */
 /** The PIT button. Null when no tyres of any type remain; draws nothing then. */
 export function applyPlayerPit(
   config: RaceConfig, state: RaceState, compound: Compound, rng: Rng,

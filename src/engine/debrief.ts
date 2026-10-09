@@ -165,7 +165,7 @@ export function judgeCalls(
   // resolveAllocatedCompound then fall back to the nearest available set in
   // that branch, so the option is penalised honestly, never crashes.
   const startAllocation = initRace(config).cars.find(c => c.isPlayer)!.tyreAllocation
-  const legal = (exclude: Compound, _lap: number) =>
+  const legal = (exclude: Compound) =>
     COMPOUNDS.filter(c => c !== exclude && (startAllocation[c] ?? 0) > 0)
 
   // Starting compound.
@@ -176,7 +176,7 @@ export function judgeCalls(
       branchLap: 0,
       options: [
         { alternative: null, config, calls },
-        ...legal(plan.startCompound, 0).map(c => ({
+        ...legal(plan.startCompound).map(c => ({
           alternative: { kind: 'start', compound: c } as Alternative,
           config: withPlan(config, p => ({ ...p, startCompound: c })),
           calls,
@@ -194,7 +194,7 @@ export function judgeCalls(
       .map(d => ps.lap + d)
       .filter(l => l >= 1 && l <= lastLap)
       .map(l => ({ alternative: { kind: 'plan', lap: l, compound: ps.compound } as Alternative, config: editStop(l, ps.compound), calls }))
-    const tyre = legal(ps.compound, ps.lap)
+    const tyre = legal(ps.compound)
       .map(c => ({ alternative: { kind: 'plan', lap: ps.lap, compound: c } as Alternative, config: editStop(ps.lap, c), calls }))
     groups.push({
       call: { kind: 'plan', lap: ps.lap, compound: ps.compound },
@@ -218,7 +218,7 @@ export function judgeCalls(
         calls: [...others, moved(d)],
       }))
     const extra: Option[] = call.kind === 'pit'
-      ? legal(call.compound, lap).map(c => ({
+      ? legal(call.compound).map(c => ({
           alternative: { kind: 'pit', lap: lap + 1, compound: c } as Alternative,
           config,
           calls: [...others, { ...call, compound: c }],
@@ -241,12 +241,15 @@ export function judgeCalls(
     // Shared past: the real race, on its own seed, up to the branch.
     const branchStep = Math.max(0, 3 * (g.branchLap - 2))
     const isStart = g.call.kind === 'start'
+    // Identical for every option and future in the group; engine states are
+    // immutable in practice so it is shared. Each future keeps its own rng.
+    const shared = isStart ? null : replay(config, seed, calls, branchStep)
     const outcomes = g.options.map(opt => {
       const positions: number[] = []
       for (let k = 0; k < futures; k++) {
         const past = isStart
           ? { state: initRace(opt.config), step: 0 }
-          : (() => { const r = replay(config, seed, calls, branchStep); return { state: withPlayerPlan(r.state, opt.config), step: r.step } })()
+          : { state: withPlayerPlan(shared!.state, opt.config), step: shared!.step }
         const end = simulate(opt.config, past, createRng(futureSeed(seed, branchStep, k)), opt.calls)
         positions.push(finishPosition(end.state))
         done++

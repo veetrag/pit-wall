@@ -71,6 +71,7 @@ export function RaceWatcher() {
       const { config: raceConfig, playerCalls } = useRaceStore.getState()
       if (raceConfig) {
         try {
+          // Scenario races are deliberately excluded: their mid-race takeover rng is not reproducible from (config, seed, calls).
           useDebriefStore.getState().start(
             { config: raceConfig, seed: raceConfig.seed, calls: playerCalls },
             `${raceConfig.seed}`,

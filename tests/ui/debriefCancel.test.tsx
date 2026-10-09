@@ -11,4 +11,11 @@ describe('RaceResult debrief lifecycle', () => {
     fireEvent.click(screen.getByText('MENU'))
     expect(useDebriefStore.getState().status).toBe('idle')
   })
+
+  it('RETRY cancels the running debrief', () => {
+    useDebriefStore.setState({ status: 'running', done: 1, total: 10, result: null, raceKey: 'r' })
+    render(<RaceResult />)
+    fireEvent.click(screen.getByText(/RETRY THIS ROUND/))
+    expect(useDebriefStore.getState().status).toBe('idle')
+  })
 })

@@ -17,4 +17,18 @@ describe('an automatic plan stop on the HUD', () => {
     }
     expect(sawPit).toBe(true)
   })
+
+  it('closes an open pit panel when the plan stop happens, and raises the alert', () => {
+    useRaceStore.getState().openPitPanel()
+    expect(useRaceStore.getState().pitPanelOpen).toBe(true)
+    let stopped = false
+    for (let i = 0; i < 30 && !stopped; i++) {
+      useRaceStore.getState().step()
+      stopped = useRaceStore.getState().playerInPit
+    }
+    expect(stopped).toBe(true)
+    expect(useRaceStore.getState().pitPanelOpen).toBe(false)
+    expect(useRaceStore.getState().projectionResult).toBeNull()
+    expect(useRaceStore.getState().hudAlerts.some(a => a.message.includes('plan stop'))).toBe(true)
+  })
 })
