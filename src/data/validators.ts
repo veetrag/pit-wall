@@ -276,6 +276,7 @@ const TeamFacetsSchema = z.object({
 const TeamSchema = z.object({
   id: z.string(), name: z.string(),
   colorPrimary: z.string(), colorSecondary: z.string(),
+  liveryAccent: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   facets: TeamFacetsSchema,
   archetype: z.string().optional(),
   developmentRate: z.number().optional(),

@@ -2,7 +2,7 @@
   "teams": [
     {
       "id": "apex", "name": "Apex Racing",
-      "colorPrimary": "#00E5D0", "colorSecondary": "#0A0E1A",
+      "colorPrimary": "#00E5D0", "colorSecondary": "#0A0E1A", "liveryAccent": "#FFD60A",
       "archetype": "The benchmark — strong everywhere, peerless aero",
       "facets": { "power": 92, "aero": 95, "handling": 90, "reliability": 96, "pitCrew": 90 },
       "developmentRate": 1.0, "nationality": "British", "flag": "🇬🇧",
@@ -10,7 +10,7 @@
     },
     {
       "id": "meridian", "name": "Meridian GP",
-      "colorPrimary": "#E8344E", "colorSecondary": "#FFFFFF",
+      "colorPrimary": "#E8344E", "colorSecondary": "#FFFFFF", "liveryAccent": "#FFFFFF",
       "archetype": "Close challenger — best engine on the grid",
       "facets": { "power": 98, "aero": 91, "handling": 89, "reliability": 90, "pitCrew": 88 },
       "developmentRate": 1.0, "nationality": "Italian", "flag": "🇮🇹",
@@ -18,7 +18,7 @@
     },
     {
       "id": "vortex", "name": "Vortex Motors",
-      "colorPrimary": "#F2C94C", "colorSecondary": "#0A0E1A",
+      "colorPrimary": "#F2C94C", "colorSecondary": "#0A0E1A", "liveryAccent": "#120E2B",
       "archetype": "Aero specialist — flies in S2, weak on straights",
       "facets": { "power": 87, "aero": 95, "handling": 94, "reliability": 88, "pitCrew": 85 },
       "developmentRate": 1.1, "nationality": "German", "flag": "🇩🇪",
@@ -26,7 +26,7 @@
     },
     {
       "id": "kestrel", "name": "Kestrel Sport",
-      "colorPrimary": "#9B6BFF", "colorSecondary": "#0A0E1A",
+      "colorPrimary": "#9B6BFF", "colorSecondary": "#0A0E1A", "liveryAccent": "#FFFFFF",
       "archetype": "Power team — rockets in S1, struggles in corners",
       "facets": { "power": 96, "aero": 89, "handling": 92, "reliability": 85, "pitCrew": 82 },
       "developmentRate": 1.0, "nationality": "French", "flag": "🇫🇷",
@@ -34,7 +34,7 @@
     },
     {
       "id": "solstice", "name": "Solstice Racing",
-      "colorPrimary": "#FF8A3D", "colorSecondary": "#0A0E1A",
+      "colorPrimary": "#FF8A3D", "colorSecondary": "#0A0E1A", "liveryAccent": "#120E2B",
       "archetype": "Solid midfield — fastest pit crew on the grid",
       "facets": { "power": 93, "aero": 91, "handling": 93, "reliability": 87, "pitCrew": 95 },
       "developmentRate": 1.0, "nationality": "American", "flag": "🇺🇸",
@@ -42,7 +42,7 @@
     },
     {
       "id": "delta", "name": "Delta Dynamics",
-      "colorPrimary": "#3DDC84", "colorSecondary": "#0A0E1A",
+      "colorPrimary": "#3DDC84", "colorSecondary": "#0A0E1A", "liveryAccent": "#120E2B",
       "archetype": "Balanced midfield — no weakness, no standout",
       "facets": { "power": 92, "aero": 90, "handling": 93, "reliability": 89, "pitCrew": 80 },
       "developmentRate": 1.2, "nationality": "Swiss", "flag": "🇨🇭",
@@ -50,7 +50,7 @@
     },
     {
       "id": "halcyon", "name": "Halcyon F1",
-      "colorPrimary": "#5BC8FF", "colorSecondary": "#0A0E1A",
+      "colorPrimary": "#5BC8FF", "colorSecondary": "#0A0E1A", "liveryAccent": "#FFFFFF",
       "archetype": "Great handling, fragile — mechanical grip but unreliable",
       "facets": { "power": 89, "aero": 92, "handling": 94, "reliability": 72, "pitCrew": 78 },
       "developmentRate": 1.1, "nationality": "Japanese", "flag": "🇯🇵",
@@ -58,7 +58,7 @@
     },
     {
       "id": "nimbus", "name": "Nimbus Grand Prix",
-      "colorPrimary": "#B0B6C8", "colorSecondary": "#0A0E1A",
+      "colorPrimary": "#B0B6C8", "colorSecondary": "#0A0E1A", "liveryAccent": "#FF2E63",
       "archetype": "Lower midfield — decent crew keeps them in the fight",
       "facets": { "power": 86, "aero": 84, "handling": 85, "reliability": 84, "pitCrew": 86 },
       "developmentRate": 1.0, "nationality": "Austrian", "flag": "🇦🇹",
@@ -66,7 +66,7 @@
     },
     {
       "id": "terra", "name": "Terra Motorsport",
-      "colorPrimary": "#C97B5A", "colorSecondary": "#0A0E1A",
+      "colorPrimary": "#C97B5A", "colorSecondary": "#0A0E1A", "liveryAccent": "#FFD60A",
       "archetype": "Backmarker on the rise — high development potential",
       "facets": { "power": 82, "aero": 84, "handling": 83, "reliability": 80, "pitCrew": 75 },
       "developmentRate": 1.4, "nationality": "Spanish", "flag": "🇪🇸",
@@ -74,7 +74,7 @@
     },
     {
       "id": "zenith", "name": "Zenith Racing",
-      "colorPrimary": "#7A8290", "colorSecondary": "#0A0E1A",
+      "colorPrimary": "#7A8290", "colorSecondary": "#0A0E1A", "liveryAccent": "#3DDC84",
       "archetype": "Tail of the field — slow but bulletproof reliability",
       "facets": { "power": 81, "aero": 81, "handling": 83, "reliability": 94, "pitCrew": 72 },
       "developmentRate": 1.2, "nationality": "Indian", "flag": "🇮🇳",

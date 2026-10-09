@@ -258,6 +258,7 @@ export interface TeamSpec {
   name: string
   colorPrimary: string
   colorSecondary: string
+  liveryAccent?: string // presentation only; the engine never reads it
   facets: TeamFacets
   developmentRate?: number
 }
