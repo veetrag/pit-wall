@@ -24,3 +24,5 @@ export type {
 } from './types'
 export type { ProjectionResult } from './projection'
 export type { Rng } from './rng'
+export { applyPlayerPit, applyPlayerPace, applyCall } from './playerCalls'
+export type { PlayerCall } from './playerCalls'
