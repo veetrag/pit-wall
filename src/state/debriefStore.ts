@@ -31,12 +31,17 @@ export const useDebriefStore = create<DebriefStore>((set, get) => ({
     stop()
     set({ status: 'running', done: 0, total: 0, result: null, raceKey })
     const mine = () => get().raceKey === raceKey && get().status === 'running'
-    handle = runner.start(job, {
-      progress: (done, total) => { if (mine()) set({ done, total }) },
-      done: (result) => { if (mine()) { stop(); set({ status: 'done', result }) } },
-      failed: () => { if (mine()) { stop(); set({ status: 'failed' }) } },
-    })
     timer = setTimeout(() => { if (mine()) { stop(); set({ status: 'failed' }) } }, job.config.tuning.debrief.timeoutMs)
+    try {
+      handle = runner.start(job, {
+        progress: (done, total) => { if (mine()) set({ done, total }) },
+        done: (result) => { if (mine()) { stop(); set({ status: 'done', result }) } },
+        failed: () => { if (mine()) { stop(); set({ status: 'failed' }) } },
+      })
+    } catch {
+      stop()
+      set({ status: 'failed' })
+    }
   },
 
   cancel() {

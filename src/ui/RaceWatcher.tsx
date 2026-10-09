@@ -70,10 +70,12 @@ export function RaceWatcher() {
       }
       const { config: raceConfig, playerCalls } = useRaceStore.getState()
       if (raceConfig) {
-        useDebriefStore.getState().start(
-          { config: raceConfig, seed: raceConfig.seed, calls: playerCalls },
-          `${raceConfig.seed}`,
-        )
+        try {
+          useDebriefStore.getState().start(
+            { config: raceConfig, seed: raceConfig.seed, calls: playerCalls },
+            `${raceConfig.seed}`,
+          )
+        } catch { /* the debrief must never block recording the result */ }
       }
       recordRaceResult(positions, events)
       setTimeout(() => resetRace(), 1500)

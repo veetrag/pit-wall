@@ -72,4 +72,26 @@ describe('debriefStore', () => {
     live[0]!.on.failed('boom')
     expect(useDebriefStore.getState().status).toBe('failed')
   })
+
+  it('a runner that throws fails closed without throwing', () => {
+    setDebriefRunner({ start() { throw new Error('no worker') } })
+    expect(() => useDebriefStore.getState().start(job(), 'race-a')).not.toThrow()
+    expect(useDebriefStore.getState().status).toBe('failed')
+  })
+
+  it('a finished run leaves no timer to fail the next race', () => {
+    vi.useFakeTimers()
+    const { runner, live } = manualRunner()
+    setDebriefRunner(runner)
+    useDebriefStore.getState().start(job(), 'race-a')
+    live[0]!.on.done({ futures: 8, verdicts: [], retired: null })
+    expect(useDebriefStore.getState().status).toBe('done')
+    vi.advanceTimersByTime(5000)
+    useDebriefStore.getState().start(job(), 'race-b')
+    vi.advanceTimersByTime(job().config.tuning.debrief.timeoutMs - 5000 + 1)
+    expect(useDebriefStore.getState().status).toBe('running')
+    vi.advanceTimersByTime(5000)
+    expect(useDebriefStore.getState().status).toBe('failed')
+    vi.useRealTimers()
+  })
 })
