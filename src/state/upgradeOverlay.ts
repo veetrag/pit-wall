@@ -17,6 +17,17 @@ function rivalFacets(): readonly string[] {
   return (rivalFacetsCache ??= loadGameData().upgrades.rivalDevelopment.facets)
 }
 
+// The ladder's step and facet list, memoised for the same reason as
+// rivalFacets(): the JSON is a static import and cannot change in-process.
+let tierTuningCache: { step: number; facets: readonly string[] } | null = null
+function tierTuning(): { step: number; facets: readonly string[] } {
+  if (tierTuningCache === null) {
+    const { step, facets } = loadGameData().tuning.career.teamTiers
+    tierTuningCache = { step, facets }
+  }
+  return tierTuningCache
+}
+
 // facet name -> the per-attribute ceiling declared for it in upgrades.json,
 // beneath the global FACET_MAX. Memoised for the same reason as rivalFacets().
 let facetCeilingCache: Map<string, number> | null = null
@@ -81,6 +92,8 @@ export function rivalFacetValue(
 export interface UpgradeOverlayInput {
   purchasedTiers: Record<string, number>
   rivalDevelopment?: Record<string, number>
+  /** team id -> ladder offset. Career only; absent everywhere else. */
+  teamTiers?: Record<string, number>
 }
 
 /** Any facet-bearing entity: a team from cars.json or a driver from drivers.json. */
@@ -99,6 +112,11 @@ export interface UpgradeOverlayOptions<T extends FacetEntity> {
   appliesTo: (entity: T) => boolean
   /** team id -> accumulated rival development pool. Only reaches non-`appliesTo` entities. */
   rivalDevelopment?: Record<string, number>
+  /**
+   * team id -> ladder offset. Applies to EVERY team, player included -- it is
+   * the car's base, not a purchase. Only meaningful when target is 'team'.
+   */
+  teamTiers?: Record<string, number>
 }
 
 /**
@@ -130,12 +148,26 @@ export function applyUpgrades<T extends FacetEntity>(
   entities: T[],
   opts: UpgradeOverlayOptions<T>,
 ): T[] {
-  const { attributes, purchasedTiers, target, appliesTo, rivalDevelopment } = opts
+  const { attributes, purchasedTiers, target, appliesTo, rivalDevelopment, teamTiers } = opts
   const relevant = attributes.filter(a => a.target === target)
   const spread = rivalFacets()
 
   return entities.map(entity => {
     const facets: Record<string, number> = { ...entity.facets }
+
+    // The ladder offset is the car's base for this season, so it goes on
+    // FIRST; upgrades and rival development stack on top. Clamped here as
+    // well as below, because a negative offset must not go under 0 and a
+    // positive one must not cross the correctness ceiling on its own.
+    const offset = target === 'team' ? (teamTiers?.[entity.id] ?? 0) : 0
+    if (offset !== 0) {
+      const { step, facets: tierFacets } = tierTuning()
+      for (const facet of tierFacets) {
+        const v = facets[facet]
+        if (v === undefined) continue
+        facets[facet] = Math.max(0, Math.min(facetCeiling(facet), v + offset * step))
+      }
+    }
 
     if (appliesTo(entity)) {
       for (const attr of relevant) {
