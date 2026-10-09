@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import './styles/tokens.css'
+import './styles/kit.css'
 import { AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from './state/seasonStore'
 import { startSeasonAutosave } from './state/seasonPersistence'

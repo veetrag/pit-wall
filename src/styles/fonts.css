@@ -17,52 +17,20 @@
  * failure CLAUDE.md 6.1 calls critical. It looked perfect in the dev browser
  * the whole time, because a desktop browser is allowed to make the request.
  *
- * Only the `latin` subset is vendored: the game is English-only, and the full
- * Google payload is 42 faces across 8 scripts. Inter and JetBrains Mono ship
- * as single VARIABLE files (verified via fvar), so one file covers every
- * weight -- and their real axis ranges give us genuine 700/800 weights, which
- * the old <link> never even requested and the browser was synthesising.
+ * Families are now Barlow (500-800) and Big Shoulders Display (700, 900), from
+ * @fontsource 5.3.0. Big Shoulders Display ships no italic: font-style italic
+ * is the browser's synthesized oblique, as designed.
  *
- * Licences: all three are SIL Open Font License 1.1 -- see public/fonts/OFL.txt.
+ * Only the `latin` subset is vendored: the game is English-only, and the full
+ * Google payload is 42 faces across 8 scripts. Both families are
+ * vendored as static per-weight files, so every declared weight is genuine.
+ *
+ * Licences: both families are SIL Open Font License 1.1 -- see public/fonts/OFL.txt.
  */
 
-/* Inter -- variable, wght 100-900 (fvar-verified) */
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('/fonts/inter-var.woff2') format('woff2');
-}
-
-/* JetBrains Mono -- variable, wght 400-800 (fvar-verified). */
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400 800;
-  font-display: swap;
-  src: url('/fonts/jetbrains-mono-var.woff2') format('woff2');
-}
-
-/* Rajdhani -- static faces; upstream tops out at 700. */
-@font-face {
-  font-family: 'Rajdhani';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/rajdhani-500.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Rajdhani';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/rajdhani-600.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Rajdhani';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/rajdhani-700.woff2') format('woff2');
-}
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/barlow-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/barlow-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/barlow-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Barlow'; font-style: normal; font-weight: 800; font-display: swap; src: url('/fonts/barlow-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Big Shoulders Display'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/big-shoulders-display-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Big Shoulders Display'; font-style: normal; font-weight: 900; font-display: swap; src: url('/fonts/big-shoulders-display-latin-900-normal.woff2') format('woff2'); }

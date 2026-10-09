@@ -103,7 +103,7 @@ export function ConstructorsList({ standings, playerTeamId }: {
           <li key={r.teamId} aria-current={me ? 'true' : undefined} style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             padding: '10px 14px', borderRadius: 8, marginBottom: 4,
-            background: me ? 'rgba(0,229,208,0.08)' : 'transparent',
+            background: me ? 'rgba(var(--volt-rgb), 0.08)' : 'transparent',
             borderLeft: me ? '2px solid var(--accent)' : '2px solid transparent',
           }}>
             <span style={{ display: 'flex', gap: 12, alignItems: 'center' }}>

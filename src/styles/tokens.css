@@ -1,31 +1,42 @@
 @import './fonts.css';
 
 :root {
-  --bg-deep:      #0A0E1A;
-  --bg-panel:     #121829;
-  --bg-elevated:  #1B2238;
-  --line-hair:    #2A3350;
-  --text-hi:      #F2F5FF;
-  --text-mid:     #9AA7C7;
-  /* #5C6788 measured 2.81-3.44:1 against our panels -- below WCAG AA's 4.5:1
-     for the 9-12px text this token is used at almost everywhere. Same hue
-     and saturation, lightened to clear AA against the lightest surface it
-     sits on (--bg-elevated, 4.53:1) while staying visibly dimmer than
-     --text-mid (1.45:1 apart) so the hi/mid/dim hierarchy still reads. */
-  --text-dim:     #7E89A8;
+  /* Race Day Bold (spec 2026-10-09-race-day-bold-redesign-design.md 3.1) */
+  --ink:        #120E2B;
+  --night:      #1B1542;
+  --grape:      #2A2160;
+  --dusk:       #3A2F7A;
+  --lilac:      #CFC8F2;
+  --lilac-dim:  #A99FDB;
+  --white:      #FFFFFF;
+  --volt-rgb:   255, 214, 10;
+  --volt:       rgb(var(--volt-rgb));
+  /* Spec #FF2E63 measured 3.92:1 on --grape; lightened to #FF4F84 (4.5:1 floor). */
+  --hot-rgb:    255, 79, 132;
+  --hot:        rgb(var(--hot-rgb));
+  --gain-rgb:   61, 220, 132; /* same channels as --positive-rgb */
+  --gain:       rgb(var(--gain-rgb));
+
+  /* Legacy names, re-pointed so every existing screen re-skins at once. */
+  --bg-deep:      #120E2B;
+  --bg-panel:     #2A2160;
+  --bg-elevated:  #3A2F7A;
+  --line-hair:    #3A2F7A;
+  --text-hi:      #FFFFFF;
+  --text-mid:     #CFC8F2;
+  --text-dim:     #A99FDB;
   /* Channels first, colour derived -- same shape as --caution-rgb below, and
      for the same reason: a translucent wash of this token needs something to
      reference, and color-mix() is unavailable at minSdkVersion 30. */
-  --accent-rgb:   0, 229, 208;
+  --accent-rgb:   255, 214, 10;
   --accent:       rgb(var(--accent-rgb));
-  --accent-warm:  #FF4D5E;
-  /* Race control caution. Deliberately NOT --tyre-medium (#F2C94C): that is a
+  --accent-warm:  #FF2E63;
+  /* Race control caution. Deliberately NOT --tyre-medium (#FFD60A): that is a
      compound colour, and reusing it would tie race-control state to tyre
      semantics in violation of CLAUDE.md 6.3. Shifted orange of the compound
      yellow so the two are distinguishable side by side in the timing tower,
      where a medium-shod car may sit on a caution-flashed row.
-     Measured: 9.66:1 against --bg-panel, 8.62:1 against --bg-elevated, and
-     10.53:1 for --bg-deep text drawn on a --caution fill. All clear AA. */
+     Contrast is pinned by tests/ui/tokenContrast.test.ts. */
   /* Declared as CHANNELS with the colour derived, so a translucent wash of it
      has something to reference. rgba(var(--caution-rgb), a) works everywhere
      rgba() does (CSS variable substitution, Chrome 49+); color-mix() would be
@@ -35,21 +46,21 @@
   --caution-rgb:  255, 176, 32;
   --caution:      rgb(var(--caution-rgb));
   --accent-violet: #9B8CFF;
-  --tyre-soft:    #E8344E;
-  --tyre-medium:  #F2C94C;
-  --tyre-hard:    #EAEAEA;
+  --tyre-soft:    #FF2E63;
+  --tyre-medium:  #FFD60A;
+  --tyre-hard:    #FFFFFF;
   /* Wet-weather compounds. data/compounds.json points I and W at these
      tokens; matched to TimingTower's COMPOUND_COLORS so a compound reads the
      same colour on the timing tower and on the scenario picker. */
-  --tyre-inter:   #39B54A;
+  --tyre-inter:   #3DDC84;
   --tyre-wet:     #4DA6FF;
   --positive-rgb: 61, 220, 132;
   --positive:     rgb(var(--positive-rgb));
-  --negative:     #FF6B6B;
+  --negative:     #FF2E63;
 
-  --font-display: 'Rajdhani', sans-serif;
-  --font-mono:    'JetBrains Mono', monospace;
-  --font-body:    'Inter', sans-serif;
+  --font-display: 'Big Shoulders Display', sans-serif;
+  --font-body:    'Barlow', sans-serif;
+  --font-mono:    'Barlow', sans-serif;
 
   --safe-top:    env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -67,6 +78,7 @@ body {
   color: var(--text-hi);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
 }
 
 .mono {

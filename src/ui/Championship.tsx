@@ -139,7 +139,7 @@ export function Championship() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             style={{
-              background: 'rgba(0,229,208,0.06)', borderRadius: 10,
+              background: 'rgba(var(--volt-rgb), 0.06)', borderRadius: 10,
               border: '1px solid var(--accent)',
               padding: '14px 18px', marginBottom: 16,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -185,7 +185,7 @@ export function Championship() {
             style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '10px 14px', borderRadius: 8,
-              background: s.driverId === playerDriverId ? 'rgba(0,229,208,0.08)' : i === 0 ? 'rgba(242,201,76,0.06)' : 'transparent',
+              background: s.driverId === playerDriverId ? 'rgba(var(--volt-rgb), 0.08)' : i === 0 ? 'rgba(242,201,76,0.06)' : 'transparent',
               borderLeft: s.driverId === playerDriverId ? '2px solid var(--accent)' : i === 0 ? '2px solid var(--tyre-medium)' : '2px solid transparent',
               marginBottom: 4,
             }}
