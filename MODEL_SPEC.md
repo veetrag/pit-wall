@@ -839,3 +839,103 @@ fixed seeds. Two traps:
 - **Report standard errors, never bare means.** Win share from 400 races has an SE of about
   2.5pp, so 400 races cannot distinguish 45% from 50%. Finishing-position SD is 2.8–4.8 depending
   on team, which is 3–4× larger than one might assume.
+
+## 13. Car setup (rear wing) — measured 2026-10-09
+
+Spec: `docs/superpowers/specs/2026-10-09-car-setup-design.md` (§2 model, §5 targets). Reproduce with
+`npx tsx scripts/calibrate-setup.ts`. The analytic targets and the Monte-Carlo bands are pinned in
+`tests/engine/setupBalance.test.ts`; the race-level place deltas below are recorded here only.
+
+**Final `tuning.setup`:** `speedGain 5.8`, `gripGain 2.8`, `balanceCost 0.78`, `overtakeGain 0.3`,
+`wetGain 0.15`, `wetSeverity {DAMP 0.5, WET 1.0}`, `aiNoise 0.25`, `seedOffset 104729`.
+(`seedOffset` moved from 7919, which equals the Monte-Carlo harness's per-race seed stride, so race
+r's wing stream was race r+1's main stream.)
+
+**Per circuit** (dry optimum `d* = (gripGain·(w₁+w₂) − speedGain·w₀) / (2·balanceCost)`; step-off =
+the smaller loss of the two neighbouring levels, dry; worst = the furthest level, dry):
+
+| circuit | rain | best (rain-weighted) | best (dry) | d* | step-off s/lap | worst level | worst s/lap |
+|---|---|---|---|---|---|---|---|
+| bengaluru | 0.25 | 3 | 3 | +0.036 | 0.167 | 1 | 0.836 |
+| monsoon_bay | 0.75 | 3 | 3 | +0.067 | 0.143 | 1 | 0.884 |
+| veloce | 0.20 | 1 | 1 | −1.072 | 0.251 | 5 | 3.344 |
+| harbour_lights | 0.30 | 3 | 3 | +0.022 | 0.178 | 1 | 0.814 |
+| sol_desert | 0.05 | 3 | 3 | −0.081 | 0.132 | 5 | 0.906 |
+| highland | 0.40 | 2 | 2 | −0.374 | 0.097 | 5 | 1.461 |
+| grand_savane | 0.20 | 3 | 3 | −0.045 | 0.160 | 5 | 0.850 |
+| aurora | 0.45 | 3 | 3 | +0.029 | 0.172 | 1 | 0.826 |
+| silverpark | 0.45 | 3 | 3 | −0.079 | 0.133 | 5 | 0.904 |
+| costa_verde | 0.30 | 3 | 3 | +0.141 | **0.085** | 1 | 1.000 |
+| kaido | 0.35 | 4 | 4 | +0.362 | **0.087** | 1 | 1.431 |
+| altiplano | 0.15 | 4 | 4 | +0.472 | 0.173 | 1 | 1.689 |
+
+Levels covered: **1, 2, 3, 4 (4 of 5)** — target ≥ 4, met. Step-off **0.085–0.251 s/lap** — target
+0.08–0.30, met. Level 5 is never best: no circuit's carSensitivity puts d* above +0.5.
+
+**Why the step-off floor is tight, structurally.** With a quadratic, a circuit whose d* sits δ from
+the nearest level (0 ≤ δ ≤ 0.25) loses `balanceCost·(0.25 − δ)` one step off on the nearer side, so
+a circuit whose optimum falls near a midpoint between levels always fails the 0.08 floor. Scaling
+all three gains together moves no optimum, so the floor can only be met by placing all 12 d* values
+near a level at once. A grid search over speedGain 2–9, gripGain 1–6, balanceCost 0.32–1.2 (with
+coverage ≥ 4 for some wetGain) found that every passing set clears 0.08 by at most ~0.015 while the
+mean worst-level loss stays under 1.4 s/lap; margins above 0.12 need a mean worst-level loss near
+2.8 s/lap. The chosen set has the smallest worst-level loss among those clearing 0.08 by ≥ 0.005.
+costa_verde and kaido are the binding pair (d* +0.141 and +0.362 straddle the 2–4 midpoint
+symmetrically). Editing carSensitivity on either circuit will likely break the step-off test; that
+is the test working, not noise.
+
+**Why wetGain dropped 0.36 → 0.15.** It is what the rain-weighted coverage needs: highland (rain
+0.40) stays on level 2 only while wetGain ≤ 0.21. Above that it rounds to 3 and coverage falls to
+{1, 3, 4}. A second window opens at wetGain ≥ 0.64, where monsoon_bay rounds to 5, but that makes
+level 5 vs 3 in the WET worth 1.9 s/lap, so it was not taken. Consequence: rain is a mild pull
+towards more wing (level 1 vs 3 in the WET costs 0.45 s/lap), not a dominant one.
+
+**Best vs worst over a dry race** (d_rossi, pro, M→H stop at 45% of laps, rivals on `aiSetups`,
+no player calls, n=100 seeds paired by seed, retired = 21):
+
+| circuit | best/worst level | mean pos best | mean pos worst | places | SE |
+|---|---|---|---|---|---|
+| bengaluru | 3 / 1 | 12.72 | 13.89 | 1.17 | 0.82 |
+| monsoon_bay | 3 / 1 | 18.26 | 17.84 | −0.42 | 0.33 |
+| veloce | 1 / 5 | 3.09 | 18.33 | 15.24 | 0.59 |
+| harbour_lights | 3 / 1 | 14.71 | 15.72 | 1.01 | 0.77 |
+| sol_desert | 3 / 5 | 3.97 | 9.85 | 5.88 | 0.83 |
+| highland | 2 / 5 | 9.77 | 13.23 | 3.46 | 0.91 |
+| grand_savane | 3 / 5 | 2.85 | 9.57 | 6.72 | 0.78 |
+| aurora | 3 / 1 | 10.40 | 12.44 | 2.04 | 0.90 |
+| silverpark | 3 / 5 | 10.37 | 11.19 | 0.82 | 0.70 |
+| costa_verde | 3 / 1 | 3.30 | 9.63 | 6.33 | 0.81 |
+| kaido | 4 / 1 | 9.98 | 13.54 | 3.56 | 0.76 |
+| altiplano | 4 / 1 | 4.10 | 15.04 | 10.94 | 0.73 |
+
+**Mean 4.73 places, median 3.51** against the ~1.5–4 target: **the median meets it, the mean
+does not.** The mean is carried by the two circuits whose optimum is at an end of the scale (veloce
+level 1, worst 5; altiplano level 4, worst 1): the worst level there is three or four steps off and
+costs 1.7–3.3 s/lap. That is inherent to a quadratic with an extreme optimum and cannot be pulled in
+without pulling the step-off losses below 0.08. The Task 1 starting values (4.0/2.0/0.6, wetGain
+0.36) measured mean 3.97 / median 2.39 but failed both analytic targets (3 levels covered, step-off
+floor 0.030 at highland). Two caveats on the measurement: monsoon_bay and harbour_lights saturate,
+because this fixed plan with no player calls finishes P15–P19 there whatever the wing (high
+retirement count, and the player car stays in `neutral` all race — see §12), so those two rows
+understate the effect.
+
+**Monte-Carlo with AI setups on vs off** (4-circuit `SAMPLE`, pro, seed base 1000, every car on
+`aiSetups`):
+
+| metric | band | off n=240 | on n=240 | off n=120 | on n=120 |
+|---|---|---|---|---|---|
+| topTeamShare | (0.35, 0.55] | 0.450 | 0.4125 | 0.500 | 0.442 |
+| meanAbsPosChange | (2.5, 4.0) | 3.639 | 3.669 | 3.626 | 3.689 |
+| gridFinishSpearman | (0.60, 0.80) | 0.631 | 0.624 | 0.632 | 0.622 |
+| paceRankCorrelation | ≥ 0.90 | 0.964 | 0.939 | 0.952 | 0.927 |
+| distinctWinners | ≥ 4 | 8 | 8 | 8 | 7 |
+| mechanicalDnfPerCarRace | [0.06, 0.10] | 0.0727 | 0.0698 | 0.075 | 0.070 |
+| crashesPerCarRace | [0.05, 0.09] | 0.0623 | 0.0585 | 0.0658 | 0.0563 |
+| safetyCarsPerRace | [0.40, 0.90] | 0.550 | 0.542 | 0.500 | 0.508 |
+| meanOvertakeEvents (unbanded) | — | 33.2 | 36.7 | 33.0 | 37.2 |
+
+Every band holds with setups on. The tightest margins are gridFinishSpearman (0.024 above its
+0.60 floor) and paceRankCorrelation (0.039 above 0.90). Setups cost both a little because the
+±1 `aiNoise` level gives a quarter of the rivals a random pace offset of one step-off loss (table
+above) or more. Overtakes rise
+~10% because unequal wings now change the pass probability on the straights.

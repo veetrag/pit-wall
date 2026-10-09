@@ -99,15 +99,15 @@
     "timeoutMs": 20000
   },
   "setup": {
-    "_note": "Wing level 1-5 per car; d=(w-3)/2. See docs/superpowers/specs/2026-10-09-car-setup-design.md section 2. Values measured in MODEL_SPEC.md (car setup).",
-    "speedGain": 4.0,
-    "gripGain": 2.0,
-    "balanceCost": 0.6,
+    "_note": "Wing level 1-5 per car; d=(w-3)/2. See docs/superpowers/specs/2026-10-09-car-setup-design.md section 2. Values measured against spec section 5 in MODEL_SPEC.md section 13 (scripts/calibrate-setup.ts).",
+    "speedGain": 5.8,
+    "gripGain": 2.8,
+    "balanceCost": 0.78,
     "overtakeGain": 0.3,
-    "wetGain": 0.36,
+    "wetGain": 0.15,
     "wetSeverity": { "DAMP": 0.5, "WET": 1.0 },
     "aiNoise": 0.25,
-    "seedOffset": 7919
+    "seedOffset": 104729
   },
   "projection": { "horizonLaps": 4, "useOvertakeRolls": false, "netEstimateHorizonLaps": 12 },
   "incidents": {
