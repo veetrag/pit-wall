@@ -272,3 +272,43 @@ Checked against the repo and the Play Console on 2026-09-24.
   record (a rival reached 65 points in a one-race season). Logged as a
   separate task. The championship header reads "SEASON 2025" in every
   season.
+
+## 2026-10-09: module Web Workers on device
+
+Spike for the post-race debrief: a Vite module worker
+(`new Worker(new URL(..., import.meta.url), { type: 'module' })`) loaded and
+replied inside the Capacitor WebView on the Pixel 10 Pro XL
+(PITWALL_WORKER_OK). Spike code removed.
+
+## 2026-10-09: post-race debrief
+
+- Spec `docs/superpowers/specs/2026-10-09-post-race-debrief-design.md`, plan
+  `docs/superpowers/plans/2026-10-09-post-race-debrief.md`.
+- The pre-race plan now executes (it never did); all stops share one
+  stop-time model including pit crew.
+- Device pass (Pixel 10 Pro XL, 3 races at 4x; Veloce GP, plan "M -> H on lap 15"):
+  - Plan executes: with no PIT tap, the lap counter read L16 with a
+    "PIT STOP 20.4s" bar running, the tyre gauge showing H at 0% worn and
+    the pit-window tile reading "No stop"; the finished race listed
+    "1 pit stop". The "Box box -- plan stop." radio line was NOT caught
+    (4x, screenshots 4s apart; the radio showed other messages).
+  - Debrief timing: NOT measured and "reviewing..." with its percentage was
+    NOT seen. The card was already finished every time I looked (first
+    look about 2s after the flag in race 1; in race 3 a uiautomator poll
+    saw the result screen and the card was complete in the screenshot
+    taken right after, under about 2s). So the debrief takes well under
+    2 seconds on this phone, and the progress state could not be caught.
+  - Finished card, as shown: "YOUR CALLS  2 judged - 8 futures". Race 1:
+    "check PLAN - START ON MEDIUM  GOOD CALL" and "check PLAN - PIT L15 ->
+    HARD  GOOD CALL". Race 3: "triangle PLAN - PIT L15 -> HARD  you avg
+    P3.4 / Better: L15 -> SOFT  avg P1.0 - 8/8" and "check PLAN - START ON
+    MEDIUM  GOOD CALL". Layout was clean, nothing overlapping.
+  - Expand: tapping the PIT L15 row in race 1 expanded it to "P1 P1 P1 P1
+    P1 P1 P1 P1" (the 8 futures). The triangle row was not expanded.
+  - RETRY: tapped on the finished result; a new race started at lap 1 and
+    its result card showed its own fresh verdicts (different from the first
+    attempt's). RETRY while the card still said "reviewing..." was NOT
+    checked because the card finishes too fast to catch.
+  - Scroll stutter during the worker run: NOT checkable for the same
+    reason; scrolling the finished result screen looked smooth.
+  - NEXT RACE during "reviewing...": not checked. Left on a result screen.

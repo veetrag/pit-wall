@@ -1,10 +1,11 @@
 import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound, IncidentEvent } from './types'
 import type { Rng } from './rng'
-import { createRng, gaussianPair } from './rng'
+import { createRng } from './rng'
+import { pitStopTime } from './pitStop'
 import { computeSectorTime } from './lapModel'
 import { openingTimeline } from './weather'
 import { aiDecision } from './strategy'
-import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, effectiveTyreAge, tyreCliffFraction } from './tyres'
+import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, resolveAllocatedCompound, effectiveTyreAge, tyreCliffFraction } from './tyres'
 import {
   rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
@@ -365,17 +366,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         const decision = aiDecision(config, updated, stateForAI, rng)
         updated.paceMode = decision.paceMode
         if (decision.pit) {
-          const [stopNoise] = gaussianPair(rng)
-          const team = config.teams.find(t => t.id === car.teamId)!
-          const crewFactor = team.facets.pitCrew / 100
-          const effectiveStopMean = config.tuning.pit.stopMean - crewFactor * config.tuning.pit.pitCrewMeanRelief
-          const effectiveStopSigma = config.tuning.pit.stopSigma * (1 - crewFactor * config.tuning.pit.pitCrewSigmaRelief)
-          // Under yellow this is laneTimeLossUnderSc, not the circuit value.
-          // Routed through effectivePitLaneLoss so this and projection.ts can
-          // never disagree -- see that function's note.
-          const stopTime = effectivePitLaneLoss(config.circuit, safetyCar, config.tuning) +
-            effectiveStopMean +
-            stopNoise * effectiveStopSigma
+          const stopTime = pitStopTime(config, car.teamId, safetyCar, rng)
           updated = {
             ...updated,
             raceTime: updated.raceTime + stopTime,
@@ -384,6 +375,30 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
             pitsDone: updated.pitsDone + 1,
             tyreAllocation: consumeTyreSet(updated.tyreAllocation, decision.compound),
             compoundsUsed: [...updated.compoundsUsed, decision.compound],
+          }
+        }
+      } else if (config.playerStrategyOverride) {
+        // The player's own plan, executed exactly as the race setup screen
+        // promises. Indexed
+        // by pitsDone like the AI's plannedStops, so a manual stop taken
+        // earlier consumes the next planned one instead of adding a second.
+        // Only when the player CHOSE a plan: without an override the car
+        // carries its team's default strategy, which the engine has never
+        // executed for the player -- and the regression oracles rely on that.
+        const nextStop = updated.strategy.plannedStops[updated.pitsDone]
+        if (nextStop && updated.lap >= nextStop.lap) {
+          const compound = resolveAllocatedCompound(nextStop.compound, updated.tyreAllocation)
+          if (compound) {
+            const stopTime = pitStopTime(config, car.teamId, safetyCar, rng)
+            updated = {
+              ...updated,
+              raceTime: updated.raceTime + stopTime,
+              compound,
+              tyreAge: 0,
+              pitsDone: updated.pitsDone + 1,
+              tyreAllocation: consumeTyreSet(updated.tyreAllocation, compound),
+              compoundsUsed: [...updated.compoundsUsed, compound],
+            }
           }
         }
       }

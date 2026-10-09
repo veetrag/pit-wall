@@ -3,6 +3,8 @@ import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore, TOTAL_RACES, raceHeadline, addResultsToStandings } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
 import { BadgeToast } from './BadgeToast'
+import { DebriefCard } from './DebriefCard'
+import { useDebriefStore } from '@state/debriefStore'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 
@@ -227,6 +229,8 @@ export function RaceResult() {
           </div>
         </div>
 
+        <div style={{ marginBottom: 16 }}><DebriefCard /></div>
+
         {/* Championship preview */}
         {standings.length > 0 && (
           <div>
@@ -263,7 +267,7 @@ export function RaceResult() {
       <div style={{ padding: '12px 16px 0', flexShrink: 0 }}>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); retryRace() }}
+          onClick={() => { uiTap(); useDebriefStore.getState().cancel(); retryRace() }}
           style={{
             width: '100%', marginBottom: 10,
             background: 'transparent', color: 'var(--text-dim)',
@@ -283,7 +287,7 @@ export function RaceResult() {
             just dead-ended here. */}
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); nextRace() }}
+          onClick={() => { uiTap(); useDebriefStore.getState().cancel(); nextRace() }}
           style={{
             flex: 1, background: 'var(--accent)',
             color: 'var(--bg-deep)',
@@ -297,7 +301,7 @@ export function RaceResult() {
         </motion.button>
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); backToMenu() }}
+          onClick={() => { uiTap(); useDebriefStore.getState().cancel(); backToMenu() }}
           style={{
             flex: 0, minWidth: 90,
             background: 'transparent', color: 'var(--text-mid)',

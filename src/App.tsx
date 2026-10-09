@@ -28,6 +28,9 @@ import { ScenarioResult } from './ui/ScenarioResult'
 import { useAndroidBackButton } from './hooks/useAndroidBackButton'
 import { useAppVisibility } from './hooks/useAppVisibility'
 import { AppErrorBoundary } from './ui/AppErrorBoundary'
+import { setDebriefRunner } from './state/debriefStore'
+import { workerRunner } from './state/debriefWorkerRunner'
+setDebriefRunner(workerRunner)
 
 export default function App() {
   const phase = useSeasonStore(s => s.phase)

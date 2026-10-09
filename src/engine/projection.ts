@@ -1,7 +1,7 @@
 import type { RaceConfig, RaceState, Compound } from './types'
 import { createRng } from './rng'
 import { stepSector } from './race'
-import { effectivePitLaneLoss } from './incidents'
+import { pitStopTime } from './pitStop'
 
 export interface ProjectionResult {
   rejoinPosition: number
@@ -31,9 +31,8 @@ export function projectPitNow(
   // Reads the safety car off the state being projected, which is the whole
   // reason safetyCar lives on RaceState (spec 5.3): the "if you pit now"
   // overlay prices a stop under yellow correctly with no extra plumbing.
-  const stopTime = effectivePitLaneLoss(config.circuit, state.safetyCar, config.tuning) +
-    config.tuning.pit.stopMean +
-    (rngForStop() - 0.5) * 2 * config.tuning.pit.stopSigma
+  const playerTeamId = state.cars.find(c => c.driverId === playerDriverId)!.teamId
+  const stopTime = pitStopTime(config, playerTeamId, state.safetyCar, rngForStop)
 
   projState = {
     ...projState,

@@ -91,6 +91,13 @@
     "minCliffFracToCover": 0.45,
     "minRemainingLaps": 6
   },
+  "debrief": {
+    "futures": 8,
+    "lapOffsets": [-3, -2, -1, 1, 2, 3],
+    "minGain": 1.0,
+    "minShare": 0.67,
+    "timeoutMs": 20000
+  },
   "projection": { "horizonLaps": 4, "useOvertakeRolls": false, "netEstimateHorizonLaps": 12 },
   "incidents": {
     "dnfPerLap": 0.0,

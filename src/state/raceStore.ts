@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import {
-  initRace, stepSector, projectPitNow, resolveAllocatedCompound, consumeTyreSet,
-  effectivePitLaneLoss,
+  initRace, stepSector, projectPitNow, effectivePitLaneLoss,
+  applyPlayerPit, applyPlayerPace, type PlayerCall,
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
@@ -22,6 +22,8 @@ interface RaceStore {
   projectionResult: ProjectionResult | null
   pitPanelOpen: boolean
   playerInPit: boolean
+  playerCalls: PlayerCall[]
+  stepCount: number
   pitEndTime: number
   rng: Rng | null
   hudAlerts: AlertMessage[]
@@ -61,6 +63,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   projectionResult: null,
   pitPanelOpen: false,
   playerInPit: false,
+  playerCalls: [],
+  stepCount: 0,
   pitEndTime: 0,
   rng: null,
   hudAlerts: [],
@@ -71,14 +75,14 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
+    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0 })
   },
 
   startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart) {
     const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart)
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0 })
   },
 
   /**
@@ -93,7 +97,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   startScenarioRace(spec) {
     const config = buildScenarioConfig(spec)
     const { state, rng } = startScenario(config, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0, hudAlerts: [], radioState: makeRadioState() })
+    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, hudAlerts: [], radioState: makeRadioState() })
   },
 
   initForStartSequence() {
@@ -101,7 +105,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0 })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0 })
   },
 
   confirmRaceStart() {
@@ -109,7 +113,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   resetRace() {
-    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, pitEndTime: 0, hudAlerts: [], radioState: makeRadioState() })
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, hudAlerts: [], radioState: makeRadioState() })
   },
 
   step() {
@@ -119,28 +123,42 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const nextState = stepSector(config, raceState, rng)
     const finished = nextState.lap >= nextState.totalLaps && nextState.sector === 0
 
-    const playerNow = nextState.cars.find(c => c.isPlayer)?.raceTime ?? 0
+    const before = raceState.cars.find(c => c.isPlayer)
+    const after = nextState.cars.find(c => c.isPlayer)
+    const autoStopped = !!before && !!after && after.pitsDone > before.pitsDone
+
+    const playerNow = after?.raceTime ?? 0
     // Same effective loss the stop itself was charged, so a stop taken under
     // yellow is not held "in the pit lane" for the full green-flag duration.
-    const stillInPit = playerInPit &&
-      playerNow < pitEndTime + effectivePitLaneLoss(config.circuit, nextState.safetyCar, config.tuning)
+    const stillInPit = autoStopped || (playerInPit &&
+      playerNow < pitEndTime + effectivePitLaneLoss(config.circuit, nextState.safetyCar, config.tuning))
 
     const nextRadio = processRadioTick(nextState, config, radioState, (msg, severity) => {
       const id = `alert-${++alertCounter}`
       set(s => ({ hudAlerts: [...s.hudAlerts, { id, severity, category: 'RADIO', message: msg, icon: '📻' }] }))
     })
 
-    set({ raceState: nextState, phase: finished ? 'finished' : 'racing', playerInPit: stillInPit, radioState: nextRadio })
+    set(s => ({
+      raceState: nextState,
+      stepCount: s.stepCount + 1,
+      phase: finished ? 'finished' : 'racing',
+      playerInPit: stillInPit,
+      radioState: nextRadio,
+      ...(autoStopped && after ? {
+        pitPanelOpen: false,      // a plan stop can land while the panel is open; confirming would charge a second stop
+        projectionResult: null,
+        pitEndTime: after.raceTime,
+        hudAlerts: [...s.hudAlerts, { id: `alert-${++alertCounter}`, severity: 'caution' as const, category: 'RADIO', message: 'Box box -- plan stop.', icon: '📻' }],
+      } : {}),
+    }))
   },
 
   pitNow(compound: Compound) {
-    const { config, raceState, rng } = get()
+    const { config, raceState, rng, stepCount } = get()
     if (!config || !raceState || !rng) return
-    const player = raceState.cars.find(c => c.isPlayer)
-    if (!player) return
 
-    const resolved = resolveAllocatedCompound(compound, player.tyreAllocation)
-    if (!resolved) {
+    const next = applyPlayerPit(config, raceState, compound, rng)
+    if (!next) {
       const id = `alert-${++alertCounter}`
       set(s => ({
         pitPanelOpen: false,
@@ -149,26 +167,11 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       return
     }
 
-    const { stopMean, stopSigma } = config.tuning.pit
-    const stopTime = effectivePitLaneLoss(config.circuit, raceState.safetyCar, config.tuning) +
-      stopMean + (rng() - 0.5) * 2 * stopSigma
-
-    const updatedCars = raceState.cars.map(car => {
-      if (!car.isPlayer) return car
-      return {
-        ...car,
-        raceTime: car.raceTime + stopTime,
-        compound: resolved,
-        tyreAge: 0,
-        pitsDone: car.pitsDone + 1,
-        tyreAllocation: consumeTyreSet(car.tyreAllocation, resolved),
-        compoundsUsed: [...car.compoundsUsed, resolved],
-      }
-    })
-    const playerTime = updatedCars.find(c => c.isPlayer)?.raceTime ?? 0
+    const playerTime = next.cars.find(c => c.isPlayer)?.raceTime ?? 0
     const id = `alert-${++alertCounter}`
     set(s => ({
-      raceState: { ...raceState, cars: updatedCars },
+      raceState: next,
+      playerCalls: [...s.playerCalls, { step: stepCount, kind: 'pit' as const, compound }],
       pitPanelOpen: false,
       playerInPit: true,
       pitEndTime: playerTime,
@@ -177,10 +180,12 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   setPaceMode(mode: PaceMode) {
-    const { raceState } = get()
+    const { raceState, stepCount } = get()
     if (!raceState) return
-    const updatedCars = raceState.cars.map(car => car.isPlayer ? { ...car, paceMode: mode } : car)
-    set({ raceState: { ...raceState, cars: updatedCars } })
+    set(s => ({
+      raceState: applyPlayerPace(raceState, mode),
+      playerCalls: [...s.playerCalls, { step: stepCount, kind: 'pace' as const, mode }],
+    }))
   },
 
   openPitPanel() { set({ pitPanelOpen: true }) },
