@@ -272,3 +272,10 @@ Checked against the repo and the Play Console on 2026-09-24.
   record (a rival reached 65 points in a one-race season). Logged as a
   separate task. The championship header reads "SEASON 2025" in every
   season.
+
+## 2026-10-09: module Web Workers on device
+
+Spike for the post-race debrief: a Vite module worker
+(`new Worker(new URL(..., import.meta.url), { type: 'module' })`) loaded and
+replied inside the Capacitor WebView on the Pixel 10 Pro XL
+(PITWALL_WORKER_OK). Spike code removed.
