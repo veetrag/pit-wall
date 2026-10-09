@@ -36,7 +36,7 @@ export function PitTimer() {
         exit={{ opacity: 0 }}
         style={{
           position: 'absolute', top: 8, left: 8, right: 8,
-          background: 'var(--bg-elevated)', borderRadius: 8,
+          background: 'var(--night)', borderRadius: 8,
           border: '1px solid var(--accent-warm)',
           padding: '10px 14px', zIndex: 10,
           display: 'flex', flexDirection: 'column', gap: 6,

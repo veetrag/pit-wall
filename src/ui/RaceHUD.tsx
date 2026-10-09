@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useClockStore, type GameSpeed } from '@state/clockStore'
@@ -12,7 +12,7 @@ import { StartScreen } from './StartScreen'
 import { TimingTower } from './TimingTower'
 import { PaceModeToggle } from './PaceModeToggle'
 import { PitPanel, PitButton } from './PitPanel'
-import { WeatherStrip } from './WeatherStrip'
+import { WeatherStrip, WeatherChip } from './WeatherStrip'
 import { HudAlert } from './HudAlert'
 import { CommentaryTicker } from './CommentaryTicker'
 import { TelemetryZone } from './TelemetryZone'
@@ -21,6 +21,8 @@ import { StartLights } from './StartLights'
 import { SettingsPanel } from './SettingsPanel'
 import { PitTimer } from './PitTimer'
 import { Component, type ReactNode } from 'react'
+import { useUiTap } from '@hooks/useUiTap'
+import { useReducedMotion, PRESS } from '@ui/kit'
 
 class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
   constructor(props: { children: ReactNode }) { super(props); this.state = { error: null } }
@@ -40,35 +42,43 @@ function SpeedControl() {
   const speed = useClockStore(s => s.speed)
   const setSpeed = useClockStore(s => s.setSpeed)
   const phase = useRaceStore(s => s.phase)
+  const uiTap = useUiTap()
+  const reduced = useReducedMotion()
 
   if (phase !== 'racing') return null
 
-  const options: { v: GameSpeed; label: string }[] = [
-    { v: 0, label: '⏸' },
+  const options: { v: GameSpeed; label: string; aria?: string }[] = [
+    { v: 0, label: 'II', aria: 'Pause' },
     { v: 1, label: '1×' },
     { v: 2, label: '2×' },
     { v: 4, label: '4×' },
   ]
 
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
-      {options.map(({ v, label }) => (
-        <motion.button
-          key={v}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setSpeed(v)}
-          style={{
-            border: 'none', borderRadius: 6, padding: '5px 10px',
-            background: speed === v ? 'var(--accent)' : 'var(--bg-elevated)',
-            color: speed === v ? 'var(--bg-deep)' : 'var(--text-mid)',
-            fontFamily: 'var(--font-mono)', fontSize: 12, cursor: 'pointer',
-            outline: speed === v ? 'none' : '1px solid var(--line-hair)',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          {label}
-        </motion.button>
-      ))}
+    <div role="group" aria-label="Race speed" style={{ display: 'flex', gap: 2 }}>
+      {options.map(({ v, label, aria }) => {
+        const on = speed === v
+        return (
+          <motion.button
+            key={v}
+            type="button"
+            aria-label={aria}
+            aria-pressed={on}
+            className="slant-sm kit-focus"
+            whileTap={reduced ? undefined : { scale: 0.96 }} transition={PRESS}
+            onClick={() => { uiTap(); setSpeed(v) }}
+            style={{
+              width: 48, height: 48, border: 'none', padding: 0, cursor: 'pointer',
+              background: on ? 'var(--volt)' : 'var(--grape)',
+              color: on ? 'var(--ink)' : 'var(--lilac)',
+              fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 18,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {label}
+          </motion.button>
+        )
+      })}
     </div>
   )
 }
@@ -82,26 +92,28 @@ function StatusBar() {
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '5px 12px',
-      background: 'var(--bg-panel)',
-      borderBottom: '1px solid var(--line-hair)',
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8,
+      padding: '8px 12px 10px',
       flexShrink: 0,
     }}>
-      <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 10,
-        color: 'var(--text-dim)', letterSpacing: '0.1em', textTransform: 'uppercase',
-      }}>
-        {config?.circuit.name ?? ''}
-      </span>
-      <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700,
-        color: 'var(--accent)', fontVariantNumeric: 'tabular-nums',
-        letterSpacing: '0.06em',
-      }}>
-        L{raceState.lap + 1}<span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>/{raceState.totalLaps}</span>
-      </span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{
+          fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700,
+          color: 'var(--lilac-dim)', letterSpacing: 1, textTransform: 'uppercase',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          {config?.circuit.name ?? ''}
+        </div>
+        <div style={{
+          fontFamily: 'var(--font-display)', fontSize: 40, fontWeight: 900, fontStyle: 'italic',
+          color: 'var(--white)', lineHeight: 1, fontVariantNumeric: 'tabular-nums',
+        }}>
+          {/* Big Shoulders has no tabular figures (tnum is a no-op): a box sized
+              to the total's digit count keeps "/58" from twitching each lap. */}
+          L<span style={{ display: 'inline-block', minWidth: `${String(raceState.totalLaps).length * 0.55}em`, textAlign: 'right' }}>{raceState.lap + 1}</span><span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <SpeedControl />
         <SettingsPanel />
       </div>
@@ -109,19 +121,33 @@ function StatusBar() {
   )
 }
 
-// Top-level group label — bolder/brighter than a component's own internal
-// sub-label (e.g. TRACK inside LIVE RACE) so the HUD reads as a small number
-// of clear sections rather than an unlabelled stack of panels.
-function GroupLabel({ children }: { children: ReactNode }) {
+/**
+ * The track as a band: night background, bottom edge slanted. The weather chip
+ * sits OUTSIDE the clipped layer (the slant would cut it off at the right
+ * edge) and toggles the full forecast strip below the band.
+ */
+function TrackBand({ live }: { live: boolean }) {
+  const [weatherOpen, setWeatherOpen] = useState(false)
   return (
-    <div style={{
-      padding: '7px 10px 5px',
-      fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
-      color: 'var(--accent)', letterSpacing: '0.14em',
-      borderBottom: '1px solid var(--line-hair)',
-    }}>
-      {children}
-    </div>
+    <>
+      <div style={{ position: 'relative', height: 168, flexShrink: 0 }}>
+        <div style={{
+          position: 'absolute', inset: 0, background: 'var(--night)',
+          clipPath: 'polygon(0 0,100% 0,100% 88%,0 100%)',
+        }}>
+          <PitTimer />
+          <CanvasBoundary>
+            <TrackCanvas />
+          </CanvasBoundary>
+        </div>
+        {live && (
+          <div style={{ position: 'absolute', right: 10, bottom: 22 }}>
+            <WeatherChip expanded={weatherOpen} onToggle={() => setWeatherOpen(o => !o)} />
+          </div>
+        )}
+      </div>
+      {live && weatherOpen && <WeatherStrip />}
+    </>
   )
 }
 
@@ -208,6 +234,7 @@ export function RaceHUD() {
   const phase = useRaceStore(s => s.phase)
   useRetireCoachTutorial()
   useTutorialMarks()
+  const live = phase === 'racing' || phase === 'starting'
 
   return (
     <div style={{
@@ -234,84 +261,37 @@ export function RaceHUD() {
             {/* Status bar: circuit · lap · speed controls */}
             <StatusBar />
 
-            {/* LIVE RACE — conditions (weather/radio), track, and car telemetry:
-                everything describing what's happening right now, grouped under
-                one label instead of an unlabelled stack of panels. */}
-            <div style={{
-              flexShrink: 0, margin: '8px 8px 0',
-              background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
-              borderRadius: 10, overflow: 'hidden',
-            }}>
-              <GroupLabel>LIVE RACE</GroupLabel>
+            <TrackBand live={live} />
 
-              {(phase === 'racing' || phase === 'starting') && <WeatherStrip />}
+            {/* HUD alert slot — collapsed when there is nothing to say */}
+            {live && <HudAlert />}
 
-              {/* HUD alert slot — 0px collapsed / 44px active */}
-              {(phase === 'racing' || phase === 'starting') && <HudAlert />}
-
-              {/* Neutral broadcast ticker — factual events, any car */}
-              {(phase === 'racing' || phase === 'starting') && <CommentaryTicker />}
-
-              {/* Track sub-section */}
-              <div style={{
-                margin: '8px 8px 0',
-                background: 'var(--bg-panel)', border: '1px solid var(--line-hair)',
-                borderRadius: 8, overflow: 'hidden',
-              }}>
-                <div style={{
-                  padding: '6px 10px 4px',
-                  fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
-                  color: 'var(--text-dim)', letterSpacing: '0.12em',
-                  borderBottom: '1px solid var(--line-hair)',
-                }}>
-                  TRACK
-                </div>
-                <div style={{ height: 160, position: 'relative', background: 'var(--bg-deep)' }}>
-                  <PitTimer />
-                  <CanvasBoundary>
-                    <TrackCanvas />
-                  </CanvasBoundary>
-                </div>
-              </div>
-
-              {/* Telemetry zone — 130px */}
-              {(phase === 'racing' || phase === 'starting') && (
-                <div style={{ margin: '6px 8px 8px' }}>
-                  <TelemetryZone />
-                </div>
-              )}
-            </div>
+            {/* Neutral broadcast ticker — factual events, any car */}
+            {live && <CommentaryTicker />}
 
             {/* Safety car — spec section 6 surface 1, above the tower because
                 its consequence (the field bunching) is read in the tower. */}
-            {(phase === 'racing' || phase === 'starting') && <SafetyCarBanner />}
+            {live && <SafetyCarBanner />}
 
-            {/* RACE LEADERBOARD — full field by default, NEARBY toggle for a
-                tighter context window (label lives in TimingTower's own header) */}
-            <div style={{
-              flex: 1, overflow: 'hidden',
-              margin: '8px 8px 0', minHeight: 0,
-            }}>
+            <div style={{ flex: 1, overflow: 'hidden', margin: '8px 8px 0', minHeight: 0 }}>
               <TimingTower />
             </div>
 
-            {/* RACE CONTROL — the player's actual levers over the race, kept
-                at the bottom for thumb reach */}
-            <div style={{
-              background: 'var(--bg-panel)',
-              borderTop: '1px solid var(--line-hair)',
-              flexShrink: 0,
-            }}>
-              <GroupLabel>RACE CONTROL</GroupLabel>
-              <div style={{
-                padding: '8px 12px 10px',
-                display: 'flex', gap: 8, alignItems: 'stretch',
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <PaceModeToggle />
-                </div>
-                <PitButton />
+            {live && (
+              <div style={{ flexShrink: 0, margin: '6px 8px 0' }}>
+                <TelemetryZone />
               </div>
+            )}
+
+            {/* The player's levers, at the bottom for thumb reach */}
+            <div style={{
+              padding: '8px 8px 10px', flexShrink: 0,
+              display: 'flex', gap: 8, alignItems: 'stretch',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <PaceModeToggle />
+              </div>
+              <PitButton />
             </div>
           </motion.div>
         )}
@@ -322,7 +302,7 @@ export function RaceHUD() {
       <CoachMark
         id="timing_tower"
         title="READ THE TOWER"
-        body="Every car, in order, with the gap to the one ahead. Your row is the teal one. Those gaps are the whole game — when one falls under a second, a move is on."
+        body="Every car, in order, with the gap to the one ahead. Your row is the yellow one. Those gaps are the whole game — when one falls under a second, a move is on."
       />
       <CoachMark
         id="pace_modes"

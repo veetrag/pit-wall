@@ -87,7 +87,7 @@ export function CoachMark({ id, title, body }: Props) {
             background: 'var(--bg-elevated)',
             border: '1px solid var(--accent)',
             borderRadius: 12,
-            boxShadow: '0 8px 32px rgba(0,229,208,0.15)',
+            boxShadow: '0 8px 32px rgba(var(--volt-rgb), 0.15)',
             padding: '14px 16px',
             display: 'flex',
             flexDirection: 'column',

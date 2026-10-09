@@ -323,3 +323,14 @@ replied inside the Capacitor WebView on the Pixel 10 Pro XL
 - Race turned wet; finished P2. Debrief card: "3 judged · 8 futures" — ✓ PLAN · START ON MEDIUM, ✓ SETUP · WING 1, ✓ PLAN · PIT L15 → HARD, all GOOD CALL.
 - Not observed: the low-wing rain radio line (the race ran at 4× and the banner was not caught), and the remembered wing on a return visit (Veloce's remembered and best level are both 1, so it cannot show the difference). Both are unit-tested.
 - Unspecced observation: unselected bars are outline-only and the level-1 bar is very small; fine at arm's length but worth a look.
+
+## Race Day Bold — Plan 1 phone pass (2026-10-09, Pixel, release build of feat/race-day-bold)
+
+- Fonts load on device: Big Shoulders Display (heroes, titles) and Barlow (everything else); no system fallback.
+- Main menu with the existing career: team pill, 200 DP, Apex band with the car (ink body, volt accents), ROUND 4 OF 12 · SOL DESERT GP, season strip, P1 · 43 pts, CONTINUE SEASON, tiles.
+- Race (Sol Desert, 1× and 4×): big lap counter, slanted speed buttons, track band with "DRY · dry ahead" chip, radio banner, tower compact around you with the volt row and tyre rings, tyre meter + "PLAN · PIT L18" + W3, pace SAVE/HOLD/PUSH with wear, big PIT.
+- Pit sheet: BOX THIS LAP?, PIT LOSS 23.0s, sets left per compound, projected rejoin mini-tower with the dashed ghost row (now computed on open), BOX NOW.
+- Result: P3, +15 PTS count-up, From P10 ▲7, helmet podium, provisional championship P2 · 58 ▼, +10 DP, debrief rows (better lines in hot), NEXT RACE / RETRY ROUND / MENU.
+- Untouched screens readable in the new palette: development, race setup, qualifying.
+- Fixed after the first pass: invisible car on the menu band, digit gaps, empty space above the tower, "1 laps", projection only after a tyre tap.
+- Left for Plan 2: race-setup circuit card renders collapsed (pre-existing); a small gap remains in "+ 15 PTS"; podium helmets look soft at small size; menu "next race" shows the pending round while a result is unkept (old semantics).

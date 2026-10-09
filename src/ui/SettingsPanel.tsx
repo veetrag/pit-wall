@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { PRESS } from '@ui/kit'
 import { useSettingsStore, type SimSpeed, type Difficulty } from '@state/settingsStore'
 import { useCoachStore } from '@state/coachStore'
 import { useSeasonStore } from '@state/seasonStore'
@@ -21,7 +22,7 @@ function Toggle({ label, sublabel, value, onChange }: {
         <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{sublabel}</div>
       </div>
       <motion.button
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.9 }} transition={PRESS}
         onClick={() => { uiTap(); onChange(!value) }}
         style={{
           width: 50, height: 28, borderRadius: 14, border: 'none',
@@ -54,7 +55,7 @@ function SpeedSelect({ value, onChange }: { value: SimSpeed; onChange: (v: SimSp
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         {opts.map(o => (
-          <motion.button key={o} whileTap={{ scale: 0.92 }} onClick={() => onChange(o)}
+          <motion.button key={o} whileTap={{ scale: 0.92 }} transition={PRESS} onClick={() => onChange(o)}
             style={{
               width: 40, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
               background: value === o ? 'var(--accent)' : 'var(--bg-elevated)',
@@ -79,7 +80,7 @@ function DifficultySelect({ value, onChange }: { value: Difficulty; onChange: (v
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         {(['rookie', 'pro'] as Difficulty[]).map(d => (
-          <motion.button key={d} whileTap={{ scale: 0.92 }} onClick={() => onChange(d)}
+          <motion.button key={d} whileTap={{ scale: 0.92 }} transition={PRESS} onClick={() => onChange(d)}
             style={{
               padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
               background: value === d ? 'var(--accent)' : 'var(--bg-elevated)',
@@ -130,7 +131,7 @@ export function SettingsScreen() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>CONFIG</div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>Settings</div>
         </div>
-        <motion.button whileTap={{ scale: 0.94 }} onClick={() => { uiTap(); exitSettings() }}
+        <motion.button whileTap={{ scale: 0.94 }} transition={PRESS} onClick={() => { uiTap(); exitSettings() }}
           style={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
           BACK
         </motion.button>
@@ -187,13 +188,13 @@ function SettingsPanelDrawer({ onClose }: { onClose: () => void }) {
       transition={{ type: 'spring', stiffness: 350, damping: 30 }}
       style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        background: 'var(--bg-elevated)', borderRadius: '16px 16px 0 0',
+        background: 'var(--night)', borderRadius: '16px 16px 0 0',
         padding: '20px 20px 32px', borderTop: '1px solid var(--line-hair)', zIndex: 100,
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text-hi)', letterSpacing: '0.05em' }}>SETTINGS</span>
-        <motion.button whileTap={{ scale: 0.9 }} onClick={() => { uiTap(); onClose() }}
+        <motion.button whileTap={{ scale: 0.9 }} transition={PRESS} onClick={() => { uiTap(); onClose() }}
           style={{ background: 'transparent', border: '1px solid var(--line-hair)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 12, cursor: 'pointer' }}>
           DONE
         </motion.button>
@@ -209,9 +210,10 @@ export function SettingsPanel() {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <motion.button whileTap={{ scale: 0.9 }} onClick={() => setOpen(true)} title="Settings"
+      <motion.button whileTap={{ scale: 0.9 }} transition={PRESS} onClick={() => setOpen(true)} title="Settings" aria-label="Settings"
         style={{
           background: 'transparent', border: '1px solid var(--line-hair)', borderRadius: 6,
+          minWidth: 48, minHeight: 48, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           padding: '6px 10px', cursor: 'pointer', color: 'var(--text-dim)',
           fontFamily: 'var(--font-display)', fontSize: 14, lineHeight: 1,
         }}>

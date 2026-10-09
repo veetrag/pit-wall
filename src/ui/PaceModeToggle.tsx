@@ -1,60 +1,34 @@
-import { motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
-import type { PaceMode } from '@engine/types'
-import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
+import type { PaceMode, TuningConstants } from '@engine/types'
+import { Segmented } from '@ui/kit'
 
-const MODES: { mode: PaceMode; label: string; sublabel: string; color: string }[] = [
-  { mode: 'conserve', label: 'SAVE',  sublabel: '+0.20s  −25% wear', color: 'var(--positive)' },
-  { mode: 'neutral',  label: 'HOLD',  sublabel: 'baseline',          color: 'var(--text-mid)' },
-  { mode: 'push',     label: 'PUSH',  sublabel: '−0.15s  +30% wear', color: 'var(--accent-warm)' },
-]
+const LABEL: Record<PaceMode, string> = { conserve: 'SAVE', neutral: 'HOLD', push: 'PUSH' }
+const ORDER: PaceMode[] = ['conserve', 'neutral', 'push']
+// Used only when no race config is loaded (CLAUDE.md 6.2 consequence preview).
+const FALLBACK_SUB: Record<PaceMode, string> = {
+  conserve: '+0.20s · −25% wear', neutral: 'base', push: '−0.15s · +30% wear',
+}
+
+const signed = (n: number, digits: number) => `${n > 0 ? '+' : n < 0 ? '−' : '±'}${Math.abs(n).toFixed(digits)}`
+
+/** "−0.15s · +30% wear" from the tuning's paceDelta and degMultiplier; "base" for a no-op mode. */
+export function paceSub(mode: { paceDelta: number; degMultiplier: number }): string {
+  const wearPct = Math.round((mode.degMultiplier - 1) * 100)
+  if (mode.paceDelta === 0 && wearPct === 0) return 'base'
+  return `${signed(mode.paceDelta, 2)}s · ${signed(wearPct, 0)}% wear`
+}
+
+function optionsFor(paceModes: TuningConstants['paceModes'] | undefined) {
+  return ORDER.map(value => ({
+    value, label: LABEL[value], sub: paceModes ? paceSub(paceModes[value]) : FALLBACK_SUB[value],
+  }))
+}
 
 export function PaceModeToggle() {
-  const raceState = useRaceStore(s => s.raceState)
+  const current = useRaceStore(s => s.raceState?.cars.find(c => c.isPlayer)?.paceMode ?? 'neutral')
+  const paceModes = useRaceStore(s => s.config?.tuning.paceModes)
   const setPaceMode = useRaceStore(s => s.setPaceMode)
-  const { impact } = useHaptics()
-
-  const player = raceState?.cars.find(c => c.isPlayer)
-  const current = player?.paceMode ?? 'neutral'
-
-  return (
-    <div style={{
-      display: 'flex', gap: 6,
-      background: 'var(--bg-panel)', borderRadius: 8,
-      padding: 6, border: '1px solid var(--line-hair)',
-    }}>
-      {MODES.map(({ mode, label, sublabel, color }) => {
-        const active = current === mode
-        return (
-          <motion.button
-            key={mode}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => { impact(ImpactStyle.Light); setPaceMode(mode) }}
-            style={{
-              flex: 1, border: 'none', borderRadius: 6, padding: '8px 6px',
-              cursor: 'pointer',
-              background: active ? color : 'transparent',
-              outline: active ? 'none' : `1px solid var(--line-hair)`,
-              transition: 'background 0.2s',
-            }}
-          >
-            <div style={{
-              fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-              color: active ? 'var(--bg-deep)' : color,
-              letterSpacing: '0.08em',
-            }}>
-              {label}
-            </div>
-            <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: 9,
-              color: active ? 'rgba(0,0,0,0.6)' : 'var(--text-dim)',
-              marginTop: 2, fontVariantNumeric: 'tabular-nums',
-            }}>
-              {sublabel}
-            </div>
-          </motion.button>
-        )
-      })}
-    </div>
-  )
+  // Segmented fires uiTap itself (Light haptic + nav tone), so no extra haptic
+  // here -- a second impact on the same tap would double-buzz.
+  return <Segmented options={optionsFor(paceModes)} value={current} onChange={setPaceMode} ariaLabel="Pace mode" />
 }

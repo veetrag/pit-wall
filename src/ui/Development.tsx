@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
+import { PRESS } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSettingsStore } from '@state/settingsStore'
 import { useCareerStore } from '@state/careerStore'
@@ -243,8 +244,7 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
         data-testid={`buy-${attr.id}`}
         aria-label={label}
         disabled={!canBuy}
-        whileTap={canBuy && !reducedMotion ? { scale: 0.94 } : undefined}
-        transition={{ type: 'spring', stiffness: 700, damping: 32 }}
+        whileTap={canBuy && !reducedMotion ? { scale: 0.94 } : undefined} transition={PRESS}
         onClick={onBuy}
         style={{
           flexShrink: 0, minWidth: 74, padding: '9px 10px', borderRadius: 9,
@@ -493,7 +493,7 @@ export function Development() {
             {arc.rivals.map(r => (
               <div key={r.id} style={{
                 flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 8,
-                background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
+                background: 'var(--grape)', border: '1px solid var(--line-hair)',
                 borderTop: `2px solid ${r.color}`,
               }}>
                 <div style={{
@@ -570,9 +570,8 @@ export function Development() {
           type="button"
           data-testid="to-race"
           aria-label="Continue to race setup"
-          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
-          transition={{ type: 'spring', stiffness: 700, damping: 32 }}
-          onClick={() => { uiTap(); toRaceSetup() }}
+          whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
+            onClick={() => { uiTap(); toRaceSetup() }}
           style={{
             width: '100%', border: 'none', borderRadius: 10, padding: '16px',
             background: 'var(--accent)', color: 'var(--bg-deep)',

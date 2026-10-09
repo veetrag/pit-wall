@@ -30,7 +30,7 @@ function open(safetyCar: SafetyCarState | null) {
 
 describe('PitPanel safety-car discount', () => {
   beforeEach(() => {
-    useRaceStore.setState({ pitPanelOpen: false, raceState: null, config: null, projectionResult: null })
+    useRaceStore.setState({ pitPanelOpen: false, raceState: null, config: null, projectionResult: null, updateProjection: () => {} })
   })
 
   it('states the green-flag pit loss from the circuit', () => {

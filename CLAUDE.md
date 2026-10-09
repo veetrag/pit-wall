@@ -99,32 +99,23 @@ The model is **already designed and validated**. Do not redesign it. Implement i
 
 The brief is explicit: **the game must look genuinely cool, with proper microinteractions and modern features.** Treat this section with the same weight as the architecture. A correct simulation in an ugly, static UI is a failed deliverable.
 
-### 6.1 Aesthetic direction — "Pit Wall at Night"
+### 6.1 Aesthetic direction — "Race Day Bold"
 
-The visual identity is the **modern F1 pit-wall / broadcast-graphics** world: dark, precise, data-dense but elegant, with the energy of a night race. Think premium telemetry dashboard, not cartoon racer. Avoid the generic AI-design defaults (cream-and-terracotta, plain near-black-with-one-acid-accent, broadsheet columns). Our darkness is *purposeful and textured* (a deep blue-black with subtle gradient, like a circuit under floodlights), not a flat default.
+Chosen 2026-10-09 (spec: `docs/superpowers/specs/2026-10-09-race-day-bold-redesign-design.md`; visual reference: the "Pit Wall — Design Review" Claude Design canvas). Loud and kinetic, at the level of a premium mobile racing game: deep indigo ground, saturated team colours, slanted cards, chunky condensed type, in-house SVG car and helmet art. Motion is fast and directional, never bouncy.
 
-**Design tokens (starting point — refine in `styles/tokens.css`; do not scatter raw hex in components):**
+**Tokens** live in `styles/tokens.css`; never scatter raw hex in components:
 
 ```
---bg-deep:      #0A0E1A   /* deep blue-black, the night */
---bg-panel:     #121829   /* raised surfaces / HUD panels */
---bg-elevated:  #1B2238   /* cards, modals */
---line-hair:    #2A3350   /* hairline dividers, 1px */
---text-hi:      #F2F5FF   /* primary text */
---text-mid:     #9AA7C7   /* secondary / labels */
---text-dim:     #5C6788   /* tertiary / disabled */
---accent:       #00E5D0   /* signature teal — telemetry/active state */
---accent-warm:  #FF4D5E   /* hot/urgent — cliff warnings, pit-now */
---tyre-soft:    #E8344E   /* compound colours, real F1 convention */
---tyre-medium:  #F2C94C
---tyre-hard:    #EAEAEA
---positive:     #3DDC84   /* gaining time / position */
---negative:     #FF6B6B   /* losing time / position */
+--ink #120E2B (ground)   --night #1B1542   --grape #2A2160 (cards)   --dusk #3A2F7A (lines)
+--lilac #CFC8F2 (body)   --lilac-dim #A99FDB (labels)   --white #FFFFFF (titles, numbers)
+--volt #FFD60A  — the ONLY call-to-action colour; your row; earned
+--hot  #FF4F84  — urgent: PIT, cliff, losing      --gain #3DDC84      --caution #FFB020
+tyres: S #FF4F84  M #FFD60A  H #FFFFFF  I #3DDC84  W #4DA6FF
 ```
 
-**Typography:** a confident, technical pairing — NOT system-default. Display/numeric: a precise mono or tabular technical face (e.g. **"Chakra Petch"**, **"Rajdhani"**, or **"Space Grotesk"** for headers; a true monospace like **"JetBrains Mono"** for all telemetry numbers so digits don't jitter). Body/UI: a clean grotesque (e.g. **"Inter"**). **All live-updating numbers MUST use tabular/monospaced figures** (`font-variant-numeric: tabular-nums`) so timing displays don't shift width as they tick — this is critical for a timing-tower feel.
+Text on a volt, hot or caution fill is `--ink`. **Typography:** Big Shoulders Display (900, italic for heroes and titles; 700 upright for section heads) and Barlow for everything else, self-hosted. **All live-updating numbers MUST use tabular figures** (set globally on `body`). **Shape:** one forward slant (kit classes `.slant-*`); only pills and avatars are round.
 
-**The signature element:** the **live timing tower** — a vertical, broadcast-style leaderboard where positions animate (smoothly reorder with FLIP animation), gaps tick in mono digits, tyre compound dots glow and wear, and the player's row is highlighted with the teal accent. This is the thing the game is remembered by; spend the boldness here.
+**The signature element** stays the live timing tower: rows slide (FLIP / Framer Motion `layout`), gaps tick in tabular figures, your row is the volt row.
 
 ### 6.2 Microinteractions — REQUIRED, not optional
 
@@ -154,7 +145,7 @@ Every interactive element must feel alive and responsive. Specific requirements 
 - Generic dashboard-template look; default Material components dropped in unstyled.
 - Motion for motion's sake — every animation must communicate something (a state change, a consequence, a transition). Cut anything decorative that doesn't.
 - Janky re-renders on sim ticks. Visual smoothness is part of "looking cool"; 60fps is a design requirement.
-- Bouncy, playful, cartoonish easing. Our motion language is **precise, mechanical, confident** — like a high-end car's switchgear.
+- Bouncy or cartoonish easing. Our motion language is **fast, directional, confident** — like a high-end car's switchgear.
 
 ---
 

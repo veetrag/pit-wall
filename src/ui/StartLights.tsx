@@ -166,7 +166,7 @@ function CircuitBackground() {
             Z
           "
           fill="none"
-          stroke="rgba(0,229,208,0.18)"
+          style={{ stroke: 'rgba(var(--volt-rgb), 0.18)' }}
           strokeWidth="2"
           strokeDasharray="12 8"
           filter="url(#trackglow)"
@@ -182,7 +182,7 @@ function CircuitBackground() {
         <path
           d="M 195 810 L 195 840 Q 220 845 245 840 L 245 808"
           fill="none"
-          stroke="rgba(0,229,208,0.12)"
+          style={{ stroke: 'rgba(var(--volt-rgb), 0.12)' }}
           strokeWidth="1"
           strokeDasharray="4 4"
         />
@@ -207,11 +207,11 @@ function CircuitBackground() {
                 width={14}
                 height={22}
                 rx={3}
-                fill={isPlayer ? 'rgba(0,229,208,0.75)' : 'rgba(160,180,220,0.22)'}
+                style={{ fill: isPlayer ? 'rgba(var(--volt-rgb), 0.75)' : 'rgba(160,180,220,0.22)' }}
               />
               {isPlayer && (
                 <rect x={195 + side} y={756 - yOff} width={14} height={4} rx={2}
-                  fill="rgba(0,229,208,1)" />
+                  style={{ fill: 'var(--volt)' }} />
               )}
             </g>
           )

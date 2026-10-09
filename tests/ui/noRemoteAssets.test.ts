@@ -110,7 +110,7 @@ describe('the app fetches nothing at runtime', () => {
     const html = readFileSync(join(ROOT, 'index.html'), 'utf8')
     expect(html).not.toMatch(/fonts\.(googleapis|gstatic)\.com/)
     const faces = readFileSync(join(SRC, 'styles/fonts.css'), 'utf8')
-    for (const file of ['inter-var', 'jetbrains-mono-var', 'rajdhani-500', 'rajdhani-600', 'rajdhani-700']) {
+    for (const file of ['barlow-latin-500-normal', 'barlow-latin-600-normal', 'barlow-latin-700-normal', 'barlow-latin-800-normal', 'big-shoulders-display-latin-700-normal', 'big-shoulders-display-latin-900-normal']) {
       expect(faces, `${file}.woff2 must be declared`).toContain(`/fonts/${file}.woff2`)
     }
     // Declared faces must actually exist, or they fail exactly like the <link> did.

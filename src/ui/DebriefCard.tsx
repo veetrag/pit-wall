@@ -55,7 +55,7 @@ function Row({ v, index, finish }: { v: CallVerdict; index: number; finish: stri
           padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600,
-          color: better ? 'var(--tyre-medium)' : 'var(--accent)' }}>
+          color: better ? 'var(--hot)' : 'var(--accent)' }}>
           {better ? '▲ ' : '✓ '}{describeCall(v.call)}
         </span>
         <span style={{ ...mono, fontSize: 12, color: 'var(--text-mid)' }}>
