@@ -4,6 +4,7 @@ import { useRaceStore } from '@state/raceStore'
 import { useCoachStore } from '@state/coachStore'
 import { useCoachingActive } from '@hooks/useCoachingActive'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
+import { wingOf } from '@engine/setup'
 import type { RaceConfig, RaceState } from '@engine/types'
 
 // Keyed rather than a ternary chain on purpose. This used to read
@@ -237,6 +238,9 @@ export function TelemetryZone() {
   const gapAhead  = ahead  ? player.raceTime - ahead.raceTime  : null
   const gapBehind = behind ? behind.raceTime - player.raceTime : null
 
+  // Wing chip: only shown when a wing was chosen (setups present on the config).
+  const wing = config.setups ? wingOf(config, player.driverId) : null
+
   // Pit window
   const nextStop = player.strategy.plannedStops[player.pitsDone] ?? null
 
@@ -249,11 +253,29 @@ export function TelemetryZone() {
       height: 130, flexShrink: 0,
     }}>
       {/* Left: radial tyre gauge */}
-      <TyreGaugeRadial
-        fraction={fraction}
-        compound={player.compound}
-        tyreAge={player.tyreAge}
-      />
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <TyreGaugeRadial
+          fraction={fraction}
+          compound={player.compound}
+          tyreAge={player.tyreAge}
+        />
+        {/* Wing chip: only when the player set a wing. Sits in the gauge's
+            top-left corner, outside the arc (which opens at the bottom). */}
+        {wing !== null && (
+          <span
+            aria-label={`Wing level ${wing}`}
+            style={{
+              position: 'absolute', top: 0, left: 0,
+              padding: '1px 5px', borderRadius: 4,
+              background: 'var(--bg-panel)', border: '1px solid var(--line-hair)',
+              color: 'var(--text-mid)', fontFamily: 'var(--font-mono)',
+              fontSize: 9, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            W{wing}
+          </span>
+        )}
+      </div>
 
       {/* Right: 3 stat readouts */}
       <div style={{

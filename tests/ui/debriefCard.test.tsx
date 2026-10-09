@@ -84,3 +84,10 @@ describe('DebriefCard', () => {
     expect(screen.getByText(/\+1 more judged good/)).toBeTruthy()
   })
 })
+
+describe('wing rows', () => {
+  it('describes the wing call and alternative', () => {
+    expect(describeCall({ kind: 'wing', wing: 2 })).toBe('SETUP · WING 2')
+    expect(describeAlternative({ kind: 'wing', wing: 4 })).toBe('WING 4')
+  })
+})

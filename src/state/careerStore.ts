@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { loadGameData } from '@data/validators'
 import { newlyEarned, type RaceFact } from './badges'
+import type { Wing } from '@engine/setup'
 
 /**
  * The career: the layer above a season that owns what survives one.
@@ -53,11 +54,17 @@ export interface CareerRecord {
    * key means 0. See docs/superpowers/specs/2026-10-09-team-ladder-design.md.
    */
   teamTiers: Record<string, number>
+  /**
+   * Circuit id -> the wing the player last ran there. A convenience: the
+   * strategy screen opens on it. Missing key means no memory yet, and the
+   * UI falls back to the circuit's own default.
+   */
+  wingByCircuit: Record<string, Wing>
 }
 
 const FRESH: CareerRecord = {
   seasonNumber: 1, titles: 0, wins: 0, seasonWins: 0, podiums: 0, poles: 0,
-  racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [], teamTiers: {},
+  racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [], teamTiers: {}, wingByCircuit: {},
 }
 
 /**
@@ -155,6 +162,7 @@ interface CareerStore extends CareerRecord {
    * tiers -- this module never reads seasonStore.
    */
   setTeamTiers: (tiers: Record<string, number>) => void
+  rememberWing: (circuitId: string, wing: Wing) => void
   beginCareer: () => void
   endCareer: () => void
   resumeCareer: (snap: CareerRecord) => void
@@ -202,6 +210,7 @@ export function nextRecordAfterRace(s: CareerRecord, r: RaceRecordInput): Career
     seasonHistory: s.seasonHistory,
     raceLog: [...s.raceLog, fact],
     teamTiers: s.teamTiers,
+    wingByCircuit: s.wingByCircuit,
   }
 
   return next
@@ -261,6 +270,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       // Ending a season is not a race: raceLog is carried over unchanged.
       raceLog: s.raceLog,
       teamTiers: s.teamTiers,
+      wingByCircuit: s.wingByCircuit,
     }
 
     set({ ...next, justEarned: newlyEarned(s, next) })
@@ -276,6 +286,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
   },
 
   setTeamTiers(teamTiers) { set({ teamTiers }) },
+  rememberWing(circuitId, wing) { set(s => ({ wingByCircuit: { ...s.wingByCircuit, [circuitId]: wing } })) },
   beginCareer() { set({ ...FRESH, hasCareer: true, justEarned: [] }) },
   endCareer() { set({ ...FRESH, hasCareer: false, justEarned: [] }) },
   resumeCareer(snap) { set({ ...snap, hasCareer: true, justEarned: [] }) },

@@ -1,5 +1,6 @@
 import { loadGameData, type Cars } from '@data/validators'
 import type { RaceConfig, StrategyBrain, DifficultyProfile } from '@engine/index'
+import { aiSetups } from '@engine/setup'
 import { applyUpgrades, type UpgradeOverlayInput } from './upgradeOverlay'
 import type { Difficulty } from './settingsStore'
 import type { PlayerStrategyChoice } from './seasonStore'
@@ -109,7 +110,7 @@ export function buildRaceConfig(
     appliesTo: d => d.id === playerDriverId,
   })
 
-  return {
+  const config: RaceConfig = {
     circuit,
     tuning: data.tuning,
     compounds: data.compounds,
@@ -126,6 +127,10 @@ export function buildRaceConfig(
     gridOrder,
     dryStart,
   }
+  // Absent wing leaves `setups` absent (not undefined) so old-path configs stay identical.
+  const wing = playerStrategy?.wing
+  if (wing !== undefined) config.setups = { ...aiSetups(config), [playerDriverId]: wing }
+  return config
 }
 
 /**

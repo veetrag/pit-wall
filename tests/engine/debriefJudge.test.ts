@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { judgeCalls, pickBetter, futureSeed, replay, simulate } from '@engine/debrief'
 import { buildRaceConfig } from '@state/buildRaceConfig'
 import type { RaceConfig } from '@engine/types'
+import { WINGS, expectedLapDelta, wingOf, type Wing } from '@engine/setup'
 
 const o = (positions: number[]) => ({ positions, meanPosition: positions.reduce((a, b) => a + b, 0) / positions.length })
 
@@ -128,5 +129,44 @@ describe('replay to a branch', () => {
       const rest = simulate(config, { state: past.state, step: past.step }, past.rng, calls)
       expect(rest).toEqual({ state: full.state, step: full.step })
     }
+  })
+})
+
+const SCALE = 10
+describe('judging the wing', () => {
+  const plan = { startCompound: 'M' as const, plannedStops: [{ lap: 12, compound: 'H' as const }] }
+  const short = (c: RaceConfig): RaceConfig => ({ ...c, circuit: { ...c.circuit, laps: 30 } })
+  const withWing = (seed: number, wing?: Wing) =>
+    short(buildRaceConfig(seed, 'd_voss', 'bengaluru', 'rookie', { ...plan, ...(wing ? { wing } : {}) }, null, undefined, true))
+
+  it('judges the wing when the player set one, and not otherwise', () => {
+    const r = judgeCalls(withWing(4243, 3), 4243, [])
+    expect(r.verdicts.map(v => v.call.kind)).toContain('wing')
+    expect(r.verdicts.find(v => v.call.kind === 'wing')!.call).toEqual({ kind: 'wing', wing: 3 })
+    const none = judgeCalls(withWing(4243), 4243, [])
+    expect(none.verdicts.map(v => v.call.kind)).not.toContain('wing')
+  })
+
+  it('branches at lap 0 on the same futures as the start', () => {
+    const r = judgeCalls(withWing(4243, 3), 4243, [])
+    const w = r.verdicts.find(v => v.call.kind === 'wing')!
+    const s = r.verdicts.find(v => v.call.kind === 'start')!
+    expect(w.actual.positions).toEqual(s.actual.positions)
+  })
+
+  it('says a decisively wrong wing cost places', () => {
+    const base = withWing(4243, 3)
+    // Gains scaled so the wrong wing is decisive (see report for the factor).
+    const k = SCALE
+    const t = base.tuning
+    const tuning = { ...t, setup: { ...t.setup, speedGain: t.setup.speedGain * k, gripGain: t.setup.gripGain * k, balanceCost: t.setup.balanceCost * k } }
+    const worst = WINGS.reduce((b, w) =>
+      expectedLapDelta(base.circuit, tuning, w, 0) > expectedLapDelta(base.circuit, tuning, b, 0) ? w : b)
+    const config: RaceConfig = { ...base, tuning, setups: { ...base.setups, [base.playerDriverId]: worst } }
+    expect(wingOf(config, config.playerDriverId)).toBe(worst)
+    const v = judgeCalls(config, 4243, []).verdicts.find(x => x.call.kind === 'wing')!
+    expect(v.better).not.toBeNull()
+    expect(v.better!.alternative.kind).toBe('wing')
+    expect(v.better!.alternative.kind === 'wing' && v.better!.alternative.wing).not.toBe(worst)
   })
 })

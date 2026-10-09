@@ -24,7 +24,7 @@ function snap(o: {
       seasonNumber: o.seasonNumber ?? 1,
       titles: 0, wins: 0, seasonWins: 0, podiums: 0, poles: 0,
       racesStarted: o.racesStarted ?? 0,
-      bestFinish: null, seasonHistory: [], raceLog: [], teamTiers: {},
+      bestFinish: null, seasonHistory: [], raceLog: [], teamTiers: {}, wingByCircuit: {},
     },
     season: null,
     savedAt: o.savedAt ?? 1000,

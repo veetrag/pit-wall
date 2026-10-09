@@ -149,6 +149,17 @@ const TuningSchema = z.object({
     minShare: z.number().min(0).max(1),
     timeoutMs: z.number().int().positive(),
   }),
+  setup: z.object({
+    _note: z.string().optional(),
+    speedGain: z.number().min(0),
+    gripGain: z.number().min(0),
+    balanceCost: z.number().positive(),
+    overtakeGain: z.number().min(0).max(1),
+    wetGain: z.number().min(0),
+    wetSeverity: z.object({ DAMP: z.number().min(0), WET: z.number().min(0) }),
+    aiNoise: z.number().min(0).max(1),
+    seedOffset: z.number().int(),
+  }),
   difficultyProfiles: z.object({
     rookie: DifficultyProfileSchema,
     pro: DifficultyProfileSchema,

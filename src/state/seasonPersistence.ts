@@ -100,6 +100,7 @@ const RaceEventSummarySchema = z.object({
 const PlayerStrategySchema = z.object({
   startCompound: z.enum(['S', 'M', 'H', 'I', 'W']),
   plannedStops: z.array(z.object({ lap: z.number(), compound: z.enum(['S', 'M', 'H', 'I', 'W']) })),
+  wing: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional(),
 })
 
 export const SeasonSnapshotSchema = z.object({

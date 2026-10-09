@@ -1,5 +1,6 @@
 import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
+import { aiSetups } from '@engine/setup'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig, StrategyBrain, DifficultyProfile } from '@engine/types'
 
@@ -9,6 +10,8 @@ export type HarnessOptions = {
   seedBase?: number
   difficulty?: 'rookie' | 'pro'
   forceDry?: boolean
+  /** Give every car an AI wing (config.setups = aiSetups). Off by default. */
+  withSetups?: boolean
 }
 
 export type Metrics = {
@@ -200,7 +203,9 @@ export function runRaces(opts: HarnessOptions): Metrics {
   for (let r = 0; r < races; r++) {
     const circuitId = circuitIds[r % circuitIds.length]!
     const seed = seedBase + r * 7919
-    const config = buildConfig(seed, circuitId, difficulty, forceDry)
+    const built = buildConfig(seed, circuitId, difficulty, forceDry)
+    // playerDriverId is '__none__' here, so every car gets an AI wing.
+    const config = opts.withSetups ? { ...built, setups: aiSetups(built) } : built
     let state = initRace(config)
     const grid = new Map(state.cars.map(c => [c.driverId, c.position]))
     const rng = createRng(seed)

@@ -1,3 +1,5 @@
+import type { Wing } from './setup'
+
 export type Compound = 'S' | 'M' | 'H' | 'I' | 'W'
 export type TyreAllocation = Record<Compound, number>
 export type PaceMode = 'push' | 'neutral' | 'conserve'
@@ -182,6 +184,18 @@ export interface TuningConstants {
     minGain: number
     minShare: number
     timeoutMs: number
+  }
+  // Car setup (docs/superpowers/specs/2026-10-09-car-setup-design.md section 2).
+  setup: {
+    _note?: string
+    speedGain: number
+    gripGain: number
+    balanceCost: number
+    overtakeGain: number
+    wetGain: number
+    wetSeverity: { DAMP: number; WET: number }
+    aiNoise: number
+    seedOffset: number
   }
   _regressionBands?: Record<string, unknown>
 }
@@ -382,6 +396,10 @@ export interface RaceConfig {
   // byteIdentity, the Monte-Carlo bands and all three scenarios depend on that
   // fallback being byte-identical, so do not make this required.
   gridOrder?: string[]
+  // Rear-wing level per car, keyed by driverId. Absent => every car level 3 =>
+  // zero effect. byteIdentity, Monte-Carlo and scenarios depend on absence
+  // staying meaningful.
+  setups?: Record<string, Wing>
   // Separate RNG stream for qualifying, same pattern as weatherSeed above, so
   // a qualifying session consumes nothing from the main race seed.
   qualifyingSeed?: number
@@ -433,12 +451,14 @@ export type JudgedCall =
   | { kind: 'plan'; lap: number; compound: Compound }     // display lap (state.lap + 1)
   | { kind: 'pit'; lap: number; compound: Compound }
   | { kind: 'pace'; lap: number; mode: PaceMode }
+  | { kind: 'wing'; wing: Wing }
 
 export type Alternative =
   | { kind: 'start'; compound: Compound }
   | { kind: 'plan' | 'pit'; lap: number; compound: Compound }
   | { kind: 'pace'; lap: number; mode: PaceMode }
   | { kind: 'pace-none' }
+  | { kind: 'wing'; wing: Wing }
 
 export interface OptionOutcome { meanPosition: number; positions: number[] }
 

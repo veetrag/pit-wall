@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { CIRCUIT_ORDER } from './raceStore'
 import { buildRaceConfig } from './buildRaceConfig'
 import { runQualifying, qualifyingRng, type Compound, type PitStop, type QualifyingCall, type QualifyingResult } from '@engine/index'
+import type { Wing } from '@engine/setup'
 import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
 import { useCareerStore, escalateRivals, previewRaceBadges, type RaceRecordInput } from './careerStore'
@@ -36,6 +37,7 @@ export interface RaceEventSummary {
 export interface PlayerStrategyChoice {
   startCompound: Compound
   plannedStops: PitStop[]
+  wing?: Wing
 }
 
 export const TOTAL_RACES = 12
@@ -360,7 +362,9 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   retryRace() {
     // Nothing to undo: the attempt was never counted. Dropping the pending
-    // result is the whole of discarding it.
+    // result is the whole of discarding it. A retry redraws rival wings (new
+    // seed) but keeps the first attempt's qualifying grid, like other
+    // seed-driven noise.
     set(s => ({ attemptNonce: s.attemptNonce + 1, phase: 'racing', lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null }))
   },
 
@@ -517,6 +521,14 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       // The career's running totals, captured at the flag from the same
       // results the standings use.
       if (pending.pendingRace) useCareerStore.getState().recordRace(pending.pendingRace)
+      // The wing is remembered on KEEP, not at the flag, so a retried attempt
+      // leaves the career's memory of this circuit untouched.
+      // currentCircuitId() falls back to the calendar slot, so a legacy save
+      // with a null selectedCircuitId still remembers.
+      const wing = pending.playerStrategy?.wing
+      if (wing !== undefined) {
+        useCareerStore.getState().rememberWing(get().currentCircuitId(), wing)
+      }
     }
   },
 

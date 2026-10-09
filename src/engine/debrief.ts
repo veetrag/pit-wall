@@ -3,6 +3,7 @@ import type {
 } from './types'
 import { initRace, stepSector } from './race'
 import { createRng, type Rng } from './rng'
+import { WINGS, wingOf } from './setup'
 import { applyCall, type PlayerCall } from './playerCalls'
 
 /** The same finish condition raceStore.step uses. */
@@ -188,6 +189,25 @@ export function judgeCalls(
     })
   }
 
+  // The wing (spec: car setup section 4). Branches at lap 0, like the start.
+  // Alternatives reuse the real grid (config.gridOrder): qualifying is not re-run
+  // per wing, so verdicts measure race pace only and understate a wrong wing.
+  if (config.setups) {
+    const mine = wingOf(config, config.playerDriverId)
+    groups.push({
+      call: { kind: 'wing', wing: mine },
+      branchLap: 0,
+      options: [
+        { alternative: null, config, calls },
+        ...WINGS.filter(w => w !== mine).map(w => ({
+          alternative: { kind: 'wing', wing: w } as Alternative,
+          config: { ...config, setups: { ...config.setups, [config.playerDriverId]: w } },
+          calls,
+        })),
+      ],
+    })
+  }
+
   // Executed plan stops.
   for (const ps of planStops) {
     const editStop = (lap: number, compound: Compound) => withPlan(config, p => ({
@@ -243,7 +263,7 @@ export function judgeCalls(
   for (const g of groups) {
     // Shared past: the real race, on its own seed, up to the branch.
     const branchStep = Math.max(0, 3 * (g.branchLap - 2))
-    const isStart = g.call.kind === 'start'
+    const isStart = g.branchLap === 0 && (g.call.kind === 'start' || g.call.kind === 'wing')
     // Identical for every option and future in the group; engine states are
     // immutable in practice so it is shared. Each future keeps its own rng.
     const shared = isStart ? null : replay(config, seed, calls, branchStep)

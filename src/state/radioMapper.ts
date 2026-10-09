@@ -1,6 +1,7 @@
 import radioData from '@data/radio.json'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
 import type { RaceState, RaceConfig } from '@engine/types'
+import { wingOf } from '@engine/setup'
 import { soundService } from '@audio/soundService'
 
 const RETIREMENT_RADIO: Record<'tyre' | 'mechanical' | 'crash', string> = {
@@ -28,16 +29,17 @@ function tryPush(
   priority: 2 | 1 | 0,
   vars: Record<string, string | number>,
   pushFn: (msg: string, severity: 'info' | 'caution' | 'urgent') => void,
-) {
+) : boolean {
   const now = Date.now()
-  if (now - lastRadioMs < RADIO_COOLDOWN_MS && priority <= lastPriority) return
+  if (now - lastRadioMs < RADIO_COOLDOWN_MS && priority <= lastPriority) return false
   const line = pick(trigger, vars)
-  if (!line) return
+  if (!line) return false
   lastRadioMs = now
   lastPriority = priority
   const severity: 'info' | 'caution' | 'urgent' =
     priority === 2 ? 'urgent' : priority === 1 ? 'caution' : 'info'
   pushFn(line, severity)
+  return true
 }
 
 export interface RadioState {
@@ -50,6 +52,7 @@ export interface RadioState {
   hasWon: boolean
   cliffWarned: boolean
   prevRetired: boolean
+  lowWingWarned: boolean
 }
 
 export function makeRadioState(): RadioState {
@@ -63,6 +66,7 @@ export function makeRadioState(): RadioState {
     hasWon: false,
     cliffWarned: false,
     prevRetired: false,
+    lowWingWarned: false,
   }
 }
 
@@ -110,6 +114,12 @@ export function processRadioTick(
     tryPush('wet_spin', 2, {}, pushAlert)
   }
   next.prevSpinCount = playerSpinCount
+
+  // Setup consequence: rain on a low wing. Once per race; only when setups exist.
+  if (!radio.lowWingWarned && state.weatherState !== 'DRY' && config.setups && wingOf(config, player.driverId) <= 2) {
+    // Only spend the one-shot warning if the line actually went out; a cooldown drop retries next tick.
+    if (tryPush('low_wing_wet', 1, {}, pushAlert)) next.lowWingWarned = true
+  }
 
   // 3. Win / podium (fire once)
   if (state.lap >= totalLaps && !radio.hasWon) {

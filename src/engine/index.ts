@@ -11,6 +11,7 @@ export {
   driverErrorChancePerSector, rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
 } from './incidents'
+export * from './setup'
 export { createRng, gaussianPair } from './rng'
 export { generateWeatherTimeline, getWeatherForecast, openingTimeline } from './weather'
 export { runQualifying, qualifyingRng } from './qualifying'
