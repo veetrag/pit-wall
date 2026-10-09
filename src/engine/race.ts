@@ -379,7 +379,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         }
       } else if (config.playerStrategyOverride) {
         // The player's own plan, executed exactly as the race setup screen
-        // promises ("You can override this live during the race"). Indexed
+        // promises. Indexed
         // by pitsDone like the AI's plannedStops, so a manual stop taken
         // earlier consumes the next planned one instead of adding a second.
         // Only when the player CHOSE a plan: without an override the car

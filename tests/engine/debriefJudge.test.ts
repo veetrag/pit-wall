@@ -40,11 +40,14 @@ describe('judgeCalls', () => {
   const config = buildRaceConfig(4242, 'd_voss', 'bengaluru', 'rookie', plan, null, undefined, true)
 
   it('judges the start, the plan stop and each logged call', () => {
+    // Seed 4243: the player finishes. (4242 crashes on lap 10, before the
+    // planned stop, and a stop never reached after a crash is not judged.)
+    const finishing = buildRaceConfig(4243, 'd_voss', 'bengaluru', 'rookie', plan, null, undefined, true)
     const calls = [{ step: 90, kind: 'pace' as const, mode: 'push' as const }]
-    const r = judgeCalls(config, 4242, calls)
+    const r = judgeCalls(finishing, 4243, calls)
     const kinds = r.verdicts.map(v => v.call.kind).sort()
     expect(kinds).toEqual(['pace', 'plan', 'start'])
-    expect(r.futures).toBe(config.tuning.debrief.futures)
+    expect(r.futures).toBe(finishing.tuning.debrief.futures)
     for (const v of r.verdicts) expect(v.actual.positions).toHaveLength(r.futures)
   })
 
@@ -83,6 +86,30 @@ describe('judgeCalls', () => {
     const alt = planVerdict.better!.alternative
     expect(alt.kind).toBe('plan')
     expect(alt.kind === 'plan' && alt.lap < failLap + 1).toBe(true)
+  })
+  it('reports the real finishing position', () => {
+    const st = replay(config, 4242, []).state
+    const real = st.cars.find(x => x.isPlayer)!
+    expect(judgeCalls(config, 4242, []).finish).toBe(real.retired ? st.cars.length + 1 : real.position)
+  })
+
+  it('does not judge a planned stop the car never reached because it crashed', () => {
+    // A crash is certain on the first error roll; find a seed where it
+    // happens before the planned lap-24 stop.
+    for (let seed = 1; seed < 200; seed++) {
+      const c = buildRaceConfig(seed, 'd_voss', 'bengaluru', 'rookie', plan, null, undefined, true)
+      const crashy: RaceConfig = { ...c, tuning: { ...c.tuning,
+        incidents: { ...c.tuning.incidents, driverErrorPerLap: 0.2, terminalFraction: 1 } } }
+      const st = replay(crashy, seed, []).state
+      const p = st.cars.find(x => x.isPlayer)!
+      if (!(p.retired && p.retiredCause === 'crash' && p.pitsDone === 0)) continue
+      const r = judgeCalls(crashy, seed, [])
+      expect(r.retired?.cause).toBe('crash')
+      expect(r.finish).toBe(st.cars.length + 1)
+      expect(r.verdicts.map(v => v.call.kind)).toEqual(['start'])
+      return
+    }
+    throw new Error('no seed crashed before the planned stop')
   })
 })
 

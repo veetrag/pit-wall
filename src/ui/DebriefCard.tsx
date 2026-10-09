@@ -37,7 +37,7 @@ function Dots({ label, positions }: { label: string; positions: number[] }) {
   )
 }
 
-function Row({ v, index }: { v: CallVerdict; index: number }) {
+function Row({ v, index, finish }: { v: CallVerdict; index: number; finish: string }) {
   const [open, setOpen] = useState(false)
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const better = v.better
@@ -57,7 +57,7 @@ function Row({ v, index }: { v: CallVerdict; index: number }) {
           {better ? '▲ ' : '✓ '}{describeCall(v.call)}
         </span>
         <span style={{ ...mono, fontSize: 12, color: 'var(--text-mid)' }}>
-          {better ? `you avg P${v.actual.meanPosition.toFixed(1)}` : 'GOOD CALL'}
+          {better ? `you ${finish} · avg P${v.actual.meanPosition.toFixed(1)}` : 'GOOD CALL'}
         </span>
       </div>
       {better && (
@@ -120,7 +120,7 @@ export function DebriefCard() {
           Retired L{result.retired.lap} · {result.retired.cause === 'tyre' ? 'tyre failure' : result.retired.cause}
         </div>
       )}
-      {shown.map((v, i) => <Row key={i} v={v} index={i} />)}
+      {shown.map((v, i) => <Row key={i} v={v} index={i} finish={result.retired ? 'DNF' : `P${result.finish}`} />)}
       {hidden > 0 && (
         <div style={{ fontSize: 11, color: 'var(--text-dim)', paddingTop: 8, borderTop: '1px solid var(--line-hair)' }}>
           +{hidden} more judged good

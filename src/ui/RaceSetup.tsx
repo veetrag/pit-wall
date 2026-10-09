@@ -469,7 +469,7 @@ export function RaceSetup() {
             PLAN: {startCompound} → {pitCompound1} on lap {pitLap1}
             {stopCount === 2 && <> → {pitCompound2} on lap {pitLap2}</>}
             <br />
-            <span style={{ color: 'var(--text-mid)' }}>You can override this live during the race.</span>
+            <span style={{ color: 'var(--text-mid)' }}>Stops run automatically. Pit earlier live if you need to — a planned stop can be brought forward, not delayed.</span>
           </div>
         </div>
       </div>

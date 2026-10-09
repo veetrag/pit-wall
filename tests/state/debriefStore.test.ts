@@ -42,7 +42,7 @@ describe('debriefStore', () => {
     setDebriefRunner(runner)
     useDebriefStore.getState().start(job(), 'race-a')
     useDebriefStore.getState().start(job(), 'race-b')
-    live[0]!.on.done({ futures: 8, verdicts: [], retired: null })
+    live[0]!.on.done({ futures: 8, verdicts: [], finish: 6, retired: null })
     expect(useDebriefStore.getState().status).toBe('running')
   })
 
@@ -87,7 +87,7 @@ describe('debriefStore', () => {
     const { runner, live } = manualRunner()
     setDebriefRunner(runner)
     useDebriefStore.getState().start(job(), 'race-a')
-    live[0]!.on.done({ futures: 8, verdicts: [], retired: null })
+    live[0]!.on.done({ futures: 8, verdicts: [], finish: 6, retired: null })
     expect(useDebriefStore.getState().status).toBe('done')
     expect(vi.getTimerCount()).toBe(0)
     vi.advanceTimersByTime(5000)

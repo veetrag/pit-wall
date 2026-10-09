@@ -149,8 +149,11 @@ export function judgeCalls(
     // on worn tyres) are still the player's call: judging them is exactly how
     // the debrief says "stop earlier". Without this a tyre failure before the
     // planned lap would leave the plan unjudged.
+    // Not after a crash, though: a stop the car never reached because it
+    // crashed says nothing about the stop, and "stop earlier" would be noise.
     const plan = config.playerStrategyOverride
-    if (plan) {
+    const crashed = player.retired && player.retiredCause === 'crash'
+    if (plan && !crashed) {
       for (let j = pitsBefore; j < plan.plannedStops.length; j++) {
         const s = plan.plannedStops[j]!
         if (s.lap <= lastLap) planStops.push({ index: j, lap: s.lap, compound: s.compound })
@@ -270,6 +273,7 @@ export function judgeCalls(
 
   return {
     futures,
+    finish: finishPosition(actualRun.state),
     verdicts,
     retired: player.retired && player.retiredCause
       ? { lap: (player.retiredLap ?? player.lap) + 1, cause: player.retiredCause }

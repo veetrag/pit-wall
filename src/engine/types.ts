@@ -450,6 +450,7 @@ export interface CallVerdict {
 
 export interface DebriefResult {
   futures: number
+  finish: number                   // the player's real finishing position (retired = cars + 1)
   verdicts: CallVerdict[]          // sorted by places left on the table, largest first
   retired: { lap: number; cause: 'tyre' | 'mechanical' | 'crash' } | null
 }

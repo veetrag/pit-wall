@@ -191,7 +191,7 @@ Done:
 ```
 YOUR CALLS                       3 judged · 8 futures
 ───────────────────────────────────────────────────
-▲ PIT L25 → HARD                     you avg P6.1
+▲ PIT L25 → HARD                 you P6 · avg P6.1
   Better: L22 → MEDIUM               avg P4.2 · 7/8
 ───────────────────────────────────────────────────
 ✓ PLAN · START ON MEDIUM                GOOD CALL
@@ -202,7 +202,11 @@ YOUR CALLS                       3 judged · 8 futures
   shown; the rest collapse to "+N more judged good".
 - ▲ amber (`--tyre-medium`) = a better alternative existed; ✓ teal = good
   call. Symbol always present with the colour (CLAUDE.md §6.3).
-- "avg" and "k/K" always shown; the header states K.
+- "avg" and "k/K" always shown; the header states K. The player's real
+  finish (or DNF) sits beside their average, because the futures re-roll the
+  race and the average can differ from what happened.
+- A planned stop the car never reached because it **crashed** is not judged;
+  one never reached because of a tyre failure still is.
 - Tapping a row expands a dot strip: the player's finishing position in each
   of the K futures, for their call and the better one.
 - A retirement adds one line under the header: "Retired L48 · tyre failure".

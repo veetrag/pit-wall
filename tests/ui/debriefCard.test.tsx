@@ -8,7 +8,7 @@ import type { DebriefResult } from '@engine/types'
 const o = (p: number[]) => ({ positions: p, meanPosition: p.reduce((a, b) => a + b, 0) / p.length })
 const result: DebriefResult = {
   futures: 8,
-  retired: null,
+  finish: 6, retired: null,
   verdicts: [
     { call: { kind: 'pit', lap: 25, compound: 'H' }, actual: o([6, 6, 7, 6, 6, 5, 7, 6]),
       better: { ...o([4, 4, 5, 4, 4, 4, 5, 4]), alternative: { kind: 'pit', lap: 22, compound: 'M' }, betterShare: 1 } },
@@ -34,7 +34,7 @@ describe('DebriefCard', () => {
     render(<DebriefCard />)
     expect(screen.getByText(/▲ PIT L25 → HARD/)).toBeTruthy()
     expect(screen.getByText(/Better: L22 → MEDIUM/)).toBeTruthy()
-    expect(screen.getByText(/avg P6\.1/)).toBeTruthy()
+    expect(screen.getByText('you P6 · avg P6.1')).toBeTruthy()
     expect(screen.getByText(/avg P4\.3 · 8\/8/)).toBeTruthy()
   })
 
@@ -78,7 +78,7 @@ describe('DebriefCard', () => {
     const late = { call: { kind: 'pit' as const, lap: 50, compound: 'S' as const }, actual: o([6, 6]),
       better: { ...o([5, 5]), alternative: { kind: 'pit' as const, lap: 48, compound: 'M' as const }, betterShare: 1 } }
     useDebriefStore.setState({ status: 'done', raceKey: 'r', done: 0, total: 0,
-      result: { futures: 2, retired: null, verdicts: [good(1), good(2), good(3), good(4), late] } })
+      result: { futures: 2, finish: 6, retired: null, verdicts: [good(1), good(2), good(3), good(4), late] } })
     render(<DebriefCard />)
     expect(screen.getByText(/▲ PIT L50/)).toBeTruthy()
     expect(screen.getByText(/\+1 more judged good/)).toBeTruthy()
