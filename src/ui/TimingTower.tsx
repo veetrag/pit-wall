@@ -75,14 +75,17 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed }:
   // from the token.
   const rowBg = compressed
     ? 'rgba(var(--caution-rgb), 0.22)'
-    : car.isPlayer
+    // A retired player drops the volt: its dim retired styling would be
+    // unreadable on yellow.
+    : car.isPlayer && !car.retired
     ? fresh
       // Fresh-tyre shimmer: the volt row washes out toward its right edge
       // for 1.8s after a stop, then settles back to solid volt.
       ? 'linear-gradient(90deg, var(--volt) 40%, rgba(var(--volt-rgb), 0.55) 100%)'
       : 'var(--volt)'
     : 'var(--grape)'
-  const textColor = car.retired ? 'var(--lilac-dim)' : car.isPlayer && !compressed ? 'var(--ink)' : 'var(--white)'
+  const onVolt = car.isPlayer && !car.retired && !compressed
+  const textColor = car.retired ? 'var(--lilac-dim)' : onVolt ? 'var(--ink)' : 'var(--white)'
 
   return (
     <motion.div
@@ -135,8 +138,12 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed }:
             {/* Colour is never the only signal (CLAUDE.md 6.3): the glyph carries direction. */}
             {flash && (
               <span
+                role="img"
                 aria-label={flash === 'gain' ? 'gained a place' : 'lost a place'}
-                style={{ color: flash === 'gain' ? 'var(--gain)' : 'var(--hot)', marginRight: 4 }}
+                data-flash-glyph
+                // On the volt row everything is ink (contrast); the glyph's
+                // shape still carries the direction.
+                style={{ color: onVolt ? 'var(--ink)' : flash === 'gain' ? 'var(--gain)' : 'var(--hot)', marginRight: 4 }}
               >
                 {flash === 'gain' ? '▲' : '▼'}
               </span>
@@ -147,7 +154,7 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed }:
             display: 'inline-flex', justifySelf: 'center', borderRadius: 999,
             // On the volt row the chip sits on an ink disc so the compound
             // colour and white letter keep their contrast.
-            background: car.isPlayer ? 'var(--ink)' : 'transparent',
+            background: onVolt ? 'var(--ink)' : 'transparent',
           }}>
             <TyreChip compound={car.compound} size={24} />
           </span>
@@ -277,7 +284,7 @@ export function TimingTower() {
     }}>
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
-        padding: '8px 12px 6px', flexShrink: 0,
+        padding: '0 12px', flexShrink: 0,
       }}>
         <span style={{
           fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 16,
@@ -292,7 +299,7 @@ export function TimingTower() {
             whileTap={reducedMotion ? undefined : { scale: 0.96 }}
             onClick={() => { uiTap(); setExpanded(v => !v) }}
             style={{
-              minHeight: 32, padding: '0 14px', border: 'none', cursor: 'pointer',
+              minHeight: 48, padding: '0 14px', border: 'none', cursor: 'pointer',
               fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 0.5,
               background: 'var(--grape)', color: 'var(--white)', whiteSpace: 'nowrap',
             }}
@@ -306,7 +313,7 @@ export function TimingTower() {
             onClick={() => { uiTap(); setDriverNameFormat(wide ? 'code' : 'full') }}
             title="Toggle full name / code"
             style={{
-              minHeight: 32, padding: '0 14px', border: 'none', cursor: 'pointer',
+              minHeight: 48, padding: '0 14px', border: 'none', cursor: 'pointer',
               fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 0.5,
               background: 'transparent', color: 'var(--lilac)', whiteSpace: 'nowrap',
             }}

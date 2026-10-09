@@ -53,4 +53,48 @@ describe('race HUD in Race Day Bold', () => {
     render(<PaceModeToggle />)
     expect(screen.getByRole('radiogroup', { name: 'Pace mode' })).toBeTruthy()
   })
+  it('the player flash glyph is ink on the volt row', () => {
+    render(<TimingTower />)
+    const base = useRaceStore.getState().raceState!
+    const me = base.cars.find(c => c.isPlayer)!
+    // Swap places with a neighbour so the player row flashes gain or loss.
+    const otherPos = me.position === 1 ? 2 : me.position - 1
+    act(() => {
+      useRaceStore.setState({
+        raceState: {
+          ...base,
+          cars: base.cars.map(c =>
+            c.isPlayer ? { ...c, position: otherPos }
+            : c.position === otherPos ? { ...c, position: me.position } : c),
+        },
+      })
+    })
+    const mine = Array.from(document.querySelectorAll<HTMLElement>('[data-tower-row]'))
+      .find(r => r.style.background.includes('--volt'))
+    expect(mine, 'the player row is volt').toBeTruthy()
+    const glyph = mine!.querySelector<HTMLElement>('[data-flash-glyph]')
+    expect(glyph, 'the player row shows a gain/loss glyph').toBeTruthy()
+    expect(glyph!.getAttribute('role')).toBe('img')
+    expect(glyph!.style.color).toBe('var(--ink)')
+  })
+  it('a retired player row is not volt', () => {
+    const base = useRaceStore.getState().raceState!
+    act(() => {
+      useRaceStore.setState({
+        raceState: { ...base, cars: base.cars.map(c => c.isPlayer ? { ...c, retired: true } : c) },
+      })
+    })
+    render(<TimingTower />)
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-tower-row]'))
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows.some(r => r.style.background.includes('--volt'))).toBe(false)
+    expect(screen.getByText('DNF')).toBeTruthy()
+  })
+  it('the tower toggles have a 48px hit area', () => {
+    render(<TimingTower />)
+    for (const name of [/FULL FIELD/, /FULL NAME/]) {
+      const btn = screen.getByRole('button', { name })
+      expect(parseInt(btn.style.minHeight, 10)).toBeGreaterThanOrEqual(48)
+    }
+  })
 })
