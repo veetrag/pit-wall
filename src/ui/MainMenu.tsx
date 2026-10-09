@@ -1,63 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
 import { loadSnapshot, type SeasonSnapshot } from '@state/seasonPersistence'
 import { loadCareer } from '@state/careerPersistence'
 import { useCareerStore } from '@state/careerStore'
-import { useUiTap } from '@hooks/useUiTap'
+import { loadGameData } from '@data/validators'
+import { KitButton, Pill, ProgressStrip, HeroBand, CarArt, liveryOf, snapIn, useReducedMotion } from '@ui/kit'
 
-function AmbientHero() {
+const SETTINGS_BTN: CSSProperties = {
+  width: 48, height: 48, borderRadius: '50%', border: 'none', cursor: 'pointer',
+  background: 'var(--grape)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+}
+
+function GearIcon() {
   return (
-    <div style={{ position: 'relative', width: '100%', height: 160, marginBottom: 8, overflow: 'hidden' }}>
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse 80% 60% at 50% 80%, rgba(0,229,208,0.07) 0%, transparent 70%)',
-      }} />
-      <svg viewBox="0 0 320 150" style={{ width: '100%', height: '100%' }} aria-hidden>
-        {/* Outer track loop */}
-        <path
-          d="M 48,115 Q 28,115 28,95 L 28,55 Q 28,38 48,38 L 128,38 Q 138,38 143,47 L 153,62 Q 160,72 160,72 Q 160,72 167,62 L 177,47 Q 182,38 192,38 L 272,38 Q 292,38 292,55 L 292,95 Q 292,115 272,115 Z"
-          fill="none" stroke="rgba(0,229,208,0.18)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"
-        />
-        {/* Inner outline */}
-        <path
-          d="M 68,100 Q 52,100 52,84 L 52,66 Q 52,52 68,52 L 118,52 Q 126,52 130,60 L 140,75 Q 148,88 160,88 Q 172,88 180,75 L 190,60 Q 194,52 202,52 L 252,52 Q 268,52 268,66 L 268,84 Q 268,100 252,100 Z"
-          fill="none" stroke="rgba(0,229,208,0.06)" strokeWidth="3"
-        />
-        {/* Start/finish tick */}
-        <line x1="52" y1="100" x2="52" y2="112" stroke="rgba(0,229,208,0.5)" strokeWidth="2" strokeDasharray="3 2" />
-        {/* Floodlight glow dots */}
-        <circle cx="28" cy="32" r="3.5" fill="rgba(242,201,76,0.2)" />
-        <circle cx="292" cy="32" r="3.5" fill="rgba(242,201,76,0.2)" />
-        <circle cx="160" cy="20" r="3" fill="rgba(242,201,76,0.15)" />
-      </svg>
-      {/* Sweep glow */}
-      <motion.div
-        animate={{ x: ['-25%', '125%'] }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'linear', repeatDelay: 5 }}
-        style={{
-          position: 'absolute', top: 0, bottom: 0, width: '28%',
-          background: 'linear-gradient(90deg, transparent, rgba(0,229,208,0.05), transparent)',
-          pointerEvents: 'none',
-        }}
-      />
-    </div>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--white)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
+    </svg>
   )
 }
 
-interface MenuItem { id: string; label: string; sub: string; primary: boolean }
-
-const BROWSE_ITEMS: MenuItem[] = [
-  { id: 'scenarios', label: 'SCENARIOS',     sub: 'Drop into a race in progress', primary: false },
-  { id: 'grid',     label: 'GRID & GARAGE',  sub: 'Browse drivers & teams',     primary: false },
-  { id: 'career',   label: 'CAREER',         sub: 'Titles, wins & season history', primary: false },
-  { id: 'howto',    label: 'HOW TO PLAY',    sub: 'Strategy primer',            primary: false },
-  { id: 'settings', label: 'SETTINGS',       sub: 'Sound, haptics, gameplay',   primary: false },
-]
-
-const NEW_SEASON: MenuItem =
-  { id: 'race', label: 'NEW SEASON', sub: '12-race championship', primary: true }
+function SubLabel({ children }: { children: string }) {
+  return (
+    <span style={{ display: 'block', fontFamily: 'var(--font-body)', fontStyle: 'normal', fontWeight: 700, fontSize: 12, letterSpacing: 1, opacity: 0.75, marginTop: 2 }}>
+      {children}
+    </span>
+  )
+}
 
 export function MainMenu() {
   const startNewSeason = useSeasonStore(s => s.startNewSeason)
@@ -69,7 +40,8 @@ export function MainMenu() {
   const viewScenarios = useSeasonStore(s => s.viewScenarios)
   const resumeCareer = useCareerStore(s => s.resumeCareer)
   const hasCareer = useCareerStore(s => s.hasCareer)
-  const uiTap = useUiTap()
+  const seasonNumber = useCareerStore(s => s.seasonNumber)
+  const reduced = useReducedMotion()
 
   // Read on mount rather than at app start: the menu is remounted every time
   // the player comes back to it, so a season abandoned during this run stops
@@ -88,32 +60,29 @@ export function MainMenu() {
   // mis-tap. Inline rather than a modal -- one tap to arm, one to confirm.
   const [confirmNew, setConfirmNew] = useState(false)
 
-  const browseItems = hasCareer ? BROWSE_ITEMS : BROWSE_ITEMS.filter(i => i.id !== 'career')
-
-  const items: MenuItem[] = saved
-    ? [
-        { id: 'continue', label: 'CONTINUE SEASON',
-          sub: `Round ${saved.raceIndex + 1} of ${CIRCUIT_ORDER.length}`, primary: true },
-        confirmNew
-          ? { id: 'race', label: 'DISCARD AND START OVER?', sub: 'Tap again to confirm', primary: false }
-          : { ...NEW_SEASON, primary: false },
-        ...browseItems,
-      ]
-    : [NEW_SEASON, ...browseItems]
-
-  function handleAction(id: string) {
-    uiTap()
-    if (id === 'continue') { if (saved) resumeSeason(saved) }
-    else if (id === 'race') {
-      if (saved && !confirmNew) { setConfirmNew(true); return }
-      startNewSeason()
-    }
-    else if (id === 'grid') viewGrid()
-    else if (id === 'career') viewCareer()
-    else if (id === 'howto') viewHowToPlay()
-    else if (id === 'settings') viewSettings()
-    else if (id === 'scenarios') viewScenarios()
+  function onNewSeason() {
+    if (saved && !confirmNew) { setConfirmNew(true); return }
+    startNewSeason()
   }
+
+  const data = loadGameData()
+  const teamId = saved?.selectedTeamId ?? null
+  const team = teamId ? data.cars.teams.find(t => t.id === teamId) : undefined
+  const livery = liveryOf(teamId ?? 'apex')
+  const circuitName = saved?.selectedCircuitId ? data.circuits[saved.selectedCircuitId]?.name ?? '' : ''
+  const total = CIRCUIT_ORDER.length
+
+  let standing = 0
+  let points = 0
+  if (saved) {
+    const sorted = [...saved.standings].sort((a, b) => b.points - a.points) // stable: ties keep array order
+    const idx = sorted.findIndex(s => s.driverId === saved.playerDriverId)
+    standing = idx >= 0 ? idx + 1 : sorted.length + 1
+    points = idx >= 0 ? sorted[idx]!.points : 0
+  }
+
+  let i = 0
+  const next = () => snapIn(reduced, i++)
 
   return (
     <motion.div
@@ -121,88 +90,93 @@ export function MainMenu() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
+        height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto',
+        background: 'var(--ink)',
         paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-        position: 'relative', overflow: 'hidden',
+        position: 'relative',
       }}
     >
-      {/* Subtle grid lines background */}
-      <div style={{
-        position: 'absolute', inset: 0, opacity: 0.025, pointerEvents: 'none',
-        backgroundImage: 'linear-gradient(var(--text-hi) 1px,transparent 1px),linear-gradient(90deg,var(--text-hi) 1px,transparent 1px)',
-        backgroundSize: '40px 40px',
-      }} />
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 28px' }}>
-        {/* Hero */}
-        <AmbientHero />
-
-        {/* Wordmark */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <motion.div
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
-            style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.32em', marginBottom: 6 }}
-          >
-            RACE STRATEGY
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}
-            style={{
-              fontFamily: 'var(--font-display)', fontSize: 50, fontWeight: 800,
-              color: 'var(--text-hi)', letterSpacing: '-0.02em', lineHeight: 1,
-              textShadow: '0 0 60px rgba(0,229,208,0.2)',
-            }}
-          >
-            PIT WALL
-          </motion.div>
-        </div>
-
-        {/* Nav buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 300, width: '100%', alignSelf: 'center' }}>
-          {items.map(({ id, label, sub, primary }, i) => (
-            <motion.button
-              key={id}
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.07 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => handleAction(id)}
-              style={{
-                background: primary ? 'var(--accent)' : 'transparent',
-                color: primary ? 'var(--bg-deep)' : 'var(--text-mid)',
-                border: primary ? 'none' : '1px solid var(--line-hair)',
-                borderRadius: 12, padding: primary ? '17px 0' : '13px 0',
-                fontFamily: 'var(--font-display)', fontWeight: primary ? 700 : 600,
-                fontSize: primary ? 16 : 13, letterSpacing: '0.09em', cursor: 'pointer',
-                width: '100%', textAlign: 'center',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              }}
-            >
-              <span>{label}</span>
-              {/*
-                Rendered for the PRIMARY button too, which it was not before.
-                CONTINUE SEASON is primary and its sub-label carries the round
-                the player is on -- the single most useful thing on this screen
-                for a returning player -- so hiding it on primary items made
-                that text exist in code and never reach the screen.
-                rgba(0,0,0,0.6) on the accent fill measures 4.94:1, clearing AA;
-                --text-dim would be illegible there.
-              */}
-              <span style={{
-                fontFamily: 'var(--font-mono)', fontSize: 9,
-                color: primary ? 'rgba(0,0,0,0.6)' : 'var(--text-dim)',
-                letterSpacing: '0.05em', fontWeight: 400,
-              }}>
-                {sub}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '16px 20px 12px', flex: 1 }}>
+        {/* Header */}
+        <motion.div {...next()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          {saved
+            ? <Pill>{team?.name ?? 'Your team'}{seasonNumber ? ` · Season ${seasonNumber}` : ''}</Pill>
+            : (
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 34, color: 'var(--white)', lineHeight: 1 }}>
+                PIT WALL
               </span>
-            </motion.button>
-          ))}
-        </div>
+            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {saved && <Pill tone="volt">{saved.devPoints} DP</Pill>}
+            <button type="button" aria-label="Settings" className="kit-focus" style={SETTINGS_BTN} onClick={viewSettings}>
+              <GearIcon />
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Hero */}
+        <motion.div {...next()} style={{ position: 'relative', height: 262, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <HeroBand color={saved ? livery.primary : 'var(--volt)'} height={290} top={-40} />
+          <div style={{ position: 'relative', width: 300, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CarArt primary={livery.primary} accent={livery.accent} height={300} heading="left"
+              label={`${team?.name ?? 'Apex Racing'} car`} />
+          </div>
+        </motion.div>
+
+        {/* Next race card */}
+        {saved && (
+          <motion.div {...next()} className="slant-lg" style={{ background: 'var(--grape)', padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 1.5, color: 'var(--lilac)' }}>
+              ROUND {saved.raceIndex + 1} OF {total}
+            </span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 44, lineHeight: 1, textTransform: 'uppercase', color: 'var(--white)' }}>
+              {circuitName}
+            </span>
+            <ProgressStrip total={total} done={saved.raceIndex} />
+            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 14, color: 'var(--lilac)', fontVariantNumeric: 'tabular-nums' }}>
+              P{standing} · {points} pts
+            </span>
+          </motion.div>
+        )}
+
+        {/* Primary */}
+        <motion.div {...next()}>
+          {saved
+            ? (
+              <KitButton variant="primary" size="lg" style={{ width: '100%' }} onClick={() => resumeSeason(saved)}>
+                <span>CONTINUE SEASON</span>
+                <SubLabel>{`Round ${saved.raceIndex + 1} of ${total}`}</SubLabel>
+              </KitButton>
+            )
+            : (
+              <KitButton variant="primary" size="lg" style={{ width: '100%' }} onClick={startNewSeason}>
+                <span>NEW SEASON</span>
+                <SubLabel>{`${total}-race championship`}</SubLabel>
+              </KitButton>
+            )}
+        </motion.div>
+
+        {/* Tiles */}
+        <motion.div {...next()} style={{ display: 'flex', gap: 10 }}>
+          <KitButton variant="urgent" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewScenarios}>SCENARIOS</KitButton>
+          <KitButton variant="secondary" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewGrid}>GARAGE</KitButton>
+          {hasCareer && <KitButton variant="secondary" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewCareer}>CAREER</KitButton>}
+        </motion.div>
+
+        {/* Secondary */}
+        <motion.div {...next()} style={{ display: 'flex', gap: 10 }}>
+          {saved && (
+            <KitButton variant="secondary" size="sm" display={false} style={{ flex: 1, padding: '0 12px' }} onClick={onNewSeason}>
+              {confirmNew
+                ? <span>DISCARD AND START OVER?<SubLabel>Tap again to confirm</SubLabel></span>
+                : 'NEW SEASON'}
+            </KitButton>
+          )}
+          <KitButton variant="secondary" size="sm" display={false} style={{ flex: 1, padding: '0 12px' }} onClick={viewHowToPlay}>HOW TO PLAY</KitButton>
+        </motion.div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-        style={{ textAlign: 'center', paddingBottom: 16, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.12em' }}
-      >
+      <motion.div {...next()} style={{ textAlign: 'center', paddingBottom: 16, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--lilac-dim)' }}>
         PIT WALL · v{__APP_VERSION__}
       </motion.div>
     </motion.div>
