@@ -519,6 +519,10 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       // The career's running totals, captured at the flag from the same
       // results the standings use.
       if (pending.pendingRace) useCareerStore.getState().recordRace(pending.pendingRace)
+      // The wing is remembered on KEEP, not at the flag, so a retried attempt
+      // leaves the career's memory of this circuit untouched.
+      const wing = pending.playerStrategy?.wing
+      if (wing !== undefined && pending.selectedCircuitId) useCareerStore.getState().rememberWing(pending.selectedCircuitId, wing)
     }
   },
 

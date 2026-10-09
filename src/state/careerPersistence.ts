@@ -74,6 +74,16 @@ export const CareerSnapshotSchema = z.object({
    * the ladder has never moved a team, so "every offset 0" is simply true.
    */
   teamTiers: z.record(z.string(), z.number()).default({}),
+  /*
+   * .default({}) for the same reason as teamTiers: no memory yet is simply
+   * true of a save from before the wing existed. Declared AFTER teamTiers and
+   * written in the same order by careerSnapshotFrom, because cloud-save
+   * reconcile compares serialised JSON and key order is part of that string.
+   */
+  wingByCircuit: z.record(
+    z.string(),
+    z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+  ).default({}),
 })
 
 export type CareerSnapshot = z.infer<typeof CareerSnapshotSchema>
@@ -96,6 +106,7 @@ export function careerSnapshotFrom(
     seasonHistory: r.seasonHistory,
     raceLog: r.raceLog,
     teamTiers: r.teamTiers,
+    wingByCircuit: r.wingByCircuit,
   }
 }
 
