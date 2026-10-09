@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
@@ -65,11 +65,15 @@ export function MainMenu() {
     startNewSeason()
   }
 
-  const data = loadGameData()
+  const data = useMemo(() => loadGameData(), [])
   const teamId = saved?.selectedTeamId ?? null
   const team = teamId ? data.cars.teams.find(t => t.id === teamId) : undefined
   const livery = liveryOf(teamId ?? 'apex')
-  const circuitName = saved?.selectedCircuitId ? data.circuits[saved.selectedCircuitId]?.name ?? '' : ''
+  const calendarId = saved ? CIRCUIT_ORDER[saved.raceIndex % CIRCUIT_ORDER.length] : undefined
+  const circuitName = saved
+    ? (saved.selectedCircuitId ? data.circuits[saved.selectedCircuitId]?.name : undefined)
+      ?? (calendarId ? data.circuits[calendarId]?.name : undefined) ?? ''
+    : ''
   const total = CIRCUIT_ORDER.length
 
   let standing = 0
