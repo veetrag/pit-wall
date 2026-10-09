@@ -31,7 +31,7 @@ export function describeAlternative(a: Alternative): string {
 
 function Dots({ label, positions }: { label: string; positions: number[] }) {
   return (
-    <div aria-label={label} style={{ ...mono, fontSize: 11, color: 'var(--text-mid)' }}>
+    <div role="group" aria-label={label} style={{ ...mono, fontSize: 11, color: 'var(--text-mid)' }}>
       {positions.map((p, i) => <span key={i} style={{ marginRight: 6 }}>P{p}</span>)}
     </div>
   )
@@ -46,9 +46,11 @@ function Row({ v, index }: { v: CallVerdict; index: number }) {
       initial={reducedMotion ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: reducedMotion ? 0 : index * 0.08, ease: [0.2, 0, 0, 1] }}
-      onClick={() => setOpen(o => !o)}
-      style={{ padding: '10px 0', borderTop: '1px solid var(--line-hair)', cursor: 'pointer' }}
+      style={{ padding: '10px 0', borderTop: '1px solid var(--line-hair)' }}
     >
+      <button type="button" className="debrief-row-btn" aria-expanded={open} onClick={() => setOpen(o => !o)}
+        style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
+          padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600,
           color: better ? 'var(--tyre-medium)' : 'var(--accent)' }}>
@@ -66,6 +68,7 @@ function Row({ v, index }: { v: CallVerdict; index: number }) {
           </span>
         </div>
       )}
+      </button>
       {open && (
         <div style={{ marginTop: 6, display: 'grid', gap: 2 }}>
           <Dots label="Your call, finishing positions" positions={v.actual.positions} />
@@ -94,7 +97,7 @@ export function DebriefCard() {
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>{title}
           <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>reviewing…</span></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-          <div style={{ flex: 1, height: 3, background: 'var(--line-hair)', borderRadius: 2 }}>
+          <div role="progressbar" aria-label="Reviewing your calls" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} style={{ flex: 1, height: 3, background: 'var(--line-hair)', borderRadius: 2 }}>
             <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', borderRadius: 2 }} />
           </div>
           <span style={{ ...mono, fontSize: 11, color: 'var(--text-mid)' }}>{pct}%</span>
@@ -108,6 +111,7 @@ export function DebriefCard() {
   const hidden = result.verdicts.length - shown.length
   return (
     <div style={shell}>
+      <style>{'.debrief-row-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}'}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>{title}
         <span style={{ ...mono, fontSize: 11, color: 'var(--text-dim)' }}>
           {result.verdicts.length} judged · {result.futures} futures</span></div>

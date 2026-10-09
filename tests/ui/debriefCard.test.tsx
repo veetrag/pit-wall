@@ -26,6 +26,7 @@ describe('DebriefCard', () => {
     render(<DebriefCard />)
     expect(screen.getByText(/reviewing/i)).toBeTruthy()
     expect(screen.getByText('61%')).toBeTruthy()
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('61')
   })
 
   it('shows a better alternative with ▲, both averages and the share', () => {
@@ -47,7 +48,10 @@ describe('DebriefCard', () => {
   it('expands a row to show each future', () => {
     useDebriefStore.setState({ status: 'done', result, raceKey: 'r', done: 0, total: 0 })
     render(<DebriefCard />)
-    fireEvent.click(screen.getByText(/▲ PIT L25 → HARD/))
+    const btn = screen.getByRole('button', { name: /PIT L25 → HARD/ })
+    expect(btn.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(btn)
+    expect(btn.getAttribute('aria-expanded')).toBe('true')
     expect(screen.getByLabelText(/your call, finishing positions/i).textContent).toContain('P6')
   })
 
