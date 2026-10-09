@@ -1,6 +1,7 @@
 import radioData from '@data/radio.json'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
 import type { RaceState, RaceConfig } from '@engine/types'
+import { wingOf } from '@engine/setup'
 import { soundService } from '@audio/soundService'
 
 const RETIREMENT_RADIO: Record<'tyre' | 'mechanical' | 'crash', string> = {
@@ -50,6 +51,7 @@ export interface RadioState {
   hasWon: boolean
   cliffWarned: boolean
   prevRetired: boolean
+  lowWingWarned: boolean
 }
 
 export function makeRadioState(): RadioState {
@@ -63,6 +65,7 @@ export function makeRadioState(): RadioState {
     hasWon: false,
     cliffWarned: false,
     prevRetired: false,
+    lowWingWarned: false,
   }
 }
 
@@ -110,6 +113,12 @@ export function processRadioTick(
     tryPush('wet_spin', 2, {}, pushAlert)
   }
   next.prevSpinCount = playerSpinCount
+
+  // Setup consequence: rain on a low wing. Once per race; only when setups exist.
+  if (!radio.lowWingWarned && state.weatherState !== 'DRY' && config.setups && wingOf(config, player.driverId) <= 2) {
+    tryPush('low_wing_wet', 1, {}, pushAlert)
+    next.lowWingWarned = true
+  }
 
   // 3. Win / podium (fire once)
   if (state.lap >= totalLaps && !radio.hasWon) {
