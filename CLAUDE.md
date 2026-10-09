@@ -109,8 +109,8 @@ Chosen 2026-10-09 (spec: `docs/superpowers/specs/2026-10-09-race-day-bold-redesi
 --ink #120E2B (ground)   --night #1B1542   --grape #2A2160 (cards)   --dusk #3A2F7A (lines)
 --lilac #CFC8F2 (body)   --lilac-dim #A99FDB (labels)   --white #FFFFFF (titles, numbers)
 --volt #FFD60A  — the ONLY call-to-action colour; your row; earned
---hot  #FF2E63  — urgent: PIT, cliff, losing      --gain #3DDC84      --caution #FFB020
-tyres: S #FF2E63  M #FFD60A  H #FFFFFF  I #3DDC84  W #4DA6FF
+--hot  #FF4F84  — urgent: PIT, cliff, losing      --gain #3DDC84      --caution #FFB020
+tyres: S #FF4F84  M #FFD60A  H #FFFFFF  I #3DDC84  W #4DA6FF
 ```
 
 Text on a volt, hot or caution fill is `--ink`. **Typography:** Big Shoulders Display (900, italic for heroes and titles; 700 upright for section heads) and Barlow for everything else, self-hosted. **All live-updating numbers MUST use tabular figures** (set globally on `body`). **Shape:** one forward slant (kit classes `.slant-*`); only pills and avatars are round.

@@ -58,11 +58,11 @@ a presentation change only.
 | `--lilac-dim` | `#A99FDB` | labels |
 | `--white` | `#FFFFFF` | titles, numbers |
 | `--volt` | `#FFD60A` | **the only call-to-action colour**; your row; earned |
-| `--hot` | `#FF2E63` | urgent: PIT, cliff, losing, radio alerts |
+| `--hot` | `#FF4F84` (lightened from #FF2E63 to clear 4.5:1 on --grape) | urgent: PIT, cliff, losing, radio alerts |
 | `--gain` | `#3DDC84` | gaining, good call, step up |
 | `--caution` | `#FFB020` | safety car |
 
-Tyre colours: S `#FF2E63`, M `#FFD60A`, H `#FFFFFF`, I `#3DDC84`,
+Tyre colours: S `#FF4F84` (lightened from #FF2E63 to clear 4.5:1 on --grape), M `#FFD60A`, H `#FFFFFF`, I `#3DDC84`,
 W `#4DA6FF`. Team colours stay as `cars.json` defines them. A colour that
 carries meaning always travels with a letter, name, or ▲/▼ (§6.3 holds).
 
