@@ -279,3 +279,17 @@ Spike for the post-race debrief: a Vite module worker
 (`new Worker(new URL(..., import.meta.url), { type: 'module' })`) loaded and
 replied inside the Capacitor WebView on the Pixel 10 Pro XL
 (PITWALL_WORKER_OK). Spike code removed.
+
+## 2026-10-09: post-race debrief
+
+- Spec `docs/superpowers/specs/2026-10-09-post-race-debrief-design.md`, plan
+  `docs/superpowers/plans/2026-10-09-post-race-debrief.md`.
+- The pre-race plan now executes (it never did); all stops share one
+  stop-time model including pit crew.
+- Device pass: NOT MADE. The release build succeeded (BUILD SUCCESSFUL) and
+  installed with `adb install -r` on the Pixel 10 Pro XL, but the phone was
+  locked (keyguard showing, clock screen) and could not be unlocked, so none
+  of the five checks (plan stop executes, "reviewing..." card, finished
+  rows and expand, RETRY mid-review, scroll smoothness) were observed and no
+  debrief time was measured. The app was not launched on screen. To be redone
+  with an unlocked phone.
