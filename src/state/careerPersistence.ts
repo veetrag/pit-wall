@@ -68,6 +68,12 @@ export const CareerSnapshotSchema = z.object({
    * save -- silent, total career loss. Asserted in careerPersistence.test.ts.
    */
   raceLog: z.array(RaceFactSchema).default([]),
+  /*
+   * .default({}) and NOT a version bump, for the reason given on raceLog
+   * above: a bump makes every existing save load as null. A save from before
+   * the ladder has never moved a team, so "every offset 0" is simply true.
+   */
+  teamTiers: z.record(z.string(), z.number()).default({}),
 })
 
 export type CareerSnapshot = z.infer<typeof CareerSnapshotSchema>
@@ -89,6 +95,7 @@ export function careerSnapshotFrom(
     bestFinish: r.bestFinish,
     seasonHistory: r.seasonHistory,
     raceLog: r.raceLog,
+    teamTiers: r.teamTiers,
   }
 }
 

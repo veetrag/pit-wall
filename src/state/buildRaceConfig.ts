@@ -1,4 +1,4 @@
-import { loadGameData } from '@data/validators'
+import { loadGameData, type Cars } from '@data/validators'
 import type { RaceConfig, StrategyBrain, DifficultyProfile } from '@engine/index'
 import { applyUpgrades, type UpgradeOverlayInput } from './upgradeOverlay'
 import type { Difficulty } from './settingsStore'
@@ -13,6 +13,45 @@ function applyBrainProfile(baseBrain: StrategyBrain, profile: DifficultyProfile)
   const capIdx = BRAIN_ORDER.indexOf(profile.brainCap)
   const promotedIdx = profile.brainPromote ? Math.min(baseIdx + 1, BRAIN_ORDER.length - 1) : baseIdx
   return BRAIN_ORDER[Math.min(promotedIdx, capIdx)]!
+}
+
+/**
+ * The ten cars as a race would receive them: authored facets, the ladder
+ * offset, then the player's upgrades or a rival's development.
+ *
+ * Exported so the team ladder rates teams with this same function that
+ * builds the race cars. One builder for both means the ladder's ratings and
+ * the simulated cars cannot be computed by two diverging code paths.
+ */
+export function effectiveTeams(
+  playerDriverId: string,
+  upgrades?: UpgradeOverlayInput | null,
+): Cars['teams'] {
+  const data = loadGameData()
+  const playerTeam = data.drivers.drivers.find(d => d.id === playerDriverId)?.teamId
+  // Run unconditionally, even with no overlay, so `config` never aliases the
+  // objects `loadGameData()` returned. That loader does not memoise today (it
+  // re-parses every schema per call), so this is currently belt-and-braces --
+  // but memoising it is an obvious optimisation, and this keeps that refactor
+  // from silently leaking one race's upgrades into the next.
+  //
+  // If playerDriverId resolves to no team, apply NO overlay rather than an
+  // inverted one: with the team falling back to '', `appliesTo` is false
+  // for every team, so the player's purchases would be discarded *and* the
+  // player's own team would take the rival-development branch -- a bad id would
+  // produce a loudly wrong grid instead of a harmless no-op.
+  const overlayActive = playerTeam !== undefined
+  return applyUpgrades(data.cars.teams, {
+    attributes: data.upgrades.attributes,
+    purchasedTiers: overlayActive ? upgrades?.purchasedTiers ?? {} : {},
+    target: 'team',
+    // Car upgrades belong to the chassis, so the player's teammate gets them too.
+    appliesTo: t => t.id === (playerTeam ?? ''),
+    rivalDevelopment: overlayActive ? upgrades?.rivalDevelopment ?? {} : {},
+    // Offsets belong to the team, not to the player, so they apply even when
+    // the player id resolves to no team.
+    teamTiers: upgrades?.teamTiers ?? {},
+  })
 }
 
 export function buildRaceConfig(
@@ -59,29 +98,9 @@ export function buildRaceConfig(
 
   // Upgrades are applied here and nowhere else: the engine receives ordinary
   // facet numbers and never learns that progression exists (CLAUDE.md §3).
-  //
-  // Run unconditionally, even with no overlay, so `config` never aliases the
-  // objects `loadGameData()` returned. That loader does not memoise today (it
-  // re-parses every schema per call), so this is currently belt-and-braces —
-  // but memoising it is an obvious optimisation, and this keeps that refactor
-  // from silently leaking one race's upgrades into the next.
-  //
-  // If playerDriverId resolves to no team, apply NO overlay rather than an
-  // inverted one: with playerTeamId falling back to '', `appliesTo` is false
-  // for every team, so the player's purchases would be discarded *and* the
-  // player's own team would take the rival-development branch — a bad id would
-  // produce a loudly wrong grid instead of a harmless no-op.
   const overlayActive = playerTeam !== undefined
   const purchasedTiers = overlayActive ? upgrades?.purchasedTiers ?? {} : {}
-  const rivalDevelopment = overlayActive ? upgrades?.rivalDevelopment ?? {} : {}
-  const teams = applyUpgrades(data.cars.teams, {
-    attributes: data.upgrades.attributes,
-    purchasedTiers,
-    target: 'team',
-    // Car upgrades belong to the chassis, so the player's teammate gets them too.
-    appliesTo: t => t.id === playerTeamId,
-    rivalDevelopment,
-  })
+  const teams = effectiveTeams(playerDriverId, upgrades)
   const drivers = applyUpgrades(data.drivers.drivers, {
     attributes: data.upgrades.attributes,
     purchasedTiers,

@@ -5,6 +5,8 @@ import { runQualifying, qualifyingRng, type Compound, type PitStop, type Qualify
 import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
 import { useCareerStore, escalateRivals } from './careerStore'
+import { settleSeason, type LadderMove } from './teamLadder'
+import type { UpgradeOverlayInput } from './upgradeOverlay'
 
 export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result' | 'career'
 
@@ -151,6 +153,18 @@ interface SeasonStore {
    * should not re-announce a payment made before the app closed.
    */
   lastSeasonBonus: number
+  /**
+   * The ladder verdict for the season just banked, for the championship
+   * screen. UI only and never persisted, like lastSeasonBonus: a reload on
+   * that screen shows the standings without the reveal rather than a stale one.
+   */
+  lastLadder: LadderMove[] | null
+  /**
+   * Everything the overlay needs to build this season's cars. The ONLY place
+   * that input is assembled, so qualifying, the race and the ladder cannot
+   * disagree about what the cars were.
+   */
+  overlayInput: () => UpgradeOverlayInput
 
   tierCost: (attributeId: string) => number | null
   canAfford: (attributeId: string) => boolean
@@ -244,6 +258,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   purchasedTiers: {},
   rivalDevelopment: {},
   lastSeasonBonus: 0,
+  lastLadder: null,
 
   tierCost(attributeId) {
     const { tierCosts, attributes } = loadGameData().upgrades
@@ -304,9 +319,18 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   backToTeamSelect() { set({ phase: 'team_select', playerDriverId: null }) },
   backToDriverSelect() { set({ phase: 'driver_select' }) },
 
+  overlayInput() {
+    const s = get()
+    return {
+      purchasedTiers: s.purchasedTiers,
+      rivalDevelopment: s.rivalDevelopment,
+      teamTiers: useCareerStore.getState().teamTiers,
+    }
+  },
+
   startNewSeason() {
     useCareerStore.getState().beginCareer()
-    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {}, lastSeasonBonus: 0 })
+    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {}, lastSeasonBonus: 0, lastLadder: null })
   },
 
   selectTeam(id) { set({ selectedTeamId: id, playerDriverId: null }) },
@@ -354,7 +378,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     }
     const config = buildRaceConfig(
       s.currentSeed(), s.playerDriverId, s.currentCircuitId(), difficulty,
-      s.playerStrategy, { purchasedTiers: s.purchasedTiers, rivalDevelopment: s.rivalDevelopment },
+      s.playerStrategy, s.overlayInput(),
       // No grid order: qualifying is what PRODUCES it.
       undefined,
       // Round 1 opens dry, and qualifying must agree with the race it precedes.
@@ -453,7 +477,23 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       // for a season already recorded must not pay the bonus twice, for the
       // same reason it must not award the title twice.
       const bonus = banked ? seasonEndBonusFor(finishedPosition) : 0
-      set({ phase: 'championship', devPoints: get().devPoints + bonus, lastSeasonBonus: bonus })
+      // The ladder is judged on the end-of-season state: rival pools after the
+      // final race's development, the player's upgrade tiers before winter
+      // erosion. That is what spec section 5 specifies, so it is settled HERE,
+      // before startNextSeason erodes or resets anything. Only when the season actually banked: a re-entry must not
+      // move every team a second time.
+      let lastLadder = get().lastLadder
+      if (banked && get().playerDriverId) {
+        const r = settleSeason({
+          standings: get().standings,
+          playerDriverId: get().playerDriverId!,
+          overlay: get().overlayInput(),
+          tiers: useCareerStore.getState().teamTiers,
+        })
+        useCareerStore.getState().setTeamTiers(r.tiers)
+        lastLadder = r.moves
+      }
+      set({ phase: 'championship', devPoints: get().devPoints + bonus, lastSeasonBonus: bonus, lastLadder })
     } else {
       const nextCircuit = CIRCUIT_ORDER[next % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
       set({ raceIndex: next, phase: 'development', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit, playerStrategy: null, attemptNonce: 0 })
@@ -496,7 +536,17 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       // is still rising at season 10, while erosion still stops a max-out.
       lastSeasonBonus: 0,
       purchasedTiers: erodedTiers,
-      rivalDevelopment: escalateRivals(s.rivalDevelopment, standing === 0),
+      /*
+       * RESET to the winter head start, not carried forward. Carrying it
+       * forward saturated the grid: by season 4 every rival's power, aero and
+       * handling sat at 100 (docs/superpowers/specs/2026-10-09-team-ladder-design.md
+       * section 5). Rival development is now the in-season race against the
+       * player's purchases; what carries across seasons is the team ladder.
+       * escalateRivals from zero is exactly the old winter boost, so "win the
+       * title and the grid has a bigger winter" survives.
+       */
+      rivalDevelopment: escalateRivals({}, standing === 0),
+      lastLadder: null,
       // playerDriverId and selectedTeamId are deliberately NOT reset.
     })
   },
@@ -509,7 +559,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       standings: [], lastRaceResults: null, lastRaceEvents: null,
       selectedCircuitId: null, playerStrategy: null, qualifyingResult: null,
       attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {},
-      lastSeasonBonus: 0,
+      lastSeasonBonus: 0, lastLadder: null,
     })
   },
 

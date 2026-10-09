@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSettingsStore } from '@state/settingsStore'
+import { useCareerStore } from '@state/careerStore'
 import { useSeasonStore, TOTAL_RACES } from '@state/seasonStore'
 import { applyUpgrades, rivalFacetValue } from '@state/upgradeOverlay'
 import { loadGameData, type UpgradeAttribute } from '@data/validators'
@@ -302,6 +303,8 @@ export function Development() {
   const tierCost = useSeasonStore(s => s.tierCost)
   const toRaceSetup = useSeasonStore(s => s.toRaceSetup)
 
+  const teamTiers = useCareerStore(s => s.teamTiers)
+
   const playerTeamId = useMemo(
     () => GAME.drivers.drivers.find(d => d.id === playerDriverId)?.teamId ?? '',
     [playerDriverId],
@@ -318,6 +321,7 @@ export function Development() {
         const teams = applyUpgrades(GAME.cars.teams, {
           attributes: UPGRADES.attributes, purchasedTiers: tiers, target: 'team',
           appliesTo: t => t.id === playerTeamId,
+          teamTiers,
         })
         return teams.find(t => t.id === playerTeamId)?.facets ?? {}
       }
@@ -337,7 +341,7 @@ export function Development() {
       out.set(attr.id, { base, before, after })
     }
     return out
-  }, [purchasedTiers, playerTeamId, playerDriverId])
+  }, [purchasedTiers, playerTeamId, playerDriverId, teamTiers])
 
   // The season arc, in one line: how much lap time the player has bought so far
   // versus how much the rivals have developed while they were doing it.
@@ -423,6 +427,25 @@ export function Development() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
             Development
           </div>
+          {(teamTiers[playerTeamId] ?? 0) !== 0 && (() => {
+            const t = teamTiers[playerTeamId] ?? 0
+            const up = t > 0
+            return (
+              <div
+                aria-label={`Team tier ${up ? '+' : ''}${t}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6,
+                  padding: '2px 8px', borderRadius: 999,
+                  border: `1px solid ${up ? 'var(--accent)' : 'var(--accent-warm)'}`,
+                  color: up ? 'var(--accent)' : 'var(--accent-warm)',
+                  fontFamily: 'var(--font-mono)', fontSize: 11, fontVariantNumeric: 'tabular-nums',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                {up ? '▲' : '▼'} TIER {up ? '+' : ''}{t}
+              </div>
+            )
+          })()}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div

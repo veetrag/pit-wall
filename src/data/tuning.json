@@ -42,7 +42,14 @@
     "tierDecayFloor": 2,
     "seasonEndBonus": [40, 25, 15],
     "rivalCatchUp": { "base": 0.5, "championBonus": 0.5 },
-    "seedStride": 100000
+    "seedStride": 100000,
+    "teamTiers": {
+      "step": 3,
+      "min": -3,
+      "max": 3,
+      "threshold": 2,
+      "facets": ["power", "aero", "handling"]
+    }
   },
   "tyreManagement": { "degReliefFactor": 0.25 },
   "tyreRules": {

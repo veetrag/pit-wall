@@ -47,11 +47,17 @@ export interface CareerRecord {
    * length. See docs/superpowers/specs/2026-09-19-badges-design.md §2.2.
    */
   raceLog: RaceFact[]
+  /**
+   * Team id -> ladder offset. The one piece of state that crosses seasons for
+   * EVERY team, which is why it is the career's and not the season's. Missing
+   * key means 0. See docs/superpowers/specs/2026-10-09-team-ladder-design.md.
+   */
+  teamTiers: Record<string, number>
 }
 
 const FRESH: CareerRecord = {
   seasonNumber: 1, titles: 0, wins: 0, seasonWins: 0, podiums: 0, poles: 0,
-  racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [],
+  racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [], teamTiers: {},
 }
 
 /**
@@ -146,6 +152,12 @@ interface CareerStore extends CareerRecord {
   rollOverSeason: (
     tiers: Record<string, number>,
   ) => { erodedTiers: Record<string, number> }
+  /**
+   * Replaces the ladder offsets. seasonStore settles the ladder at season end
+   * and hands the result here, the same way rollOverSeason hands back eroded
+   * tiers -- this module never reads seasonStore.
+   */
+  setTeamTiers: (tiers: Record<string, number>) => void
   beginCareer: () => void
   endCareer: () => void
   resumeCareer: (snap: CareerRecord) => void
@@ -185,6 +197,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
         : s.bestFinish,
       seasonHistory: s.seasonHistory,
       raceLog: [...s.raceLog, fact],
+      teamTiers: s.teamTiers,
     }
 
     set({ ...next, justEarned: newlyEarned(s, next) })
@@ -223,6 +236,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
       bestFinish: s.bestFinish,
       // Ending a season is not a race: raceLog is carried over unchanged.
       raceLog: s.raceLog,
+      teamTiers: s.teamTiers,
     }
 
     set({ ...next, justEarned: newlyEarned(s, next) })
@@ -237,6 +251,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     return { erodedTiers: erodeTiers(tiers, tierDecayPerSeason, tierDecayFloor) }
   },
 
+  setTeamTiers(teamTiers) { set({ teamTiers }) },
   beginCareer() { set({ ...FRESH, hasCareer: true, justEarned: [] }) },
   endCareer() { set({ ...FRESH, hasCareer: false, justEarned: [] }) },
   resumeCareer(snap) { set({ ...snap, hasCareer: true, justEarned: [] }) },

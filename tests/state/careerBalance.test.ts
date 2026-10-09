@@ -36,18 +36,13 @@ describe('an endless career does not flatten out', () => {
     expect(everBelowMax, 'erosion never bites -- the career flattens').toBe(true)
   })
 
-  it('RIVAL DEVELOPMENT COMPOUNDS ACROSS SEASONS', () => {
-    // playAgain discarded rivalDevelopment entirely. If this ever returns to
-    // zero between seasons, "rivals get stronger every season" is gone.
-    let rivals: Record<string, number> = {}
-    const totals: number[] = []
-    for (let s = 0; s < 5; s++) {
-      rivals = escalateRivals(rivals, true)
-      totals.push(Object.values(rivals).reduce((a, b) => a + b, 0))
-    }
-    for (let i = 1; i < totals.length; i++) {
-      expect(totals[i]!).toBeGreaterThan(totals[i - 1]!)
-    }
+  it('THE WINTER BOOST IS BIGGER FOR A CHAMPION, AND DOES NOT COMPOUND', () => {
+    // escalateRivals is now called from zero each winter (team ladder spec,
+    // section 5), so its job is the head start alone. The cross-season
+    // escalation it used to provide is the ladder's.
+    const total = (r: Record<string, number>) => Object.values(r).reduce((a, b) => a + b, 0)
+    expect(total(escalateRivals({}, true))).toBeGreaterThan(total(escalateRivals({}, false)))
+    expect(escalateRivals({}, true)).toEqual(escalateRivals({}, true))
   })
 })
 

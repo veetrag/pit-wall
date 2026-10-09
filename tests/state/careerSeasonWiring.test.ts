@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useSeasonStore, seedFor } from '@state/seasonStore'
-import { useCareerStore } from '@state/careerStore'
+import { useCareerStore, escalateRivals } from '@state/careerStore'
 import { loadGameData } from '@data/validators'
 
 describe('career wiring', () => {
@@ -81,12 +81,14 @@ describe('career wiring', () => {
     expect(s.phase).toBe('development')
   })
 
-  it('startNextSeason ESCALATES THE RIVALS RATHER THAN DISCARDING THEM', () => {
-    // playAgain used to reset rivalDevelopment to {}. Carrying it forward is
-    // most of what "rivals get stronger every season" means.
+  it('startNextSeason RESETS RIVAL DEVELOPMENT TO THE WINTER HEAD START', () => {
+    // It used to carry pools forward forever, which pinned every rival at 100
+    // by season 4 (team ladder spec, section 5). What crosses seasons now is
+    // the ladder; the pool restarts from the winter boost alone. The fixture
+    // is P1 here, so it is the champion's -- bigger -- winter.
     useCareerStore.getState().beginCareer()
     useSeasonStore.getState().startNextSeason()
-    expect(useSeasonStore.getState().rivalDevelopment.apex!).toBeGreaterThan(10)
+    expect(useSeasonStore.getState().rivalDevelopment).toEqual(escalateRivals({}, true))
   })
 
   it('endCareer WIPES THE SEASON AND THE CAREER', () => {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { act } from 'react'
 import { Development } from '@ui/Development'
+import { useCareerStore } from '@state/careerStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { loadGameData } from '@data/validators'
 
@@ -207,5 +208,47 @@ describe('development phase routing', () => {
     act(() => { useSeasonStore.getState().toRaceSetup() })
     expect(useSeasonStore.getState().phase).toBe('race_setup')
     expect(useSeasonStore.getState().devPoints).toBe(17)
+  })
+})
+
+describe('the ladder on the Development screen', () => {
+  beforeEach(() => {
+    cleanup()
+    useSeasonStore.getState().startNewSeason()
+    useSeasonStore.setState({ phase: 'development', playerDriverId: 'd_voss', selectedTeamId: 'apex' })
+    useCareerStore.setState({ teamTiers: {} })
+  })
+
+  it('shows the team tier chip when the team has an offset', () => {
+    useCareerStore.setState({ teamTiers: { apex: 2 } })
+    render(<Development />)
+    expect(screen.getByLabelText('Team tier +2')).toBeTruthy()
+  })
+
+  it('shows a negative tier with a down arrow', () => {
+    useCareerStore.setState({ teamTiers: { apex: -1 } })
+    render(<Development />)
+    expect(screen.getByLabelText('Team tier -1').textContent).toContain('▼')
+  })
+
+  it('shows no chip at offset 0', () => {
+    render(<Development />)
+    expect(screen.queryByLabelText(/^Team tier/)).toBeNull()
+  })
+
+  it('previews the next upgrade on top of the offset', () => {
+    /*
+     * The screen promises the number the engine will receive. Apex aero is
+     * 95: today the next +5 tier gains the full 5 points. At ladder tier +1
+     * the car is already at 98, so the 100 ceiling cuts that gain to 2 --
+     * and the displayed consequence must say so, or the screen is lying.
+     */
+    render(<Development />)
+    const without = screen.getByTestId('effect-aero').textContent
+    cleanup()
+    useCareerStore.setState({ teamTiers: { apex: 1 } })
+    render(<Development />)
+    const withTier = screen.getByTestId('effect-aero').textContent
+    expect(withTier).not.toBe(without)
   })
 })

@@ -111,6 +111,19 @@ const TuningSchema = z.object({
       championBonus: z.number().min(0),
     }),
     seedStride: z.number().int().positive(),
+    /**
+     * The team ladder (docs/superpowers/specs/2026-10-09-team-ladder-design.md).
+     * A team's offset moves one step at season end when it finishes
+     * `threshold` or more constructors' places better (or worse) than its car
+     * deserved. Each step adds `step` to every facet in `facets`.
+     */
+    teamTiers: z.object({
+      step: z.number().int().min(0),
+      min: z.number().int().max(0),
+      max: z.number().int().min(0),
+      threshold: z.number().int().min(1),
+      facets: z.array(z.string()).min(1),
+    }),
   }),
   tyreManagement: z.object({ degReliefFactor: z.number() }),
   tyreRules: z.object({
