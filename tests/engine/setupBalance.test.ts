@@ -15,6 +15,8 @@ describe('setup balance (spec section 5)', () => {
   it('best levels cover at least 4 of the 5', () => {
     expect(new Set(circuits.map(c => expectedBestWing(c, data.tuning, c.rainProbability ?? 0))).size).toBeGreaterThanOrEqual(4)
   })
+  // The 0.08 floor is knife-edge: costa_verde sits at 0.085 and kaido at 0.087.
+  // See MODEL_SPEC.md section 13 before touching it or the setup tuning.
   it('one step off the dry best costs 0.08-0.30 s/lap', () => {
     for (const c of circuits) {
       const best = expectedBestWing(c, data.tuning, 0)

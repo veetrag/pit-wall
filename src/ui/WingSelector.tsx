@@ -16,19 +16,34 @@ function circuitCharacter(circuit: CircuitSpec): string {
   return CHARACTER[top]
 }
 
+/** Expected lap-time loss of `wing` against the best wing, both weighted by the circuit's rain chance. */
+export function wingVsBest(circuit: CircuitSpec, tuning: TuningConstants, wing: Wing): number {
+  const rainChance = circuit.rainProbability ?? 0
+  const best = expectedBestWing(circuit, tuning, rainChance)
+  return expectedLapDelta(circuit, tuning, wing, rainChance) - expectedLapDelta(circuit, tuning, best, rainChance)
+}
+
+function wingTradeParts(circuit: CircuitSpec, tuning: TuningConstants, wing: Wing): { head: string; rest: string } {
+  const vsBest = wingVsBest(circuit, tuning, wing)
+  const d = wingD(wing)
+  const straights = d < 0 ? '▲' : d > 0 ? '▼' : '—'
+  // Rain figure is the full-WET per-lap change, not weighted by rain chance.
+  const rain = -3 * d * tuning.setup.wetGain * tuning.setup.wetSeverity.WET // + = slower when wet
+  const sign = (x: number) => (x >= 0 ? '+' : '−')
+  return {
+    head: `${sign(vsBest)}${Math.abs(vsBest).toFixed(2)}`,
+    rest: ` s/lap vs best · Straights ${straights} · Rain ${sign(rain)}${Math.abs(rain).toFixed(1)} s`,
+  }
+}
+
 /**
  * One-line consequence of a wing level at this circuit: expected lap time
  * against the best level, straight-line speed direction, and the wet-weather
  * swing. Arrows and signs, never colour alone.
  */
 export function wingTradeLine(circuit: CircuitSpec, tuning: TuningConstants, wing: Wing): string {
-  const best = expectedBestWing(circuit, tuning, circuit.rainProbability ?? 0)
-  const vsBest = expectedLapDelta(circuit, tuning, wing, 0) - expectedLapDelta(circuit, tuning, best, 0)
-  const d = wingD(wing)
-  const straights = d < 0 ? '▲' : d > 0 ? '▼' : '—'
-  const rain = -3 * d * tuning.setup.wetGain * tuning.setup.wetSeverity.WET // + = slower when wet
-  const sign = (x: number) => (x >= 0 ? '+' : '−')
-  return `${sign(vsBest)}${Math.abs(vsBest).toFixed(2)} s/lap vs best · Straights ${straights} · Rain ${sign(rain)}${Math.abs(rain).toFixed(1)} s`
+  const { head, rest } = wingTradeParts(circuit, tuning, wing)
+  return head + rest
 }
 
 export function WingSelector({ circuitId, value, onChange }: {
@@ -40,11 +55,9 @@ export function WingSelector({ circuitId, value, onChange }: {
   if (!circuit) return null
   const tuning = GAME_DATA.tuning
   const best = expectedBestWing(circuit, tuning, circuit.rainProbability ?? 0)
-  const line = wingTradeLine(circuit, tuning, value)
-  const vsBest = expectedLapDelta(circuit, tuning, value, 0) - expectedLapDelta(circuit, tuning, best, 0)
-  const split = line.indexOf(' s/lap')
-  const head = line.slice(0, split)
-  const rest = line.slice(split)
+  const { head, rest } = wingTradeParts(circuit, tuning, value)
+  const line = head + rest
+  const vsBest = wingVsBest(circuit, tuning, value)
 
   return (
     <div>
@@ -84,15 +97,15 @@ export function WingSelector({ circuitId, value, onChange }: {
           )
         })}
       </div>
-      <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>
+      <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-mid)', marginTop: 8 }}>
         {circuitCharacter(circuit)}
       </div>
+      <div aria-live="polite">
       <motion.div
         key={line}
         initial={reducedMotion ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: reducedMotion ? 0 : 0.15 }}
-        aria-live="polite"
         style={{
           marginTop: 6, fontFamily: 'var(--font-mono)', fontSize: 10, lineHeight: 1.5,
           fontVariantNumeric: 'tabular-nums', color: 'var(--text-mid)',
@@ -100,6 +113,7 @@ export function WingSelector({ circuitId, value, onChange }: {
       >
         <span style={vsBest > 0.005 ? { color: 'var(--negative)' } : undefined}>{head}</span>{rest}
       </motion.div>
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useSeasonStore } from '@state/seasonStore'
 import { useCareerStore } from '@state/careerStore'
-import { CareerSnapshotSchema } from '@state/careerPersistence'
+import { CareerSnapshotSchema, careerSnapshotFrom } from '@state/careerPersistence'
 
 vi.mock('@capacitor/preferences', () => ({
   Preferences: { set: vi.fn(async () => {}), get: vi.fn(async () => ({ value: null })), remove: vi.fn(async () => {}) },
@@ -28,6 +28,28 @@ describe('wing memory', () => {
     useSeasonStore.getState().recordRaceResult(WIN, EVENTS)
     useSeasonStore.getState().retryRace()
     expect(useCareerStore.getState().wingByCircuit['veloce']).toBeUndefined()
+  })
+  it('overwrites an earlier wing at the same circuit', () => {
+    useSeasonStore.getState().recordRaceResult(WIN, EVENTS)
+    useSeasonStore.getState().nextRace()
+    useSeasonStore.setState({ phase: 'racing', selectedCircuitId: 'veloce', playerStrategy: { startCompound: 'M', plannedStops: [], wing: 4 } })
+    useSeasonStore.getState().recordRaceResult(WIN, EVENTS)
+    useSeasonStore.getState().keepResult()
+    expect(useCareerStore.getState().wingByCircuit['veloce']).toBe(4)
+  })
+  it('still remembers on a legacy save with no selected circuit', async () => {
+    const { CIRCUIT_ORDER } = await import('@state/raceStore')
+    useSeasonStore.setState({ selectedCircuitId: null })
+    useSeasonStore.getState().recordRaceResult(WIN, EVENTS)
+    useSeasonStore.getState().keepResult()
+    const slot = CIRCUIT_ORDER[useSeasonStore.getState().raceIndex % CIRCUIT_ORDER.length]!
+    expect(useCareerStore.getState().wingByCircuit[slot]).toBe(2)
+  })
+  it('round-trips through the career snapshot', () => {
+    useCareerStore.setState({ wingByCircuit: { veloce: 2, kaido: 4 } })
+    const snap = careerSnapshotFrom({ ...useCareerStore.getState(), hasCareer: true })!
+    const first = JSON.stringify(snap)
+    expect(JSON.stringify(CareerSnapshotSchema.parse(JSON.parse(first)))).toBe(first)
   })
   it('defaults to {} on a career save written before it', () => {
     const legacy = {

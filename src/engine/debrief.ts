@@ -190,6 +190,8 @@ export function judgeCalls(
   }
 
   // The wing (spec: car setup section 4). Branches at lap 0, like the start.
+  // Alternatives reuse the real grid (config.gridOrder): qualifying is not re-run
+  // per wing, so verdicts measure race pace only and understate a wrong wing.
   if (config.setups) {
     const mine = wingOf(config, config.playerDriverId)
     groups.push({

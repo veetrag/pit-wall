@@ -362,7 +362,9 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   retryRace() {
     // Nothing to undo: the attempt was never counted. Dropping the pending
-    // result is the whole of discarding it.
+    // result is the whole of discarding it. A retry redraws rival wings (new
+    // seed) but keeps the first attempt's qualifying grid, like other
+    // seed-driven noise.
     set(s => ({ attemptNonce: s.attemptNonce + 1, phase: 'racing', lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null }))
   },
 
@@ -521,8 +523,12 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       if (pending.pendingRace) useCareerStore.getState().recordRace(pending.pendingRace)
       // The wing is remembered on KEEP, not at the flag, so a retried attempt
       // leaves the career's memory of this circuit untouched.
+      // currentCircuitId() falls back to the calendar slot, so a legacy save
+      // with a null selectedCircuitId still remembers.
       const wing = pending.playerStrategy?.wing
-      if (wing !== undefined && pending.selectedCircuitId) useCareerStore.getState().rememberWing(pending.selectedCircuitId, wing)
+      if (wing !== undefined) {
+        useCareerStore.getState().rememberWing(get().currentCircuitId(), wing)
+      }
     }
   },
 

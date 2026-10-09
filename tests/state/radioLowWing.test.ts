@@ -56,6 +56,27 @@ describe('radio: low wing in the rain', () => {
     expect(push).toHaveBeenCalledTimes(1)
   })
 
+  it('does not spend the one-shot warning when the line is dropped by the cooldown', () => {
+    const push = vi.fn()
+    const config = configWith({ d_voss: 1 })
+    const base = stateFor(config, 'WET')
+    // A priority-2 spin lands on the same tick rain arrives, so the priority-1 warning is dropped.
+    const spun: RaceState = {
+      ...base,
+      sectorResults: [{ driverId: 'd_voss', sectorTime: 30, tyreContribution: 0, trafficPenalty: 0, noiseSample: 0, spinLoss: 4 } as RaceState['sectorResults'][number]],
+    }
+    let radio = processRadioTick(spun, config, makeRadioState(), push)
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(LINES).not.toContain(push.mock.calls[0]![0])
+    expect(radio.lowWingWarned).toBe(false)
+
+    vi.setSystemTime(fakeClock + 10_000)
+    radio = processRadioTick(spun, config, radio, push)
+    expect(push).toHaveBeenCalledTimes(2)
+    expect(LINES).toContain(push.mock.calls[1]![0])
+    expect(radio.lowWingWarned).toBe(true)
+  })
+
   it('stays silent on a high wing in the rain', () => {
     const push = vi.fn()
     const config = configWith({ d_voss: 4 })

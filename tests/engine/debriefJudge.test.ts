@@ -169,11 +169,4 @@ describe('judging the wing', () => {
     expect(v.better!.alternative.kind).toBe('wing')
     expect(v.better!.alternative.kind === 'wing' && v.better!.alternative.wing).not.toBe(worst)
   })
-
-  it('times a 56-lap judge with plan and wing (log only)', () => {
-    const c = buildRaceConfig(4243, 'd_voss', 'bengaluru', 'rookie', { ...plan, wing: 3 }, null, undefined, true)
-    const t0 = performance.now()
-    judgeCalls(c, 4243, [])
-    console.log(`judgeCalls ${c.circuit.laps} laps: ${(performance.now() - t0).toFixed(0)} ms`)
-  })
 })

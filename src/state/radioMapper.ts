@@ -29,16 +29,17 @@ function tryPush(
   priority: 2 | 1 | 0,
   vars: Record<string, string | number>,
   pushFn: (msg: string, severity: 'info' | 'caution' | 'urgent') => void,
-) {
+) : boolean {
   const now = Date.now()
-  if (now - lastRadioMs < RADIO_COOLDOWN_MS && priority <= lastPriority) return
+  if (now - lastRadioMs < RADIO_COOLDOWN_MS && priority <= lastPriority) return false
   const line = pick(trigger, vars)
-  if (!line) return
+  if (!line) return false
   lastRadioMs = now
   lastPriority = priority
   const severity: 'info' | 'caution' | 'urgent' =
     priority === 2 ? 'urgent' : priority === 1 ? 'caution' : 'info'
   pushFn(line, severity)
+  return true
 }
 
 export interface RadioState {
@@ -116,8 +117,8 @@ export function processRadioTick(
 
   // Setup consequence: rain on a low wing. Once per race; only when setups exist.
   if (!radio.lowWingWarned && state.weatherState !== 'DRY' && config.setups && wingOf(config, player.driverId) <= 2) {
-    tryPush('low_wing_wet', 1, {}, pushAlert)
-    next.lowWingWarned = true
+    // Only spend the one-shot warning if the line actually went out; a cooldown drop retries next tick.
+    if (tryPush('low_wing_wet', 1, {}, pushAlert)) next.lowWingWarned = true
   }
 
   // 3. Win / podium (fire once)

@@ -908,6 +908,10 @@ no player calls, n=100 seeds paired by seed, retired = 21):
 | kaido | 4 / 1 | 9.98 | 13.54 | 3.56 | 0.76 |
 | altiplano | 4 / 1 | 4.10 | 15.04 | 10.94 | 0.73 |
 
+**Caveat: no qualifying.** These best-vs-worst places were measured without qualifying (the grid was
+not re-run per wing), so the in-game spread is larger: a wrong wing also costs grid slots. The debrief
+verdicts share this limit (they reuse the real grid and measure race pace only).
+
 **Mean 4.73 places, median 3.51** against the ~1.5–4 target: **the median meets it, the mean
 does not.** The mean is carried by the two circuits whose optimum is at an end of the scale (veloce
 level 1, worst 5; altiplano level 4, worst 1): the worst level there is three or four steps off and
