@@ -3,6 +3,7 @@ import type { Rng } from './rng'
 import { gaussianPair } from './rng'
 import { tyreDelta, effectiveTyreAge } from './tyres'
 import { crossoverPenalty } from './weather'
+import { wingSectorDelta } from './setup'
 
 // Convert a 0-100 facet to the 0-9 engine rating (0=best, 9=worst)
 function facetToRating9(facet: number): number {
@@ -65,6 +66,9 @@ export function computeSectorTime(
   // --- Pace mode delta ---
   const modeDelta = tuning.paceModes[car.paceMode].paceDelta / 3
 
+  // --- Rear-wing setup delta (exactly 0 when no setups / level 3) ---
+  const wingDelta = wingSectorDelta(config, car.driverId, sector, weatherState)
+
   // --- Noise: reduced by high consistency ---
   const [noise, noise2] = gaussianPair(rng)
   const effSigma = tuning.noise.sigmaPerSector * (1 - (df.consistency / 100) * tuning.noise.consistencyReliefFactor)
@@ -97,7 +101,7 @@ export function computeSectorTime(
     }
   }
 
-  const raw = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + noiseSample + spinLoss
+  const raw = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + wingDelta + noiseSample + spinLoss
 
   // Safety car: every car is scaled by the same factor, so this changes no
   // GAPS -- its entire purpose is to make the pit-loss discount meaningful, by

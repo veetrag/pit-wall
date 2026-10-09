@@ -3,6 +3,7 @@ import type { Rng } from './rng'
 import { createRng } from './rng'
 import { pitStopTime } from './pitStop'
 import { computeSectorTime } from './lapModel'
+import { wingOvertakeFactor } from './setup'
 import { openingTimeline } from './weather'
 import { aiDecision } from './strategy'
 import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, resolveAllocatedCompound, effectiveTyreAge, tyreCliffFraction } from './tyres'
@@ -499,7 +500,7 @@ function resolveOvertakes(
       0.85,
       (config.tuning.overtaking.base * sectorEase +
         paceAdv * config.tuning.overtaking.paceMultiplier * sectorEase) *
-        attackMult * defendMult,
+        attackMult * defendMult * wingOvertakeFactor(config, behind.driverId, ahead.driverId, sector),
     )
     if (prob > bestProb) {
       bestProb = prob
