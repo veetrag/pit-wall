@@ -175,6 +175,14 @@ export interface TuningConstants {
     rookie: DifficultyProfile
     pro: DifficultyProfile
   }
+  // Post-race debrief (docs/superpowers/specs/2026-10-09-post-race-debrief-design.md).
+  debrief: {
+    futures: number
+    lapOffsets: number[]
+    minGain: number
+    minShare: number
+    timeoutMs: number
+  }
   _regressionBands?: Record<string, unknown>
 }
 
@@ -417,4 +425,31 @@ export interface QualifyingResult {
   laps: QualifyingLap[]
   /** driverIds, P1 first. Derived from `laps`; stored so consumers never re-sort. */
   order: string[]
+}
+
+// ---- Post-race debrief results ----
+export type JudgedCall =
+  | { kind: 'start'; compound: Compound }
+  | { kind: 'plan'; lap: number; compound: Compound }     // display lap (state.lap + 1)
+  | { kind: 'pit'; lap: number; compound: Compound }
+  | { kind: 'pace'; lap: number; mode: PaceMode }
+
+export type Alternative =
+  | { kind: 'start'; compound: Compound }
+  | { kind: 'plan' | 'pit'; lap: number; compound: Compound }
+  | { kind: 'pace'; lap: number; mode: PaceMode }
+  | { kind: 'pace-none' }
+
+export interface OptionOutcome { meanPosition: number; positions: number[] }
+
+export interface CallVerdict {
+  call: JudgedCall
+  actual: OptionOutcome
+  better: (OptionOutcome & { alternative: Alternative; betterShare: number }) | null
+}
+
+export interface DebriefResult {
+  futures: number
+  verdicts: CallVerdict[]          // sorted by places left on the table, largest first
+  retired: { lap: number; cause: 'tyre' | 'mechanical' | 'crash' } | null
 }

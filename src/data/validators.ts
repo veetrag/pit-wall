@@ -142,6 +142,13 @@ const TuningSchema = z.object({
   mechanicalFailure: z.object({
     baseChancePerLap: z.number(),
   }),
+  debrief: z.object({
+    futures: z.number().int().min(1),
+    lapOffsets: z.array(z.number().int()).min(1),
+    minGain: z.number().min(0),
+    minShare: z.number().min(0).max(1),
+    timeoutMs: z.number().int().positive(),
+  }),
   difficultyProfiles: z.object({
     rookie: DifficultyProfileSchema,
     pro: DifficultyProfileSchema,
