@@ -153,16 +153,26 @@ function PitPanelDrawer() {
   // sets line is then simply omitted rather than guessed.
   const allocation = raceState?.cars?.find(c => c.isPlayer)?.tyreAllocation
 
-  const [selected, setSelected] = useState<Compound>('M')
+  // A compound with no sets left cannot be fitted (the engine would substitute
+  // another or not stop at all), so it is not offered. Unknown allocation
+  // (no player car in state) means nothing is gated.
+  const hasSets = (c: Compound) => allocation === undefined || allocation[c] > 0
+  const anySets = availableCompounds.some(c => hasSets(c.id))
+
+  // Medium by default, else the first offered compound that still has a set.
+  const [selected, setSelected] = useState<Compound>(() =>
+    hasSets('M') ? 'M' : availableCompounds.find(c => hasSets(c.id))?.id ?? 'M')
   const selectedLabel = ALL_COMPOUNDS.find(c => c.id === selected)?.label ?? selected
 
   function handleSelect(c: Compound) {
+    if (!hasSets(c)) return
     uiTap()
     setSelected(c)
     updateProjection(c)
   }
 
   function handleConfirm() {
+    if (!anySets) return
     impact(ImpactStyle.Heavy)
     soundService.play('pitConfirm')
     pitNow(selected)
@@ -225,18 +235,21 @@ function PitPanelDrawer() {
         {availableCompounds.map(({ id, label }) => {
           const active = selected === id
           const sets = allocation?.[id]
+          const empty = !hasSets(id)
           return (
             <motion.button
               key={id}
               type="button"
               role="radio"
               aria-checked={active}
+              aria-disabled={empty || undefined}
               className="slant-sm kit-focus"
-              whileTap={reduced ? undefined : { scale: 0.96 }}
+              whileTap={reduced || empty ? undefined : { scale: 0.96 }}
               onClick={() => handleSelect(id)}
               style={{
                 flex: '1 1 calc(33% - 6px)', minWidth: 72, minHeight: 64,
-                border: 'none', padding: '6px 14px', cursor: 'pointer',
+                border: 'none', padding: '6px 14px', cursor: empty ? 'default' : 'pointer',
+                opacity: empty ? 0.4 : 1,
                 background: active ? 'var(--volt)' : 'var(--grape)',
                 color: active ? 'var(--ink)' : 'var(--white)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -262,7 +275,14 @@ function PitPanelDrawer() {
       </div>
 
       {/* haptic={false}: handleConfirm fires Heavy itself; the kit's Medium on top would double-buzz. */}
-      <KitButton variant="urgent" size="lg" haptic={false} onClick={handleConfirm} style={{ width: '100%' }}>
+      {!anySets && (
+        <div role="status" style={{
+          fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--lilac)', marginBottom: 10,
+        }}>
+          No sets left to fit.
+        </div>
+      )}
+      <KitButton variant="urgent" size="lg" haptic={false} disabled={!anySets} onClick={handleConfirm} style={{ width: '100%' }}>
         BOX NOW
       </KitButton>
     </motion.div>

@@ -28,17 +28,25 @@ const config = {
   strategies: DATA.strategies.defaults, playerDriverId: player.id, seed: 1,
 } as RaceConfig
 
-function raceState(weatherTimeline: WeatherState[] = []): RaceState {
+const DEFAULT_ALLOC = { S: 2, M: 1, H: 0, I: 4, W: 3 }
+
+function raceState(weatherTimeline: WeatherState[] = [], tyreAllocation: Record<string, number> = DEFAULT_ALLOC): RaceState {
   return {
-    safetyCar: null, incidents: [], lap: 10, weatherTimeline, weatherState: 'DRY',
-    cars: [{ driverId: player.id, isPlayer: true, compound: 'M', tyreAllocation: { S: 2, M: 1, H: 0, I: 4, W: 3 } }],
+    safetyCar: null, incidents: [], lap: 10, weatherTimeline, weatherState: weatherTimeline[10] ?? 'DRY',
+    cars: [{ driverId: player.id, isPlayer: true, compound: 'M', tyreAllocation }],
   } as unknown as RaceState
 }
 
-function open(projectionResult: ProjectionResult | null = null) {
+function open(projectionResult: ProjectionResult | null = null, alloc: Record<string, number> = DEFAULT_ALLOC) {
   act(() => {
-    useRaceStore.setState({ pitPanelOpen: true, config, projectionResult, raceState: raceState() })
+    useRaceStore.setState({ pitPanelOpen: true, config, projectionResult, raceState: raceState([], alloc) })
   })
+}
+
+const PROJ: ProjectionResult = {
+  rejoinPosition: 5, rejoinGap: 3.4, rejoinGapBehind: 1.2,
+  driverAheadId: null, driverBehindId: null,
+  lapsProjected: 4, netEstimatePosition: 5, netEstimateLap: 14,
 }
 
 beforeEach(() => {
@@ -70,6 +78,39 @@ describe('pit sheet (hero 2b)', () => {
     expect(hard.textContent).toMatch(/0 sets/)
     expect(medium.getAttribute('aria-checked')).toBe('true')
     expect(soft.getAttribute('aria-checked')).toBe('false')
+  })
+
+  it('a 0-set compound is aria-disabled and cannot be picked', () => {
+    const updateProjection = vi.fn()
+    useRaceStore.setState({ updateProjection })
+    render(<PitPanel />)
+    open(PROJ)
+    const hard = screen.getByRole('radio', { name: /HARD/ })
+    expect(hard.getAttribute('aria-disabled')).toBe('true')
+    fireEvent.click(hard)
+    expect(hard.getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByRole('radio', { name: /MEDIUM/ }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByTestId('ghost-row').textContent).toMatch(/fresh MEDIUM/)
+    expect(updateProjection).not.toHaveBeenCalled()
+  })
+
+  it('the default pick skips a Medium with no sets left', () => {
+    render(<PitPanel />)
+    open(null, { S: 2, M: 0, H: 1, I: 4, W: 3 })
+    expect(screen.getByRole('radio', { name: /MEDIUM/ }).getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByRole('radio', { name: /SOFT/ }).getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('with no dry sets left at all, BOX NOW is disabled and says why', () => {
+    const pitNow = vi.fn()
+    useRaceStore.setState({ pitNow })
+    render(<PitPanel />)
+    open(null, { S: 0, M: 0, H: 0, I: 4, W: 3 })
+    const box = screen.getByRole('button', { name: /BOX NOW/ }) as HTMLButtonElement
+    expect(box.disabled).toBe(true)
+    expect(screen.getByText(/No sets left/)).toBeTruthy()
+    fireEvent.click(box)
+    expect(pitNow).not.toHaveBeenCalled()
   })
 
   it('the projection is a mini tower with a ghost row for the player', () => {
@@ -109,16 +150,48 @@ describe('weather chip', () => {
     expect(chip.getAttribute('aria-expanded')).toBe('true')
   })
 
-  it('summarises the forecast: rain chance and laps until it, or dry ahead', () => {
-    const tl: WeatherState[] = Array(20).fill('DRY')
-    tl[12] = 'DAMP'
-    act(() => { useRaceStore.setState({ config, raceState: { ...raceState(tl) } }) })
+  function chipText(tl: WeatherState[]): string {
+    act(() => { useRaceStore.setState({ config, raceState: raceState(tl) }) })
     const { unmount } = render(<WeatherChip />)
-    const pct = Math.round(tuning.weather.forecastConfidence[2]! * 100)
-    expect(screen.getByRole('button').textContent).toMatch(new RegExp(`DRY · rain ${pct}% in 2L`))
+    const t = screen.getByRole('button').textContent ?? ''
     unmount()
-    act(() => { useRaceStore.setState({ raceState: raceState(Array(20).fill('DRY')) }) })
-    render(<WeatherChip />)
-    expect(screen.getByRole('button').textContent).toMatch(/dry ahead/)
+    return t
+  }
+  // lap is 10, so index 10 is NOW and 11..14 are +1..+4.
+  // tuning.json forecastConfidence: [1.0, 1.0, 0.85, 0.65, 0.45]
+  function tl(now: WeatherState, later: Partial<Record<1 | 2 | 3 | 4, WeatherState>>): WeatherState[] {
+    const t: WeatherState[] = Array(20).fill(now)
+    for (const [k, v] of Object.entries(later)) {
+      for (let i = Number(k); i <= 4; i++) t[10 + i] = v as WeatherState
+    }
+    return t
+  }
+
+  it('all dry reads dry ahead', () => {
+    expect(chipText(tl('DRY', {}))).toMatch(/DRY · dry ahead/)
+  })
+  it('DRY to DAMP within confident range reads rain likely', () => {
+    expect(chipText(tl('DRY', { 2: 'DAMP' }))).toMatch(/DRY · rain likely in 2L/)
+  })
+  it('DRY to DAMP at low confidence reads rain possible, and never prints a percentage', () => {
+    const t = chipText(tl('DRY', { 3: 'DAMP' }))
+    expect(t).toMatch(/DRY · rain possible in 3L/)
+    expect(t).not.toMatch(/%/)
+  })
+  it('DAMP to WET names the arriving state', () => {
+    expect(chipText(tl('DAMP', { 2: 'WET' }))).toMatch(/DAMP · WET likely in 2L/)
+  })
+  it('WET to DAMP reads drying, not rain', () => {
+    const t = chipText(tl('WET', { 1: 'DAMP' }))
+    expect(t).toMatch(/WET · drying likely in 1L/)
+    expect(t).not.toMatch(/rain/)
+  })
+  it('WET to DRY names DRY', () => {
+    expect(chipText(tl('WET', { 4: 'DRY' }))).toMatch(/WET · DRY possible in 4L/)
+  })
+  it('DAMP holding DAMP reads steady', () => {
+    const t = chipText(tl('DAMP', {}))
+    expect(t).toMatch(/DAMP · steady/)
+    expect(t).not.toMatch(/rain/)
   })
 })

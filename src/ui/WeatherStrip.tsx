@@ -101,10 +101,33 @@ function useForecast(): { states: WeatherState[]; confidence: readonly number[] 
   return { states: [now, lap1, lap2, lap3, lap4], confidence }
 }
 
+const SEVERITY: Record<WeatherState, number> = { DRY: 0, DAMP: 1, WET: 2 }
+
 /**
- * The collapsed forecast: "{icon} {NOW} · rain {p}% in {n}L", or "· dry ahead"
- * when none of the next four laps is damp or wet. {p} is that lap's forecast
- * confidence, the same number the full strip prints under its +2..+4 cells.
+ * The chip's one-line outlook, from the first of the next four laps whose
+ * conditions differ from NOW:
+ *   worse  -> "rain likely in nL" from dry, or "{WET} likely in nL" when damp
+ *   better -> "DRY likely in nL" if it dries out, else "drying likely in nL"
+ *   none   -> "dry ahead" when dry, else "steady"
+ *
+ * likely/possible comes from that lap's forecast CONFIDENCE (>= 0.70 likely).
+ * It is deliberately not printed as a percentage: it is how sure the forecast
+ * is, not a rain probability, and "rain 45%" would read as the latter.
+ */
+export function weatherOutlook(states: readonly WeatherState[], confidence: readonly number[]): { text: string; worsening: boolean } {
+  const now = states[0] ?? 'DRY'
+  const n = states.findIndex((st, i) => i > 0 && SEVERITY[st] !== SEVERITY[now])
+  const next = n > 0 ? states[n] : undefined
+  if (next === undefined) return { text: now === 'DRY' ? 'dry ahead' : 'steady', worsening: false }
+  const odds = (confidence[n] ?? 1) >= 0.7 ? 'likely' : 'possible'
+  if (SEVERITY[next] > SEVERITY[now]) {
+    return { text: `${now === 'DRY' ? 'rain' : WEATHER_LABEL[next]} ${odds} in ${n}L`, worsening: true }
+  }
+  return { text: `${next === 'DRY' ? 'DRY' : 'drying'} ${odds} in ${n}L`, worsening: false }
+}
+
+/**
+ * The collapsed forecast: "{icon} {NOW} · {outlook}" (see weatherOutlook).
  *
  * Controlled when `expanded`/`onToggle` are passed (RaceHUD renders the full
  * strip below the track band); otherwise it keeps its own open state.
@@ -118,10 +141,7 @@ export function WeatherChip({ expanded, onToggle }: { expanded?: boolean; onTogg
   const open = expanded ?? ownOpen
   const { states, confidence } = forecast
   const now = states[0] ?? 'DRY'
-  const n = states.findIndex((st, i) => i > 0 && st !== 'DRY')
-  const ahead = n > 0
-    ? `rain ${Math.round((confidence[n] ?? 1) * 100)}% in ${n}L`
-    : 'dry ahead'
+  const outlook = weatherOutlook(states, confidence)
 
   return (
     <button
@@ -132,8 +152,8 @@ export function WeatherChip({ expanded, onToggle }: { expanded?: boolean; onTogg
       style={{ background: 'none', border: 'none', padding: 0, minHeight: 48, cursor: 'pointer', borderRadius: 999,
         display: 'inline-flex', alignItems: 'center' }}
     >
-      <Pill tone={n > 0 ? 'caution' : 'default'}>
-        <span aria-hidden="true">{WEATHER_ICON[now]}</span> {WEATHER_LABEL[now]} · {ahead}
+      <Pill tone={outlook.worsening ? 'caution' : 'default'}>
+        <span aria-hidden="true">{WEATHER_ICON[now]}</span> {WEATHER_LABEL[now]} · {outlook.text}
       </Pill>
     </button>
   )
