@@ -238,3 +238,23 @@ Checked against the repo and the Play Console on 2026-09-24.
 4. **Screenshots.** Still August and September: no qualifying, no career, no
    badges, shot before the font fix.
 5. **1.2's review status**, still unknown.
+
+## 2026-10-09: the team ladder
+
+- Spec `docs/superpowers/specs/2026-10-09-team-ladder-design.md`, plan
+  `docs/superpowers/plans/2026-10-09-team-ladder.md`.
+- Teams climb or slip at season end against the constructors' position
+  their car deserved. One rule for all ten.
+- **Balance change in the live game:** rival development now resets each
+  winter. Before, it pinned every rival at 100 on power/aero/handling by
+  season 4.
+- Device pass: on 2026-10-09, Pixel 10 Pro XL, release build, no crash.
+  Played rounds 1 to 12 and reached the championship screen. Seen: the
+  reveal (Deserved P4, Finished P5, HELD, Tier 0 to 0), a grid-movers
+  line listing only Kestrel Sport (up) and Solstice Racing (down), and
+  the CONSTRUCTORS' toggle with ten teams whose points sum to 1212, the
+  season total for 12 races. NEXT SEASON led to a Development screen with
+  no tier chip, as expected for tier 0. Not checked: a STEP UP or STEP
+  DOWN verdict on the player team and the tier chip it drives (this run
+  was a HELD), and the reduced-motion behaviour (not toggled; the reveal
+  could not be replayed).
