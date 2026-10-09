@@ -451,12 +451,14 @@ export type JudgedCall =
   | { kind: 'plan'; lap: number; compound: Compound }     // display lap (state.lap + 1)
   | { kind: 'pit'; lap: number; compound: Compound }
   | { kind: 'pace'; lap: number; mode: PaceMode }
+  | { kind: 'wing'; wing: Wing }
 
 export type Alternative =
   | { kind: 'start'; compound: Compound }
   | { kind: 'plan' | 'pit'; lap: number; compound: Compound }
   | { kind: 'pace'; lap: number; mode: PaceMode }
   | { kind: 'pace-none' }
+  | { kind: 'wing'; wing: Wing }
 
 export interface OptionOutcome { meanPosition: number; positions: number[] }
 

@@ -14,6 +14,7 @@ export function describeCall(c: JudgedCall): string {
     case 'plan': return `PLAN · PIT L${c.lap} → ${TYRE[c.compound]}`
     case 'pit': return `PIT L${c.lap} → ${TYRE[c.compound]}`
     case 'pace': return `PACE → ${c.mode.toUpperCase()} L${c.lap}`
+    case 'wing': return `SETUP · WING ${c.wing}`
     default: { const n: never = c; return n }
   }
 }
@@ -25,6 +26,7 @@ export function describeAlternative(a: Alternative): string {
     case 'pit': return `L${a.lap} → ${TYRE[a.compound]}`
     case 'pace': return `${a.mode.toUpperCase()} at L${a.lap}`
     case 'pace-none': return 'no pace change'
+    case 'wing': return `WING ${a.wing}`
     default: { const n: never = a; return n }
   }
 }
