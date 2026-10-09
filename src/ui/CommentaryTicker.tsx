@@ -34,13 +34,11 @@ export function CommentaryTicker() {
 
   return (
     <div style={{
-      padding: '5px 10px',
-      background: 'var(--bg-panel)',
-      borderBottom: '1px solid var(--line-hair)',
+      padding: '6px 14px',
       overflow: 'hidden', flexShrink: 0,
       display: 'flex', alignItems: 'center', gap: 6,
     }}>
-      <span style={{ fontSize: 10, color: 'var(--text-dim)', flexShrink: 0 }}>📡</span>
+      <span aria-hidden="true" style={{ fontSize: 11, color: 'var(--lilac-dim)', flexShrink: 0 }}>📡</span>
       <AnimatePresence mode="wait">
         <motion.span
           key={current}
@@ -49,7 +47,7 @@ export function CommentaryTicker() {
           exit={{ opacity: 0, y: -4 }}
           transition={{ duration: 0.25 }}
           style={{
-            fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--text-mid)',
+            fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, color: 'var(--lilac)',
             letterSpacing: '0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}
         >

@@ -57,3 +57,24 @@ describe('kit', () => {
     vi.useRealTimers()
   })
 })
+
+describe('KitButton haptic opt-out', () => {
+  it('haptic={false} suppresses the kit impact but still calls onClick', async () => {
+    const { Haptics } = await import('@capacitor/haptics')
+    useSettingsStore.setState({ hapticsEnabled: true })
+    vi.mocked(Haptics.impact).mockClear()
+    let n = 0
+    render(<KitButton variant="urgent" haptic={false} onClick={() => { n++ }}>Box</KitButton>)
+    fireEvent.click(screen.getByRole('button', { name: 'Box' }))
+    expect(n).toBe(1)
+    expect(Haptics.impact).not.toHaveBeenCalled()
+  })
+  it('haptics stay on by default for primary/urgent', async () => {
+    const { Haptics } = await import('@capacitor/haptics')
+    useSettingsStore.setState({ hapticsEnabled: true })
+    vi.mocked(Haptics.impact).mockClear()
+    render(<KitButton variant="primary" onClick={() => {}}>Go</KitButton>)
+    fireEvent.click(screen.getByRole('button', { name: 'Go' }))
+    expect(Haptics.impact).toHaveBeenCalledTimes(1)
+  })
+})

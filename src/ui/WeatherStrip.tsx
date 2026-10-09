@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { Pill } from '@ui/kit'
+import { useUiTap } from '@hooks/useUiTap'
 import { useRaceStore } from '@state/raceStore'
 import type { WeatherState } from '@engine/types'
 
@@ -78,24 +81,70 @@ function WeatherCell({
   )
 }
 
-export function WeatherStrip() {
+const DEFAULT_CONFIDENCE: [number, number, number, number, number] = [1.0, 1.0, 0.85, 0.65, 0.45]
+
+/** NOW plus the next four laps, and the confidence for each -- shared by the strip and the chip. */
+function useForecast(): { states: WeatherState[]; confidence: readonly number[] } | null {
   const raceState = useRaceStore(s => s.raceState)
   const config = useRaceStore(s => s.config)
-
   if (!raceState) return null
 
   const lap = raceState.lap
   const timeline = raceState.weatherTimeline
-  const defaultConf: [number, number, number, number, number] = [1.0, 1.0, 0.85, 0.65, 0.45]
-  const confidence = config?.tuning.weather.forecastConfidence ?? defaultConf
+  const confidence = config?.tuning.weather.forecastConfidence ?? DEFAULT_CONFIDENCE
 
   const now:  WeatherState = timeline[lap]     ?? raceState.weatherState ?? 'DRY'
   const lap1: WeatherState = timeline[lap + 1] ?? now
   const lap2: WeatherState = timeline[lap + 2] ?? lap1
   const lap3: WeatherState = timeline[lap + 3] ?? lap2
   const lap4: WeatherState = timeline[lap + 4] ?? lap3
+  return { states: [now, lap1, lap2, lap3, lap4], confidence }
+}
 
-  const states: WeatherState[] = [now, lap1, lap2, lap3, lap4]
+/**
+ * The collapsed forecast: "{icon} {NOW} · rain {p}% in {n}L", or "· dry ahead"
+ * when none of the next four laps is damp or wet. {p} is that lap's forecast
+ * confidence, the same number the full strip prints under its +2..+4 cells.
+ *
+ * Controlled when `expanded`/`onToggle` are passed (RaceHUD renders the full
+ * strip below the track band); otherwise it keeps its own open state.
+ */
+export function WeatherChip({ expanded, onToggle }: { expanded?: boolean; onToggle?: () => void }) {
+  const forecast = useForecast()
+  const uiTap = useUiTap()
+  const [ownOpen, setOwnOpen] = useState(false)
+  if (!forecast) return null
+
+  const open = expanded ?? ownOpen
+  const { states, confidence } = forecast
+  const now = states[0] ?? 'DRY'
+  const n = states.findIndex((st, i) => i > 0 && st !== 'DRY')
+  const ahead = n > 0
+    ? `rain ${Math.round((confidence[n] ?? 1) * 100)}% in ${n}L`
+    : 'dry ahead'
+
+  return (
+    <button
+      type="button"
+      className="kit-focus"
+      aria-expanded={open}
+      onClick={() => { uiTap(); if (onToggle) onToggle(); else setOwnOpen(o => !o) }}
+      style={{ background: 'none', border: 'none', padding: 0, minHeight: 48, cursor: 'pointer', borderRadius: 999,
+        display: 'inline-flex', alignItems: 'center' }}
+    >
+      <Pill tone={n > 0 ? 'caution' : 'default'}>
+        <span aria-hidden="true">{WEATHER_ICON[now]}</span> {WEATHER_LABEL[now]} · {ahead}
+      </Pill>
+    </button>
+  )
+}
+
+export function WeatherStrip() {
+  const forecast = useForecast()
+  if (!forecast) return null
+
+  const { states, confidence } = forecast
+  const now = states[0] ?? 'DRY'
   const cellLabels = ['NOW', '+1', '+2', '+3', '+4']
 
   const wetIncoming  = now !== 'WET'  && states.slice(1).some(s => s === 'WET')

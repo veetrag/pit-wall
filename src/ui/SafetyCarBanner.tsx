@@ -97,26 +97,18 @@ export function SafetyCarBanner() {
             // stays legible, only the movement goes.
             animate={reducedMotion ? { opacity: 1 } : { opacity: [1, 0.62, 1] }}
             transition={reducedMotion ? { duration: 0 } : { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            className="slant-lg"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              gap: 10, padding: '8px 14px', borderRadius: 8,
-              background: 'var(--caution)',
-              border: '1px solid var(--caution)',
+              gap: 10, padding: '8px 22px', minHeight: 48,
+              background: 'var(--caution)', color: 'var(--ink)',
+              fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, fontStyle: 'italic',
+              letterSpacing: 0.5, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
             }}
           >
-            <span style={{
-              fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700,
-              // --bg-deep on --caution measures 10.53:1.
-              color: 'var(--bg-deep)', letterSpacing: '0.14em', whiteSpace: 'nowrap',
-            }}>
-              ⚠ SAFETY CAR
-            </span>
-            <span className="mono" style={{
-              fontSize: 12, fontWeight: 700, color: 'var(--bg-deep)',
-              letterSpacing: '0.06em', whiteSpace: 'nowrap',
-            }}>
-              {lapText}
-            </span>
+            {/* --ink on --caution: dark text on amber, well above AA. */}
+            <span>⚠ SAFETY CAR</span>
+            <span>{lapText}</span>
           </motion.div>
 
           {/*

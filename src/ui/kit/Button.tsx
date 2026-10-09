@@ -10,9 +10,13 @@ const TEXT: Record<Variant, string> = { primary: 'var(--ink)', urgent: 'var(--in
 const HEIGHT = { lg: 64, md: 52, sm: 48 } as const
 const SLANT = { lg: 'slant-lg', md: 'slant-md', sm: 'slant-sm' } as const
 
-export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, disabled, display = true, style }: {
+/**
+ * `haptic={false}` drops the kit's own tap feedback for a caller that fires a
+ * stronger one itself (BOX NOW fires Heavy; Medium on top would double-buzz).
+ */
+export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, disabled, display = true, haptic = true, style }: {
   variant: Variant; size?: 'lg' | 'md' | 'sm'; onClick: () => void; children: ReactNode
-  ariaLabel?: string; disabled?: boolean; display?: boolean; style?: CSSProperties
+  ariaLabel?: string; disabled?: boolean; display?: boolean; haptic?: boolean; style?: CSSProperties
 }) {
   const uiTap = useUiTap()
   const { impact } = useHaptics()
@@ -24,7 +28,10 @@ export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, 
       disabled={disabled}
       className={`${SLANT[size]} kit-focus`}
       whileTap={reduced || disabled ? undefined : { scale: 0.96 }}
-      onClick={() => { if (variant === 'secondary') uiTap(); else impact(ImpactStyle.Medium); onClick() }}
+      onClick={() => {
+        if (haptic) { if (variant === 'secondary') uiTap(); else impact(ImpactStyle.Medium) }
+        onClick()
+      }}
       style={{
         minHeight: HEIGHT[size], border: 'none', cursor: disabled ? 'default' : 'pointer',
         background: FILL[variant], color: TEXT[variant], opacity: disabled ? 0.45 : 1,

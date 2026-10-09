@@ -46,6 +46,11 @@ const TEAM_HEX: Record<string, string> = {
   zenith:   '#7A8290',
 }
 
+// The player's glow + trail. Volt, matching --volt (#FFD60A) and the volt
+// player row in the tower; Pixi cannot read CSS custom properties, so it is
+// restated here. Team colours above stay data.
+const PLAYER_HIGHLIGHT = 0xFFD60A
+
 function hexToNum(hex: string): number {
   return parseInt(hex.replace('#', ''), 16)
 }
@@ -231,8 +236,8 @@ function updateCars(
     ds.gfx.clear()
     if (isPlayer) {
       // Outer glow ring
-      ds.gfx.circle(0, 0, radius + 5).fill({ color: 0x00E5D0, alpha: 0.15 })
-      ds.gfx.circle(0, 0, radius + 2).fill({ color: 0x00E5D0, alpha: 0.25 })
+      ds.gfx.circle(0, 0, radius + 5).fill({ color: PLAYER_HIGHLIGHT, alpha: 0.15 })
+      ds.gfx.circle(0, 0, radius + 2).fill({ color: PLAYER_HIGHLIGHT, alpha: 0.25 })
     }
     ds.gfx.circle(0, 0, radius).fill({ color })
     if (isPlayer) {
@@ -496,14 +501,14 @@ export function TrackCanvas() {
             ds.gfx.x = wx
             ds.gfx.y = wy
 
-            // Trail: player always gets the teal identity trail; the current
+            // Trail: player always gets the volt identity trail; the current
             // race leader gets a light wet-spray trail in DAMP/WET (R4) —
             // "strongest for the leader in clean air".
             const isLeaderSpray = !ds.isPlayer && ds.driverId === leaderId && currentWeather !== 'DRY' && !reducedMotion
             if (ds.isPlayer || isLeaderSpray) {
               ds.trail.clear()
               const TRAIL_STEPS = ds.isPlayer ? 8 : 5
-              const color = ds.isPlayer ? 0x00E5D0 : 0x9AD8FF
+              const color = ds.isPlayer ? PLAYER_HIGHLIGHT : 0x9AD8FF
               const maxAlpha = ds.isPlayer ? 0.5 : 0.3
               for (let i = 1; i <= TRAIL_STEPS; i++) {
                 const tBack = ((ds.displayT - i * 0.006) % 1 + 1) % 1
