@@ -258,3 +258,17 @@ Checked against the repo and the Play Console on 2026-09-24.
   DOWN verdict on the player team and the tier chip it drives (this run
   was a HELD), and the reduced-motion behaviour (not toggled; the reveal
   could not be replayed).
+- Forced-tier device pass, 2026-10-09, same phone, using a temporary
+  uncommitted build (1-race seasons, ladder threshold 1) so a season end
+  was one race away. Seen: STEP DOWN twice (deserved P1 finished P4,
+  tier 0 to -1; deserved P4 finished P6, tier -1 to -2), STEP UP once
+  (deserved P6 finished P4, tier -2 to -1), the Development chip as
+  "TIER -1" with a down arrow after both a step down and a step up, and
+  reduced motion (every reveal element in its final place at 0.25s). The
+  tier survived reinstalling the normal build. Everything on the
+  team-ladder device list is now checked.
+- Found during it, not fixed: "Retry this round" keeps the abandoned
+  attempt's points, development points, rival development and career
+  record (a rival reached 65 points in a one-race season). Logged as a
+  separate task. The championship header reads "SEASON 2025" in every
+  season.
