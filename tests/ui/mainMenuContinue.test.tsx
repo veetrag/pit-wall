@@ -20,7 +20,7 @@ const SAVED: SeasonSnapshot = {
   selectedTeamId: 'apex', selectedCircuitId: 'veloce', raceIndex: 4,
   standings: [{ driverId: 'd_voss', points: 43 }], playerStrategy: null,
   attemptNonce: 0, devPoints: 60, purchasedTiers: {}, rivalDevelopment: {},
-  lastRaceResults: null, lastRaceEvents: null,
+  lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null,
 }
 
 function withSave() { mem.set(SAVE_KEY, JSON.stringify(SAVED)) }

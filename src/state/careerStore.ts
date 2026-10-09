@@ -120,10 +120,7 @@ interface CareerStore extends CareerRecord {
    * signal -- if it persisted, reopening the app would re-toast an old badge.
    */
   justEarned: string[]
-  recordRace: (r: {
-    position: number; retired: boolean; pole: boolean
-    round: number; grid: number; stops: number; overtakes: number; wet: boolean
-  }) => void
+  recordRace: (r: RaceRecordInput) => void
   /**
    * Banks the season that has just finished: the title, the history entry,
    * the season-win reset, and the badges those earn. Called on the TRANSITION
@@ -163,43 +160,70 @@ interface CareerStore extends CareerRecord {
   resumeCareer: (snap: CareerRecord) => void
 }
 
+/** One race, as the career records it. */
+export interface RaceRecordInput {
+  position: number; retired: boolean; pole: boolean
+  round: number; grid: number; stops: number; overtakes: number; wet: boolean
+}
+
+/**
+ * The career record after one more race. Pure, so the result screen can ask
+ * "what would keeping this race award?" without recording anything -- see
+ * previewRaceBadges, and recordRaceResult / nextRace in seasonStore for why a
+ * race is only recorded when the player keeps it.
+ */
+export function nextRecordAfterRace(s: CareerRecord, r: RaceRecordInput): CareerRecord {
+  const { position, retired, pole, round, grid, stops, overtakes, wet } = r
+  // A DNF is never a win or a podium, matching recordRaceResult, which
+  // already scores a retirement as 0 points regardless of classified
+  // position. A car classified P3 because others retired behind it did not
+  // stand on a podium.
+  const scored = !retired
+  const won = scored && position === 1
+
+  const fact: RaceFact = {
+    season: s.seasonNumber, round, grid,
+    finish: position, retired, pole, stops, overtakes, wet,
+  }
+
+  // Built as a whole record so the badge difference below compares two
+  // complete states rather than a patch against a partial one.
+  const next: CareerRecord = {
+    seasonNumber: s.seasonNumber,
+    titles: s.titles,
+    wins: s.wins + (won ? 1 : 0),
+    seasonWins: s.seasonWins + (won ? 1 : 0),
+    podiums: s.podiums + (scored && position <= 3 ? 1 : 0),
+    poles: s.poles + (pole ? 1 : 0),
+    racesStarted: s.racesStarted + 1,
+    bestFinish: scored
+      ? (s.bestFinish === null ? position : Math.min(s.bestFinish, position))
+      : s.bestFinish,
+    seasonHistory: s.seasonHistory,
+    raceLog: [...s.raceLog, fact],
+    teamTiers: s.teamTiers,
+  }
+
+  return next
+}
+
+/**
+ * The badges keeping this race would award, computed exactly as recordRace
+ * computes them. The result screen shows these before the player chooses
+ * between NEXT RACE and RETRY, so a preview and a real award cannot differ.
+ */
+export function previewRaceBadges(s: CareerRecord, r: RaceRecordInput): string[] {
+  return newlyEarned(s, nextRecordAfterRace(s, r))
+}
+
 export const useCareerStore = create<CareerStore>((set, get) => ({
   ...FRESH,
   hasCareer: false,
   justEarned: [],
 
-  recordRace({ position, retired, pole, round, grid, stops, overtakes, wet }) {
+  recordRace(r) {
     const s = get()
-    // A DNF is never a win or a podium, matching recordRaceResult, which
-    // already scores a retirement as 0 points regardless of classified
-    // position. A car classified P3 because others retired behind it did not
-    // stand on a podium.
-    const scored = !retired
-    const won = scored && position === 1
-
-    const fact: RaceFact = {
-      season: s.seasonNumber, round, grid,
-      finish: position, retired, pole, stops, overtakes, wet,
-    }
-
-    // Built as a whole record so the badge difference below compares two
-    // complete states rather than a patch against a partial one.
-    const next: CareerRecord = {
-      seasonNumber: s.seasonNumber,
-      titles: s.titles,
-      wins: s.wins + (won ? 1 : 0),
-      seasonWins: s.seasonWins + (won ? 1 : 0),
-      podiums: s.podiums + (scored && position <= 3 ? 1 : 0),
-      poles: s.poles + (pole ? 1 : 0),
-      racesStarted: s.racesStarted + 1,
-      bestFinish: scored
-        ? (s.bestFinish === null ? position : Math.min(s.bestFinish, position))
-        : s.bestFinish,
-      seasonHistory: s.seasonHistory,
-      raceLog: [...s.raceLog, fact],
-      teamTiers: s.teamTiers,
-    }
-
+    const next = nextRecordAfterRace(s, r)
     set({ ...next, justEarned: newlyEarned(s, next) })
   },
 

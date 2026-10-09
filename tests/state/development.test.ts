@@ -131,6 +131,7 @@ describe('development income', () => {
       [{ driverId: 'd_voss', position, retired }],
       { overtakesGained: 0, pitsDone: 1, hadRain: false },
     )
+    useSeasonStore.getState().keepResult()  // a race counts when it is kept
   }
 
   it('pays the flat rate for a win', () => {
@@ -164,6 +165,7 @@ describe('rival development', () => {
       [{ driverId: 'd_voss', position: 1, retired: false }],
       { overtakesGained: 0, pitsDone: 1, hadRain: false },
     )
+    useSeasonStore.getState().keepResult()  // a race counts when it is kept
   }
 
   it('develops rivals in proportion to developmentRate', () => {

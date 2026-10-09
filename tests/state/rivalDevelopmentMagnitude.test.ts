@@ -82,6 +82,7 @@ function seasonPool(): Record<string, number> {
       [{ driverId: 'd_voss', position: 1, retired: false }],
       { overtakesGained: 0, pitsDone: 1, hadRain: false },
     )
+    useSeasonStore.getState().keepResult()  // a race counts when it is kept
   }
   return { ...useSeasonStore.getState().rivalDevelopment }
 }
