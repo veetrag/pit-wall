@@ -4,7 +4,7 @@ import { buildRaceConfig } from './buildRaceConfig'
 import { runQualifying, qualifyingRng, type Compound, type PitStop, type QualifyingCall, type QualifyingResult } from '@engine/index'
 import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
-import { useCareerStore, escalateRivals } from './careerStore'
+import { useCareerStore, escalateRivals, previewRaceBadges, type RaceRecordInput } from './careerStore'
 import { settleSeason, type LadderMove } from './teamLadder'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
 
@@ -132,6 +132,30 @@ interface SeasonStore {
   standings: Standing[]
   lastRaceResults: SeasonResult[] | null
   lastRaceEvents: RaceEventSummary | null
+  /**
+   * True from the chequered flag until the player keeps the race (NEXT RACE /
+   * FINAL STANDINGS) or throws it away (RETRY). While it is true, the result
+   * is shown but NOT yet counted: no points, no development, no rival
+   * development, nothing in the career. Saved, so a player who closes the app
+   * on the result screen still has the race waiting.
+   */
+  resultPending: boolean
+  /**
+   * The player's race as the career will record it, captured AT THE FLAG while
+   * the qualifying grid is still known. qualifyingResult is not saved, so
+   * deriving this at commit time after the app was reopened would lose the
+   * grid slot and pole -- and with them the Comeback badge.
+   */
+  pendingRace: RaceRecordInput | null
+  /**
+   * Counts the pending race: points, development points, rival development
+   * and the career record, exactly once. nextRace calls it -- leaving the
+   * result screen forward is what keeping a race means. A no-op when nothing
+   * is pending.
+   */
+  keepResult: () => void
+  /** Badges keeping the pending race would award. Empty when nothing is pending. */
+  pendingBadges: () => string[]
   selectedCircuitId: string | null
   selectedTeamId: string | null
   playerStrategy: PlayerStrategyChoice | null
@@ -238,6 +262,49 @@ function seedStride(): number {
   return cachedStride
 }
 
+/**
+ * Standings with one race's points added. Pure: returns new objects and never
+ * edits `standings` -- the old version did `existing.points +=` on a shallow
+ * copy, which silently changed the previous state too. Shared by the commit
+ * in nextRace and the provisional table on the result screen, so the two
+ * always agree.
+ */
+export function addResultsToStandings(standings: readonly Standing[], results: readonly SeasonResult[]): Standing[] {
+  const out = standings.map(x => ({ ...x }))
+  for (const r of results) {
+    const existing = out.find(x => x.driverId === r.driverId)
+    if (existing) existing.points += r.points
+    else out.push({ driverId: r.driverId, points: r.points })
+  }
+  return out.sort((a, b) => b.points - a.points)
+}
+
+/**
+ * The player's race as the career would record it, from a pending result.
+ * One function for both the commit and the badge preview, so the screen can
+ * never promise a badge the commit does not award.
+ */
+function pendingRaceRecord(s: Pick<SeasonStore, 'lastRaceResults' | 'lastRaceEvents' | 'playerDriverId' | 'qualifyingResult' | 'raceIndex'>): RaceRecordInput | null {
+  const player = s.lastRaceResults?.find(r => r.driverId === s.playerDriverId)
+  if (!player || !s.lastRaceEvents) return null
+  const grid = s.qualifyingResult
+  const playerId = s.playerDriverId
+  // 1-based grid slot. Without a qualifying result the field starts in
+  // championship order, so the player's standings slot is the honest
+  // fallback -- never 0, which would read as "started ahead of pole".
+  const gridSlot = grid && playerId ? grid.order.indexOf(playerId) + 1 : player.position
+  return {
+    position: player.position,
+    retired: player.retired,
+    pole: grid ? grid.order[0] === playerId : false,
+    round: s.raceIndex,
+    grid: gridSlot > 0 ? gridSlot : player.position,
+    stops: s.lastRaceEvents.pitsDone,
+    overtakes: s.lastRaceEvents.overtakesGained,
+    wet: s.lastRaceEvents.hadRain,
+  }
+}
+
 export function seedFor(seasonNumber: number, raceIndex: number, attemptNonce: number): number {
   return (seasonNumber - 1) * seedStride() + raceIndex * 1000 + 42 + attemptNonce * 7919
 }
@@ -249,6 +316,8 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   standings: [],
   lastRaceResults: null,
   lastRaceEvents: null,
+  resultPending: false,
+  pendingRace: null,
   selectedCircuitId: null,
   selectedTeamId: null,
   playerStrategy: null,
@@ -290,7 +359,9 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   },
 
   retryRace() {
-    set(s => ({ attemptNonce: s.attemptNonce + 1, phase: 'racing', lastRaceResults: null, lastRaceEvents: null }))
+    // Nothing to undo: the attempt was never counted. Dropping the pending
+    // result is the whole of discarding it.
+    set(s => ({ attemptNonce: s.attemptNonce + 1, phase: 'racing', lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null }))
   },
 
   currentCircuitId() {
@@ -330,7 +401,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   startNewSeason() {
     useCareerStore.getState().beginCareer()
-    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {}, lastSeasonBonus: 0, lastLadder: null })
+    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {}, lastSeasonBonus: 0, lastLadder: null })
   },
 
   selectTeam(id) { set({ selectedTeamId: id, playerDriverId: null }) },
@@ -403,8 +474,15 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   // src/ui/RaceWatcher.tsx's `hasFiredRef` guard. No `phase` check is added
   // here deliberately: tests call this action directly and rely on being
   // able to invoke it repeatedly in a single race's worth of assertions.
+  /**
+   * Called at the chequered flag. Records the result as PENDING and counts
+   * nothing yet -- see `resultPending`. It used to commit points, development,
+   * rival development and the career record right here, before the player
+   * had chosen between NEXT RACE and RETRY, and retryRace undid none of it:
+   * on device a rival reached 65 points in a one-race season. A race now
+   * counts when it is kept, in nextRace.
+   */
   recordRaceResult(positions, events) {
-    const { standings } = get()
     const results: SeasonResult[] = positions.map(p => ({
       driverId: p.driverId,
       position: p.position,
@@ -412,48 +490,39 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       retired: p.retired ?? false,
       retiredCause: p.retiredCause ?? null,
     }))
-    const newStandings = [...standings]
-    for (const r of results) {
-      const existing = newStandings.find(s => s.driverId === r.driverId)
-      if (existing) {
-        existing.points += r.points
-      } else {
-        newStandings.push({ driverId: r.driverId, points: r.points })
-      }
-    }
-    newStandings.sort((a, b) => b.points - a.points)
-    set({
-      phase: 'result', standings: newStandings, lastRaceResults: results, lastRaceEvents: events,
-      devPoints: get().devPoints + loadGameData().upgrades.income.perRace,
-      rivalDevelopment: accumulateRivalDevelopment(get().rivalDevelopment),
-    })
+    const pendingRace = pendingRaceRecord({ ...get(), lastRaceResults: results, lastRaceEvents: events })
+    set({ phase: 'result', lastRaceResults: results, lastRaceEvents: events, resultPending: true, pendingRace })
+  },
 
-    // The career's running totals. Read from the same results the standings
-    // use, so the two can never disagree.
-    const player = results.find(r => r.driverId === get().playerDriverId)
-    if (player) {
-      const grid = get().qualifyingResult
-      const playerId = get().playerDriverId
-      // 1-based grid slot. Without a qualifying result the field starts in
-      // championship order, so the player's standings slot is the honest
-      // fallback -- never 0, which would read as "started ahead of pole".
-      const gridSlot = grid && playerId
-        ? grid.order.indexOf(playerId) + 1
-        : player.position
-      useCareerStore.getState().recordRace({
-        position: player.position,
-        retired: player.retired,
-        pole: grid ? grid.order[0] === playerId : false,
-        round: get().raceIndex,
-        grid: gridSlot > 0 ? gridSlot : player.position,
-        stops: events.pitsDone,
-        overtakes: events.overtakesGained,
-        wet: events.hadRain,
+  pendingBadges() {
+    const s = get()
+    if (!s.resultPending) return []
+    return s.pendingRace ? previewRaceBadges(useCareerStore.getState(), s.pendingRace) : []
+  },
+
+  keepResult() {
+    // Keeping the race: count it now, exactly once. A save written on the
+    // result screen by a build from before this existed has resultPending
+    // false (its race was already counted at the flag), so it is not counted
+    // a second time.
+    const pending = get()
+    if (pending.resultPending && pending.lastRaceResults) {
+      set({
+        standings: addResultsToStandings(pending.standings, pending.lastRaceResults),
+        devPoints: pending.devPoints + loadGameData().upgrades.income.perRace,
+        rivalDevelopment: accumulateRivalDevelopment(pending.rivalDevelopment),
+        resultPending: false,
+        pendingRace: null,
       })
+      // The career's running totals, captured at the flag from the same
+      // results the standings use.
+      if (pending.pendingRace) useCareerStore.getState().recordRace(pending.pendingRace)
     }
   },
 
   nextRace() {
+    get().keepResult()
+
     const { raceIndex } = get()
     const next = raceIndex + 1
     if (next >= TOTAL_RACES) {
@@ -556,7 +625,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     useCareerStore.getState().endCareer()
     set({
       phase: 'menu', playerDriverId: null, selectedTeamId: null, raceIndex: 0,
-      standings: [], lastRaceResults: null, lastRaceEvents: null,
+      standings: [], lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null,
       selectedCircuitId: null, playerStrategy: null, qualifyingResult: null,
       attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {},
       lastSeasonBonus: 0, lastLadder: null,
@@ -587,6 +656,8 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       rivalDevelopment: snap.rivalDevelopment,
       lastRaceResults: snap.lastRaceResults,
       lastRaceEvents: snap.lastRaceEvents,
+      resultPending: snap.resultPending,
+      pendingRace: snap.pendingRace,
     })
   },
 }))

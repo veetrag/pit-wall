@@ -45,7 +45,8 @@ function playOneRace() {
   useSeasonStore.getState().recordRaceResult(
     [{ driverId: 'd_voss', position: 1 }, { driverId: 'd_rossi', position: 2 }],
     { overtakesGained: 3, pitsDone: 1, hadRain: false },
-  )                          // -> phase 'result', standings updated, devPoints paid
+  )                          // -> phase 'result', result pending
+  useSeasonStore.getState().keepResult()  // a race counts when it is kept
 }
 
 beforeEach(reset)
@@ -101,7 +102,7 @@ describe('loadSnapshot rejects anything it cannot trust', () => {
     selectedTeamId: 'apex', selectedCircuitId: 'veloce', raceIndex: 2,
     standings: [{ driverId: 'd_voss', points: 18 }], playerStrategy: null,
     attemptNonce: 0, devPoints: 30, purchasedTiers: {}, rivalDevelopment: {},
-    lastRaceResults: null, lastRaceEvents: null,
+    lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null,
   }
 
   it('round-trips a valid save', async () => {

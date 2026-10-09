@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useSettingsStore } from '@state/settingsStore'
-import { useSeasonStore, TOTAL_RACES, raceHeadline } from '@state/seasonStore'
+import { useSeasonStore, TOTAL_RACES, raceHeadline, addResultsToStandings } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
 import { BadgeToast } from './BadgeToast'
 import driversData from '@data/drivers.json'
@@ -68,7 +68,14 @@ export function RaceResult() {
   // made it worse (endCareer would take every season with it), which is how it
   // was noticed. backToMenu only changes phase, so the season save and the
   // career both survive and Continue still works.
-  const { lastRaceResults, lastRaceEvents, standings, playerDriverId, raceIndex, nextRace, backToMenu, retryRace } = useSeasonStore()
+  const { lastRaceResults, lastRaceEvents, standings: committedStandings, playerDriverId, raceIndex, nextRace, backToMenu, retryRace, resultPending, pendingBadges } = useSeasonStore()
+  // The race is shown here but not yet counted -- it counts when the player
+  // keeps it (NEXT RACE / FINAL STANDINGS). So the table and the badges show
+  // what keeping it WOULD mean, from the same functions keepResult uses.
+  const standings = resultPending && lastRaceResults
+    ? addResultsToStandings(committedStandings, lastRaceResults)
+    : committedStandings
+  const previewBadges = resultPending ? pendingBadges() : []
   const uiTap = useUiTap()
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
@@ -108,7 +115,7 @@ export function RaceResult() {
       }}
     >
       {isTopThree && <Confetti />}
-      <BadgeToast />
+      <BadgeToast ids={previewBadges} />
 
       {/* Header */}
       <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, position: 'relative', zIndex: 2 }}>
