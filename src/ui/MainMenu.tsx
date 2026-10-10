@@ -5,6 +5,7 @@ import { CIRCUIT_ORDER } from '@state/raceStore'
 import { loadSnapshot, type SeasonSnapshot } from '@state/seasonPersistence'
 import { loadCareer } from '@state/careerPersistence'
 import { useCareerStore } from '@state/careerStore'
+import { BADGES, earnedBadges } from '@state/badges'
 import { loadGameData } from '@data/validators'
 import { KitButton, Pill, ProgressStrip, HeroBand, CarArt, liveryOf, snapIn, useReducedMotion, ScreenFrame } from '@ui/kit'
 
@@ -39,7 +40,7 @@ export function MainMenu() {
   const viewSettings = useSeasonStore(s => s.viewSettings)
   const viewScenarios = useSeasonStore(s => s.viewScenarios)
   const resumeCareer = useCareerStore(s => s.resumeCareer)
-  const hasCareer = useCareerStore(s => s.hasCareer)
+  const earnedCount = useCareerStore(st => earnedBadges(st).length)
   const seasonNumber = useCareerStore(s => s.seasonNumber)
   const reduced = useReducedMotion()
 
@@ -125,7 +126,7 @@ export function MainMenu() {
         {saved && (
           <motion.div {...next()} className="slant-lg" style={{ background: 'var(--grape)', padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 1.5, color: 'var(--lilac)' }}>
-              ROUND {saved.raceIndex + 1} OF {total}
+              ROUND {saved.raceIndex + 1} OF {total}{saved.resultPending ? ' · RESULT WAITING' : ''}
             </span>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 44, lineHeight: 1, textTransform: 'uppercase', color: 'var(--white)' }}>
               {circuitName}
@@ -143,7 +144,7 @@ export function MainMenu() {
             ? (
               <KitButton variant="primary" size="lg" style={{ width: '100%' }} onClick={() => resumeSeason(saved)}>
                 <span>CONTINUE SEASON</span>
-                <SubLabel>{`Round ${saved.raceIndex + 1} of ${total}`}</SubLabel>
+                <SubLabel>{`Round ${saved.raceIndex + 1} of ${total}${saved.resultPending ? ' · result waiting' : ''}`}</SubLabel>
               </KitButton>
             )
             : (
@@ -158,7 +159,12 @@ export function MainMenu() {
         <motion.div {...next()} style={{ display: 'flex', gap: 10 }}>
           <KitButton variant="secondary" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewScenarios}>SCENARIOS</KitButton>
           <KitButton variant="secondary" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewGrid}>GARAGE</KitButton>
-          {hasCareer && <KitButton variant="secondary" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewCareer}>CAREER</KitButton>}
+          <KitButton variant="secondary" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewCareer}>
+            <span>TROPHIES</span>
+            <span style={{ display: 'block', fontFamily: 'var(--font-body)', fontStyle: 'normal', fontWeight: 800, fontSize: 11, color: 'var(--volt)', fontVariantNumeric: 'tabular-nums' }}>
+              {earnedCount} / {BADGES.length}
+            </span>
+          </KitButton>
         </motion.div>
 
         {/* Secondary */}

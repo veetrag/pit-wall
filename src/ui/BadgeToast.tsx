@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { snapIn } from '@ui/kit'
 import { useEffect } from 'react'
 import { useCareerStore } from '@state/careerStore'
 import { useSettingsStore } from '@state/settingsStore'
@@ -59,27 +60,15 @@ export function BadgeToast({ ids }: { ids?: readonly string[] } = {}) {
         {earned.map((b, i) => (
           <motion.div
             key={b.id}
-            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-            transition={{ delay: reducedMotion ? 0 : i * 0.35, duration: 0.3 }}
-            style={{
-              borderRadius: 10, padding: '10px 16px',
-              border: '1px solid var(--accent)',
-              background: 'linear-gradient(rgba(var(--accent-rgb), 0.12), rgba(var(--accent-rgb), 0.12)), var(--bg-elevated)',
-              textAlign: 'center', maxWidth: '86%',
-            }}
+            className="slant-md"
+            {...(() => { const e = snapIn(reducedMotion, i * 8); return { initial: e.initial, animate: e.animate, transition: e.transition } })()}
+            exit={{ opacity: 0 }}
+            style={{ padding: '10px 22px', background: 'var(--volt)', color: 'var(--ink)', textAlign: 'center', maxWidth: '86%' }}
           >
-            <div style={{
-              fontFamily: 'var(--font-display)', fontSize: 9, letterSpacing: '0.2em',
-              color: 'var(--text-dim)',
-            }}>
+            <div style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 11, letterSpacing: 2 }}>
               BADGE EARNED
             </div>
-            <div style={{
-              fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700,
-              color: 'var(--accent)', marginTop: 1,
-            }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 22, lineHeight: 1.05, marginTop: 1 }}>
               {b.name}
             </div>
           </motion.div>

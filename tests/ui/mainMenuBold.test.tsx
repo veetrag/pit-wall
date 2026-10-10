@@ -60,4 +60,11 @@ describe('MainMenu — Race Day Bold', () => {
     expect(await screen.findByText('NEW SEASON')).toBeTruthy()
     expect(screen.queryByText(/OF 12$/)).toBeNull()
   })
+
+  it('labels the round RESULT WAITING when the saved race result is pending', async () => {
+    mem.set(SAVE_KEY, JSON.stringify({ ...SAVED, resultPending: true }))
+    render(<MainMenu />)
+    expect((await screen.findAllByText(/RESULT WAITING/i)).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Round 4 of 12 · result waiting/)).toBeTruthy()
+  })
 })
