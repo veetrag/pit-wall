@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSettingsStore } from '@state/settingsStore'
@@ -11,17 +11,15 @@ import { expectedBestWing, type Wing } from '@engine/setup'
 import { useCareerStore } from '@state/careerStore'
 import { WingSelector } from '@ui/WingSelector'
 import circuitsJson from '@data/circuits.json'
-import compoundsData from '@data/compounds.json'
-import { ScreenFrame } from '@ui/kit'
+import { ScreenFrame, ScreenHeader, CircuitOutline, Pill, TyreChip, TYRE_NAME, Segmented, KitButton, PRESS } from '@ui/kit'
+import { StintBar, stopBounds, MIN_STINT_GAP } from '@ui/StintBar'
 
 type Compound = 'S' | 'M' | 'H' | 'I' | 'W'
-type CompoundEntry = { name: string; type: string; colorToken: string }
 type CircuitEntry = {
   name: string; laps: number; flag?: string; location?: string;
   rainProbability?: number; weatherBias?: string; characterNote?: string;
-  funFacts?: string[];
+  funFacts?: string[]; pitLaneTimeLoss?: number;
 }
-const compounds = (compoundsData as unknown as { compounds: Record<string, CompoundEntry> }).compounds
 const allCircuits = (circuitsJson as unknown as { circuits: Record<string, CircuitEntry> }).circuits
 const GAME_DATA = loadGameData()
 
@@ -35,20 +33,13 @@ function defaultWing(circuitId: string): Wing {
 
 const DRY_COMPOUNDS: Compound[] = ['S', 'M', 'H']
 const START_COMPOUNDS: Compound[] = ['S', 'M', 'H', 'I', 'W']
-const COMPOUND_SHORT_LABEL: Record<Compound, string> = { S: 'SOFT', M: 'MED', H: 'HARD', I: 'INTER', W: 'WET' }
+const WEATHER_START: Record<WeatherState, string> = { DRY: '☀ Dry start', DAMP: '⛅ Damp start', WET: '🌧 Wet start' }
 
-const COMPOUND_COLORS: Record<string, string> = {
-  S: 'var(--tyre-soft)',
-  M: 'var(--tyre-medium)',
-  H: 'var(--tyre-hard)',
-  I: 'var(--tyre-inter, #39B54A)',
-  W: 'var(--tyre-wet, #4DA6FF)',
+/** The circuit's character in a few words: characterNote up to its first period or dash. */
+function characterLabel(note: string | undefined): string | null {
+  const first = note?.split(/[.—–]| - /)[0]?.trim()
+  return first ? first : null
 }
-
-// Literal hex, not CSS var() — WeatherStrip.tsx's shared convention, since
-// these get alpha suffixes concatenated onto them for glow/wash below.
-const WEATHER_ICON: Record<WeatherState, string> = { DRY: '☀', DAMP: '⛅', WET: '🌧' }
-const WEATHER_COLOR: Record<WeatherState, string> = { DRY: '#F2C94C', DAMP: '#39B54A', WET: '#4DA6FF' }
 
 function recommendedStartCompound(weather: WeatherState): Compound {
   if (weather === 'WET') return 'W'
@@ -80,33 +71,40 @@ export function computeStartWeather(
   return openingTimeline({ laps, circuit: spec, tuning: GAME_DATA.tuning, seed, dryStart })
 }
 
-// Minimum laps required between two planned stops (and from a stop to the flag).
-const MIN_STINT_GAP = 4
+const SECTION_HEAD = {
+  margin: 0, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20,
+  textTransform: 'uppercase', color: 'var(--lilac-dim)',
+} as const
 
-function CompoundChips({ value, onChange, size = 'sm' }: { value: Compound; onChange: (c: Compound) => void; size?: 'sm' | 'md' }) {
-  const dim = size === 'md' ? 28 : 20
-  const fontSize = size === 'md' ? 12 : 10
+/**
+ * A radio group of tyre chips (WAI-ARIA: one tab stop, arrows move and select).
+ * `tall` is the start-tyre row (56 high, fills the width); otherwise compact 48×48.
+ */
+function TyreRadios({ options, value, onChange, ariaLabel, tall = false }: {
+  options: Compound[]; value: Compound; onChange: (c: Compound) => void; ariaLabel: string; tall?: boolean
+}) {
+  const uiTap = useUiTap()
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (step === 0) return
+    e.preventDefault()
+    const i = options.indexOf(value)
+    const next = options[(i + step + options.length) % options.length]
+    if (!next) return
+    uiTap(); onChange(next)
+    e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[options.indexOf(next)]?.focus()
+  }
   return (
-    <div style={{ display: 'flex', gap: 6 }}>
-      {DRY_COMPOUNDS.map(c => {
-        const color = COMPOUND_COLORS[c] ?? 'var(--text-mid)'
-        const selected = value === c
+    <div role="radiogroup" aria-label={ariaLabel} onKeyDown={onKeyDown} style={{ display: 'flex', gap: tall ? 8 : 4 }}>
+      {options.map(c => {
+        const on = c === value
         return (
-          <motion.button
-            key={c}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => onChange(c)}
-            style={{
-              width: dim, height: dim, borderRadius: '50%',
-              border: selected ? `1.5px solid ${color}` : '1px solid var(--line-hair)',
-              background: selected ? color : 'var(--bg-panel)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--font-mono)', fontSize, fontWeight: 700,
-              color: selected ? 'var(--bg-deep)' : 'var(--text-mid)',
-              cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s',
-            }}
-          >
-            {c}
+          <motion.button key={c} type="button" role="radio" aria-checked={on} aria-label={TYRE_NAME[c]} tabIndex={on ? 0 : -1}
+            className="slant-sm kit-focus" whileTap={{ scale: 0.96 }} transition={PRESS}
+            onClick={() => { uiTap(); onChange(c) }}
+            style={{ flex: tall ? 1 : undefined, width: tall ? undefined : 56, height: tall ? 56 : 48, border: 'none', cursor: 'pointer',
+              background: on ? 'var(--dusk)' : 'var(--grape)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TyreChip compound={c} size={tall ? 34 : 26} />
           </motion.button>
         )
       })}
@@ -138,6 +136,7 @@ export function RaceSetup() {
   const circuitId = CIRCUIT_ORDER[selectedIdx] ?? CIRCUIT_ORDER[0]!
   const circuit = allCircuits[circuitId]!
   const roundNum = raceIndex + 1
+  const [factsOpen, setFactsOpen] = useState(false)
 
   // The ACTUAL seeded forecast for this attempt — same seed initRace() will
   // use — not just the circuit's base rain probability. This is what fixes
@@ -167,354 +166,192 @@ export function RaceSetup() {
   const [pitLap2, setPitLap2] = useState(Math.round(circuit.laps * 0.7))
   const [pitCompound2, setPitCompound2] = useState<Compound>('M')
 
-  // Bounds: each stop needs room from the last (or the start) and from the flag.
-  const maxLap1 = stopCount === 2
-    ? circuit.laps - 3 - MIN_STINT_GAP
-    : circuit.laps - 3
-  const minLap2 = pitLap1 + MIN_STINT_GAP
-  const maxLap2 = circuit.laps - 2
-
   function selectStopCount(n: 1 | 2) {
     setStopCount(n)
     if (n === 2) {
-      const clampedLap1 = Math.min(pitLap1, circuit.laps - 3 - MIN_STINT_GAP)
+      // Switching to two stops: pull stop 1 back to leave room, then keep stop 2 in its bounds.
+      const b = stopBounds(circuit.laps, 2, pitLap1)
+      const clampedLap1 = Math.min(pitLap1, b.max1)
+      setPitLap2(prev => Math.max(clampedLap1 + MIN_STINT_GAP, Math.min(prev, b.max2)))
       setPitLap1(clampedLap1)
-      setPitLap2(prev => Math.max(clampedLap1 + MIN_STINT_GAP, Math.min(prev, circuit.laps - 2)))
     }
   }
 
+  function moveStop(index: number, lap: number) {
+    if (index === 0) {
+      setPitLap1(lap)
+      if (stopCount === 2) setPitLap2(prev => Math.max(prev, lap + MIN_STINT_GAP))
+    } else {
+      setPitLap2(lap)
+    }
+  }
+
+  const stops = stopCount === 2
+    ? [{ lap: pitLap1, compound: pitCompound1 }, { lap: pitLap2, compound: pitCompound2 }]
+    : [{ lap: pitLap1, compound: pitCompound1 }]
+  const character = characterLabel(circuit.characterNote)
+  const pitLoss = circuit.pitLaneTimeLoss
+  const hasFacts = !!circuit.characterNote || (circuit.funFacts?.length ?? 0) > 0
+
   return (
     <ScreenFrame label="Race setup">
-      {/* Header */}
-      <div style={{
-        padding: '20px 20px 16px',
-        borderBottom: '1px solid var(--line-hair)',
-        flexShrink: 0,
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
-      }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-            PRE-RACE SETUP
-          </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
-            Strategy Plan
-          </div>
-        </div>
-        <motion.button whileTap={{ scale: 0.94 }} onClick={() => { uiTap(); backToDriverSelect() }}
-          style={{ flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
-          ← BACK
-        </motion.button>
-      </div>
+      <ScreenHeader eyebrow="PRE-RACE SETUP" title="Race plan" onBack={backToDriverSelect} />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-        {/* Circuit selector */}
-        <div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 8 }}>SELECT CIRCUIT</div>
-          <div ref={chipStripRef} style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-            {CIRCUIT_ORDER.map((cId, i) => {
-              const c = allCircuits[cId]
-              if (!c) return null
-              const active = i === selectedIdx
-              return (
-                <motion.button
-                  key={cId}
-                  data-circuit-idx={i}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setSelectedIdx(i)
-                    setPitLap1(Math.round(c.laps * (stopCount === 2 ? 0.33 : 0.45)))
-                    setPitLap2(Math.round(c.laps * 0.7))
-                    const newWeather = computeStartWeather(cId, c.laps, seed, dryStart)[0] ?? 'DRY'
-                    setStartCompound(recommendedStartCompound(newWeather))
-                  }}
-                  style={{
-                    flexShrink: 0, border: 'none', borderRadius: 10, padding: '10px 14px',
-                    background: active ? 'var(--accent)' : 'var(--bg-elevated)',
-                    outline: active ? 'none' : '1px solid var(--line-hair)',
-                    cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  }}
-                >
-                  {c.flag && <span style={{ fontSize: 16 }}>{c.flag}</span>}
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: active ? 'var(--bg-deep)' : 'var(--text-mid)', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
-                    {c.name.toUpperCase().slice(0, 8)}
-                  </span>
-                </motion.button>
-              )
-            })}
-          </div>
+        {/* Circuit chips */}
+        <div ref={chipStripRef} role="group" aria-label="Circuit"
+          style={{ display: 'flex', gap: 8, overflowX: 'auto', flexShrink: 0, margin: '0 -16px', padding: '0 16px 2px' }}>
+          {CIRCUIT_ORDER.map((cId, i) => {
+            const c = allCircuits[cId]
+            if (!c) return null
+            const active = i === selectedIdx
+            return (
+              <motion.button
+                key={cId}
+                type="button"
+                data-circuit-idx={i}
+                aria-pressed={active}
+                className="kit-focus"
+                whileTap={{ scale: 0.96 }} transition={PRESS}
+                onClick={() => {
+                  uiTap()
+                  setSelectedIdx(i)
+                  setPitLap1(Math.round(c.laps * (stopCount === 2 ? 0.33 : 0.45)))
+                  setPitLap2(Math.round(c.laps * 0.7))
+                  const newWeather = computeStartWeather(cId, c.laps, seed, dryStart)[0] ?? 'DRY'
+                  setStartCompound(recommendedStartCompound(newWeather))
+                }}
+                style={{
+                  flexShrink: 0, minHeight: 48, border: 'none', borderRadius: 999, padding: '0 16px', cursor: 'pointer',
+                  background: active ? 'var(--white)' : 'var(--grape)', color: active ? 'var(--ink)' : 'var(--lilac)',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14,
+                }}
+              >
+                {c.flag && <span aria-hidden="true" style={{ fontSize: 16 }}>{c.flag}</span>}
+                <span>{c.name}</span>
+              </motion.button>
+            )
+          })}
         </div>
 
-        {/* Circuit Card */}
-        <div style={{
-          background: 'var(--bg-elevated)', borderRadius: 14,
-          border: '1px solid var(--line-hair)', overflow: 'hidden',
+        {/* Circuit card. flexShrink 0: it clips (overflow hidden => min-height 0),
+            so in an overflowing column it would otherwise shrink to nothing. */}
+        <div className="slant-lg" style={{
+          flexShrink: 0, background: 'var(--night)', padding: '14px 22px', overflow: 'hidden',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
         }}>
-          <div style={{
-            background: 'linear-gradient(135deg, var(--bg-panel) 0%, var(--bg-elevated) 100%)',
-            padding: '14px 16px',
-            borderBottom: '1px solid var(--line-hair)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-          }}>
-            <div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 4 }}>
-                {`ROUND ${roundNum} · CIRCUIT`}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {circuit.flag && <span style={{ fontSize: 22 }}>{circuit.flag}</span>}
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text-hi)' }}>
-                  {circuit.name.toUpperCase()}
-                </div>
-              </div>
-              {circuit.location && (
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>
-                  {circuit.location}
-                </div>
-              )}
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>
-                {circuit.laps}
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>
-                LAPS
-              </div>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12, color: 'var(--lilac-dim)', letterSpacing: 2 }}>
+              {`ROUND ${roundNum}${circuit.flag ? ` · ${circuit.flag}` : ''}`}
+            </span>
+            <h2 style={{
+              margin: 0, fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 38,
+              lineHeight: 0.9, textTransform: 'uppercase', color: 'var(--white)', overflowWrap: 'break-word',
+            }}>
+              {circuit.name}
+            </h2>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--lilac)' }}>
+              {`${circuit.laps} laps${character ? ` · ${character}` : ''}`}
+            </span>
           </div>
+          <div style={{ flexShrink: 0 }}>
+            <CircuitOutline circuitId={circuitId} width={120} height={100} label={`${circuit.name} layout`} />
+          </div>
+        </div>
 
-          <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* Actual seeded starting conditions — not just a probability */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>
-                CONDITIONS AT LIGHTS OUT
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {weatherTimeline.slice(0, 4).map((w, i) => (
-                <div
-                  key={i}
-                  style={{
-                    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    padding: i === 0 ? '7px 4px' : '6px 4px',
-                    border: `1.5px solid ${WEATHER_COLOR[w]}${i === 0 ? '99' : '44'}`,
-                    borderRadius: 8,
-                    background: i === 0 ? `${WEATHER_COLOR[w]}18` : 'rgba(27,34,56,0.5)',
-                    boxShadow: i === 0 ? `0 0 10px ${WEATHER_COLOR[w]}40` : 'none',
-                  }}
-                >
-                  <span style={{ fontSize: i === 0 ? 18 : 14, lineHeight: 1 }}>{WEATHER_ICON[w]}</span>
-                  <span style={{
-                    fontFamily: 'var(--font-mono)', fontSize: i === 0 ? 11 : 9, fontWeight: 700,
-                    color: i === 0 ? 'var(--text-hi)' : 'var(--text-mid)', marginTop: 3,
-                  }}>
-                    {w}
-                  </span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'var(--text-dim)', marginTop: 1 }}>
-                    {i === 0 ? 'LAP 1' : `+${i}`}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {startingWeather !== 'DRY' && (
-              <div style={{
-                marginTop: 2, padding: '7px 10px', borderRadius: 8,
-                background: `${WEATHER_COLOR[startingWeather]}14`, border: `1px solid ${WEATHER_COLOR[startingWeather]}55`,
-                fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--text-hi)', lineHeight: 1.4,
-              }}>
-                ⚠ Track is <strong>{startingWeather}</strong> at lights out — starting compound below has been set to {recommendedStartCompound(startingWeather)}.
-              </div>
-            )}
-
-            {circuit.characterNote && (
-              <div style={{
-                fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)',
-                lineHeight: 1.4, marginTop: 4,
-              }}>
-                {circuit.characterNote}
-              </div>
-            )}
-            {circuit.funFacts && circuit.funFacts.length > 0 && (
-              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {circuit.funFacts.map((fact, i) => (
-                  <div key={i} style={{
-                    fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--accent)',
-                    display: 'flex', alignItems: 'flex-start', gap: 5,
-                  }}>
-                    <span style={{ opacity: 0.6, flexShrink: 0 }}>›</span>
+        {/* Actual seeded starting conditions — not just a probability */}
+        <div aria-label="Conditions at lights out" role="group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flexShrink: 0 }}>
+          <Pill tone={startingWeather === 'DRY' ? 'default' : 'rain'}>{WEATHER_START[startingWeather]}</Pill>
+          {circuit.rainProbability !== undefined && <Pill>{`Rain ${Math.round(circuit.rainProbability * 100)}%`}</Pill>}
+          {pitLoss !== undefined && <Pill>{`Pit loss ${Number.isInteger(pitLoss) ? pitLoss : pitLoss.toFixed(1)}s`}</Pill>}
+        </div>
+        {startingWeather !== 'DRY' && (
+          <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--hot)', lineHeight: 1.4 }}>
+            ⚠ Track is <strong>{startingWeather}</strong> at lights out — starting compound below has been set to {recommendedStartCompound(startingWeather)}.
+          </div>
+        )}
+        {hasFacts && (
+          <div style={{ flexShrink: 0 }}>
+            <button type="button" className="kit-focus" aria-expanded={factsOpen}
+              onClick={() => { uiTap(); setFactsOpen(o => !o) }}
+              style={{ minHeight: 48, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer',
+                fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, letterSpacing: 1, color: 'var(--lilac)', textAlign: 'left' }}>
+              {`MORE ABOUT ${circuit.name.toUpperCase()} ${factsOpen ? '▴' : '▾'}`}
+            </button>
+            {factsOpen && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--lilac)', lineHeight: 1.4 }}>
+                {circuit.characterNote && <div>{circuit.characterNote}</div>}
+                {circuit.funFacts?.map((fact, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 6 }}>
+                    <span aria-hidden="true" style={{ color: 'var(--lilac-dim)', flexShrink: 0 }}>›</span>
                     <span>{fact}</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        </div>
+        )}
 
-        {/* Starting Tyre */}
-        <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--line-hair)' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 12 }}>
-            STARTING COMPOUND
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {START_COMPOUNDS.map(c => {
-              const color = COMPOUND_COLORS[c] ?? 'var(--text-mid)'
-              const selected = startCompound === c
-              const recommended = c === recommendedStartCompound(startingWeather)
-              return (
-                <motion.button
-                  key={c}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => setStartCompound(c)}
-                  style={{
-                    flex: 1, border: selected ? `1.5px solid ${color}` : recommended ? `1px dashed ${color}88` : '1px solid var(--line-hair)',
-                    borderRadius: 10, padding: '10px 4px',
-                    background: selected ? `${color}18` : 'var(--bg-panel)',
-                    cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                    outline: 'none',
-                    boxShadow: selected ? `0 0 16px ${color}30` : 'none',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{
-                    width: 24, height: 24, borderRadius: '50%',
-                    background: color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--bg-deep)',
-                  }}>
-                    {c}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 8.5, color: selected ? color : 'var(--text-mid)', letterSpacing: '0.02em', textAlign: 'center' }}>
-                    {COMPOUND_SHORT_LABEL[c]}
-                  </div>
-                </motion.button>
-              )
-            })}
-          </div>
-        </div>
+        {/* Start tyre */}
+        <h2 style={{ ...SECTION_HEAD, marginTop: 4 }}>Start tyre</h2>
+        <TyreRadios options={START_COMPOUNDS} value={startCompound} onChange={setStartCompound} ariaLabel="Start tyre" tall />
 
         {/* Wing */}
-        <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--line-hair)' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 12 }}>
-            WING
+        <h2 style={{ ...SECTION_HEAD, marginTop: 4 }}>Wing</h2>
+        <WingSelector circuitId={circuitId} value={wing} onChange={setWing} />
+
+        {/* Strategy */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 4, flexShrink: 0 }}>
+          <h2 style={SECTION_HEAD}>Strategy</h2>
+          <div style={{ width: 200 }}>
+            <Segmented<'1' | '2'>
+              ariaLabel="Number of stops"
+              options={[{ value: '1', label: '1 STOP' }, { value: '2', label: '2 STOP' }]}
+              value={stopCount === 2 ? '2' : '1'}
+              onChange={v => selectStopCount(v === '2' ? 2 : 1)}
+            />
           </div>
-          <WingSelector circuitId={circuitId} value={wing} onChange={setWing} />
         </div>
-
-        {/* Pit Stop Plan */}
-        <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--line-hair)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em' }}>
-              STRATEGY PLAN
-            </div>
-            <div style={{ display: 'flex', gap: 4, background: 'var(--bg-panel)', borderRadius: 8, padding: 3 }}>
-              {([1, 2] as const).map(n => (
-                <motion.button
-                  key={n}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => selectStopCount(n)}
-                  style={{
-                    border: 'none', borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
-                    background: stopCount === n ? 'var(--accent)' : 'transparent',
-                    color: stopCount === n ? 'var(--bg-deep)' : 'var(--text-mid)',
-                    fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
-                  }}
-                >
-                  {n === 1 ? 'ONE STOP' : 'TWO STOP'}
-                </motion.button>
-              ))}
-            </div>
+        {stops.map((_, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0 }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--lilac)' }}>
+              {stopCount === 2 ? `Pit ${i + 1} — fit` : 'Pit — fit'}
+            </span>
+            <TyreRadios options={DRY_COMPOUNDS}
+              value={i === 0 ? pitCompound1 : pitCompound2}
+              onChange={i === 0 ? setPitCompound1 : setPitCompound2}
+              ariaLabel={stopCount === 2 ? `Pit ${i + 1} tyre` : 'Pit tyre'} />
           </div>
-
-          {/* Stop 1 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-mid)' }}>
-              Pit {stopCount === 2 ? '1' : ''} — fit
-            </div>
-            <CompoundChips value={pitCompound1} onChange={setPitCompound1} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>Target lap</span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>LAP {pitLap1}</span>
-          </div>
-          <input
-            type="range"
-            min={5}
-            max={maxLap1}
-            value={pitLap1}
-            onChange={e => {
-              const v = Number(e.target.value)
-              setPitLap1(v)
-              if (stopCount === 2) setPitLap2(prev => Math.max(prev, v + MIN_STINT_GAP))
-            }}
-            style={{ width: '100%', height: 4, borderRadius: 2, accentColor: 'var(--accent)', cursor: 'pointer' }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, marginBottom: stopCount === 2 ? 16 : 0 }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>LAP 5</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>LAP {maxLap1}</div>
-          </div>
-
-          {/* Stop 2 */}
-          {stopCount === 2 && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-mid)' }}>
-                  Pit 2 — fit
-                </div>
-                <CompoundChips value={pitCompound2} onChange={setPitCompound2} />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>Target lap</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>LAP {pitLap2}</span>
-              </div>
-              <input
-                type="range"
-                min={minLap2}
-                max={maxLap2}
-                value={pitLap2}
-                onChange={e => setPitLap2(Number(e.target.value))}
-                style={{ width: '100%', height: 4, borderRadius: 2, accentColor: 'var(--accent)', cursor: 'pointer' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>LAP {minLap2}</div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)' }}>LAP {maxLap2}</div>
-              </div>
-            </>
-          )}
-
-          <div style={{
-            marginTop: 12, padding: '8px 12px', borderRadius: 8,
-            background: 'var(--bg-panel)', border: '1px solid var(--line-hair)',
-            fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)',
-            lineHeight: 1.5,
-          }}>
-            PLAN: {startCompound} → {pitCompound1} on lap {pitLap1}
-            {stopCount === 2 && <> → {pitCompound2} on lap {pitLap2}</>}
-            {' · W'}{wing}
-            <br />
-            <span style={{ color: 'var(--text-mid)' }}>Stops run automatically. Pit earlier live if you need to — a planned stop can be brought forward, not delayed.</span>
-          </div>
+        ))}
+        <div style={{ flexShrink: 0 }}>
+          <StintBar laps={circuit.laps} startCompound={startCompound} stops={stops} onChange={moveStop} />
+        </div>
+        <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--white)' }}>
+          PLAN: {startCompound} → {pitCompound1} on lap {pitLap1}
+          {stopCount === 2 && <> → {pitCompound2} on lap {pitLap2}</>}
+          {' · W'}{wing}
+        </div>
+        <div style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--lilac-dim)', lineHeight: 1.4 }}>
+          Drag a split to move a stop. Stops run automatically; you can pit earlier live, not later.
         </div>
       </div>
 
       {/* Confirm */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
-        <motion.button
-          whileTap={{ scale: 0.97 }}
+      <div style={{ padding: '12px 16px', flexShrink: 0 }}>
+        <KitButton
+          variant="primary" size="lg" style={{ width: '100%' }}
           onClick={() => {
-            uiTap()
             const plannedStops = stopCount === 2
               ? [{ lap: pitLap1, compound: pitCompound1 }, { lap: pitLap2, compound: pitCompound2 }]
               : [{ lap: pitLap1, compound: pitCompound1 }]
             const strategy: PlayerStrategyChoice = { startCompound, plannedStops, wing }
             confirmRaceSetup(circuitId, strategy)
           }}
-          style={{
-            width: '100%', border: 'none', borderRadius: 10, padding: '16px',
-            background: 'var(--accent)', color: 'var(--bg-deep)',
-            fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700,
-            letterSpacing: '0.08em', cursor: 'pointer', outline: 'none',
-          }}
         >
           TO QUALIFYING →
-        </motion.button>
+        </KitButton>
       </div>
     </ScreenFrame>
   )
