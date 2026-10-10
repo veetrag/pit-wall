@@ -629,9 +629,6 @@ export function GridStats() {
           }}
         >‹</motion.button>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-            SEASON 2025
-          </div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: 'var(--text-hi)', marginTop: 1 }}>
             Grid & Stats
           </div>
