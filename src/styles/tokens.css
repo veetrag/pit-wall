@@ -10,6 +10,8 @@
   --lilac-dim:  #A99FDB;
   --white:      #FFFFFF;
   --volt-rgb:   255, 214, 10;
+  --ink-rgb:    18, 14, 43;
+  --white-rgb:  255, 255, 255;
   --volt:       rgb(var(--volt-rgb));
   /* Spec #FF2E63 measured 3.92:1 on --grape; lightened to #FF4F84 (4.5:1 floor). The ONE pink: accent-warm, negative and tyre-soft follow it. */
   --hot-rgb:    255, 79, 132;
