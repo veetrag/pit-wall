@@ -82,7 +82,7 @@ export function SettingsScreen() {
         <KitToggle label="Cloud save" sub="Google Play Games" checked={false} onChange={() => {}} disabled />
 
         <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--lilac)' }}>Privacy policy · soon</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--lilac)' }}>Privacy policy · Coming soon</span>
           <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--lilac-dim)' }}>Pit Wall v{__APP_VERSION__}</span>
         </div>
       </div>

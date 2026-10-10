@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
 import { ScreenFrame, ScreenHeader, KitButton, snapIn, useReducedMotion, PRESS } from '@ui/kit'
@@ -62,10 +62,9 @@ export function HowToPlay() {
       />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px' }}>
-        <AnimatePresence mode="wait">
           <motion.div
             key={step}
-            initial={enter.initial} animate={enter.animate} exit={{ opacity: 0 }} transition={enter.transition}
+            initial={enter.initial} animate={enter.animate} transition={enter.transition}
             className="slant-lg"
             style={{ background: 'var(--grape)', padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}
           >
@@ -74,7 +73,6 @@ export function HowToPlay() {
               {current.body}
             </div>
           </motion.div>
-        </AnimatePresence>
 
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))`, gap: 3, marginTop: 20 }}>
           {STEPS.map((_, i) => (

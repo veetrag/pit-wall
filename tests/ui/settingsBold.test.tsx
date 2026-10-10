@@ -8,6 +8,8 @@ vi.mock('@capacitor/preferences', () => ({
 import { SettingsScreen } from '@ui/SettingsPanel'
 import { HowToPlay } from '@ui/HowToPlay'
 import { useSettingsStore } from '@state/settingsStore'
+import { useCoachStore } from '@state/coachStore'
+import { useSeasonStore } from '@state/seasonStore'
 
 beforeEach(() => { useSettingsStore.setState({ reducedMotion: false }) })
 
@@ -19,7 +21,7 @@ describe('settings and how to play in Race Day Bold', () => {
     expect(screen.getByRole('radiogroup', { name: 'Sim speed' })).toBeTruthy()
     expect(screen.getByRole('radiogroup', { name: 'Difficulty' })).toBeTruthy()
     expect((screen.getByRole('switch', { name: 'Cloud save' }) as HTMLButtonElement).disabled).toBe(true)
-    expect(screen.getByText('Coming soon', { exact: false })).toBeTruthy()
+    expect(screen.getAllByText('Coming soon', { exact: false }).length).toBe(2)
     fireEvent.click(screen.getByRole('switch', { name: 'Reduce motion' }))
     expect(useSettingsStore.getState().reducedMotion).toBe(true)
   })
@@ -28,5 +30,22 @@ describe('settings and how to play in Race Day Bold', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Step 3' }))
     expect(screen.getByRole('button', { name: 'Step 3' }).getAttribute('aria-current')).toBe('step')
     expect(screen.getByText(/3 OF 6/)).toBeTruthy()
+  })
+  it('turning Replay tutorial on clears the seen flag and resets the coach', () => {
+    const reset = vi.fn()
+    useCoachStore.setState({ reset })
+    useSettingsStore.setState({ coachMarksSeen: true })
+    render(<SettingsScreen />)
+    fireEvent.click(screen.getByRole('switch', { name: 'Replay tutorial' }))
+    expect(useSettingsStore.getState().coachMarksSeen).toBe(false)
+    expect(reset).toHaveBeenCalled()
+  })
+  it('START RACING on the last step starts a season', () => {
+    const startNewSeason = vi.fn()
+    useSeasonStore.setState({ startNewSeason })
+    render(<HowToPlay />)
+    fireEvent.click(screen.getByRole('button', { name: 'Step 6' }))
+    fireEvent.click(screen.getByRole('button', { name: /START RACING/ }))
+    expect(startNewSeason).toHaveBeenCalled()
   })
 })
