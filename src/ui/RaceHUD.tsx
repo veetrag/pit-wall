@@ -83,7 +83,7 @@ function SpeedControl() {
   )
 }
 
-function StatusBar() {
+export function StatusBar() {
   const raceState = useRaceStore(s => s.raceState)
   const config = useRaceStore(s => s.config)
   const phase = useRaceStore(s => s.phase)
@@ -109,8 +109,9 @@ function StatusBar() {
           color: 'var(--white)', lineHeight: 1, fontVariantNumeric: 'tabular-nums',
         }}>
           {/* Big Shoulders has no tabular figures (tnum is a no-op): a box sized
-              to the total's digit count keeps "/58" from twitching each lap. */}
-          L<span style={{ display: 'inline-block', minWidth: `${String(raceState.totalLaps).length * 0.55}em`, textAlign: 'right' }}>{raceState.lap + 1}</span><span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span>
+              to the total's digit count, reserved after the counter, keeps it from twitching each lap. */}
+          <span data-testid="lap-counter">L{raceState.lap + 1}<span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span></span>
+          <span data-testid="lap-reserve" aria-hidden="true" style={{ visibility: 'hidden' }}>{'0'.repeat(Math.max(0, String(raceState.totalLaps).length - String(raceState.lap + 1).length))}</span>
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>

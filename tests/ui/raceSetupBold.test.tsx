@@ -141,4 +141,12 @@ describe('StintBar pointer drag', () => {
     fireEvent.pointerMove(s, { clientX: 140, buttons: 1 })
     expect(calls).toEqual([])
   })
+  it('the selected start and pit tyres are volt filled', () => {
+    render(<RaceSetup />)
+    const groups = [screen.getByRole('radiogroup', { name: 'Start tyre' }), screen.getByRole('radiogroup', { name: 'Pit tyre' })]
+    for (const g of groups) {
+      const on = within(g).getAllByRole('radio').find(r => r.getAttribute('aria-checked') === 'true')!
+      expect(on.style.background).toContain('--volt')
+    }
+  })
 })

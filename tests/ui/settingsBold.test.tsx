@@ -54,4 +54,12 @@ describe('settings and how to play in Race Day Bold', () => {
     const card = screen.getByText(/Switch modes live/).parentElement as HTMLElement
     expect(parseFloat(card.style.opacity || '1')).toBeGreaterThan(0)
   })
+  it('the sim speed and difficulty controls do not shrink in their rows', () => {
+    render(<SettingsScreen />)
+    for (const n of ['Sim speed', 'Difficulty']) {
+      const box = screen.getByRole('radiogroup', { name: n }).parentElement!
+      expect(box.style.flexShrink).toBe('0')
+      expect(parseInt(box.style.minWidth)).toBeGreaterThanOrEqual(150)
+    }
+  })
 })

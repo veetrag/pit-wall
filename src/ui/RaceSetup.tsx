@@ -115,10 +115,10 @@ function TyreRadios({ options, value, onChange, ariaLabel, tall = false, recomme
             className="slant-sm kit-focus" whileTap={{ scale: 0.96 }} transition={PRESS}
             onClick={() => { uiTap(); onChange(c) }}
             style={{ flex: tall ? 1 : undefined, width: tall ? undefined : 56, height: tall ? 56 : 48, border: 'none', cursor: 'pointer',
-              background: on ? 'var(--dusk)' : 'var(--grape)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-            <TyreChip compound={c} size={tall ? (rec ? 30 : 34) : 26} />
+              background: on ? 'var(--volt)' : 'var(--grape)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+            <TyreChip compound={c} size={tall ? (rec ? 30 : 34) : 26} onInk={!on} />
             {rec && <span aria-hidden="true" style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 9, letterSpacing: 1,
-              lineHeight: 1, color: 'var(--lilac)' }}>REC</span>}
+              lineHeight: 1, color: on ? 'var(--ink)' : 'var(--lilac)' }}>REC</span>}
           </motion.button>
         )
       })}

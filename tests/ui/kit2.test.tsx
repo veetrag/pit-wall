@@ -86,4 +86,11 @@ describe('screen switch never shows a blank or faded frame', () => {
       expect(screen.getByRole('region', { name: 'Beta' })).toBeTruthy()
     })
   }
+  it('ScreenHeader eyebrow wraps and the right slot does not shrink', () => {
+    render(<ScreenHeader eyebrow="BETWEEN ROUNDS · 6 OF 12" title="Dev" right={<b data-testid="r">DP</b>} />)
+    const e = screen.getByText('BETWEEN ROUNDS · 6 OF 12')
+    expect(e.style.minWidth).toBe('0px')
+    expect(e.style.whiteSpace).not.toBe('nowrap')
+    expect(screen.getByTestId('r').parentElement!.style.flexShrink).toBe('0')
+  })
 })

@@ -18,14 +18,14 @@ function GroupHead({ title, right }: { title: string; right?: ReactNode }) {
 }
 
 /** Grape slanted row: label and sub on the left, a segmented control on the right. */
-function SegRow({ label, sub, children }: { label: string; sub: string; children: ReactNode }) {
+function SegRow({ label, sub, minWidth, children }: { label: string; sub: string; minWidth: number; children: ReactNode }) {
   return (
     <div className="slant-row" style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 64, padding: '8px 18px 8px 20px', background: 'var(--grape)' }}>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 15, color: 'var(--white)' }}>{label}</span>
         <span style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: 12, color: 'var(--lilac)' }}>{sub}</span>
       </div>
-      {children}
+      <div style={{ flexShrink: 0, minWidth }}>{children}</div>
     </div>
   )
 }
@@ -61,11 +61,11 @@ export function SettingsScreen() {
 
         <GroupHead title="Gameplay" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <SegRow label="Sim speed" sub="Default playback speed">
+          <SegRow minWidth={156} label="Sim speed" sub="Default playback speed">
             <Segmented ariaLabel="Sim speed" options={SPEED_OPTIONS} value={String(simSpeed)}
               onChange={v => setSimSpeed(Number(v) as SimSpeed)} />
           </SegRow>
-          <SegRow label="Difficulty" sub="Pro fields sharper, more aggressive rival strategy">
+          <SegRow minWidth={150} label="Difficulty" sub="Pro fields sharper, more aggressive rival strategy">
             <Segmented ariaLabel="Difficulty" options={DIFFICULTY_OPTIONS} value={difficulty} onChange={setDifficulty} />
           </SegRow>
           <KitToggle label="Skip start sequence" sub="Jump straight to racing" checked={skipStartSequence} onChange={setSkipStartSequence} />

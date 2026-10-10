@@ -83,9 +83,9 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
 
                 {/* Situation readout from `expect` -- never re-simulated here. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <Pill>{`P${spec.expect.position}`}</Pill>
-                  <Pill>{`${spec.expect.lapsRemaining} LAPS LEFT`}</Pill>
-                  <Pill>
+                  <Pill tone="dusk">{`P${spec.expect.position}`}</Pill>
+                  <Pill tone="dusk">{`${spec.expect.lapsRemaining} LAPS LEFT`}</Pill>
+                  <Pill tone="dusk">
                     <TyreChip compound={spec.expect.compound as Compound} size={20} />
                     {/* The compound letter is printed with the age too: colour is never the only signal. */}
                     <span>{`${spec.expect.compound}${spec.expect.tyreAge}`}</span>

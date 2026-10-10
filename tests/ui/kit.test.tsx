@@ -97,4 +97,10 @@ describe('KitButton testId', () => {
     render(<KitButton variant="primary" testId="go-btn" onClick={() => {}}>Go</KitButton>)
     expect(screen.getByTestId('go-btn').tagName).toBe('BUTTON')
   })
+  it('Pill dusk tone is dusk fill with white text', () => {
+    render(<Pill tone="dusk">P8</Pill>)
+    const el = screen.getByText('P8')
+    expect(el.style.background).toContain('--dusk')
+    expect(el.style.color).toContain('--white')
+  })
 })

@@ -14,9 +14,9 @@ export function ScreenHeader({ eyebrow, title, onBack, right }: { eyebrow?: stri
             style={{ width: 48, height: 48, borderRadius: 999, border: 'none', background: 'var(--grape)', color: 'var(--white)',
               fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 20, cursor: 'pointer', flexShrink: 0 }}>←</motion.button>
         )}
-        {eyebrow && <span style={{ flex: 1, fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: 'var(--lilac-dim)' }}>{eyebrow}</span>}
+        {eyebrow && <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, letterSpacing: 2, color: 'var(--lilac-dim)' }}>{eyebrow}</span>}
         {!eyebrow && <span style={{ flex: 1 }} />}
-        {right}
+        {right && <div style={{ flexShrink: 0 }}>{right}</div>}
       </div>
       <h1 style={{ margin: '8px 0 0', fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 46,
         lineHeight: 0.95, textTransform: 'uppercase', color: 'var(--white)', overflowWrap: 'anywhere' }}>{title}</h1>

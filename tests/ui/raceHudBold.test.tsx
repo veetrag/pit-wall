@@ -6,6 +6,7 @@ import { useSeasonStore } from '@state/seasonStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useCoachStore } from '@state/coachStore'
 import { TimingTower } from '@ui/TimingTower'
+import { StatusBar } from '@ui/RaceHUD'
 import { TelemetryZone } from '@ui/TelemetryZone'
 import { PaceModeToggle } from '@ui/PaceModeToggle'
 import { loadGameData } from '@data/validators'
@@ -103,5 +104,12 @@ describe('race HUD in Race Day Bold', () => {
       const btn = screen.getByRole('button', { name })
       expect(parseInt(btn.style.minHeight, 10)).toBeGreaterThanOrEqual(48)
     }
+  })
+  it('the lap counter reads tight and reserves width after the digits', () => {
+    act(() => { useRaceStore.setState({ phase: 'racing' }) })
+    render(<StatusBar />)
+    const c = screen.getByTestId('lap-counter')
+    expect(c.textContent).toMatch(/^L\d+\/\d+$/)
+    expect(screen.getByTestId('lap-reserve')).toBeTruthy()
   })
 })

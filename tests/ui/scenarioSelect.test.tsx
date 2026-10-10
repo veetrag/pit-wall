@@ -126,4 +126,10 @@ describe('ScenarioSelect — keyboard', () => {
     const stint = `${cliff.expect.compound}${cliff.expect.tyreAge}`
     expect(screen.getByText(stint), `the ${stint} stint renders`).toBeTruthy()
   })
+  it('situation pills on the grape card use the dusk tone', () => {
+    render(<ScenarioSelect />)
+    const first = SCENARIOS[0]!
+    act(() => { screen.getByText(first.name).click() })
+    expect((screen.getByText(`P${first.expect.position}`) as HTMLElement).style.background).toContain('--dusk')
+  })
 })
