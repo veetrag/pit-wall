@@ -35,3 +35,11 @@ export function useCountUp(target: number, durationMs = 600): number {
   }, [target, durationMs, reduced])
   return value
 }
+
+/**
+ * Exit for a stacked screen layer: stays fully opaque for 180 ms underneath the
+ * entering one. Opacity alone would animate 1 -> 1 (skipped), so a 0.01 px
+ * y-offset gives the animation something real to run; zIndex drops instantly so
+ * the entering layer is never hidden behind the leaving one.
+ */
+export const HOLD_EXIT = { opacity: 1, zIndex: 0, y: 0.01, transition: { duration: 0.18, zIndex: { duration: 0 } } } as const

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import { useReducedMotion, EASE } from './motion'
+import { useReducedMotion, EASE, HOLD_EXIT } from './motion'
 
 /**
  * Every screen's root. Opaque and absolutely stacked so a screen switch never
@@ -15,7 +15,7 @@ export function ScreenFrame({ children, label, style }: { children: ReactNode; l
       aria-label={label}
       initial={reduced ? { opacity: 0, zIndex: 1 } : { opacity: 0, x: -18, zIndex: 1 }}
       animate={reduced ? { opacity: 1, zIndex: 1 } : { opacity: 1, x: 0, zIndex: 1 }}
-      exit={{ opacity: 1, zIndex: 0, transition: { duration: 0.18 } }}
+      exit={HOLD_EXIT}
       transition={{ duration: reduced ? 0.12 : 0.18, ease: EASE }}
       style={{
         position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, background: 'var(--ink)', color: 'var(--white)',

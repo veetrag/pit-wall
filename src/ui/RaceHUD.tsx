@@ -22,7 +22,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { PitTimer } from './PitTimer'
 import { Component, type ReactNode } from 'react'
 import { useUiTap } from '@hooks/useUiTap'
-import { useReducedMotion, PRESS, ScreenFrame } from '@ui/kit'
+import { useReducedMotion, PRESS, ScreenFrame, HOLD_EXIT } from '@ui/kit'
 
 class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
   constructor(props: { children: ReactNode }) { super(props); this.state = { error: null } }
@@ -246,9 +246,10 @@ export function RaceHUD() {
         ) : (
           <motion.div
             key="race"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, background: 'var(--ink)', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}
+            initial={{ opacity: 0, zIndex: 1 }}
+            animate={{ opacity: 1, zIndex: 1 }}
+            exit={HOLD_EXIT}
+            style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)', boxSizing: 'border-box', background: 'var(--ink)', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}
           >
             {phase === 'finished' && <FinishBanner />}
             {phase === 'starting' && <StartLights />}

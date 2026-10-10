@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { HOLD_EXIT } from '@ui/kit'
 import { useRaceStore } from '@state/raceStore'
 
 export function StartScreen() {
@@ -6,11 +7,12 @@ export function StartScreen() {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 1, transition: { duration: 0.18 } }}
+      initial={{ opacity: 0, zIndex: 1 }}
+      animate={{ opacity: 1, zIndex: 1 }}
+      exit={HOLD_EXIT}
       style={{
         position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
+        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)', boxSizing: 'border-box',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'center', gap: 32,
         background: 'var(--ink)',

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { AnimatePresence } from 'framer-motion'
 import { ScreenFrame, ScreenHeader, StatTile, Tabs, KitToggle } from '@ui/kit'
 import { useSettingsStore } from '@state/settingsStore'
 
@@ -51,4 +52,32 @@ describe('kit 2', () => {
     expect(parseInt(sw.style.minHeight, 10)).toBeGreaterThanOrEqual(48)
     fireEvent.click(sw); expect(on).toBe(true)
   })
+})
+
+describe('screen switch never shows a blank or faded frame', () => {
+  for (const reduced of [true, false]) {
+    it(`old frame holds opaque and below the new one, then leaves (reducedMotion=${reduced})`, async () => {
+      useSettingsStore.setState({ reducedMotion: reduced })
+      const App = ({ k }: { k: 'a' | 'b' }) => (
+        <AnimatePresence initial={false}>
+          {k === 'a' ? <ScreenFrame key="a" label="Alpha"><p>a</p></ScreenFrame> : <ScreenFrame key="b" label="Beta"><p>b</p></ScreenFrame>}
+        </AnimatePresence>
+      )
+      const { rerender } = render(<App k="a" />)
+      rerender(<App k="b" />)
+      // Immediately after the swap (no timers advanced): both are mounted.
+      const oldF = screen.getByRole('region', { name: 'Alpha' })
+      const newF = screen.getByRole('region', { name: 'Beta' })
+      expect(parseFloat(oldF.style.opacity || '1')).toBeGreaterThanOrEqual(1)
+      // Framer applies the exit's instant zIndex drop on the next animation frame.
+      await waitFor(() => expect(Number(screen.getByRole('region', { name: 'Alpha' }).style.zIndex)).toBeLessThan(Number(newF.style.zIndex)))
+      // Mid-hold the old one is still there and still opaque.
+      await new Promise(r => setTimeout(r, 60))
+      const mid = screen.queryByRole('region', { name: 'Alpha' })
+      expect(mid).toBeTruthy()
+      expect(parseFloat(mid!.style.opacity || '1')).toBeGreaterThanOrEqual(1)
+      await waitFor(() => expect(screen.queryByRole('region', { name: 'Alpha' })).toBeNull(), { timeout: 1500 })
+      expect(screen.getByRole('region', { name: 'Beta' })).toBeTruthy()
+    })
+  }
 })
