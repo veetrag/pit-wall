@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
+import { soundService } from '@audio/soundService'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { useReducedMotion, PRESS } from './motion'
 
@@ -14,9 +15,9 @@ const SLANT = { lg: 'slant-lg', md: 'slant-md', sm: 'slant-sm' } as const
  * `haptic={false}` drops the kit's own tap feedback for a caller that fires a
  * stronger one itself (BOX NOW fires Heavy; Medium on top would double-buzz).
  */
-export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, disabled, display = true, haptic = true, style, testId }: {
+export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, disabled, display = true, haptic = true, sound = true, style, testId }: {
   variant: Variant; size?: 'lg' | 'md' | 'sm'; onClick: () => void; children: ReactNode
-  ariaLabel?: string; disabled?: boolean; display?: boolean; haptic?: boolean; style?: CSSProperties; testId?: string
+  ariaLabel?: string; disabled?: boolean; display?: boolean; haptic?: boolean; sound?: boolean; style?: CSSProperties; testId?: string
 }) {
   const uiTap = useUiTap()
   const { impact } = useHaptics()
@@ -30,7 +31,11 @@ export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, 
       className={`${SLANT[size]} kit-focus`}
       whileTap={reduced || disabled ? undefined : { scale: 0.96 }} transition={PRESS}
       onClick={() => {
-        if (haptic) { if (variant === 'secondary') uiTap(); else impact(ImpactStyle.Medium) }
+        if (variant === 'secondary') { if (haptic) uiTap() }
+        else {
+          if (haptic) impact(ImpactStyle.Medium)
+          if (sound) soundService.play('navTap')
+        }
         onClick()
       }}
       style={{

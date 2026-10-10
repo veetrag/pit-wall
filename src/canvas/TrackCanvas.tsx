@@ -3,24 +3,13 @@ import * as PIXI from 'pixi.js'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { CIRCUIT_PATHS } from '@data/circuitPaths'
+import { TEAM_HEX } from './teamHex'
 import type { RaceState, RaceConfig, WeatherState } from '@engine/types'
 
 type Point = [number, number]
 
 export { CIRCUIT_PATHS }
 
-const TEAM_HEX: Record<string, string> = {
-  apex:     '#00E5D0',
-  meridian: '#EA3850',
-  vortex:   '#F2C94C',
-  kestrel:  '#9B6BFF',
-  solstice: '#FF8A3D',
-  delta:    '#3DDC84',
-  halcyon:  '#5BC8FF',
-  nimbus:   '#B0B6C8',
-  terra:    '#C97B5A',
-  zenith:   '#7A8290',
-}
 
 // The player's glow + trail. Volt, matching --volt (#FFD60A) and the volt
 // player row in the tower; Pixi cannot read CSS custom properties, so it is

@@ -33,6 +33,7 @@ describe('Scenarios in Race Day Bold', () => {
 
   it('shows a caution safety-car pill for a safety-car scenario', () => {
     const sc = SCENARIOS.find(s => s.expect.safetyCarOut)
+    expect(sc).toBeTruthy()
     if (!sc) return
     render(<ScenarioSelect />)
     fireEvent.click(screen.getByText(sc.name).closest('[role="button"]') as HTMLElement)

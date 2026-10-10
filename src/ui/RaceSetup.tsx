@@ -269,6 +269,9 @@ export function RaceSetup() {
             <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--lilac)' }}>
               {`${circuit.laps} laps${character ? ` · ${character}` : ''}`}
             </span>
+            {circuit.location && (
+              <span style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: 13, color: 'var(--lilac-dim)' }}>{circuit.location}</span>
+            )}
           </div>
           <div style={{ flexShrink: 0 }}>
             <CircuitOutline circuitId={circuitId} width={120} height={100} label={`${circuit.name} layout`} />

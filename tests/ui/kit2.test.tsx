@@ -9,6 +9,12 @@ vi.mock('@capacitor/haptics', () => ({ Haptics: { impact: vi.fn(async () => {}),
 beforeEach(() => useSettingsStore.setState({ reducedMotion: true }))
 
 describe('kit 2', () => {
+  it('KitToggle name is the label and its description carries the sub', () => {
+    render(<KitToggle label="Haptics" sub="Vibrate on taps" checked={false} onChange={() => {}} />)
+    const sw = screen.getByRole('switch', { name: 'Haptics' })
+    const d = sw.getAttribute('aria-describedby')!
+    expect(document.getElementById(d)!.textContent).toBe('Vibrate on taps')
+  })
   it('ScreenFrame is an opaque, absolutely positioned, labelled region', () => {
     render(<ScreenFrame label="Settings"><p>x</p></ScreenFrame>)
     const el = screen.getByRole('region', { name: 'Settings' })

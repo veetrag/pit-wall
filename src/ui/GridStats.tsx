@@ -736,7 +736,7 @@ export function GridStats() {
                     color={color} rating={rating} title={driver.name} sub={team}
                     art={
                       <div aria-hidden="true" style={{ position: 'absolute', left: 12, top: 40 }}>
-                        <HelmetAvatar teamPrimary="var(--ink)" teamSecondary={color} pattern={driverPattern(driver)} size={72} />
+                        <HelmetAvatar teamPrimary="var(--ink)" visor="var(--white)" teamSecondary={color} pattern={driverPattern(driver)} size={72} />
                       </div>
                     }
                     open={isOpen} compareMode={compareMode} selected={compareIds.includes(driver.id)} index={i}

@@ -102,8 +102,8 @@ export function CoachMark({ id, title, body }: Props) {
             {title}
           </div>
           {/*
-            var(--white) (#F2F5FF) on var(--dusk) (#1B2238) measures
-            14.47:1 -- clears WCAG AA's 4.5:1 for this 13px body text with
+            var(--white) (#FFFFFF) on var(--dusk) (#3A2F7A) measures
+            11.24:1 -- clears WCAG AA's 4.5:1 for this 13px body text with
             enormous headroom.
           */}
           <div style={{

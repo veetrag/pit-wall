@@ -7,6 +7,12 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 describe('kit art 2', () => {
+  it('HelmetAvatar visor uses the visor prop, default ink', () => {
+    const { container, rerender } = render(<HelmetAvatar teamPrimary="red" />)
+    expect(container.querySelector('path[fill="var(--ink)"]')).toBeTruthy()
+    rerender(<HelmetAvatar teamPrimary="red" visor="var(--white)" />)
+    expect(container.querySelector('path[fill="var(--white)"]')).toBeTruthy()
+  })
   it('has a path for every circuit in circuits.json', async () => {
     const data = (await import('@data/circuits.json')).default as { circuits: Record<string, unknown> }
     for (const id of Object.keys(data.circuits)) expect(CIRCUIT_PATHS[id], id).toBeTruthy()

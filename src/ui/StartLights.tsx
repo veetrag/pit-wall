@@ -251,7 +251,16 @@ function CircuitBackground() {
   )
 }
 
+function readLampRgb(): string {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--start-light-rgb').trim()
+    return v || '255, 59, 74'
+  } catch { return '255, 59, 74' }
+}
+
 export function StartLights() {
+  // framer-motion cannot interpolate a var() inside a shadow string, so resolve it once.
+  const [lampRgb] = useState(readLampRgb)
   const confirmRaceStart = useRaceStore(s => s.confirmRaceStart)
   const setSpeed = useClockStore(s => s.setSpeed)
   /*
@@ -377,7 +386,7 @@ export function StartLights() {
                 }} />
                 <motion.div
                   animate={lit
-                    ? { scale: [1, 1.18, 1], boxShadow: ['0 0 0px rgba(var(--start-light-rgb), 0)', '0 0 32px rgba(var(--start-light-rgb), 1)', '0 0 20px rgba(var(--start-light-rgb), 1)'] }
+                    ? { scale: [1, 1.18, 1], boxShadow: [`0 0 0px rgba(${lampRgb}, 0)`, `0 0 32px rgba(${lampRgb}, 1)`, `0 0 20px rgba(${lampRgb}, 1)`] }
                     : lightsOut
                       ? { scale: 0.85, opacity: 0.15 }
                       : {}
@@ -386,8 +395,8 @@ export function StartLights() {
                   style={{
                     width: 40, height: 40, borderRadius: '50%',
                     background: lit ? 'var(--start-light)' : 'var(--grape)',
-                    border: lit ? '2px solid rgba(255,150,150,0.4)' : '2px solid rgba(60,30,30,0.5)',
-                    boxShadow: lit ? '0 0 20px rgba(var(--start-light-rgb), 1), inset 0 0 10px rgba(255,200,200,0.3)' : 'none',
+                    border: lit ? '2px solid rgba(var(--floodlight-rgb), 0.4)' : '2px solid rgba(var(--ink-rgb), 0.5)',
+                    boxShadow: lit ? '0 0 20px rgba(var(--start-light-rgb), 1), inset 0 0 10px rgba(var(--floodlight-rgb), 0.3)' : 'none',
                     transition: 'background 0.15s, border 0.15s',
                   }}
                 />

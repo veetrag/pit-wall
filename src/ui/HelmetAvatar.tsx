@@ -11,6 +11,7 @@ interface HelmetAvatarProps {
   size?: number
   selected?: boolean
   selectionColor?: string
+  visor?: string
 }
 
 export function HelmetAvatar({
@@ -21,6 +22,7 @@ export function HelmetAvatar({
   size = 52,
   selected = false,
   selectionColor,
+  visor = 'var(--ink)',
 }: HelmetAvatarProps) {
   const sec = teamSecondary ?? 'var(--ink)'
   const ring = selectionColor ?? teamPrimary
@@ -31,7 +33,7 @@ export function HelmetAvatar({
       {pattern === 'stripe' && <path d="M8 34 L58 30 L58 38 L8 42 Z" fill={sec} />}
       {pattern === 'chevron' && <path d="M8 44 L33 36 L58 44 L58 50 L33 42 L8 50 Z" fill={sec} />}
       {pattern === 'halo' && <path d="M14 20 Q34 8 54 20 L52 25 Q34 14 16 25 Z" fill={sec} />}
-      <path d="M28 24 L56 22 Q58 30 56 30 L28 32 Q24 28 28 24 Z" fill="var(--ink)" />
+      <path d="M28 24 L56 22 Q58 30 56 30 L28 32 Q24 28 28 24 Z" fill={visor} />
       {number > 0 && (
         <text x="20" y="50" fontFamily="var(--font-body)" fontWeight={800} fontSize={12} fill="var(--ink)">{number}</text>
       )}

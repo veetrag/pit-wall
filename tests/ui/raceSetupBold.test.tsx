@@ -16,6 +16,11 @@ beforeEach(() => {
 })
 
 describe('RaceSetup in Race Day Bold', () => {
+  it('the circuit card shows the circuit location', () => {
+    render(<RaceSetup />)
+    const first = (circuitsJson as unknown as { circuits: Record<string, { location: string }> }).circuits[CIRCUIT_ORDER[0]!]!
+    expect(screen.getByText(first.location)).toBeTruthy()
+  })
   it('the circuit card does not shrink, shows the outline, and the plan is a stint bar', () => {
     render(<RaceSetup />)
     const outline = screen.getByRole('img', { name: / layout$/ })
