@@ -74,24 +74,44 @@ export function StintBar({ laps, startCompound, stops, onChange }: {
     move(index, target)
   }
 
-  const lapAt = (clientX: number): number | null => {
+  /** Pointer x as a fractional lap over the bar width (null if the bar has no size). */
+  const lapAtExact = (clientX: number): number | null => {
     const rect = barRef.current?.getBoundingClientRect()
     if (!rect || rect.width <= 0) return null
-    return Math.round(((clientX - rect.left) / rect.width) * laps)
+    return ((clientX - rect.left) / rect.width) * laps
   }
 
+  // The ref is the source of truth (a move can arrive before React re-renders);
+  // the state only drives the grip's pressed look.
+  const draggingRef = useRef<number | null>(null)
+  const setDrag = (i: number | null) => { draggingRef.current = i; setDragging(i) }
+
+  /**
+   * On a short race two splits sit closer than their 48 px hit areas, and the
+   * later handle is on top. Grab whichever split is nearest the pointer, not
+   * whichever element took the press, so stop 1 stays movable from the overlap.
+   */
   const onPointerDown = (index: number) => (e: PointerEvent<HTMLDivElement>) => {
+    const at = lapAtExact(e.clientX)
+    let pick = index
+    if (at !== null) {
+      let best = Infinity
+      stops.forEach((s, i) => { const d = Math.abs(s.lap - at); if (d < best) { best = d; pick = i } })
+    }
     try { e.currentTarget.setPointerCapture?.(e.pointerId) } catch { /* jsdom / no active pointer */ }
-    setDragging(index)
+    setDrag(pick)
   }
-  const onPointerMove = (index: number) => (e: PointerEvent<HTMLDivElement>) => {
-    if (dragging !== index) return
-    const lap = lapAt(e.clientX)
-    if (lap !== null) move(index, lap)
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    const index = draggingRef.current
+    if (index === null) return
+    // No button held: the release was missed (capture failed or was lost). Drop the drag.
+    if (e.buttons === 0) { setDrag(null); return }
+    const at = lapAtExact(e.clientX)
+    if (at !== null) move(index, Math.round(at))
   }
   const endDrag = (e: PointerEvent<HTMLDivElement>) => {
     try { e.currentTarget.releasePointerCapture?.(e.pointerId) } catch { /* not captured */ }
-    setDragging(null)
+    setDrag(null)
   }
 
   return (
@@ -111,8 +131,8 @@ export function StintBar({ laps, startCompound, stops, onChange }: {
           <div key={i} role="slider" tabIndex={0} className="kit-focus"
             aria-label={`Stop ${i + 1} lap`} aria-valuemin={lo} aria-valuemax={hi} aria-valuenow={stop.lap} aria-valuetext={`Lap ${stop.lap}`}
             aria-orientation="horizontal"
-            onKeyDown={onKeyDown(i)} onPointerDown={onPointerDown(i)} onPointerMove={onPointerMove(i)}
-            onPointerUp={endDrag} onPointerCancel={endDrag}
+            onKeyDown={onKeyDown(i)} onPointerDown={onPointerDown(i)} onPointerMove={onPointerMove}
+            onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag}
             style={{ position: 'absolute', top: 0, left: `calc(${(stop.lap / laps) * 100}% - 24px)`, width: 48, height: 48,
               display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'ew-resize', touchAction: 'none', zIndex: 1 }}>
             <span aria-hidden="true" style={{ width: active ? 10 : 6, height: 48, background: 'var(--white)',

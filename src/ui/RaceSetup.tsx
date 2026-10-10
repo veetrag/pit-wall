@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSettingsStore } from '@state/settingsStore'
@@ -34,6 +34,8 @@ function defaultWing(circuitId: string): Wing {
 const DRY_COMPOUNDS: Compound[] = ['S', 'M', 'H']
 const START_COMPOUNDS: Compound[] = ['S', 'M', 'H', 'I', 'W']
 const WEATHER_START: Record<WeatherState, string> = { DRY: '☀ Dry start', DAMP: '⛅ Damp start', WET: '🌧 Wet start' }
+// Icon AND word, so the forecast never relies on the glyph alone.
+const WEATHER_SHORT: Record<WeatherState, string> = { DRY: '☀ Dry', DAMP: '⛅ Damp', WET: '🌧 Wet' }
 
 /** The circuit's character in a few words: characterNote up to its first period or dash. */
 function characterLabel(note: string | undefined): string | null {
@@ -71,6 +73,10 @@ export function computeStartWeather(
   return openingTimeline({ laps, circuit: spec, tuning: GAME_DATA.tuning, seed, dryStart })
 }
 
+const VISUALLY_HIDDEN = {
+  position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap',
+} as const
+
 const SECTION_HEAD = {
   margin: 0, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20,
   textTransform: 'uppercase', color: 'var(--lilac-dim)',
@@ -80,10 +86,13 @@ const SECTION_HEAD = {
  * A radio group of tyre chips (WAI-ARIA: one tab stop, arrows move and select).
  * `tall` is the start-tyre row (56 high, fills the width); otherwise compact 48×48.
  */
-function TyreRadios({ options, value, onChange, ariaLabel, tall = false }: {
+function TyreRadios({ options, value, onChange, ariaLabel, tall = false, recommended }: {
   options: Compound[]; value: Compound; onChange: (c: Compound) => void; ariaLabel: string; tall?: boolean
+  /** Marked with a visible REC tag and described as recommended to assistive tech. */
+  recommended?: Compound
 }) {
   const uiTap = useUiTap()
+  const recId = useId()
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
     if (step === 0) return
@@ -95,16 +104,21 @@ function TyreRadios({ options, value, onChange, ariaLabel, tall = false }: {
     e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[options.indexOf(next)]?.focus()
   }
   return (
-    <div role="radiogroup" aria-label={ariaLabel} onKeyDown={onKeyDown} style={{ display: 'flex', gap: tall ? 8 : 4 }}>
+    <div role="radiogroup" aria-label={ariaLabel} onKeyDown={onKeyDown} style={{ position: 'relative', display: 'flex', gap: tall ? 8 : 4 }}>
+      {recommended && <span id={recId} style={VISUALLY_HIDDEN}>Recommended for the conditions</span>}
       {options.map(c => {
         const on = c === value
+        const rec = c === recommended
         return (
           <motion.button key={c} type="button" role="radio" aria-checked={on} aria-label={TYRE_NAME[c]} tabIndex={on ? 0 : -1}
+            aria-describedby={rec ? recId : undefined}
             className="slant-sm kit-focus" whileTap={{ scale: 0.96 }} transition={PRESS}
             onClick={() => { uiTap(); onChange(c) }}
             style={{ flex: tall ? 1 : undefined, width: tall ? undefined : 56, height: tall ? 56 : 48, border: 'none', cursor: 'pointer',
-              background: on ? 'var(--dusk)' : 'var(--grape)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <TyreChip compound={c} size={tall ? 34 : 26} />
+              background: on ? 'var(--dusk)' : 'var(--grape)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+            <TyreChip compound={c} size={tall ? (rec ? 30 : 34) : 26} />
+            {rec && <span aria-hidden="true" style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 9, letterSpacing: 1,
+              lineHeight: 1, color: 'var(--lilac)' }}>REC</span>}
           </motion.button>
         )
       })}
@@ -264,6 +278,9 @@ export function RaceSetup() {
         {/* Actual seeded starting conditions — not just a probability */}
         <div aria-label="Conditions at lights out" role="group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flexShrink: 0 }}>
           <Pill tone={startingWeather === 'DRY' ? 'default' : 'rain'}>{WEATHER_START[startingWeather]}</Pill>
+          {weatherTimeline.slice(1, 4).map((w, i) => (
+            <span key={i} data-forecast={w}><Pill tone={w === 'DRY' ? 'default' : 'rain'}>{`+${i + 1} ${WEATHER_SHORT[w]}`}</Pill></span>
+          ))}
           {circuit.rainProbability !== undefined && <Pill>{`Rain ${Math.round(circuit.rainProbability * 100)}%`}</Pill>}
           {pitLoss !== undefined && <Pill>{`Pit loss ${Number.isInteger(pitLoss) ? pitLoss : pitLoss.toFixed(1)}s`}</Pill>}
         </div>
@@ -296,7 +313,8 @@ export function RaceSetup() {
 
         {/* Start tyre */}
         <h2 style={{ ...SECTION_HEAD, marginTop: 4 }}>Start tyre</h2>
-        <TyreRadios options={START_COMPOUNDS} value={startCompound} onChange={setStartCompound} ariaLabel="Start tyre" tall />
+        <TyreRadios options={START_COMPOUNDS} value={startCompound} onChange={setStartCompound} ariaLabel="Start tyre" tall
+          recommended={recommendedStartCompound(startingWeather)} />
 
         {/* Wing */}
         <h2 style={{ ...SECTION_HEAD, marginTop: 4 }}>Wing</h2>
