@@ -6,6 +6,7 @@ import { useUiTap } from '@hooks/useUiTap'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 import { BadgeCase } from './BadgeCase'
+import { ScreenFrame } from '@ui/kit'
 
 type DriverEntry = { id: string; name: string; teamId: string }
 type TeamEntry = { id: string; name: string }
@@ -53,16 +54,7 @@ export function CareerRecord() {
   const completedSeasons = seasonNumber - 1
 
   return (
-    <motion.div
-      initial={reducedMotion ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={reducedMotion ? undefined : { opacity: 0 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Trophy room">
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12,
@@ -201,6 +193,6 @@ export function CareerRecord() {
           </div>
         )}
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

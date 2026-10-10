@@ -5,6 +5,7 @@ import { useUiTap } from '@hooks/useUiTap'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 import rivalriesData from '@data/rivalries.json'
+import { ScreenFrame } from '@ui/kit'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -610,17 +611,7 @@ export function GridStats() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 24 }}
-      transition={{ ease: 'easeOut', duration: 0.25 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Garage">
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12,
@@ -852,6 +843,6 @@ export function GridStats() {
           )}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

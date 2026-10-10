@@ -4,6 +4,7 @@ import { useUiTap } from '@hooks/useUiTap'
 import { HelmetAvatar, type HelmetPattern } from './HelmetAvatar'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
+import { ScreenFrame } from '@ui/kit'
 
 type DriverFacets = { pace: number; racecraft: number; tyreManagement: number; consistency: number; wetWeather: number; experience: number }
 type DriverEntry = { id: string; name: string; code: string; teamId: string; flag?: string; facets: DriverFacets }
@@ -55,14 +56,7 @@ export function DriverSelect() {
   const drivers = allDrivers.filter(d => d.teamId === selectedTeamId)
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Driver select">
       {/* Header */}
       <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
@@ -212,6 +206,6 @@ export function DriverSelect() {
             : 'SELECT A DRIVER'}
         </motion.button>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

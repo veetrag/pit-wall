@@ -5,6 +5,7 @@ import { useScenarioStore } from '@state/scenarioStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useUiTap } from '@hooks/useUiTap'
 import { loadGameData, type ScenarioSpecData } from '@data/validators'
+import { ScreenFrame } from '@ui/kit'
 
 // Module scope, not per render -- this screen never needs to re-parse the
 // scenario data on every re-render, and the brief calls this out explicitly.
@@ -181,17 +182,7 @@ export function ScenarioSelect() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   return (
-    <motion.div
-      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, x: 40 }}
-      animate={reducedMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
-      exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -40 }}
-      transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Scenarios">
       {/* Header */}
       <div style={{
         padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
@@ -230,6 +221,6 @@ export function ScenarioSelect() {
           />
         ))}
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

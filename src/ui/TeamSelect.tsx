@@ -3,6 +3,7 @@ import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
 import carsData from '@data/cars.json'
 import driversData from '@data/drivers.json'
+import { ScreenFrame } from '@ui/kit'
 
 type TeamFacets = { power: number; aero: number; handling: number; pitCrew: number; reliability: number }
 type TeamEntry = {
@@ -38,14 +39,7 @@ export function TeamSelect() {
   const uiTap = useUiTap()
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Team select">
       {/* Header */}
       <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
@@ -182,6 +176,6 @@ export function TeamSelect() {
           {selectedTeamId ? 'FIELD THIS TEAM →' : 'SELECT A TEAM'}
         </motion.button>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

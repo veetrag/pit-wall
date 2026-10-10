@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { PRESS } from '@ui/kit'
+import { PRESS, ScreenFrame } from '@ui/kit'
 import { useSeasonStore } from '@state/seasonStore'
 import { useCareerStore, erodeTiers } from '@state/careerStore'
 import { useSettingsStore } from '@state/settingsStore'
@@ -66,19 +66,7 @@ export function Championship() {
   }, [playerRank])
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-        // BadgeToast is absolutely positioned and needs a positioned ancestor,
-        // exactly as in RaceResult.tsx.
-        position: 'relative',
-      }}
-    >
+    <ScreenFrame label="Championship">
       {/*
         The season was banked by careerStore.recordSeasonEnd on the transition
         into this phase, so by the time this renders the career record already
@@ -295,6 +283,6 @@ export function Championship() {
           </motion.div>
         )}
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

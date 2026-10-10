@@ -22,7 +22,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { PitTimer } from './PitTimer'
 import { Component, type ReactNode } from 'react'
 import { useUiTap } from '@hooks/useUiTap'
-import { useReducedMotion, PRESS } from '@ui/kit'
+import { useReducedMotion, PRESS, ScreenFrame } from '@ui/kit'
 
 class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
   constructor(props: { children: ReactNode }) { super(props); this.state = { error: null } }
@@ -237,15 +237,10 @@ export function RaceHUD() {
   const live = phase === 'racing' || phase === 'starting'
 
   return (
-    <div style={{
-      height: '100%', display: 'flex', flexDirection: 'column',
-      background: 'var(--bg-deep)',
-      paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      position: 'relative', overflow: 'hidden',
-    }}>
+    <ScreenFrame label="Race">
       <GameClock />
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence initial={false}>
         {phase === 'idle' ? (
           <StartScreen key="start" />
         ) : (
@@ -253,7 +248,7 @@ export function RaceHUD() {
             key="race"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}
+            style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, background: 'var(--ink)', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}
           >
             {phase === 'finished' && <FinishBanner />}
             {phase === 'starting' && <StartLights />}
@@ -319,6 +314,6 @@ export function RaceHUD() {
         title="WHAT PITTING COSTS YOU"
         body="This is where you would rejoin if you boxed right now, traffic included. Compare it with where you are before you commit."
       />
-    </div>
+    </ScreenFrame>
   )
 }

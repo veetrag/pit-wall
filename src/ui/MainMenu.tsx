@@ -6,7 +6,7 @@ import { loadSnapshot, type SeasonSnapshot } from '@state/seasonPersistence'
 import { loadCareer } from '@state/careerPersistence'
 import { useCareerStore } from '@state/careerStore'
 import { loadGameData } from '@data/validators'
-import { KitButton, Pill, ProgressStrip, HeroBand, CarArt, liveryOf, snapIn, useReducedMotion } from '@ui/kit'
+import { KitButton, Pill, ProgressStrip, HeroBand, CarArt, liveryOf, snapIn, useReducedMotion, ScreenFrame } from '@ui/kit'
 
 const SETTINGS_BTN: CSSProperties = {
   width: 48, height: 48, borderRadius: '50%', border: 'none', cursor: 'pointer',
@@ -93,17 +93,7 @@ export function MainMenu() {
   const next = () => snapIn(reduced, i++)
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto',
-        background: 'var(--ink)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-        position: 'relative',
-      }}
-    >
+    <ScreenFrame label="Main menu" style={{ overflowY: 'auto' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '16px 20px 12px', flex: 1 }}>
         {/* Header */}
         <motion.div {...next()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -187,6 +177,6 @@ export function MainMenu() {
       <motion.div {...next()} style={{ textAlign: 'center', paddingBottom: 16, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--lilac-dim)' }}>
         PIT WALL · v{__APP_VERSION__}
       </motion.div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

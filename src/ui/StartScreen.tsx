@@ -8,11 +8,12 @@ export function StartScreen() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      exit={{ opacity: 1, transition: { duration: 0.18 } }}
       style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', height: '100%', gap: 32,
-        background: 'var(--bg-deep)',
+        justifyContent: 'center', gap: 32,
+        background: 'var(--ink)',
       }}
     >
       <h1 style={{

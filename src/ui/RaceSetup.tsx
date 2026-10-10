@@ -12,6 +12,7 @@ import { useCareerStore } from '@state/careerStore'
 import { WingSelector } from '@ui/WingSelector'
 import circuitsJson from '@data/circuits.json'
 import compoundsData from '@data/compounds.json'
+import { ScreenFrame } from '@ui/kit'
 
 type Compound = 'S' | 'M' | 'H' | 'I' | 'W'
 type CompoundEntry = { name: string; type: string; colorToken: string }
@@ -183,16 +184,7 @@ export function RaceSetup() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -40 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Race setup">
       {/* Header */}
       <div style={{
         padding: '20px 20px 16px',
@@ -524,6 +516,6 @@ export function RaceSetup() {
           TO QUALIFYING →
         </motion.button>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

@@ -6,6 +6,7 @@ import { loadGameData } from '@data/validators'
 import { openingTimeline, type WeatherState } from '@engine/index'
 import type { Compound, AttackLevel, QualifyingLap } from '@engine/index'
 import { useUiTap } from '@hooks/useUiTap'
+import { ScreenFrame } from '@ui/kit'
 
 const GAME_DATA = loadGameData()
 
@@ -110,16 +111,7 @@ export function Qualifying() {
     : { layout: true, 'data-animated': 'true' as const }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -40 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Qualifying">
       <div style={{
         padding: '20px 20px 16px',
         borderBottom: '1px solid var(--line-hair)',
@@ -395,6 +387,6 @@ export function Qualifying() {
           </motion.button>
         )}
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

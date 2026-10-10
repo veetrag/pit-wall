@@ -4,6 +4,7 @@ import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useRaceStore } from '@state/raceStore'
 import { useUiTap } from '@hooks/useUiTap'
+import { ScreenFrame } from '@ui/kit'
 
 /**
  * Scenario mode's result screen -- judged against the authored `goal`, not
@@ -50,14 +51,7 @@ export function ScenarioResult() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Scenario result">
       <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
           SCENARIO
@@ -124,6 +118,6 @@ export function ScenarioResult() {
           BACK TO MENU
         </motion.button>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

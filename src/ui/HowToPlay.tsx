@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
+import { ScreenFrame } from '@ui/kit'
 
 const STEPS = [
   {
@@ -45,14 +46,7 @@ export function HowToPlay() {
   const uiTap = useUiTap()
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="How to play">
       {/* Header */}
       <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
@@ -128,6 +122,6 @@ export function HowToPlay() {
           {isLast ? 'START RACING →' : 'NEXT →'}
         </motion.button>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { PRESS } from '@ui/kit'
+import { PRESS, ScreenFrame } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSettingsStore } from '@state/settingsStore'
 import { useCareerStore } from '@state/careerStore'
@@ -404,17 +404,7 @@ export function Development() {
   ]
 
   return (
-    <motion.div
-      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, x: 40 }}
-      animate={reducedMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
-      exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -40 }}
-      transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)', position: 'relative',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Development">
       {/* Header */}
       <div style={{
         padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
@@ -582,6 +572,6 @@ export function Development() {
           TO RACE SETUP →
         </motion.button>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PRESS } from '@ui/kit'
+import { PRESS, ScreenFrame } from '@ui/kit'
 import { useSettingsStore, type SimSpeed, type Difficulty } from '@state/settingsStore'
 import { useCoachStore } from '@state/coachStore'
 import { useSeasonStore } from '@state/seasonStore'
@@ -125,14 +125,7 @@ export function SettingsScreen() {
   } = useSettingsStore()
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
+    <ScreenFrame label="Settings">
       <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>CONFIG</div>
@@ -180,7 +173,7 @@ export function SettingsScreen() {
           <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 3 }}>Google Play sign-in — coming in a future update</div>
         </div>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }
 

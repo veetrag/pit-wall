@@ -8,7 +8,7 @@ import { BADGES } from '@state/badges'
 import { BadgeToast } from './BadgeToast'
 import { DebriefCard } from './DebriefCard'
 import { HelmetAvatar } from './HelmetAvatar'
-import { HeroBand, KitButton, Pill, liveryOf, snapIn, useCountUp, useReducedMotion } from '@ui/kit'
+import { HeroBand, KitButton, Pill, liveryOf, snapIn, useCountUp, useReducedMotion, ScreenFrame } from '@ui/kit'
 import { useDebriefStore } from '@state/debriefStore'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
@@ -168,15 +168,7 @@ export function RaceResult() {
   const podiumHeights = [156, 132, 120]
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--ink)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-        position: 'relative', overflow: 'hidden',
-      }}
-    >
+    <ScreenFrame label="Race result">
       {isTopThree && <Confetti />}
       <BadgeToast ids={previewBadges} />
 
@@ -375,6 +367,6 @@ export function RaceResult() {
           </KitButton>
         </div>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }
