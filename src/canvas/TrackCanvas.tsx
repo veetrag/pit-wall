@@ -11,7 +11,7 @@ export { CIRCUIT_PATHS }
 
 const TEAM_HEX: Record<string, string> = {
   apex:     '#00E5D0',
-  meridian: '#E8344E',
+  meridian: '#EA3850',
   vortex:   '#F2C94C',
   kestrel:  '#9B6BFF',
   solstice: '#FF8A3D',
