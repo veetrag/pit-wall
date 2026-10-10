@@ -9,6 +9,9 @@
   --lilac:      #CFC8F2;
   --lilac-dim:  #A99FDB;
   --white:      #FFFFFF;
+  --start-light-rgb: 255, 59, 74; /* physical red start lamp, deliberately not --hot */
+  --start-light: rgb(var(--start-light-rgb));
+  --floodlight: #FFFBE6; /* warm floodlight white */
   --volt-rgb:   255, 214, 10;
   --ink-rgb:    18, 14, 43;
   --white-rgb:  255, 255, 255;

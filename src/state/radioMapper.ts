@@ -111,7 +111,10 @@ export function processRadioTick(
   // weather forecast. The strip in the HUD already covers "what's the weather."
   const playerSpinCount = state.sectorResults.filter(r => r.driverId === player.driverId && r.spinLoss > 0).length
   if (playerSpinCount > radio.prevSpinCount) {
-    tryPush('wet_spin', 2, {}, pushAlert)
+    // Wet-family tyres on a dry track also spin (engine dryTrackSpinChance); the
+    // wet_spin pool blames slicks, which would be wrong there.
+    const onWetTyres = compound?.type === 'wet'
+    tryPush(onWetTyres && state.weatherState === 'DRY' ? 'dry_spin' : 'wet_spin', 2, {}, pushAlert)
   }
   next.prevSpinCount = playerSpinCount
 

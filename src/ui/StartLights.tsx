@@ -21,24 +21,24 @@ function CircuitBackground() {
       <defs>
         {/* Deep night sky base */}
         <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0B0820" />
-          <stop offset="100%" stopColor="#120E2B" />
+          <stop offset="0%" style={{ stopColor: 'var(--ink)' }} />
+          <stop offset="100%" style={{ stopColor: 'var(--night)' }} />
         </linearGradient>
 
         {/* Floodlight halos */}
         <radialGradient id="fl1" cx="15%" cy="12%" r="45%">
-          <stop offset="0%" stopColor="#fffbe6" stopOpacity="0.18" />
-          <stop offset="60%" stopColor="#fffbe6" stopOpacity="0.04" />
-          <stop offset="100%" stopColor="#fffbe6" stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.18" />
+          <stop offset="60%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.04" />
+          <stop offset="100%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0" />
         </radialGradient>
         <radialGradient id="fl2" cx="85%" cy="8%" r="40%">
-          <stop offset="0%" stopColor="#fffbe6" stopOpacity="0.15" />
-          <stop offset="60%" stopColor="#fffbe6" stopOpacity="0.03" />
-          <stop offset="100%" stopColor="#fffbe6" stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.15" />
+          <stop offset="60%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.03" />
+          <stop offset="100%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0" />
         </radialGradient>
         <radialGradient id="fl3" cx="50%" cy="55%" r="35%">
-          <stop offset="0%" stopColor="#fffbe6" stopOpacity="0.1" />
-          <stop offset="100%" stopColor="#fffbe6" stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.1" />
+          <stop offset="100%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0" />
         </radialGradient>
 
         {/* Track glow filter */}
@@ -227,7 +227,7 @@ function CircuitBackground() {
             <line x1={x} y1={y} x2={x} y2={y - 28}
               stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
             <circle cx={x} cy={y - 30} r={3}
-              fill="#fffbe6" opacity="0.7" filter="url(#lampglow)" />
+              style={{ fill: 'var(--floodlight)' }} opacity="0.7" filter="url(#lampglow)" />
           </g>
         )})}
 
@@ -323,7 +323,7 @@ export function StartLights() {
       {/* Dark vignette overlay so UI pops */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse at 50% 45%, rgba(10,14,26,0.3) 0%, rgba(10,14,26,0.75) 100%)',
+        background: 'radial-gradient(ellipse at 50% 45%, rgba(var(--ink-rgb), 0.3) 0%, rgba(var(--ink-rgb), 0.75) 100%)',
         pointerEvents: 'none',
       }} />
 
@@ -335,7 +335,7 @@ export function StartLights() {
         style={{
           position: 'relative',
           fontFamily: 'var(--font-display)', fontSize: 11,
-          color: 'var(--text-dim)', letterSpacing: '0.25em',
+          color: 'var(--lilac-dim)', letterSpacing: '0.25em',
         }}
       >
         RACE DAY — LIGHTS SEQUENCE
@@ -355,7 +355,7 @@ export function StartLights() {
         }} />
 
         <div style={{
-          background: 'rgba(10,14,26,0.85)',
+          background: 'rgba(var(--ink-rgb), 0.85)',
           backdropFilter: 'blur(8px)',
           borderRadius: 14,
           padding: '20px 28px',
@@ -376,7 +376,7 @@ export function StartLights() {
                 }} />
                 <motion.div
                   animate={lit
-                    ? { scale: [1, 1.18, 1], boxShadow: ['0 0 0px #FF4D5E', '0 0 32px #FF4D5E', '0 0 20px #FF4D5E'] }
+                    ? { scale: [1, 1.18, 1], boxShadow: ['0 0 0px rgba(var(--start-light-rgb), 0)', '0 0 32px rgba(var(--start-light-rgb), 1)', '0 0 20px rgba(var(--start-light-rgb), 1)'] }
                     : lightsOut
                       ? { scale: 0.85, opacity: 0.15 }
                       : {}
@@ -384,9 +384,9 @@ export function StartLights() {
                   transition={{ duration: 0.3 }}
                   style={{
                     width: 40, height: 40, borderRadius: '50%',
-                    background: lit ? '#FF4D5E' : 'rgba(40,20,20,0.8)',
+                    background: lit ? 'var(--start-light)' : 'var(--grape)',
                     border: lit ? '2px solid rgba(255,150,150,0.4)' : '2px solid rgba(60,30,30,0.5)',
-                    boxShadow: lit ? '0 0 20px #FF4D5E, inset 0 0 10px rgba(255,200,200,0.3)' : 'none',
+                    boxShadow: lit ? '0 0 20px rgba(var(--start-light-rgb), 1), inset 0 0 10px rgba(255,200,200,0.3)' : 'none',
                     transition: 'background 0.15s, border 0.15s',
                   }}
                 />
@@ -406,9 +406,9 @@ export function StartLights() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'spring', stiffness: 500, damping: 18 }}
               style={{
-                fontFamily: 'var(--font-display)', fontSize: 72, fontWeight: 800,
-                color: 'var(--positive)', letterSpacing: '0.1em',
-                textShadow: '0 0 60px var(--positive), 0 0 20px var(--positive)',
+                fontFamily: 'var(--font-display)', fontSize: 72, fontWeight: 900, fontStyle: 'italic',
+                color: 'var(--gain)', letterSpacing: '0.1em',
+                textShadow: '0 0 60px var(--gain), 0 0 20px var(--gain)',
               }}
             >
               GO
@@ -420,7 +420,7 @@ export function StartLights() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               style={{
-                fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-dim)',
+                fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 16, color: 'var(--lilac-dim)',
                 letterSpacing: '0.15em', textAlign: 'center',
               }}
             >
@@ -445,7 +445,7 @@ export function StartLights() {
           // device with on-screen navigation.
           position: 'absolute', bottom: 'calc(40px + var(--safe-bottom))',
           fontFamily: 'var(--font-mono)', fontSize: 10,
-          color: 'var(--text-dim)', letterSpacing: '0.2em',
+          color: 'var(--lilac-dim)', letterSpacing: '0.2em',
           textAlign: 'center', padding: '0 16px',
         }}
       >

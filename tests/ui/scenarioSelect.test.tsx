@@ -72,7 +72,7 @@ describe('ScenarioSelect', () => {
 
   it('BACK returns to the menu', () => {
     render(<ScenarioSelect />)
-    act(() => { screen.getByText('BACK').click() })
+    act(() => { screen.getByRole('button', { name: 'Back' }).click() })
     expect(useSeasonStore.getState().phase).toBe('menu')
   })
 
