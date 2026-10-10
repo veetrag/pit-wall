@@ -84,8 +84,8 @@ export function CoachMark({ id, title, body }: Props) {
              * a full-screen takeover that nothing should sit over.
              */
             zIndex: 120,
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--accent)',
+            background: 'var(--dusk)',
+            border: '1px solid var(--volt)',
             borderRadius: 12,
             boxShadow: '0 8px 32px rgba(var(--volt-rgb), 0.15)',
             padding: '14px 16px',
@@ -96,19 +96,19 @@ export function CoachMark({ id, title, body }: Props) {
         >
           <div style={{
             fontFamily: 'var(--font-display)', fontSize: 12,
-            letterSpacing: '0.12em', color: 'var(--accent)',
+            letterSpacing: '0.12em', color: 'var(--volt)',
             textTransform: 'uppercase',
           }}>
             {title}
           </div>
           {/*
-            var(--text-hi) (#F2F5FF) on var(--bg-elevated) (#1B2238) measures
+            var(--white) (#F2F5FF) on var(--dusk) (#1B2238) measures
             14.47:1 -- clears WCAG AA's 4.5:1 for this 13px body text with
             enormous headroom.
           */}
           <div style={{
             fontFamily: 'var(--font-body)', fontSize: 13,
-            color: 'var(--text-hi)', lineHeight: 1.5,
+            color: 'var(--white)', lineHeight: 1.5,
           }}>
             {body}
           </div>
@@ -118,9 +118,9 @@ export function CoachMark({ id, title, body }: Props) {
               alignSelf: 'flex-end',
               marginTop: 4,
               background: 'none',
-              border: '1px solid var(--accent)',
+              border: '1px solid var(--volt)',
               borderRadius: 6,
-              color: 'var(--accent)',
+              color: 'var(--volt)',
               fontFamily: 'var(--font-display)',
               fontSize: 11,
               letterSpacing: '0.08em',

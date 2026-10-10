@@ -55,25 +55,25 @@ export class AppErrorBoundary extends Component<Props, State> {
           height: '100%', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', gap: 14,
           padding: '24px', textAlign: 'center',
-          background: 'var(--bg-deep)',
+          background: 'var(--ink)',
           paddingTop: 'calc(24px + var(--safe-top))',
           paddingBottom: 'calc(24px + var(--safe-bottom))',
         }}
       >
         <div style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.2em',
-          color: 'var(--accent-warm)',
+          fontFamily: 'var(--font-body)', fontSize: 10, letterSpacing: '0.2em',
+          color: 'var(--hot)',
         }}>
           RED FLAG
         </div>
         <div style={{
           fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700,
-          color: 'var(--text-hi)',
+          color: 'var(--white)',
         }}>
           Something broke
         </div>
         <div style={{
-          fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text-mid)',
+          fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--lilac)',
           lineHeight: 1.5, maxWidth: 320,
         }}>
           The app hit an unexpected error. Any race in progress has been lost, but
@@ -83,8 +83,8 @@ export class AppErrorBoundary extends Component<Props, State> {
         {/* The message is the only diagnostic a player can report back, so it is
             shown rather than swallowed — truncated to stay readable. */}
         <pre style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)',
-          background: 'var(--bg-panel)', border: '1px solid var(--line-hair)',
+          fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)',
+          background: 'var(--grape)', border: '1px solid var(--line-hair)',
           borderRadius: 8, padding: '10px 12px', maxWidth: '100%',
           whiteSpace: 'pre-wrap', wordBreak: 'break-word',
           textAlign: 'left', margin: 0,
@@ -96,7 +96,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           <button
             onClick={this.returnToMenu}
             style={{
-              background: 'var(--accent)', color: 'var(--bg-deep)', border: 'none',
+              background: 'var(--volt)', color: 'var(--ink)', border: 'none',
               borderRadius: 10, padding: '14px 22px', cursor: 'pointer',
               fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
               letterSpacing: '0.08em',
@@ -107,7 +107,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           <button
             onClick={this.reload}
             style={{
-              background: 'transparent', color: 'var(--text-mid)',
+              background: 'transparent', color: 'var(--lilac)',
               border: '1px solid var(--line-hair)',
               borderRadius: 10, padding: '14px 22px', cursor: 'pointer',
               fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600,

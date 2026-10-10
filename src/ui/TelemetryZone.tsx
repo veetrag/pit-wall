@@ -74,14 +74,14 @@ export function TelemetryZone() {
     return (
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '6px 10px', background: 'var(--bg-panel)',
+        padding: '6px 10px', background: 'var(--grape)',
         borderBottom: '1px solid var(--line-hair)', height: 130, flexShrink: 0,
       }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--accent-warm)', letterSpacing: '0.05em' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--hot)', letterSpacing: '0.05em' }}>
             DNF
           </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)', marginTop: 4 }}>
             Retired on lap {player.retiredLap ?? '—'} — {RETIREMENT_CAUSE_TEXT[player.retiredCause ?? 'tyre']}
           </div>
         </div>

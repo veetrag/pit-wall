@@ -4,6 +4,7 @@ import { useRaceStore } from '@state/raceStore'
 import { useClockStore } from '@state/clockStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { soundService } from '@audio/soundService'
+import { EASE } from '@ui/kit'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 
 const NUM_LIGHTS = 5
@@ -105,7 +106,7 @@ function CircuitBackground() {
             Z
           "
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke="rgba(var(--white-rgb), 0.07)"
           strokeWidth="26"
           filter="url(#trackglow)"
         />
@@ -176,7 +177,7 @@ function CircuitBackground() {
         <path
           d="M 195 810 L 195 840 Q 220 845 245 840 L 245 808"
           fill="none"
-          stroke="rgba(255,255,255,0.08)"
+          stroke="rgba(var(--white-rgb), 0.08)"
           strokeWidth="10"
         />
         <path
@@ -188,10 +189,10 @@ function CircuitBackground() {
         />
 
         {/* Start / finish line */}
-        <rect x="182" y="784" width="26" height="8" rx="1" fill="rgba(255,255,255,0)" />
+        <rect x="182" y="784" width="26" height="8" rx="1" fill="rgba(var(--white-rgb), 0)" />
         {[0,1,2,3].map(i => (
           <rect key={i} x={182 + i * 7} y={784} width={6} height={8}
-            fill={i % 2 === 0 ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)'} />
+            fill={i % 2 === 0 ? 'rgba(var(--white-rgb), 0.55)' : 'rgba(var(--ink-rgb), 0.55)'} />
         ))}
 
         {/* Cars on the starting grid — 10 cars staggered */}
@@ -225,7 +226,7 @@ function CircuitBackground() {
         ].map((pt, i) => { const x = pt[0]!; const y = pt[1]!; return (
           <g key={i}>
             <line x1={x} y1={y} x2={x} y2={y - 28}
-              stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
+              stroke="rgba(var(--white-rgb), 0.12)" strokeWidth="1.5" />
             <circle cx={x} cy={y - 30} r={3}
               style={{ fill: 'var(--floodlight)' }} opacity="0.7" filter="url(#lampglow)" />
           </g>
@@ -345,13 +346,13 @@ export function StartLights() {
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: -16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+        transition={{ duration: 0.22, ease: EASE }}
         style={{ position: 'relative' }}
       >
         {/* Gantry bar */}
         <div style={{
           position: 'absolute', top: -8, left: -12, right: -12, height: 4,
-          background: 'rgba(255,255,255,0.08)', borderRadius: 2,
+          background: 'rgba(var(--white-rgb), 0.08)', borderRadius: 2,
         }} />
 
         <div style={{
@@ -359,9 +360,9 @@ export function StartLights() {
           backdropFilter: 'blur(8px)',
           borderRadius: 14,
           padding: '20px 28px',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: '1px solid rgba(var(--white-rgb), 0.08)',
           display: 'flex', gap: 18, alignItems: 'center',
-          boxShadow: '0 8px 48px rgba(0,0,0,0.6)',
+          boxShadow: '0 8px 48px rgba(var(--ink-rgb), 0.6)',
         }}>
           {Array.from({ length: NUM_LIGHTS }, (_, i) => {
             const lit = !lightsOut && litCount > i
@@ -370,9 +371,9 @@ export function StartLights() {
                 {/* Housing */}
                 <div style={{
                   width: 10, height: 10,
-                  background: 'rgba(255,255,255,0.06)',
+                  background: 'rgba(var(--white-rgb), 0.06)',
                   borderRadius: '50%',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(var(--white-rgb), 0.1)',
                 }} />
                 <motion.div
                   animate={lit
@@ -404,7 +405,7 @@ export function StartLights() {
               key="go"
               initial={{ opacity: 0, scale: 0.4 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+              transition={{ duration: 0.22, ease: EASE }}
               style={{
                 fontFamily: 'var(--font-display)', fontSize: 72, fontWeight: 900, fontStyle: 'italic',
                 color: 'var(--gain)', letterSpacing: '0.1em',
@@ -444,7 +445,7 @@ export function StartLights() {
           // Sits above the system nav bar — at a flat 40px it was clipped on a
           // device with on-screen navigation.
           position: 'absolute', bottom: 'calc(40px + var(--safe-bottom))',
-          fontFamily: 'var(--font-mono)', fontSize: 10,
+          fontFamily: 'var(--font-body)', fontSize: 10,
           color: 'var(--lilac-dim)', letterSpacing: '0.2em',
           textAlign: 'center', padding: '0 16px',
         }}

@@ -30,7 +30,7 @@ class CanvasBoundary extends Component<{ children: ReactNode }, { error: string 
   componentDidCatch(e: unknown) { console.error('[CanvasBoundary]', e) }
   render() {
     if (this.state.error) return (
-      <div style={{ padding: 16, color: 'var(--accent-warm)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+      <div style={{ padding: 16, color: 'var(--hot)', fontFamily: 'var(--font-body)', fontSize: 11 }}>
         Canvas error: {this.state.error}
       </div>
     )
@@ -162,15 +162,15 @@ function FinishBanner() {
       animate={{ opacity: 1, y: 0 }}
       style={{
         position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)',
-        background: 'var(--bg-elevated)', border: '1px solid var(--accent)',
+        background: 'var(--dusk)', border: '1px solid var(--volt)',
         borderRadius: 10, padding: '12px 28px', textAlign: 'center', zIndex: 50,
         whiteSpace: 'nowrap',
       }}
     >
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--lilac-dim)', letterSpacing: '0.1em' }}>
         RACE FINISHED
       </div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--accent)', marginTop: 2 }}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--volt)', marginTop: 2 }}>
         {driverCode} WINS
       </div>
     </motion.div>

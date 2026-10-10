@@ -20,18 +20,18 @@ export function StartScreen() {
     >
       <h1 style={{
         fontFamily: 'var(--font-display)', fontSize: 48, fontWeight: 700,
-        color: 'var(--accent)', letterSpacing: '0.05em', textTransform: 'uppercase',
+        color: 'var(--volt)', letterSpacing: '0.05em', textTransform: 'uppercase',
       }}>
         PIT WALL
       </h1>
-      <p style={{ color: 'var(--text-mid)', fontFamily: 'var(--font-body)', fontSize: 16 }}>
+      <p style={{ color: 'var(--lilac)', fontFamily: 'var(--font-body)', fontSize: 16 }}>
         Test Session · Voss / Apex Racing
       </p>
       <motion.button
         whileTap={{ scale: 0.96 }}
         onClick={initForStartSequence}
         style={{
-          background: 'var(--accent)', color: 'var(--bg-deep)',
+          background: 'var(--volt)', color: 'var(--ink)',
           border: 'none', borderRadius: 8, padding: '16px 48px',
           fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer',

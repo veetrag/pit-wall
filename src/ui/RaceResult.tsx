@@ -325,7 +325,7 @@ export function RaceResult() {
                         borderBottom: i < sorted.length - 1 ? '1px solid var(--grape)' : 'none',
                       }}
                     >
-                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, color: r.retired ? 'var(--hot)' : 'var(--lilac-dim)', ...numeric }}>
+                      <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: r.retired ? 'var(--hot)' : 'var(--lilac-dim)', ...numeric }}>
                         {r.retired ? 'DNF' : r.position}
                       </span>
                       <span style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 16, fontWeight: 800, color: isPlayer ? 'var(--volt)' : 'var(--white)', opacity: r.retired ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -333,7 +333,7 @@ export function RaceResult() {
                         <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
                         {d.code}
                       </span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, color: r.points > 0 ? 'var(--gain)' : 'var(--lilac-dim)', textAlign: 'right', ...numeric }}>
+                      <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: r.points > 0 ? 'var(--gain)' : 'var(--lilac-dim)', textAlign: 'right', ...numeric }}>
                         +{r.points}
                       </span>
                     </motion.div>

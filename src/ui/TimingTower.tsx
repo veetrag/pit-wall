@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
 import type { CarState } from '@engine/types'
-import { TyreChip, PRESS } from '@ui/kit'
+import { TyreChip, PRESS, EASE } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSafetyCarDeployCount } from '@hooks/useSafetyCar'
 
@@ -16,7 +16,7 @@ const COMPACT_WINDOW_SIZE = 6
 // Full-name mode trades the fixed code column for the flexible one.
 const GRID = '26px 5px 46px 1fr 30px'
 const GRID_WIDE = '26px 5px minmax(0, 1fr) 56px 30px'
-const ROW_SPRING = { type: 'spring', stiffness: 450, damping: 38 } as const
+const ROW_SPRING = { duration: 0.22, ease: EASE } as const
 
 function formatGap(gap: number, position: number): string {
   if (position === 1) return 'LEAD'

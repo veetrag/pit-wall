@@ -132,7 +132,7 @@ export function MainMenu() {
               {circuitName}
             </span>
             <ProgressStrip total={total} done={saved.raceIndex} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 14, color: 'var(--lilac)', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 14, color: 'var(--lilac)', fontVariantNumeric: 'tabular-nums' }}>
               P{standing} · {points} pts
             </span>
           </motion.div>
@@ -180,7 +180,7 @@ export function MainMenu() {
         </motion.div>
       </div>
 
-      <motion.div {...next()} style={{ textAlign: 'center', paddingBottom: 16, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--lilac-dim)' }}>
+      <motion.div {...next()} style={{ textAlign: 'center', paddingBottom: 16, fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--lilac-dim)' }}>
         PIT WALL · v{__APP_VERSION__}
       </motion.div>
     </ScreenFrame>

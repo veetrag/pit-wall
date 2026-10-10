@@ -75,29 +75,29 @@ export function WingSelector({ circuitId, value, onChange }: {
               onClick={() => { uiTap(); onChange(w) }}
               style={{
                 flex: 1, minHeight: 56, padding: '6px 0 8px', borderRadius: 10, cursor: 'pointer',
-                background: 'var(--bg-panel)',
-                border: selected ? '1.5px solid var(--accent)' : '1px solid var(--line-hair)',
+                background: 'var(--grape)',
+                border: selected ? '1.5px solid var(--volt)' : '1px solid var(--line-hair)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 4,
               }}
             >
               <div style={{
                 width: 14, height: 10 + (w - 1) * 6, borderRadius: 3,
-                background: selected ? 'var(--accent)' : 'var(--bg-panel)',
-                border: selected ? '1px solid var(--accent)' : '1px solid var(--line-hair)',
+                background: selected ? 'var(--volt)' : 'var(--grape)',
+                border: selected ? '1px solid var(--volt)' : '1px solid var(--line-hair)',
                 transition: reducedMotion ? 'none' : 'background 0.15s',
               }} />
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontVariantNumeric: 'tabular-nums', color: selected ? 'var(--text-hi)' : 'var(--text-mid)' }}>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, fontVariantNumeric: 'tabular-nums', color: selected ? 'var(--white)' : 'var(--lilac)' }}>
                 {w}
               </span>
               <span aria-hidden="true" style={{
                 width: 4, height: 4, borderRadius: '50%',
-                background: w === best ? 'var(--accent)' : 'transparent',
+                background: w === best ? 'var(--volt)' : 'transparent',
               }} />
             </motion.button>
           )
         })}
       </div>
-      <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-mid)', marginTop: 8 }}>
+      <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--lilac)', marginTop: 8 }}>
         {circuitCharacter(circuit)}
       </div>
       <div aria-live="polite">
@@ -107,11 +107,11 @@ export function WingSelector({ circuitId, value, onChange }: {
         animate={{ opacity: 1 }}
         transition={{ duration: reducedMotion ? 0 : 0.15 }}
         style={{
-          marginTop: 6, fontFamily: 'var(--font-mono)', fontSize: 10, lineHeight: 1.5,
-          fontVariantNumeric: 'tabular-nums', color: 'var(--text-mid)',
+          marginTop: 6, fontFamily: 'var(--font-body)', fontSize: 10, lineHeight: 1.5,
+          fontVariantNumeric: 'tabular-nums', color: 'var(--lilac)',
         }}
       >
-        <span style={vsBest > 0.005 ? { color: 'var(--negative)' } : undefined}>{head}</span>{rest}
+        <span style={vsBest > 0.005 ? { color: 'var(--hot)' } : undefined}>{head}</span>{rest}
       </motion.div>
       </div>
     </div>
