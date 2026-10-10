@@ -167,7 +167,7 @@ export function SettingsScreen() {
         <SectionHeader title="ABOUT" />
         <div style={{ padding: '13px 0', borderBottom: '1px solid var(--line-hair)', display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-mid)' }}>Version</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-dim)' }}>v0.1 alpha</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-dim)' }}>v{__APP_VERSION__}</span>
         </div>
         <div style={{ padding: '13px 0', borderBottom: '1px solid var(--line-hair)', display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-mid)' }}>Privacy policy</span>
