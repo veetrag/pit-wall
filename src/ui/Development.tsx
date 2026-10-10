@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { PRESS, ScreenFrame } from '@ui/kit'
+import { EASE, PRESS, ScreenFrame, ScreenHeader, KitButton, Pill } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSettingsStore } from '@state/settingsStore'
 import { useCareerStore } from '@state/careerStore'
@@ -113,37 +113,19 @@ interface RowProps {
   reducedMotion: boolean
 }
 
-function TierPips(
-  // `accentRgb` is the CHANNEL form of `accent` (e.g. 'var(--accent-rgb)').
-  // rgba() cannot take var(--accent) as its first three arguments, so a
-  // translucent version of this colour needs the channels passed alongside it.
-  { owned, accent, accentRgb }: { owned: number; accent: string; accentRgb: string },
-) {
+function TierMarks({ owned }: { owned: number }) {
   return (
-    <div style={{ display: 'flex', gap: 3, alignItems: 'center' }} aria-hidden>
-      {Array.from({ length: MAX_TIERS }, (_, i) => {
-        const isOwned = i < owned
-        const isNext = i === owned
-        return (
-          <span
-            key={i}
-            style={{
-              width: 14, height: 5, borderRadius: 3,
-              background: isOwned ? accent : 'transparent',
-              border: isOwned ? 'none' : `1px solid ${isNext ? 'var(--text-dim)' : 'var(--line-hair)'}`,
-              // rgba(var(--x-rgb), 0.4), NOT color-mix(): minSdkVersion is 30 and
-              // color-mix needs Chromium 111, so the declaration is DROPPED and
-              // this glow silently disappears on exactly the low-end devices
-              // this project targets.
-              //
-              // That is the SECOND time this one channel has been lost to a
-              // colour spelling the browser would not parse: it previously read
-              // `${accent}66`, which produced the invalid `var(--accent)66`.
-              boxShadow: isOwned ? `0 0 6px rgba(${accentRgb}, 0.4)` : 'none',
-            }}
-          />
-        )
-      })}
+    <div role="img" aria-label={`Tier ${owned} of ${MAX_TIERS}`} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      {Array.from({ length: MAX_TIERS }, (_, i) => (
+        <span
+          key={i}
+          aria-hidden
+          style={{
+            width: 14, height: 8, transform: 'skewX(-12deg)',
+            background: i < owned ? 'var(--volt)' : 'var(--dusk)',
+          }}
+        />
+      ))}
     </div>
   )
 }
@@ -160,17 +142,10 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
   const canBuy = !maxed && !spentOut && short === 0
   const consequence = maxed || spentOut ? null : describeConsequence(attr, before, after)
 
-  // THREE terminal states, deliberately different in glyph, wording and row
-  // treatment — never in colour alone:
-  //   maxed      ✓ MAX      all tiers owned, row tinted, stops advertising
-  //   spentOut   ⊘ NO GAIN  tiers left but the facet is capped, so nothing to sell
-  //   unaffordable ✕ NEED n  still a goal, so it keeps its consequence line
-  const accent = maxed ? 'var(--positive)' : 'var(--accent)'
-  const accentRgb = maxed ? 'var(--positive-rgb)' : 'var(--accent-rgb)'
-  const edge = maxed ? 'var(--positive)'
-    : spentOut ? 'var(--text-mid)'
-      : canBuy ? 'var(--accent)' : 'var(--line-hair)'
-
+  // Terminal states differ in glyph and wording, never in colour alone:
+  //   maxed      ✓ MAX     all tiers owned
+  //   spentOut   CAPPED    tiers left but the facet is capped, nothing to sell
+  //   unaffordable NEED n  still a goal, keeps its consequence line
   const label = maxed
     ? `${attr.label}: fully developed, all ${MAX_TIERS} tiers owned`
     : spentOut
@@ -179,64 +154,44 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
       : `Buy ${attr.label} tier ${owned + 1} of ${MAX_TIERS} for ${cost} development points`
         + (canBuy ? '' : `. Not affordable, ${short} more points needed`)
 
+  const buyFill = canBuy ? 'var(--volt)' : maxed || spentOut ? 'transparent' : 'var(--dusk)'
+  const buyText = canBuy ? 'var(--ink)' : maxed || spentOut ? 'var(--lilac-dim)' : 'var(--lilac)'
+
   return (
     <div
+      className="slant-row"
       style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '10px 12px',
-        borderRadius: 12,
-        background: maxed
-          // A 7% --positive tint composited over the solid --bg-elevated.
-          //
-          // The gradient layer is the portable spelling of color-mix's
-          // OPAQUE-BASE blend, which minSdk 30 cannot parse. A bare
-          // rgba(var(--positive-rgb), 0.07) would NOT be equivalent: it would
-          // make the row 93% transparent over whatever sits behind it, rather
-          // than tinting the elevated surface.
-          ? 'linear-gradient(rgba(var(--positive-rgb), 0.07), rgba(var(--positive-rgb), 0.07)), var(--bg-elevated)'
-          : 'var(--bg-elevated)',
-        border: '1px solid var(--line-hair)',
-        borderLeft: `2px solid ${edge}`,
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '12px 14px', background: 'var(--grape)',
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{
-            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-            color: 'var(--text-hi)', letterSpacing: '0.02em', whiteSpace: 'nowrap',
-            overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            {attr.label}
-          </span>
-          <TierPips owned={owned} accent={accent} accentRgb={accentRgb} />
+        <div style={{
+          fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, fontStyle: 'italic',
+          textTransform: 'uppercase', color: 'var(--white)', lineHeight: 1.05, overflowWrap: 'anywhere',
+        }}>
+          {attr.label}
         </div>
-        <div
+        <div style={{ marginTop: 6 }}><TierMarks owned={owned} /></div>
+        {/* Keyed on the owned count so a purchase re-enters the line with the
+            new before→after consequence: a short slide on EASE, no spring. */}
+        <motion.div
+          key={owned}
           data-testid={`effect-${attr.id}`}
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -10 }}
+          animate={reducedMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
+          transition={{ duration: reducedMotion ? 0.12 : 0.18, ease: EASE }}
           style={{
-            marginTop: 3, display: 'flex', alignItems: 'baseline', gap: 5,
-            fontFamily: 'var(--font-mono)', fontSize: 10, lineHeight: 1.3,
+            marginTop: 6, fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 700,
+            lineHeight: 1.3, color: 'var(--gain)', fontVariantNumeric: 'tabular-nums',
           }}
         >
           {consequence
-            ? (
-              <>
-                <span style={{
-                  color: canBuy ? 'var(--accent)' : 'var(--text-mid)', fontWeight: 700,
-                  fontVariantNumeric: 'tabular-nums',
-                }}>
-                  {consequence.value}
-                </span>
-                {/* --text-mid, not --text-dim: this half of the sentence
-                    carries WHAT the gain applies to, and #5C6788 on
-                    --bg-elevated measures 2.87:1 against the AA floor of
-                    4.5 (§6.3). --text-mid measures 6.56:1. */}
-                <span style={{ color: 'var(--text-mid)' }}>{consequence.qualifier}</span>
-              </>
-            )
+            ? <>{consequence.value} <span style={{ fontWeight: 500, color: 'var(--lilac)' }}>{consequence.qualifier}</span></>
             : maxed
-              ? <span style={{ color: 'var(--positive)' }}>✓ Fully developed — no further gains</span>
-              : <span style={{ color: 'var(--text-mid)' }}>⊘ At its ceiling — a further tier would add nothing</span>}
-        </div>
+              ? '✓ Fully developed — no further gains'
+              : '⊘ At its ceiling — a further tier would add nothing'}
+        </motion.div>
       </div>
 
       <motion.button
@@ -244,42 +199,32 @@ function AttributeRow({ attr, owned, cost, affordable, onBuy, before, after, red
         data-testid={`buy-${attr.id}`}
         aria-label={label}
         disabled={!canBuy}
-        whileTap={canBuy && !reducedMotion ? { scale: 0.94 } : undefined} transition={PRESS}
+        className="slant-sm kit-focus"
+        whileTap={canBuy && !reducedMotion ? { scale: 0.96 } : undefined} transition={PRESS}
         onClick={onBuy}
         style={{
-          flexShrink: 0, minWidth: 74, padding: '9px 10px', borderRadius: 9,
+          flexShrink: 0, width: 88, height: 52, border: 'none', padding: 0,
           cursor: canBuy ? 'pointer' : 'default',
-          background: canBuy ? 'var(--accent)' : 'transparent',
-          border: maxed
-            ? '1px solid var(--positive)'
-            : spentOut ? '1px solid var(--line-hair)'
-              : canBuy ? 'none' : '1px dashed var(--line-hair)',
-          color: canBuy ? 'var(--bg-deep)' : maxed ? 'var(--positive)' : 'var(--text-mid)',
-          fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 700,
-          letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+          background: buyFill, color: buyText,
+          fontFamily: 'var(--font-body)', fontVariantNumeric: 'tabular-nums',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
         }}
       >
         {maxed
-          ? <span>✓ MAX</span>
+          ? <span style={{ fontWeight: 800, fontSize: 14 }}>✓ MAX</span>
           : spentOut
-            ? (
-              <>
-                <span>⊘ CAPPED</span>
-                <span style={{ fontSize: 8, opacity: 0.75, letterSpacing: '0.08em' }}>NO GAIN</span>
-              </>
-            )
+            ? <span style={{ fontWeight: 800, fontSize: 13, letterSpacing: 1 }}>CAPPED</span>
             : canBuy
               ? (
                 <>
-                  <span>{cost} DP</span>
-                  <span style={{ fontSize: 8, opacity: 0.7, letterSpacing: '0.1em' }}>BUY T{owned + 1}</span>
+                  <span style={{ fontWeight: 800, fontSize: 16 }}>{cost} DP</span>
+                  <span style={{ fontWeight: 700, fontSize: 10, letterSpacing: 1 }}>BUY T{owned + 1}</span>
                 </>
               )
               : (
                 <>
-                  <span>✕ {cost} DP</span>
-                  <span style={{ fontSize: 8, letterSpacing: '0.08em', color: 'var(--accent-warm)' }}>NEED {short}</span>
+                  <span style={{ fontWeight: 800, fontSize: 16 }}>{cost} DP</span>
+                  <span style={{ fontWeight: 700, fontSize: 10, letterSpacing: 1 }}>NEED {short}</span>
                 </>
               )}
       </motion.button>
@@ -403,105 +348,80 @@ export function Development() {
     { caption: 'THE DRIVER', note: 'Yours alone', target: 'driver' },
   ]
 
+  const teamTier = teamTiers[playerTeamId] ?? 0
+
   return (
     <ScreenFrame label="Development">
-      {/* Header */}
-      <div style={{
-        padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
-      }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-            {`BETWEEN ROUNDS · ${raceIndex + 1}/${TOTAL_RACES}`}
-          </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
-            Development
-          </div>
-          {(teamTiers[playerTeamId] ?? 0) !== 0 && (() => {
-            const t = teamTiers[playerTeamId] ?? 0
-            const up = t > 0
-            return (
-              <div
-                aria-label={`Team tier ${up ? '+' : ''}${t}`}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6,
-                  padding: '2px 8px', borderRadius: 999,
-                  border: `1px solid ${up ? 'var(--accent)' : 'var(--accent-warm)'}`,
-                  color: up ? 'var(--accent)' : 'var(--accent-warm)',
-                  fontFamily: 'var(--font-mono)', fontSize: 11, fontVariantNumeric: 'tabular-nums',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                {up ? '▲' : '▼'} TIER {up ? '+' : ''}{t}
-              </div>
-            )
-          })()}
-        </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+      <ScreenHeader
+        eyebrow={`BETWEEN ROUNDS · ${raceIndex + 1} OF ${TOTAL_RACES}`}
+        title="The factory"
+        right={(
           <div
             data-testid="dp-balance"
             role="status"
             aria-live="polite"
             aria-label={`${devPoints} development points available`}
+            className="slant-sm"
             style={{
-              fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 700,
-              color: 'var(--accent)', fontVariantNumeric: 'tabular-nums', lineHeight: 1,
+              background: 'var(--volt)', color: 'var(--ink)', padding: '6px 14px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0,
             }}
           >
-            {devPoints}
+            <span style={{
+              fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 900, fontStyle: 'italic',
+              lineHeight: 1, fontVariantNumeric: 'tabular-nums',
+            }}>{devPoints}</span>
+            <span style={{ fontWeight: 800, fontSize: 11, letterSpacing: 1 }}>DEV POINTS</span>
           </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.14em', marginTop: 3 }}>
-            POINTS
-          </div>
+        )}
+      />
+      {teamTier !== 0 && (
+        <div style={{ padding: '8px 16px 0', flexShrink: 0 }}>
+          <Pill ariaLabel={`Team tier ${teamTier > 0 ? '+' : ''}${teamTier}`}>
+            <span style={{ color: teamTier > 0 ? 'var(--gain)' : 'var(--hot)', fontVariantNumeric: 'tabular-nums' }}>
+              {teamTier > 0 ? '▲' : '▼'} TIER {teamTier > 0 ? '+' : ''}{teamTier}
+            </span>
+          </Pill>
         </div>
-      </div>
+      )}
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-        {/* The season arc — the player is not developing in a vacuum */}
+        {/* The season arc: the player is not developing in a vacuum */}
         <div
           data-testid="rival-development"
-          style={{
-            background: 'var(--bg-panel)', border: '1px solid var(--line-hair)',
-            borderRadius: 12, padding: '10px 12px',
-          }}
+          className="slant-lg"
+          style={{ background: 'var(--night)', padding: '14px 16px' }}
         >
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-            fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.14em', color: 'var(--text-dim)',
-          }}>
-            <span>THE ARMS RACE · SEASON TO DATE</span>
-            <span
-              data-testid="player-arc"
-              aria-label={playerArc.label}
-              style={{ color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}
-            >
-              {playerArc.text}
-            </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontWeight: 800, fontSize: 12, letterSpacing: 2, color: 'var(--hot)' }}>THE ARMS RACE</span>
+            <span style={{ fontSize: 12, color: 'var(--lilac-dim)' }}>season to date</span>
           </div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10, marginTop: 10 }}>
             {arc.rivals.map(r => (
-              <div key={r.id} style={{
-                flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 8,
-                background: 'var(--grape)', border: '1px solid var(--line-hair)',
-                borderTop: `2px solid ${r.color}`,
-              }}>
-                <div style={{
-                  fontFamily: 'var(--font-display)', fontSize: 9.5, color: 'var(--text-mid)',
-                  letterSpacing: '0.04em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}>
-                  {r.name.toUpperCase()}
+              <div key={r.id} style={{ minWidth: 0 }}>
+                <div style={{ height: 4, background: r.color, transform: 'skewX(-12deg)' }} />
+                <div style={{ fontSize: 11, color: 'var(--lilac)', marginTop: 6, overflowWrap: 'anywhere' }}>
+                  {r.name.split(' ')[0]}
                 </div>
-                <div style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, marginTop: 2,
-                  color: r.gain > 0 ? 'var(--negative)' : 'var(--text-mid)', fontVariantNumeric: 'tabular-nums',
-                }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--hot)', fontVariantNumeric: 'tabular-nums' }}>
                   {r.gain > 0 ? `−${r.gain.toFixed(2)}s` : '—'}
                 </div>
               </div>
             ))}
+            <div style={{ minWidth: 0, gridColumn: 4 }}>
+              <div style={{ height: 4, background: 'var(--volt)', transform: 'skewX(-12deg)' }} />
+              <div style={{ fontSize: 11, color: 'var(--lilac)', marginTop: 6 }}>You</div>
+              <div
+                data-testid="player-arc"
+                aria-label={playerArc.label}
+                style={{ fontWeight: 800, fontSize: 16, color: 'var(--volt)', fontVariantNumeric: 'tabular-nums' }}
+              >
+                {playerArc.text}
+              </div>
+            </div>
           </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-mid)', marginTop: 7, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 12, color: 'var(--lilac-dim)', marginTop: 10, lineHeight: 1.4 }}>
             {arc.anyRival
               ? 'Every team develops between rounds. Lap time you do not buy, someone else does.'
               : 'No rival has developed yet. The gap you build now is the gap you defend later.'}
@@ -510,18 +430,16 @@ export function Development() {
 
         {groups.map(group => (
           <div key={group.target}>
-            <div style={{
-              display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8,
-            }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-mid)', letterSpacing: '0.16em' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+              <span style={{
+                fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20,
+                textTransform: 'uppercase', color: 'var(--lilac-dim)',
+              }}>
                 {group.caption}
               </span>
-              <span style={{ flex: 1, height: 1, background: 'var(--line-hair)' }} />
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: 9.5, color: 'var(--text-mid)' }}>
-                {group.note}
-              </span>
+              <span style={{ fontSize: 13, color: 'var(--lilac-dim)' }}>{group.note}</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {UPGRADES.attributes.filter(a => a.target === group.target).map(attr => {
                 const pair = facetPairs.get(attr.id) ?? { base: 0, before: 0, after: 0 }
                 return (
@@ -544,33 +462,21 @@ export function Development() {
       </div>
 
       {/* Skippable by design: unspent points bank. */}
-      <div style={{ padding: '10px 16px 12px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
+      <div style={{ padding: '10px 16px calc(12px + var(--safe-bottom, 0px))', flexShrink: 0 }}>
         <div style={{
-          fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-mid)',
-          textAlign: 'center', marginBottom: 8, letterSpacing: '0.04em',
-          // This count changes on every purchase, so it gets tabular figures
-          // like every other live number on the screen (§6.1).
+          fontSize: 13, color: 'var(--lilac-dim)', textAlign: 'center', marginBottom: 10,
           fontVariantNumeric: 'tabular-nums',
         }}>
           {devPoints > 0
             ? `${devPoints} unspent points carry over to the next round`
             : `+${UPGRADES.income.perRace} points after every race · +${CAREER.seasonEndBonus[0]} for the title`}
         </div>
-        <motion.button
-          type="button"
-          data-testid="to-race"
-          aria-label="Continue to race setup"
-          whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
-            onClick={() => { uiTap(); toRaceSetup() }}
-          style={{
-            width: '100%', border: 'none', borderRadius: 10, padding: '16px',
-            background: 'var(--accent)', color: 'var(--bg-deep)',
-            fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700,
-            letterSpacing: '0.08em', cursor: 'pointer', outline: 'none',
-          }}
+        <KitButton
+          variant="primary" size="lg" testId="to-race" ariaLabel="Continue to race setup"
+          onClick={toRaceSetup} style={{ width: '100%' }}
         >
           TO RACE SETUP →
-        </motion.button>
+        </KitButton>
       </div>
     </ScreenFrame>
   )

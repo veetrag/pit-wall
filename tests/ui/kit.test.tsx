@@ -78,3 +78,10 @@ describe('KitButton haptic opt-out', () => {
     expect(Haptics.impact).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('KitButton testId', () => {
+  it('passes testId through as data-testid', () => {
+    render(<KitButton variant="primary" testId="go-btn" onClick={() => {}}>Go</KitButton>)
+    expect(screen.getByTestId('go-btn').tagName).toBe('BUTTON')
+  })
+})

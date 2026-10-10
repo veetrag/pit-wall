@@ -14,9 +14,9 @@ const SLANT = { lg: 'slant-lg', md: 'slant-md', sm: 'slant-sm' } as const
  * `haptic={false}` drops the kit's own tap feedback for a caller that fires a
  * stronger one itself (BOX NOW fires Heavy; Medium on top would double-buzz).
  */
-export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, disabled, display = true, haptic = true, style }: {
+export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, disabled, display = true, haptic = true, style, testId }: {
   variant: Variant; size?: 'lg' | 'md' | 'sm'; onClick: () => void; children: ReactNode
-  ariaLabel?: string; disabled?: boolean; display?: boolean; haptic?: boolean; style?: CSSProperties
+  ariaLabel?: string; disabled?: boolean; display?: boolean; haptic?: boolean; style?: CSSProperties; testId?: string
 }) {
   const uiTap = useUiTap()
   const { impact } = useHaptics()
@@ -25,6 +25,7 @@ export function KitButton({ variant, size = 'md', onClick, children, ariaLabel, 
     <motion.button
       type="button"
       aria-label={ariaLabel}
+      data-testid={testId}
       disabled={disabled}
       className={`${SLANT[size]} kit-focus`}
       whileTap={reduced || disabled ? undefined : { scale: 0.96 }} transition={PRESS}
