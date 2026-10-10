@@ -21,8 +21,8 @@ function CircuitBackground() {
       <defs>
         {/* Deep night sky base */}
         <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#060a14" />
-          <stop offset="100%" stopColor="#0a0e1a" />
+          <stop offset="0%" stopColor="#0B0820" />
+          <stop offset="100%" stopColor="#120E2B" />
         </linearGradient>
 
         {/* Floodlight halos */}

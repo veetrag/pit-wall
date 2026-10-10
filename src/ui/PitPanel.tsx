@@ -192,6 +192,7 @@ function PitPanelDrawer() {
       {...sheetMotion}
       transition={{ duration: 0.22, ease: EASE }}
       role="dialog"
+      aria-modal="true"
       aria-label="Box this lap?"
       style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,

@@ -19,9 +19,9 @@ const WEATHER_LABEL: Record<WeatherState, string> = {
 // (e.g. `${color}55`) for the glow/border below, which only works with a
 // real hex string.
 const WEATHER_COLOR: Record<WeatherState, string> = {
-  DRY:  '#F2C94C',
-  DAMP: '#39B54A',
-  WET:  '#4DA6FF',
+  DRY:  '#CFC8F2', // lilac: dry is the neutral state
+  DAMP: '#3DDC84', // = --tyre-inter
+  WET:  '#4DA6FF', // = --tyre-wet
 }
 
 // Depth-of-forecast cues: only the border/background haze fades with distance —
@@ -66,7 +66,7 @@ function WeatherCell({
       <span style={{ fontSize: iconSz, lineHeight: 1 }}>{WEATHER_ICON[state]}</span>
       <span style={{
         fontFamily: 'var(--font-mono)', fontSize: isNow ? 12 : 10, fontWeight: 700,
-        color: isNow ? '#F2F5FF' : 'var(--text-mid)',
+        color: isNow ? 'var(--white)' : 'var(--text-mid)',
         letterSpacing: '0.06em', marginTop: 3,
       }}>
         {WEATHER_LABEL[state]}
@@ -152,7 +152,7 @@ export function WeatherChip({ expanded, onToggle }: { expanded?: boolean; onTogg
       style={{ background: 'none', border: 'none', padding: 0, minHeight: 48, cursor: 'pointer', borderRadius: 999,
         display: 'inline-flex', alignItems: 'center' }}
     >
-      <Pill tone={outlook.worsening ? 'caution' : 'default'}>
+      <Pill tone={outlook.worsening ? 'rain' : 'default'}>
         <span aria-hidden="true">{WEATHER_ICON[now]}</span> {WEATHER_LABEL[now]} · {outlook.text}
       </Pill>
     </button>
@@ -191,7 +191,7 @@ export function WeatherStrip() {
             transition={{ duration: 1.4, repeat: Infinity }}
             style={{
               fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
-              color: wetIncoming ? 'var(--accent-warm)' : 'var(--tyre-inter, #39B54A)',
+              color: wetIncoming ? 'var(--accent-warm)' : 'var(--tyre-inter)',
               letterSpacing: '0.06em',
             }}
           >

@@ -19,6 +19,8 @@ function verdictOf(m: LadderMove): Verdict {
   return { text: '● HELD', color: 'var(--text-dim)' }
 }
 
+const VERDICT_DELAY = 0.7
+
 /**
  * The season's one orchestrated moment for the ladder (CLAUDE.md §6.2):
  * deserved and finished positions, then the verdict, then who else moved.
@@ -30,11 +32,18 @@ export function LadderReveal({ moves, playerTeamId }: { moves: LadderMove[]; pla
   const stepped = mine !== undefined && mine.after !== mine.before
   const up = mine !== undefined && mine.after > mine.before
 
+  // Feedback lands with the verdict, not on mount: the buzz is the verdict's
+  // punctuation. Reduced motion shows everything at once, so it fires at once.
   useEffect(() => {
     if (!stepped) return
-    impact(ImpactStyle.Medium)
-    if (up) soundService.play('positionGain')
-  }, [stepped, up]) // eslint-disable-line react-hooks/exhaustive-deps
+    const fire = () => {
+      impact(ImpactStyle.Medium)
+      if (up) soundService.play('positionGain')
+    }
+    if (reducedMotion) { fire(); return }
+    const t = setTimeout(fire, VERDICT_DELAY * 1000)
+    return () => clearTimeout(t)
+  }, [stepped, up, reducedMotion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mine) return null
   const v = verdictOf(mine)
@@ -61,7 +70,7 @@ export function LadderReveal({ moves, playerTeamId }: { moves: LadderMove[]; pla
           <motion.div {...enter(0.1)} aria-label={`Deserved P${mine.deserved}`}>Deserved <b style={{ color: 'var(--text-hi)' }}>P{mine.deserved}</b></motion.div>
           <motion.div {...enter(0.35)} aria-label={`Finished P${mine.finished}`}>Finished <b style={{ color: 'var(--text-hi)' }}>P{mine.finished}</b></motion.div>
         </div>
-        <motion.div {...enter(0.7)} style={{ textAlign: 'right' }}>
+        <motion.div {...enter(VERDICT_DELAY)} style={{ textAlign: 'right' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: v.color, letterSpacing: '0.08em' }}>
             {v.text}
           </div>

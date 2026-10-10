@@ -166,7 +166,7 @@ export function MainMenu() {
 
         {/* Tiles */}
         <motion.div {...next()} style={{ display: 'flex', gap: 10 }}>
-          <KitButton variant="urgent" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewScenarios}>SCENARIOS</KitButton>
+          <KitButton variant="secondary" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewScenarios}>SCENARIOS</KitButton>
           <KitButton variant="secondary" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewGrid}>GARAGE</KitButton>
           {hasCareer && <KitButton variant="secondary" size="sm" style={{ flex: 1, padding: '0 12px' }} onClick={viewCareer}>CAREER</KitButton>}
         </motion.div>

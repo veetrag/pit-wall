@@ -94,7 +94,7 @@ export function TeamSelect() {
                 {/* Livery swatch */}
                 <div style={{
                   width: 6, alignSelf: 'stretch', borderRadius: 3,
-                  background: `linear-gradient(180deg, ${team.colorPrimary} 0%, ${team.colorSecondary ?? '#0A0E1A'} 100%)`,
+                  background: `linear-gradient(180deg, ${team.colorPrimary} 0%, ${team.colorSecondary ?? 'var(--ink)'} 100%)`,
                   flexShrink: 0,
                 }} />
 

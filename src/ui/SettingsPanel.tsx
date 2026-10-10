@@ -21,25 +21,32 @@ function Toggle({ label, sublabel, value, onChange }: {
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--text-hi)', letterSpacing: '0.03em' }}>{label}</div>
         <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{sublabel}</div>
       </div>
+      {/* 48px touch target around a 50x28 track: the button is the hit area,
+          the inner span is what you see. */}
       <motion.button
-        whileTap={{ scale: 0.9 }} transition={PRESS}
+        type="button" role="switch" aria-checked={value} aria-label={label} className="kit-focus"
+        whileTap={{ scale: 0.96 }} transition={PRESS}
         onClick={() => { uiTap(); onChange(!value) }}
         style={{
-          width: 50, height: 28, borderRadius: 14, border: 'none',
-          background: value ? 'var(--accent)' : 'var(--bg-elevated)',
-          outline: value ? 'none' : '1px solid var(--line-hair)',
-          cursor: 'pointer', position: 'relative', flexShrink: 0,
-          transition: 'background 0.2s',
+          width: 66, height: 48, margin: '-10px -8px', border: 'none', background: 'transparent',
+          cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        <motion.div
-          animate={{ x: value ? 22 : 3 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-          style={{
-            position: 'absolute', top: 3, width: 22, height: 22, borderRadius: '50%',
-            background: value ? 'var(--bg-deep)' : 'var(--text-dim)',
-          }}
-        />
+        <span style={{
+          width: 50, height: 28, borderRadius: 14, position: 'relative',
+          background: value ? 'var(--accent)' : 'var(--bg-elevated)',
+          outline: value ? 'none' : '1px solid var(--line-hair)',
+          transition: 'background 0.2s',
+        }}>
+          <motion.span
+            animate={{ x: value ? 22 : 3 }}
+            transition={PRESS}
+            style={{
+              position: 'absolute', top: 3, left: 0, width: 22, height: 22, borderRadius: '50%',
+              background: value ? 'var(--bg-deep)' : 'var(--text-dim)',
+            }}
+          />
+        </span>
       </motion.button>
     </div>
   )
@@ -57,7 +64,7 @@ function SpeedSelect({ value, onChange }: { value: SimSpeed; onChange: (v: SimSp
         {opts.map(o => (
           <motion.button key={o} whileTap={{ scale: 0.92 }} transition={PRESS} onClick={() => onChange(o)}
             style={{
-              width: 40, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
+              width: 44, height: 48, borderRadius: 8, border: 'none', cursor: 'pointer',
               background: value === o ? 'var(--accent)' : 'var(--bg-elevated)',
               color: value === o ? 'var(--bg-deep)' : 'var(--text-mid)',
               outline: value === o ? 'none' : '1px solid var(--line-hair)',
@@ -82,7 +89,7 @@ function DifficultySelect({ value, onChange }: { value: Difficulty; onChange: (v
         {(['rookie', 'pro'] as Difficulty[]).map(d => (
           <motion.button key={d} whileTap={{ scale: 0.92 }} transition={PRESS} onClick={() => onChange(d)}
             style={{
-              padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              minHeight: 48, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
               background: value === d ? 'var(--accent)' : 'var(--bg-elevated)',
               color: value === d ? 'var(--bg-deep)' : 'var(--text-mid)',
               outline: value === d ? 'none' : '1px solid var(--line-hair)',
@@ -132,7 +139,7 @@ export function SettingsScreen() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>Settings</div>
         </div>
         <motion.button whileTap={{ scale: 0.94 }} transition={PRESS} onClick={() => { uiTap(); exitSettings() }}
-          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
+          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, minHeight: 48, padding: '0 16px', cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 13, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
           BACK
         </motion.button>
       </div>
@@ -160,7 +167,7 @@ export function SettingsScreen() {
         <SectionHeader title="ABOUT" />
         <div style={{ padding: '13px 0', borderBottom: '1px solid var(--line-hair)', display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-mid)' }}>Version</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-dim)' }}>v0.1 alpha</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-dim)' }}>v{__APP_VERSION__}</span>
         </div>
         <div style={{ padding: '13px 0', borderBottom: '1px solid var(--line-hair)', display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-mid)' }}>Privacy policy</span>
@@ -195,7 +202,7 @@ function SettingsPanelDrawer({ onClose }: { onClose: () => void }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text-hi)', letterSpacing: '0.05em' }}>SETTINGS</span>
         <motion.button whileTap={{ scale: 0.9 }} transition={PRESS} onClick={() => { uiTap(); onClose() }}
-          style={{ background: 'transparent', border: '1px solid var(--line-hair)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-dim)', fontFamily: 'var(--font-display)', fontSize: 12, cursor: 'pointer' }}>
+          className="kit-focus" style={{ background: 'transparent', border: '1px solid var(--line-hair)', borderRadius: 6, minHeight: 48, minWidth: 64, padding: '0 14px', color: 'var(--lilac)', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
           DONE
         </motion.button>
       </div>
