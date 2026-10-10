@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { WingSelector, wingTradeLine } from '@ui/WingSelector'
 import { useSettingsStore } from '@state/settingsStore'
 import { loadGameData } from '@data/validators'
@@ -51,9 +51,10 @@ describe('RaceSetup wing row', () => {
     let got: unknown = null
     useSeasonStore.setState({ confirmRaceSetup: (_id: string, s: unknown) => { got = s } } as never)
     render(<RaceSetup />)
-    expect(screen.getAllByRole('radio').find(r => r.getAttribute('aria-checked') === 'true')!.getAttribute('aria-label')).toMatch(/^Wing 4/)
+    const wingRadios = () => within(screen.getByRole('radiogroup', { name: /wing level/i })).getAllByRole('radio')
+    expect(wingRadios().find(r => r.getAttribute('aria-checked') === 'true')!.getAttribute('aria-label')).toMatch(/^Wing 4/)
     expect(screen.getByText(/PLAN:/).textContent).toMatch(/ · W4/)
-    fireEvent.click(screen.getAllByRole('radio')[1]!)
+    fireEvent.click(wingRadios()[1]!)
     fireEvent.click(screen.getByText(/TO QUALIFYING/))
     expect((got as { wing?: number }).wing).toBe(2)
   })

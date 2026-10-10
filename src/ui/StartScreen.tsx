@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { HOLD_EXIT } from '@ui/kit'
 import { useRaceStore } from '@state/raceStore'
 
 export function StartScreen() {
@@ -6,29 +7,31 @@ export function StartScreen() {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0, zIndex: 1 }}
+      animate={{ opacity: 1, zIndex: 1 }}
+      exit={HOLD_EXIT}
       style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
+        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)', boxSizing: 'border-box',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', height: '100%', gap: 32,
-        background: 'var(--bg-deep)',
+        justifyContent: 'center', gap: 32,
+        background: 'var(--ink)',
       }}
     >
       <h1 style={{
         fontFamily: 'var(--font-display)', fontSize: 48, fontWeight: 700,
-        color: 'var(--accent)', letterSpacing: '0.05em', textTransform: 'uppercase',
+        color: 'var(--volt)', letterSpacing: '0.05em', textTransform: 'uppercase',
       }}>
         PIT WALL
       </h1>
-      <p style={{ color: 'var(--text-mid)', fontFamily: 'var(--font-body)', fontSize: 16 }}>
+      <p style={{ color: 'var(--lilac)', fontFamily: 'var(--font-body)', fontSize: 16 }}>
         Test Session · Voss / Apex Racing
       </p>
       <motion.button
         whileTap={{ scale: 0.96 }}
         onClick={initForStartSequence}
         style={{
-          background: 'var(--accent)', color: 'var(--bg-deep)',
+          background: 'var(--volt)', color: 'var(--ink)',
           border: 'none', borderRadius: 8, padding: '16px 48px',
           fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer',

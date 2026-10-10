@@ -2,49 +2,14 @@ import { useEffect, useRef } from 'react'
 import * as PIXI from 'pixi.js'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
-import pathBengaluru from '@data/paths/bengaluru.json'
-import pathMonsoonBay from '@data/paths/monsoon_bay.json'
-import pathVeloce from '@data/paths/veloce.json'
-import pathHarbourLights from '@data/paths/harbour_lights.json'
-import pathSolDesert from '@data/paths/sol_desert.json'
-import pathHighland from '@data/paths/highland.json'
-import pathGrandSavane from '@data/paths/grand_savane.json'
-import pathAurora from '@data/paths/aurora.json'
-import pathSilverpark from '@data/paths/silverpark.json'
-import pathCostaVerde from '@data/paths/costa_verde.json'
-import pathKaido from '@data/paths/kaido.json'
-import pathAltiplano from '@data/paths/altiplano.json'
+import { CIRCUIT_PATHS } from '@data/circuitPaths'
+import { TEAM_HEX } from './teamHex'
 import type { RaceState, RaceConfig, WeatherState } from '@engine/types'
 
 type Point = [number, number]
 
-export const CIRCUIT_PATHS: Record<string, { points: number[][]; sectorBoundaries: number[]; pitEntry: number[]; pitExit: number[] }> = {
-  bengaluru:      pathBengaluru,
-  monsoon_bay:    pathMonsoonBay,
-  veloce:         pathVeloce,
-  harbour_lights: pathHarbourLights,
-  sol_desert:     pathSolDesert,
-  highland:       pathHighland,
-  grand_savane:   pathGrandSavane,
-  aurora:         pathAurora,
-  silverpark:     pathSilverpark,
-  costa_verde:    pathCostaVerde,
-  kaido:          pathKaido,
-  altiplano:      pathAltiplano,
-}
+export { CIRCUIT_PATHS }
 
-const TEAM_HEX: Record<string, string> = {
-  apex:     '#00E5D0',
-  meridian: '#E8344E',
-  vortex:   '#F2C94C',
-  kestrel:  '#9B6BFF',
-  solstice: '#FF8A3D',
-  delta:    '#3DDC84',
-  halcyon:  '#5BC8FF',
-  nimbus:   '#B0B6C8',
-  terra:    '#C97B5A',
-  zenith:   '#7A8290',
-}
 
 // The player's glow + trail. Volt, matching --volt (#FFD60A) and the volt
 // player row in the tower; Pixi cannot read CSS custom properties, so it is

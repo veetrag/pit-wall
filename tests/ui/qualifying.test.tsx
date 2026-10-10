@@ -92,6 +92,11 @@ describe('the compound decision must be informed', () => {
 })
 
 describe('the player can always see their own row', () => {
+  // Isolation: this used to pass only through a result leaked from the previous describe.
+  beforeEach(() => {
+    useSeasonStore.setState({ phase: 'qualifying', qualifyingResult: null, playerDriverId: 'd_voss' })
+  })
+
   it('RENDERS EVERY DRIVER, NOT JUST THE TOP FEW', () => {
     /*
      * The result box is a flex child with overflow hidden, so without an

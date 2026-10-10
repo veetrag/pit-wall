@@ -4,6 +4,7 @@ import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useRaceStore } from '@state/raceStore'
 import { useUiTap } from '@hooks/useUiTap'
+import { ScreenFrame, ScreenHeader, HeroBand, KitButton, snapIn } from '@ui/kit'
 
 /**
  * Scenario mode's result screen -- judged against the authored `goal`, not
@@ -30,7 +31,6 @@ export function ScenarioResult() {
   if (!active || !outcome) return null
 
   const met = outcome.met
-  const verdictColor = met ? 'var(--positive)' : 'var(--accent-warm)'
   const verdictText = met ? 'GOAL MET' : 'GOAL MISSED'
   const verdictMark = met ? '✓' : '✗'
 
@@ -50,80 +50,42 @@ export function ScenarioResult() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
-      <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-          SCENARIO
+    <ScreenFrame label="Scenario result">
+      <ScreenHeader eyebrow="SCENARIO" title={active.name} />
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 0', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'relative', minHeight: 170 }}>
+          <HeroBand color={met ? 'var(--gain)' : 'var(--hot)'} height={170} />
+          <motion.div
+            role="status"
+            {...snapIn(reducedMotion)}
+            style={{
+              position: 'relative', height: 170, padding: '0 24px', boxSizing: 'border-box',
+              display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8, color: 'var(--ink)',
+            }}
+          >
+            <div style={{
+              fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 64,
+              lineHeight: 0.95, textTransform: 'uppercase', overflowWrap: 'anywhere',
+            }}>
+              {verdictMark} {verdictText}
+            </div>
+            <div style={{
+              fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 16, display: 'flex', flexWrap: 'wrap',
+              alignItems: 'center', gap: 10,
+            }}>
+              <span>{`TARGET P${active.goal.position}`}</span>
+              <span aria-hidden>·</span>
+              <span>{outcome.retired ? 'RETIRED' : `FINISHED P${outcome.position}`}</span>
+            </div>
+          </motion.div>
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
-          {active.name}
-        </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <motion.div
-          role="status"
-          initial={reducedMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          style={{
-            background: 'var(--bg-panel)', border: `1px solid ${verdictColor}`, borderRadius: 12,
-            padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center',
-          }}
-        >
-          <div style={{
-            fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800,
-            letterSpacing: '0.06em', color: verdictColor,
-          }}>
-            {verdictMark} {verdictText}
-          </div>
-
-          <div style={{
-            fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--text-mid)',
-            display: 'flex', alignItems: 'center', gap: 10, fontVariantNumeric: 'tabular-nums',
-          }}>
-            <span>{`TARGET P${active.goal.position}`}</span>
-            <span style={{ color: 'var(--line-hair)' }} aria-hidden>·</span>
-            <span style={{ color: 'var(--text-hi)' }}>
-              {outcome.retired ? 'RETIRED' : `FINISHED P${outcome.position}`}
-            </span>
-          </div>
-        </motion.div>
+      <div style={{ padding: '0 16px calc(12px + var(--safe-bottom))', display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
+        <KitButton variant="primary" size="lg" onClick={tryAgain}>TRY AGAIN</KitButton>
+        <KitButton variant="secondary" size="sm" onClick={toMenu}>BACK TO MENU</KitButton>
       </div>
-
-      <div style={{ padding: '0 16px 12px', display: 'flex', gap: 10, flexShrink: 0 }}>
-        <motion.button
-          type="button"
-          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
-          onClick={tryAgain}
-          style={{
-            flex: 1, background: 'var(--accent)', color: 'var(--bg-deep)',
-            border: 'none', borderRadius: 10, padding: '16px 0',
-            fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700,
-            letterSpacing: '0.08em', cursor: 'pointer',
-          }}
-        >
-          TRY AGAIN
-        </motion.button>
-        <motion.button
-          type="button"
-          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
-          onClick={toMenu}
-          style={{
-            flex: 0, minWidth: 110, background: 'transparent', color: 'var(--text-mid)',
-            border: '1px solid var(--line-hair)', borderRadius: 10, padding: '16px 0',
-            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600,
-            letterSpacing: '0.08em', cursor: 'pointer',
-          }}
-        >
-          BACK TO MENU
-        </motion.button>
-      </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, type KeyboardEvent, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
+import { HelmetAvatar, type HelmetPattern } from './HelmetAvatar'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 import rivalriesData from '@data/rivalries.json'
+import { ScreenFrame, ScreenHeader, Tabs, CarArt, liveryOf, EASE, PRESS, snapIn, useReducedMotion } from '@ui/kit'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,8 +49,26 @@ const TEAM_COLOR_MAP: Record<string, string> = Object.fromEntries(
   (carsData.teams as Team[]).map(t => [t.id, t.colorPrimary])
 )
 
-function teamColor(teamId: string) { return TEAM_COLOR_MAP[teamId] ?? '#888' }
+function teamColor(teamId: string) { return TEAM_COLOR_MAP[teamId] ?? 'var(--lilac-dim)' }
 function teamName(teamId: string)  { return teams.find(t => t.id === teamId)?.name ?? teamId }
+
+/** Detail panel open/close: height + opacity, opacity only under reduced motion. */
+function expandMotion(reduced: boolean) {
+  return reduced
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.12 } }
+    : { initial: { opacity: 0, height: 0 }, animate: { opacity: 1, height: 'auto' }, exit: { opacity: 0, height: 0 }, transition: { duration: 0.18, ease: EASE } }
+}
+
+function driverRating(d: Driver): number {
+  return Math.round((d.facets.pace + d.facets.racecraft + d.facets.tyreManagement + d.facets.consistency) / 4)
+}
+function teamRating(t: Team): number {
+  return Math.round((t.facets.power + t.facets.aero + t.facets.handling) / 3)
+}
+/** Teammates get different helmet patterns (same rule as DriverSelect). */
+function driverPattern(d: Driver): HelmetPattern {
+  return drivers.filter(x => x.teamId === d.teamId)[0]?.id === d.id ? 'stripe' : 'chevron'
+}
 
 // ─── Radar polygon ────────────────────────────────────────────────────────────
 
@@ -100,21 +120,21 @@ function RadarChart({ data, color, size = 140, compareData, compareColor }: {
             return `${cx + pr * Math.cos(angle(i))},${cy + pr * Math.sin(angle(i))}`
           }).join(' ')}
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke="rgba(var(--white-rgb),0.07)"
           strokeWidth="1"
         />
       ))}
       {/* Axis lines */}
       {axes.map((a, i) => (
         <line key={i} x1={cx} y1={cy} x2={a.x2} y2={a.y2}
-          stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+          stroke="rgba(var(--white-rgb),0.08)" strokeWidth="1" />
       ))}
       {/* Compare polygon drawn first, underneath the primary one */}
       {comparePts && compareColor && (
         <motion.polygon
           initial={{ opacity: 0, scale: 0.2 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 22, delay: 0.05 }}
+          transition={{ duration: 0.18, ease: EASE, delay: 0.05 }}
           style={{ transformOrigin: `${cx}px ${cy}px` }}
           points={comparePts.join(' ')}
           fill={`${compareColor}22`}
@@ -128,7 +148,7 @@ function RadarChart({ data, color, size = 140, compareData, compareColor }: {
       <motion.polygon
         initial={{ opacity: 0, scale: 0.2 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 22, delay: 0.05 }}
+        transition={{ duration: 0.18, ease: EASE, delay: 0.05 }}
         style={{ transformOrigin: `${cx}px ${cy}px` }}
         points={pts.join(' ')}
         fill={`${color}30`}
@@ -159,9 +179,9 @@ function RadarChart({ data, color, size = 140, compareData, compareColor }: {
           x={l.x} y={l.y}
           textAnchor="middle" dominantBaseline="middle"
           fontSize="7.5"
-          fontFamily="var(--font-mono)"
+          fontFamily="var(--font-body)"
           letterSpacing="0.5"
-          fill={l.dormant ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.55)'}
+          fill={l.dormant ? 'rgba(var(--white-rgb),0.25)' : 'rgba(var(--white-rgb),0.55)'}
         >
           {l.label}
         </text>
@@ -177,31 +197,31 @@ function FacetBar({ label, value, color, dormant }: { label: string; value: numb
     <div style={{ marginBottom: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
         <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em',
-          color: dormant ? 'var(--text-dim)' : 'var(--text-mid)',
+          fontFamily: 'var(--font-body)', fontSize: 10, letterSpacing: '0.1em',
+          color: dormant ? 'var(--lilac-dim)' : 'var(--lilac)',
         }}>
           {label}{dormant ? ' ·' : ''}
         </span>
         <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10,
-          color: dormant ? 'var(--text-dim)' : 'var(--text-hi)',
+          fontFamily: 'var(--font-body)', fontSize: 10,
+          color: dormant ? 'var(--lilac-dim)' : 'var(--white)',
           fontVariantNumeric: 'tabular-nums',
         }}>
           {dormant ? '—' : value}
         </span>
       </div>
       <div style={{
-        height: 4, borderRadius: 2,
-        background: 'rgba(255,255,255,0.07)',
+        height: 4,
+        background: 'rgba(var(--white-rgb),0.07)',
         overflow: 'hidden',
       }}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: dormant ? '0%' : `${value}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
+          transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
           style={{
-            height: '100%', borderRadius: 2,
-            background: dormant ? 'rgba(255,255,255,0.15)' : color,
+            height: '100%',
+            background: dormant ? 'rgba(var(--white-rgb),0.15)' : color,
             opacity: dormant ? 0.4 : 1,
           }}
         />
@@ -213,6 +233,7 @@ function FacetBar({ label, value, color, dormant }: { label: string; value: numb
 // ─── Driver detail card ───────────────────────────────────────────────────────
 
 function DriverCard({ driver }: { driver: Driver }) {
+  const reduced = useReducedMotion()
   const color = teamColor(driver.teamId)
   const radarData: RadarDatum[] = [
     { label: 'PACE',     value: driver.facets.pace },
@@ -226,19 +247,13 @@ function DriverCard({ driver }: { driver: Driver }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.25, ease: 'easeInOut' }}
+      {...expandMotion(reduced)}
       style={{ overflow: 'hidden' }}
     >
-      <div style={{
-        background: `linear-gradient(135deg, ${color}12 0%, var(--bg-panel) 100%)`,
-        border: `1px solid ${color}44`,
-        borderTop: 'none',
-        borderRadius: '0 0 12px 12px',
-        padding: '16px',
-        marginTop: -2,
+      <div className="slant-row" style={{
+        background: `linear-gradient(135deg, ${color}12 0%, var(--grape) 100%)`,
+        padding: '16px 20px',
+        marginTop: 6,
       }}>
         {(driver.archetype || driver.backstory) && (
           <div style={{ marginBottom: 14 }}>
@@ -251,7 +266,7 @@ function DriverCard({ driver }: { driver: Driver }) {
               )}
             </div>
             {driver.backstory && (
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--text-mid)', lineHeight: 1.5, margin: 0 }}>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--lilac)', lineHeight: 1.5, margin: 0 }}>
                 {driver.backstory}
               </p>
             )}
@@ -290,14 +305,14 @@ function DriverCard({ driver }: { driver: Driver }) {
         {/* Rivalries */}
         {rivals.length > 0 && (
           <div style={{ marginTop: 12 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--accent-warm)', letterSpacing: '0.15em', marginBottom: 6 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--lilac-dim)', letterSpacing: '0.15em', marginBottom: 6 }}>
               RIVALS
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {rivals.map(({ rival, note }) => (
                 <div key={rival.id} style={{
                   display: 'flex', alignItems: 'baseline', gap: 6,
-                  fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-mid)',
+                  fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--lilac)',
                 }}>
                   <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: teamColor(rival.teamId), flexShrink: 0 }}>
                     {rival.flag} {rival.code}
@@ -316,6 +331,7 @@ function DriverCard({ driver }: { driver: Driver }) {
 // ─── Car detail card ──────────────────────────────────────────────────────────
 
 function CarCard({ team }: { team: Team }) {
+  const reduced = useReducedMotion()
   const color = team.colorPrimary
   const f = team.facets
   const radarData: RadarDatum[] = [
@@ -337,19 +353,13 @@ function CarCard({ team }: { team: Team }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.25, ease: 'easeInOut' }}
+      {...expandMotion(reduced)}
       style={{ overflow: 'hidden' }}
     >
-      <div style={{
-        background: `linear-gradient(135deg, ${color}12 0%, var(--bg-panel) 100%)`,
-        border: `1px solid ${color}44`,
-        borderTop: 'none',
-        borderRadius: '0 0 12px 12px',
-        padding: '16px',
-        marginTop: -2,
+      <div className="slant-row" style={{
+        background: `linear-gradient(135deg, ${color}12 0%, var(--grape) 100%)`,
+        padding: '16px 20px',
+        marginTop: 6,
       }}>
         {(team.archetype || team.history) && (
           <div style={{ marginBottom: 14 }}>
@@ -362,7 +372,7 @@ function CarCard({ team }: { team: Team }) {
               )}
             </div>
             {team.history && (
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--text-mid)', lineHeight: 1.5, margin: 0 }}>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--lilac)', lineHeight: 1.5, margin: 0 }}>
                 {team.history}
               </p>
             )}
@@ -384,28 +394,28 @@ function CarCard({ team }: { team: Team }) {
         </div>
         {/* Per-sector readout */}
         <div style={{
-          marginTop: 14, padding: '10px 12px', borderRadius: 8,
-          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+          marginTop: 14, padding: '10px 12px',
+          background: 'rgba(var(--white-rgb),0.04)', border: '1px solid rgba(var(--white-rgb),0.06)',
         }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 6 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--lilac-dim)', letterSpacing: '0.15em', marginBottom: 6 }}>
             SECTOR CHARACTER
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {sectors.map(s => (
               <div key={s.key} style={{ flex: 1, textAlign: 'center' }}>
                 <div style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)',
+                  fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--lilac-dim)',
                   letterSpacing: '0.1em', marginBottom: 4,
                 }}>{s.label.split(' ')[0]}</div>
                 <div style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700,
-                  color: s.val === strongest.val ? color : s.val === weakest.val ? 'var(--accent-warm)' : 'var(--text-hi)',
+                  fontFamily: 'var(--font-body)', fontSize: 16, fontWeight: 700,
+                  color: s.val === strongest.val ? color : s.val === weakest.val ? 'var(--hot)' : 'var(--white)',
                   fontVariantNumeric: 'tabular-nums',
                 }}>{s.val}</div>
               </div>
             ))}
           </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)', marginTop: 8 }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)', marginTop: 8 }}>
             Strong in {strongest.label.toLowerCase()} · Weak in {weakest.label.toLowerCase()}
           </div>
         </div>
@@ -418,8 +428,8 @@ function CarCard({ team }: { team: Team }) {
 }
 
 const hintStyle: React.CSSProperties = {
-  fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-mid)',
-  background: 'rgba(255,255,255,0.05)', borderRadius: 6,
+  fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac)',
+  background: 'rgba(var(--white-rgb),0.05)',
   padding: '4px 8px', display: 'inline-block',
 }
 
@@ -431,24 +441,24 @@ function CompareFacetRow({ label, valueA, valueB, colorA, colorB }: {
   const delta = valueA - valueB
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '32px 1fr 60px 1fr 32px', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colorA, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{valueA}</span>
-      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', display: 'flex', justifyContent: 'flex-end' }}>
+      <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: colorA, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{valueA}</span>
+      <div style={{ height: 4, background: 'rgba(var(--white-rgb),0.07)', overflow: 'hidden', display: 'flex', justifyContent: 'flex-end' }}>
         <div style={{ width: `${valueA}%`, height: '100%', background: colorA }} />
       </div>
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.06em', textAlign: 'center',
-        color: 'var(--text-dim)',
+        fontFamily: 'var(--font-body)', fontSize: 9, letterSpacing: '0.06em', textAlign: 'center',
+        color: 'var(--lilac-dim)',
       }}>
         {label}
       </span>
-      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+      <div style={{ height: 4, background: 'rgba(var(--white-rgb),0.07)', overflow: 'hidden' }}>
         <div style={{ width: `${valueB}%`, height: '100%', background: colorB }} />
       </div>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colorB, fontVariantNumeric: 'tabular-nums' }}>{valueB}</span>
+      <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: colorB, fontVariantNumeric: 'tabular-nums' }}>{valueB}</span>
       <div style={{ gridColumn: '1 / -1', textAlign: 'center', marginTop: 1 }}>
         {delta !== 0 && (
           <span style={{
-            fontFamily: 'var(--font-mono)', fontSize: 8,
+            fontFamily: 'var(--font-body)', fontSize: 8,
             color: delta > 0 ? colorA : colorB,
           }}>
             {delta > 0 ? '◀' : '▶'} {Math.abs(delta)}
@@ -466,14 +476,14 @@ function CompareHeader({ a, b, colorA, colorB, nameA, nameB, subA, subB }: {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
       <div style={{ flex: 1, textAlign: 'left' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: colorA }}>{a}</div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)' }}>{nameA}</div>
-        {subA && <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--text-dim)' }}>{subA}</div>}
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)' }}>{nameA}</div>
+        {subA && <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--lilac-dim)' }}>{subA}</div>}
       </div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.1em', flexShrink: 0, padding: '0 10px' }}>VS</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--lilac-dim)', letterSpacing: '0.1em', flexShrink: 0, padding: '0 10px' }}>VS</div>
       <div style={{ flex: 1, textAlign: 'right' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: colorB }}>{b}</div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)' }}>{nameB}</div>
-        {subB && <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--text-dim)' }}>{subB}</div>}
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)' }}>{nameB}</div>
+        {subB && <div style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--lilac-dim)' }}>{subB}</div>}
       </div>
     </div>
   )
@@ -496,15 +506,15 @@ function DriverCompareView({ a, b, onClose }: { a: Driver; b: Driver; onClose: (
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18, ease: EASE }}
+      className="slant-row"
       style={{
-        background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
-        borderRadius: 12, padding: 16, marginBottom: 14,
+        background: 'var(--grape)', padding: '16px 20px', marginBottom: 14,
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.15em' }}>COMPARING</span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--lilac-dim)', letterSpacing: '0.15em' }}>COMPARING</span>
+        <button type="button" aria-label="Close comparison" className="kit-focus" onClick={onClose} style={{ width: 48, height: 48, marginRight: -12, background: 'none', border: 'none', color: 'var(--lilac-dim)', cursor: 'pointer', fontSize: 14 }}>✕</button>
       </div>
       <CompareHeader
         a={a.code} b={b.code} colorA={colorA} colorB={colorB}
@@ -520,9 +530,9 @@ function DriverCompareView({ a, b, onClose }: { a: Driver; b: Driver; onClose: (
       <CompareFacetRow label="CONSIST"  valueA={a.facets.consistency}    valueB={b.facets.consistency}    colorA={colorA} colorB={colorB} />
       <CompareFacetRow label="EXP"      valueA={a.facets.experience}     valueB={b.facets.experience}     colorA={colorA} colorB={colorB} />
       {mutualRivalry && (
-        <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(255,77,94,0.08)', border: '1px solid rgba(255,77,94,0.3)', borderRadius: 8 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, color: 'var(--accent-warm)', letterSpacing: '0.12em', marginBottom: 3 }}>RIVALRY</div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-mid)' }}>{mutualRivalry.note}</div>
+        <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(var(--white-rgb),0.05)', borderLeft: '3px solid var(--dusk)' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 9, fontWeight: 700, color: 'var(--lilac-dim)', letterSpacing: '0.12em', marginBottom: 3 }}>RIVALRY</div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--lilac)' }}>{mutualRivalry.note}</div>
         </div>
       )}
     </motion.div>
@@ -545,15 +555,15 @@ function TeamCompareView({ a, b, onClose }: { a: Team; b: Team; onClose: () => v
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18, ease: EASE }}
+      className="slant-row"
       style={{
-        background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
-        borderRadius: 12, padding: 16, marginBottom: 14,
+        background: 'var(--grape)', padding: '16px 20px', marginBottom: 14,
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.15em' }}>COMPARING</span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, color: 'var(--lilac-dim)', letterSpacing: '0.15em' }}>COMPARING</span>
+        <button type="button" aria-label="Close comparison" className="kit-focus" onClick={onClose} style={{ width: 48, height: 48, marginRight: -12, background: 'none', border: 'none', color: 'var(--lilac-dim)', cursor: 'pointer', fontSize: 14 }}>✕</button>
       </div>
       <CompareHeader
         a={a.flag ?? ''} b={b.flag ?? ''} colorA={colorA} colorB={colorB}
@@ -571,17 +581,64 @@ function TeamCompareView({ a, b, onClose }: { a: Team; b: Team; onClose: () => v
   )
 }
 
-// ─── Mini stat bar row ────────────────────────────────────────────────────────
 
-function MiniBar({ value, color }: { value: number; color: string }) {
+// ─── Collectible card (shared by drivers and cars) ────────────────────────────
+
+const CARD_H = 196
+const BAND_H = 92
+
+function CollectibleCard({ label, color, rating, title, sub, art, open, compareMode, selected, index, onActivate }: {
+  label: string; color: string; rating: number; title: string; sub?: string; art: ReactNode
+  open: boolean; compareMode: boolean; selected: boolean; index: number; onActivate: () => void
+}) {
+  const reduced = useReducedMotion()
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivate() }
+  }
   return (
-    <div style={{ width: 32, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-      <div style={{ width: `${value}%`, height: '100%', background: color, borderRadius: 2 }} />
-    </div>
+    <motion.div
+      role="button" tabIndex={0} aria-label={label}
+      aria-expanded={open}
+      aria-pressed={compareMode ? selected : undefined}
+      className="slant-md kit-focus"
+      {...snapIn(reduced, index)}
+      whileTap={reduced ? undefined : { scale: 0.96, transition: PRESS }}
+      onClick={onActivate}
+      onKeyDown={onKeyDown}
+      style={{
+        position: 'relative', height: CARD_H, background: 'var(--grape)', overflow: 'hidden', cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 18px 14px',
+        boxShadow: selected ? 'inset 0 0 0 3px var(--volt)' : 'none',
+      }}
+    >
+      <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: BAND_H, background: color }} />
+      {art}
+      <span aria-hidden="true" style={{
+        position: 'absolute', right: 16, top: 8, fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic',
+        fontSize: 40, lineHeight: 1, color: 'var(--ink)',
+      }}>{rating}</span>
+      <span style={{
+        position: 'relative', fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 22,
+        lineHeight: 1, textTransform: 'uppercase', color: 'var(--white)', overflowWrap: 'anywhere',
+      }}>{title}</span>
+      {sub && (
+        <span style={{ position: 'relative', marginTop: 4, fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12, lineHeight: 1.2, color: 'var(--lilac)', overflowWrap: 'anywhere' }}>
+          {sub}
+        </span>
+      )}
+    </motion.div>
   )
 }
 
 // ─── Main GridStats screen ────────────────────────────────────────────────────
+
+type GarageTab = 'drivers' | 'cars' | 'vs'
+
+const GARAGE_TABS: { value: GarageTab; label: string }[] = [
+  { value: 'drivers', label: 'DRIVERS' },
+  { value: 'cars',    label: 'CARS' },
+  { value: 'vs',      label: 'VS' },
+]
 
 export function GridStats() {
   const exitGrid = useSeasonStore(s => s.exitGrid)
@@ -603,102 +660,50 @@ export function GridStats() {
     })
   }
 
-  function toggleCompareMode() {
-    setCompareMode(v => !v)
+  // VS keeps whichever list was showing (drivers compare drivers, cars compare teams);
+  // leaving VS for a list turns compare off. Tabs already plays the tap sound.
+  function onTab(next: GarageTab) {
+    if (next === 'vs') {
+      if (!compareMode) { setCompareMode(true); setCompareIds([]); setExpanded(null) }
+      return
+    }
+    setTab(next)
+    setCompareMode(false)
     setCompareIds([])
     setExpanded(null)
   }
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 24 }}
-      transition={{ ease: 'easeOut', duration: 0.25 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '16px 16px 12px',
-        borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
-      }}>
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          onClick={() => { uiTap(); exitGrid() }}
-          style={{
-            background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
-            borderRadius: 8, width: 36, height: 36, cursor: 'pointer',
-            color: 'var(--text-hi)', fontSize: 18, display: 'flex',
-            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}
-        >‹</motion.button>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-            SEASON 2025
-          </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: 'var(--text-hi)', marginTop: 1 }}>
-            Grid & Stats
-          </div>
-        </div>
-      </div>
+  function activate(id: string) {
+    uiTap()
+    if (compareMode) toggleCompareSelection(id)
+    else toggle(id)
+  }
 
-      {/* Tabs */}
-      <div style={{
-        display: 'flex', padding: '10px 16px',
-        borderBottom: '1px solid var(--line-hair)', flexShrink: 0, gap: 8,
-        justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['drivers', 'cars'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => { setTab(t); setExpanded(null); setCompareIds([]) }}
-              style={{
-                fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-                letterSpacing: '0.1em', padding: '7px 18px', borderRadius: 8,
-                border: 'none', cursor: 'pointer',
-                background: tab === t ? 'var(--accent)' : 'var(--bg-elevated)',
-                color: tab === t ? 'var(--bg-deep)' : 'var(--text-mid)',
-                transition: 'all 0.15s',
-              }}
-            >
-              {t.toUpperCase()}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={() => { uiTap(); toggleCompareMode() }}
-          style={{
-            fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700,
-            letterSpacing: '0.06em', padding: '7px 14px', borderRadius: 8,
-            border: compareMode ? 'none' : '1px solid var(--line-hair)', cursor: 'pointer',
-            background: compareMode ? 'var(--accent-warm)' : 'transparent',
-            color: compareMode ? 'var(--bg-deep)' : 'var(--text-mid)',
-            transition: 'all 0.15s',
-          }}
-        >
-          {compareMode ? '✕ COMPARE' : '⇄ COMPARE'}
-        </button>
-      </div>
+  const gridStyle = {
+    display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10,
+  } as const
+
+  return (
+    <ScreenFrame label="Garage">
+      <ScreenHeader
+        title="The grid"
+        onBack={exitGrid}
+        right={<Tabs ariaLabel="Garage" tabs={GARAGE_TABS} value={compareMode ? 'vs' : tab} onChange={onTab} />}
+      />
 
       {compareMode && (
         <div style={{
-          padding: '8px 16px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
-          fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.05em',
+          padding: '10px 16px 0', flexShrink: 0,
+          fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12, color: 'var(--lilac-dim)', letterSpacing: '0.05em',
         }}>
           {compareIds.length < 2
             ? `Tap ${2 - compareIds.length} more ${tab === 'drivers' ? 'driver' : 'team'}${2 - compareIds.length > 1 ? 's' : ''} to compare`
-            : 'Tap a row to swap it into the comparison'}
+            : 'Tap a card to swap it into the comparison'}
         </div>
       )}
 
       {/* List */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 16px' }}>
         {compareMode && compareIds.length === 2 && tab === 'drivers' && (
           <AnimatePresence>
             <DriverCompareView
@@ -717,141 +722,63 @@ export function GridStats() {
             />
           </AnimatePresence>
         )}
-        <AnimatePresence mode="wait">
-          {tab === 'drivers' ? (
-            <motion.div key="drivers" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {drivers.map((driver, i) => {
-                const color = teamColor(driver.teamId)
-                const isOpen = expanded === driver.id
-                const isSelected = compareIds.includes(driver.id)
-                return (
-                  <motion.div
-                    key={driver.id}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                    style={{ marginBottom: 8 }}
-                  >
-                    {/* Row */}
-                    <button
-                      onClick={() => compareMode ? toggleCompareSelection(driver.id) : toggle(driver.id)}
-                      style={{
-                        width: '100%', display: 'flex', alignItems: 'center', gap: 14,
-                        padding: '11px 14px',
-                        background: isSelected ? `${color}1c` : isOpen ? `${color}14` : 'var(--bg-elevated)',
-                        border: `1px solid ${isSelected ? color : isOpen ? color + '66' : 'var(--line-hair)'}`,
-                        borderRadius: isOpen && !compareMode ? '12px 12px 0 0' : 12,
-                        cursor: 'pointer', outline: 'none', textAlign: 'left',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {/* Color stripe */}
-                      <div style={{ width: 3, height: 36, borderRadius: 2, background: color, flexShrink: 0 }} />
-                      {/* Name block */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700,
-                          color: isOpen ? color : 'var(--text-hi)', letterSpacing: '0.04em',
-                        }}>
-                          {driver.name.toUpperCase()}
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>
-                          {teamName(driver.teamId)}
-                        </div>
+        {tab === 'drivers' ? (
+          <div key="drivers" style={gridStyle}>
+            {drivers.map((driver, i) => {
+              const color = teamColor(driver.teamId)
+              const isOpen = expanded === driver.id
+              const rating = driverRating(driver)
+              const team = teamName(driver.teamId)
+              return (
+                <div key={driver.id} style={{ gridColumn: isOpen ? '1 / -1' : undefined, minWidth: 0 }}>
+                  <CollectibleCard
+                    label={`${driver.name}, ${team}, rating ${rating}`}
+                    color={color} rating={rating} title={driver.name} sub={team}
+                    art={
+                      <div aria-hidden="true" style={{ position: 'absolute', left: 12, top: 40 }}>
+                        <HelmetAvatar teamPrimary="var(--ink)" visor="var(--white)" teamSecondary={color} pattern={driverPattern(driver)} size={72} />
                       </div>
-                      {/* Mini sparkline: pace / racecraft / tyreManagement / consistency */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                        <MiniBar value={driver.facets.pace}           color={color} />
-                        <MiniBar value={driver.facets.racecraft}      color={color} />
-                        <MiniBar value={driver.facets.tyreManagement} color={color} />
-                        <MiniBar value={driver.facets.consistency}    color={color} />
+                    }
+                    open={isOpen} compareMode={compareMode} selected={compareIds.includes(driver.id)} index={i}
+                    onActivate={() => activate(driver.id)}
+                  />
+                  <AnimatePresence>
+                    {isOpen && <DriverCard key="card" driver={driver} />}
+                  </AnimatePresence>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div key="cars" style={gridStyle}>
+            {teams.map((team, i) => {
+              const isOpen = expanded === team.id
+              const rating = teamRating(team)
+              const livery = liveryOf(team.id)
+              return (
+                <div key={team.id} style={{ gridColumn: isOpen ? '1 / -1' : undefined, minWidth: 0 }}>
+                  <CollectibleCard
+                    label={`${team.name}, rating ${rating}`}
+                    color={team.colorPrimary} rating={rating} title={team.name}
+                    art={
+                      // CarArt rotates its own svg; the 45 x 112 box reads as a 112 x 45 car
+                      // sitting low-left in the band (y 46-90), clear of the rating.
+                      <div style={{ position: 'absolute', left: 48, top: 12, width: 45, height: 112 }}>
+                        <CarArt primary={livery.primary} accent={livery.accent} height={112} heading="left" label={`${team.name} car`} />
                       </div>
-                      {/* Overall */}
-                      <div style={{
-                        fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700,
-                        color: isOpen ? color : 'var(--text-hi)',
-                        fontVariantNumeric: 'tabular-nums', minWidth: 32, textAlign: 'right',
-                      }}>
-                        {Math.round((driver.facets.pace + driver.facets.racecraft + driver.facets.tyreManagement + driver.facets.consistency) / 4)}
-                      </div>
-                      <div style={{ color: isOpen ? color : 'var(--text-dim)', fontSize: 14 }}>
-                        {isOpen ? '▲' : '▼'}
-                      </div>
-                    </button>
-                    {/* Expanded detail */}
-                    <AnimatePresence>
-                      {isOpen && <DriverCard key="card" driver={driver} />}
-                    </AnimatePresence>
-                  </motion.div>
-                )
-              })}
-            </motion.div>
-          ) : (
-            <motion.div key="cars" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {teams.map((team, i) => {
-                const color = team.colorPrimary
-                const isOpen = expanded === team.id
-                const isSelected = compareIds.includes(team.id)
-                const f = team.facets
-                return (
-                  <motion.div
-                    key={team.id}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <button
-                      onClick={() => compareMode ? toggleCompareSelection(team.id) : toggle(team.id)}
-                      style={{
-                        width: '100%', display: 'flex', alignItems: 'center', gap: 14,
-                        padding: '11px 14px',
-                        background: isSelected ? `${color}1c` : isOpen ? `${color}14` : 'var(--bg-elevated)',
-                        border: `1px solid ${isSelected ? color : isOpen ? color + '66' : 'var(--line-hair)'}`,
-                        borderRadius: isOpen && !compareMode ? '12px 12px 0 0' : 12,
-                        cursor: 'pointer', outline: 'none', textAlign: 'left',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      <div style={{ width: 3, height: 36, borderRadius: 2, background: color, flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700,
-                          color: isOpen ? color : 'var(--text-hi)', letterSpacing: '0.04em',
-                        }}>
-                          {team.name.toUpperCase()}
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>
-                          PWR {f.power} · AERO {f.aero} · HDL {f.handling}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                        <MiniBar value={f.power}    color={color} />
-                        <MiniBar value={f.aero}     color={color} />
-                        <MiniBar value={f.handling} color={color} />
-                        <MiniBar value={f.pitCrew}  color={color} />
-                      </div>
-                      <div style={{
-                        fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 700,
-                        color: isOpen ? color : 'var(--text-hi)',
-                        fontVariantNumeric: 'tabular-nums', minWidth: 32, textAlign: 'right',
-                      }}>
-                        {Math.round((f.power + f.aero + f.handling) / 3)}
-                      </div>
-                      <div style={{ color: isOpen ? color : 'var(--text-dim)', fontSize: 14 }}>
-                        {isOpen ? '▲' : '▼'}
-                      </div>
-                    </button>
-                    <AnimatePresence>
-                      {isOpen && <CarCard key="card" team={team} />}
-                    </AnimatePresence>
-                  </motion.div>
-                )
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    }
+                    open={isOpen} compareMode={compareMode} selected={compareIds.includes(team.id)} index={i}
+                    onActivate={() => activate(team.id)}
+                  />
+                  <AnimatePresence>
+                    {isOpen && <CarCard key="card" team={team} />}
+                  </AnimatePresence>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

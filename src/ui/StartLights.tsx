@@ -4,6 +4,7 @@ import { useRaceStore } from '@state/raceStore'
 import { useClockStore } from '@state/clockStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { soundService } from '@audio/soundService'
+import { EASE } from '@ui/kit'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 
 const NUM_LIGHTS = 5
@@ -21,24 +22,24 @@ function CircuitBackground() {
       <defs>
         {/* Deep night sky base */}
         <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#0B0820" />
-          <stop offset="100%" stopColor="#120E2B" />
+          <stop offset="0%" style={{ stopColor: 'var(--ink)' }} />
+          <stop offset="100%" style={{ stopColor: 'var(--night)' }} />
         </linearGradient>
 
         {/* Floodlight halos */}
         <radialGradient id="fl1" cx="15%" cy="12%" r="45%">
-          <stop offset="0%" stopColor="#fffbe6" stopOpacity="0.18" />
-          <stop offset="60%" stopColor="#fffbe6" stopOpacity="0.04" />
-          <stop offset="100%" stopColor="#fffbe6" stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.18" />
+          <stop offset="60%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.04" />
+          <stop offset="100%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0" />
         </radialGradient>
         <radialGradient id="fl2" cx="85%" cy="8%" r="40%">
-          <stop offset="0%" stopColor="#fffbe6" stopOpacity="0.15" />
-          <stop offset="60%" stopColor="#fffbe6" stopOpacity="0.03" />
-          <stop offset="100%" stopColor="#fffbe6" stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.15" />
+          <stop offset="60%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.03" />
+          <stop offset="100%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0" />
         </radialGradient>
         <radialGradient id="fl3" cx="50%" cy="55%" r="35%">
-          <stop offset="0%" stopColor="#fffbe6" stopOpacity="0.1" />
-          <stop offset="100%" stopColor="#fffbe6" stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0.1" />
+          <stop offset="100%" style={{ stopColor: 'var(--floodlight)' }} stopOpacity="0" />
         </radialGradient>
 
         {/* Track glow filter */}
@@ -105,7 +106,7 @@ function CircuitBackground() {
             Z
           "
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke="rgba(var(--white-rgb), 0.07)"
           strokeWidth="26"
           filter="url(#trackglow)"
         />
@@ -176,7 +177,7 @@ function CircuitBackground() {
         <path
           d="M 195 810 L 195 840 Q 220 845 245 840 L 245 808"
           fill="none"
-          stroke="rgba(255,255,255,0.08)"
+          stroke="rgba(var(--white-rgb), 0.08)"
           strokeWidth="10"
         />
         <path
@@ -188,10 +189,10 @@ function CircuitBackground() {
         />
 
         {/* Start / finish line */}
-        <rect x="182" y="784" width="26" height="8" rx="1" fill="rgba(255,255,255,0)" />
+        <rect x="182" y="784" width="26" height="8" rx="1" fill="rgba(var(--white-rgb), 0)" />
         {[0,1,2,3].map(i => (
           <rect key={i} x={182 + i * 7} y={784} width={6} height={8}
-            fill={i % 2 === 0 ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)'} />
+            fill={i % 2 === 0 ? 'rgba(var(--white-rgb), 0.55)' : 'rgba(var(--ink-rgb), 0.55)'} />
         ))}
 
         {/* Cars on the starting grid — 10 cars staggered */}
@@ -225,9 +226,9 @@ function CircuitBackground() {
         ].map((pt, i) => { const x = pt[0]!; const y = pt[1]!; return (
           <g key={i}>
             <line x1={x} y1={y} x2={x} y2={y - 28}
-              stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
+              stroke="rgba(var(--white-rgb), 0.12)" strokeWidth="1.5" />
             <circle cx={x} cy={y - 30} r={3}
-              fill="#fffbe6" opacity="0.7" filter="url(#lampglow)" />
+              style={{ fill: 'var(--floodlight)' }} opacity="0.7" filter="url(#lampglow)" />
           </g>
         )})}
 
@@ -250,7 +251,16 @@ function CircuitBackground() {
   )
 }
 
+function readLampRgb(): string {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--start-light-rgb').trim()
+    return v || '255, 59, 74'
+  } catch { return '255, 59, 74' }
+}
+
 export function StartLights() {
+  // framer-motion cannot interpolate a var() inside a shadow string, so resolve it once.
+  const [lampRgb] = useState(readLampRgb)
   const confirmRaceStart = useRaceStore(s => s.confirmRaceStart)
   const setSpeed = useClockStore(s => s.setSpeed)
   /*
@@ -323,7 +333,7 @@ export function StartLights() {
       {/* Dark vignette overlay so UI pops */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse at 50% 45%, rgba(10,14,26,0.3) 0%, rgba(10,14,26,0.75) 100%)',
+        background: 'radial-gradient(ellipse at 50% 45%, rgba(var(--ink-rgb), 0.3) 0%, rgba(var(--ink-rgb), 0.75) 100%)',
         pointerEvents: 'none',
       }} />
 
@@ -335,7 +345,7 @@ export function StartLights() {
         style={{
           position: 'relative',
           fontFamily: 'var(--font-display)', fontSize: 11,
-          color: 'var(--text-dim)', letterSpacing: '0.25em',
+          color: 'var(--lilac-dim)', letterSpacing: '0.25em',
         }}
       >
         RACE DAY — LIGHTS SEQUENCE
@@ -345,23 +355,23 @@ export function StartLights() {
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: -16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+        transition={{ duration: 0.22, ease: EASE }}
         style={{ position: 'relative' }}
       >
         {/* Gantry bar */}
         <div style={{
           position: 'absolute', top: -8, left: -12, right: -12, height: 4,
-          background: 'rgba(255,255,255,0.08)', borderRadius: 2,
+          background: 'rgba(var(--white-rgb), 0.08)', borderRadius: 2,
         }} />
 
         <div style={{
-          background: 'rgba(10,14,26,0.85)',
+          background: 'rgba(var(--ink-rgb), 0.85)',
           backdropFilter: 'blur(8px)',
           borderRadius: 14,
           padding: '20px 28px',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: '1px solid rgba(var(--white-rgb), 0.08)',
           display: 'flex', gap: 18, alignItems: 'center',
-          boxShadow: '0 8px 48px rgba(0,0,0,0.6)',
+          boxShadow: '0 8px 48px rgba(var(--ink-rgb), 0.6)',
         }}>
           {Array.from({ length: NUM_LIGHTS }, (_, i) => {
             const lit = !lightsOut && litCount > i
@@ -370,13 +380,13 @@ export function StartLights() {
                 {/* Housing */}
                 <div style={{
                   width: 10, height: 10,
-                  background: 'rgba(255,255,255,0.06)',
+                  background: 'rgba(var(--white-rgb), 0.06)',
                   borderRadius: '50%',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(var(--white-rgb), 0.1)',
                 }} />
                 <motion.div
                   animate={lit
-                    ? { scale: [1, 1.18, 1], boxShadow: ['0 0 0px #FF4D5E', '0 0 32px #FF4D5E', '0 0 20px #FF4D5E'] }
+                    ? { scale: [1, 1.18, 1], boxShadow: [`0 0 0px rgba(${lampRgb}, 0)`, `0 0 32px rgba(${lampRgb}, 1)`, `0 0 20px rgba(${lampRgb}, 1)`] }
                     : lightsOut
                       ? { scale: 0.85, opacity: 0.15 }
                       : {}
@@ -384,9 +394,9 @@ export function StartLights() {
                   transition={{ duration: 0.3 }}
                   style={{
                     width: 40, height: 40, borderRadius: '50%',
-                    background: lit ? '#FF4D5E' : 'rgba(40,20,20,0.8)',
-                    border: lit ? '2px solid rgba(255,150,150,0.4)' : '2px solid rgba(60,30,30,0.5)',
-                    boxShadow: lit ? '0 0 20px #FF4D5E, inset 0 0 10px rgba(255,200,200,0.3)' : 'none',
+                    background: lit ? 'var(--start-light)' : 'var(--grape)',
+                    border: lit ? '2px solid rgba(var(--floodlight-rgb), 0.4)' : '2px solid rgba(var(--ink-rgb), 0.5)',
+                    boxShadow: lit ? '0 0 20px rgba(var(--start-light-rgb), 1), inset 0 0 10px rgba(var(--floodlight-rgb), 0.3)' : 'none',
                     transition: 'background 0.15s, border 0.15s',
                   }}
                 />
@@ -404,11 +414,11 @@ export function StartLights() {
               key="go"
               initial={{ opacity: 0, scale: 0.4 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+              transition={{ duration: 0.22, ease: EASE }}
               style={{
-                fontFamily: 'var(--font-display)', fontSize: 72, fontWeight: 800,
-                color: 'var(--positive)', letterSpacing: '0.1em',
-                textShadow: '0 0 60px var(--positive), 0 0 20px var(--positive)',
+                fontFamily: 'var(--font-display)', fontSize: 72, fontWeight: 900, fontStyle: 'italic',
+                color: 'var(--gain)', letterSpacing: '0.1em',
+                textShadow: '0 0 60px var(--gain), 0 0 20px var(--gain)',
               }}
             >
               GO
@@ -420,7 +430,7 @@ export function StartLights() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               style={{
-                fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-dim)',
+                fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 16, color: 'var(--lilac-dim)',
                 letterSpacing: '0.15em', textAlign: 'center',
               }}
             >
@@ -444,8 +454,8 @@ export function StartLights() {
           // Sits above the system nav bar — at a flat 40px it was clipped on a
           // device with on-screen navigation.
           position: 'absolute', bottom: 'calc(40px + var(--safe-bottom))',
-          fontFamily: 'var(--font-mono)', fontSize: 10,
-          color: 'var(--text-dim)', letterSpacing: '0.2em',
+          fontFamily: 'var(--font-body)', fontSize: 10,
+          color: 'var(--lilac-dim)', letterSpacing: '0.2em',
           textAlign: 'center', padding: '0 16px',
         }}
       >

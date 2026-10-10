@@ -2,8 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { KitButton, Pill, Segmented, TyreChip, ProgressStrip, useCountUp } from '@ui/kit'
 import { useSettingsStore } from '@state/settingsStore'
+import { soundService } from '@audio/soundService'
 
 vi.mock('@capacitor/haptics', () => ({ Haptics: { impact: vi.fn(async () => {}), notification: vi.fn(async () => {}) }, ImpactStyle: { Light: 'LIGHT', Medium: 'MEDIUM', Heavy: 'HEAVY' }, NotificationType: {} }))
+
+vi.mock('@audio/soundService', () => ({ soundService: { play: vi.fn() } }))
 
 beforeEach(() => useSettingsStore.setState({ reducedMotion: true }))
 
@@ -16,6 +19,16 @@ describe('kit', () => {
     expect(b.style.color).toContain('--ink')
     expect(b.className).toContain('slant-')
     fireEvent.click(b); expect(n).toBe(1)
+  })
+  it('primary and urgent clicks play the UI sound unless sound={false}', () => {
+    vi.mocked(soundService.play).mockClear()
+    render(<KitButton variant="primary" onClick={() => {}}>Go</KitButton>)
+    fireEvent.click(screen.getByRole('button', { name: 'Go' }))
+    expect(soundService.play).toHaveBeenCalledWith('navTap')
+    vi.mocked(soundService.play).mockClear()
+    render(<KitButton variant="urgent" sound={false} onClick={() => {}}>Box</KitButton>)
+    fireEvent.click(screen.getByRole('button', { name: 'Box' }))
+    expect(soundService.play).not.toHaveBeenCalled()
   })
   it('urgent uses hot with ink text', () => {
     render(<KitButton variant="urgent" onClick={() => {}}>Pit</KitButton>)
@@ -76,5 +89,18 @@ describe('KitButton haptic opt-out', () => {
     render(<KitButton variant="primary" onClick={() => {}}>Go</KitButton>)
     fireEvent.click(screen.getByRole('button', { name: 'Go' }))
     expect(Haptics.impact).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('KitButton testId', () => {
+  it('passes testId through as data-testid', () => {
+    render(<KitButton variant="primary" testId="go-btn" onClick={() => {}}>Go</KitButton>)
+    expect(screen.getByTestId('go-btn').tagName).toBe('BUTTON')
+  })
+  it('Pill dusk tone is dusk fill with white text', () => {
+    render(<Pill tone="dusk">P8</Pill>)
+    const el = screen.getByText('P8')
+    expect(el.style.background).toContain('--dusk')
+    expect(el.style.color).toContain('--white')
   })
 })

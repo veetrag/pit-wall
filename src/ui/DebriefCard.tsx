@@ -6,7 +6,7 @@ import type { Alternative, CallVerdict, JudgedCall, Compound } from '@engine/typ
 
 const TYRE: Record<Compound, string> = { S: 'SOFT', M: 'MEDIUM', H: 'HARD', I: 'INTER', W: 'WET' }
 const MAX_ROWS = 3
-const mono = { fontFamily: 'var(--font-mono)', fontVariantNumeric: 'tabular-nums' as const }
+const mono = { fontFamily: 'var(--font-body)', fontVariantNumeric: 'tabular-nums' as const }
 
 export function describeCall(c: JudgedCall): string {
   switch (c.kind) {
@@ -33,7 +33,7 @@ export function describeAlternative(a: Alternative): string {
 
 function Dots({ label, positions }: { label: string; positions: number[] }) {
   return (
-    <div role="group" aria-label={label} style={{ ...mono, fontSize: 11, color: 'var(--text-mid)' }}>
+    <div role="group" aria-label={label} style={{ ...mono, fontSize: 11, color: 'var(--lilac)' }}>
       {positions.map((p, i) => <span key={i} style={{ marginRight: 6 }}>P{p}</span>)}
     </div>
   )
@@ -55,17 +55,17 @@ function Row({ v, index, finish }: { v: CallVerdict; index: number; finish: stri
           padding: 0, font: 'inherit', color: 'inherit', cursor: 'pointer' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600,
-          color: better ? 'var(--hot)' : 'var(--accent)' }}>
+          color: better ? 'var(--hot)' : 'var(--volt)' }}>
           {better ? '▲ ' : '✓ '}{describeCall(v.call)}
         </span>
-        <span style={{ ...mono, fontSize: 12, color: 'var(--text-mid)' }}>
+        <span style={{ ...mono, fontSize: 12, color: 'var(--lilac)' }}>
           {better ? `you ${finish} · avg P${v.actual.meanPosition.toFixed(1)}` : 'GOOD CALL'}
         </span>
       </div>
       {better && (
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 2 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-hi)' }}>Better: {describeAlternative(better.alternative)}</span>
-          <span style={{ ...mono, fontSize: 12, color: 'var(--text-hi)' }}>
+          <span style={{ fontSize: 12, color: 'var(--white)' }}>Better: {describeAlternative(better.alternative)}</span>
+          <span style={{ ...mono, fontSize: 12, color: 'var(--white)' }}>
             {`avg P${better.meanPosition.toFixed(1)} · ${Math.round(better.betterShare * better.positions.length)}/${better.positions.length}`}
           </span>
         </div>
@@ -83,26 +83,26 @@ function Row({ v, index, finish }: { v: CallVerdict; index: number; finish: stri
 
 export function DebriefCard() {
   const { status, done, total, result } = useDebriefStore()
-  const shell = { background: 'var(--bg-panel)', border: '1px solid var(--line-hair)', borderRadius: 10, padding: '12px 14px' }
-  const title = <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.12em' }}>YOUR CALLS</span>
+  const shell = { background: 'var(--grape)', border: '1px solid var(--line-hair)', borderRadius: 10, padding: '12px 14px' }
+  const title = <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)', letterSpacing: '0.12em' }}>YOUR CALLS</span>
 
   if (status === 'idle') {
-    return <div style={{ ...shell, fontSize: 12, color: 'var(--text-dim)' }}>Debrief unavailable for a resumed race.</div>
+    return <div style={{ ...shell, fontSize: 12, color: 'var(--lilac-dim)' }}>Debrief unavailable for a resumed race.</div>
   }
   if (status === 'failed') {
-    return <div style={{ ...shell, fontSize: 12, color: 'var(--text-dim)' }}>Debrief unavailable.</div>
+    return <div style={{ ...shell, fontSize: 12, color: 'var(--lilac-dim)' }}>Debrief unavailable.</div>
   }
   if (status === 'running' || !result) {
     const pct = total > 0 ? Math.round((done / total) * 100) : 0
     return (
       <div style={shell}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>{title}
-          <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>reviewing…</span></div>
+          <span style={{ fontSize: 11, color: 'var(--lilac-dim)' }}>reviewing…</span></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
           <div role="progressbar" aria-label="Reviewing your calls" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} style={{ flex: 1, height: 3, background: 'var(--line-hair)', borderRadius: 2 }}>
-            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', borderRadius: 2 }} />
+            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--volt)', borderRadius: 2 }} />
           </div>
-          <span style={{ ...mono, fontSize: 11, color: 'var(--text-mid)' }}>{pct}%</span>
+          <span style={{ ...mono, fontSize: 11, color: 'var(--lilac)' }}>{pct}%</span>
         </div>
       </div>
     )
@@ -113,18 +113,18 @@ export function DebriefCard() {
   const hidden = result.verdicts.length - shown.length
   return (
     <div style={shell}>
-      <style>{'.debrief-row-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}'}</style>
+      <style>{'.debrief-row-btn:focus-visible{outline:2px solid var(--volt);outline-offset:2px}'}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>{title}
-        <span style={{ ...mono, fontSize: 11, color: 'var(--text-dim)' }}>
+        <span style={{ ...mono, fontSize: 11, color: 'var(--lilac-dim)' }}>
           {result.verdicts.length} judged · {result.futures} futures</span></div>
       {result.retired && (
-        <div style={{ ...mono, fontSize: 11, color: 'var(--text-mid)', marginTop: 4 }}>
+        <div style={{ ...mono, fontSize: 11, color: 'var(--lilac)', marginTop: 4 }}>
           Retired L{result.retired.lap} · {result.retired.cause === 'tyre' ? 'tyre failure' : result.retired.cause}
         </div>
       )}
       {shown.map((v, i) => <Row key={i} v={v} index={i} finish={result.retired ? 'DNF' : `P${result.finish}`} />)}
       {hidden > 0 && (
-        <div style={{ fontSize: 11, color: 'var(--text-dim)', paddingTop: 8, borderTop: '1px solid var(--line-hair)' }}>
+        <div style={{ fontSize: 11, color: 'var(--lilac-dim)', paddingTop: 8, borderTop: '1px solid var(--line-hair)' }}>
           +{hidden} more judged good
         </div>
       )}

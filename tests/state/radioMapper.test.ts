@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { processRadioTick, makeRadioState } from '@state/radioMapper'
 import type { RaceConfig, RaceState, CarState, SectorResult, DriverSpec, TeamSpec, CircuitSpec, CompoundSpec, TuningConstants } from '@engine/types'
+import radioPools from '@data/radio.json'
 import { makeDeterministicTuning } from '../fixtures/tuning'
 
 const TUNING: TuningConstants = makeDeterministicTuning()
@@ -11,6 +12,7 @@ const CIRCUIT: CircuitSpec = {
   overtakingFactor: [1.0, 0.25, 0.55], pitLaneTimeLoss: 22.0,
 }
 const COMPOUNDS: Record<string, CompoundSpec> = {
+  I: { name: 'Intermediate', type: 'wet', offset: 1.0, lin: 0.03, cliff: 30, pen: 0.05, colorToken: '--tyre-inter' },
   M: { name: 'Medium', type: 'dry', offset: 0.0, lin: 0.04, cliff: 16, pen: 0.07, colorToken: '--tyre-medium' },
 }
 const DRIVER: DriverSpec = {
@@ -80,6 +82,26 @@ describe('processRadioTick — wet spin alert', () => {
     processRadioTick(state, makeConfig(), radio, pushAlert)
     expect(pushAlert).toHaveBeenCalledTimes(1)
     expect(pushAlert.mock.calls[0]![1]).toBe('urgent')
+  })
+
+  it('a spin on wet tyres on a dry track uses the dry_spin pool, never a slicks line', () => {
+    const pushAlert = vi.fn()
+    const state = makeState({
+      weatherState: 'DRY',
+      cars: [makeCar({ compound: 'I' })],
+      sectorResults: [makeSpinResult({ spinLoss: 3 })],
+    })
+    processRadioTick(state, makeConfig(), makeRadioState(), pushAlert)
+    const text = String(pushAlert.mock.calls[0]?.[0] ?? '')
+    expect(radioPools.dry_spin).toContain(text)
+    expect(text).not.toMatch(/slicks/i)
+  })
+
+  it('a spin on slicks in the wet still uses the wet_spin pool', () => {
+    const pushAlert = vi.fn()
+    const state = makeState({ weatherState: 'WET', sectorResults: [makeSpinResult({ spinLoss: 3 })] })
+    processRadioTick(state, makeConfig(), makeRadioState(), pushAlert)
+    expect(radioPools.wet_spin).toContain(String(pushAlert.mock.calls[0]?.[0] ?? ''))
   })
 
   it('does not fire when there is no spin this tick', () => {

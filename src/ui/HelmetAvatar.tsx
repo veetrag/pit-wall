@@ -11,6 +11,7 @@ interface HelmetAvatarProps {
   size?: number
   selected?: boolean
   selectionColor?: string
+  visor?: string
 }
 
 export function HelmetAvatar({
@@ -21,88 +22,22 @@ export function HelmetAvatar({
   size = 52,
   selected = false,
   selectionColor,
+  visor = 'var(--ink)',
 }: HelmetAvatarProps) {
-  const sec = teamSecondary ?? '#120E2B'
+  const sec = teamSecondary ?? 'var(--ink)'
   const ring = selectionColor ?? teamPrimary
-  const id = `h${teamPrimary.replace('#', '')}${pattern}${number}`
 
   return (
-    <svg
-      width={size} height={size}
-      viewBox="0 0 56 56"
-      style={{
-        flexShrink: 0,
-        filter: selected ? `drop-shadow(0 0 7px ${ring}99)` : 'none',
-        transition: 'filter 0.2s',
-      }}
-      aria-hidden
-    >
-      <defs>
-        <radialGradient id={`base_${id}`} cx="38%" cy="28%" r="70%">
-          <stop offset="0%" stopColor={teamPrimary} stopOpacity="0.85" />
-          <stop offset="100%" stopColor={sec} />
-        </radialGradient>
-        <clipPath id={`clip_${id}`}>
-          <ellipse cx="28" cy="28" rx="25" ry="25" />
-        </clipPath>
-      </defs>
-
-      {/* Helmet dome */}
-      <ellipse cx="28" cy="28" rx="25" ry="25" fill={`url(#base_${id})`} />
-
-      {/* Pattern overlay */}
-      {pattern === 'stripe' && (
-        <g clipPath={`url(#clip_${id})`}>
-          <rect x="22" y="0" width="5" height="56" fill={teamPrimary} opacity="0.55" />
-          <rect x="29" y="0" width="2" height="56" fill="rgba(255,255,255,0.18)" />
-        </g>
+    <svg width={size} height={size} viewBox="0 0 64 64" style={{ flexShrink: 0 }} aria-hidden>
+      <path d="M8 38 Q8 10 34 8 Q58 8 58 34 L58 46 Q58 54 50 54 L18 54 Q8 54 8 46 Z" fill={teamPrimary} />
+      {pattern === 'stripe' && <path d="M8 34 L58 30 L58 38 L8 42 Z" fill={sec} />}
+      {pattern === 'chevron' && <path d="M8 44 L33 36 L58 44 L58 50 L33 42 L8 50 Z" fill={sec} />}
+      {pattern === 'halo' && <path d="M14 20 Q34 8 54 20 L52 25 Q34 14 16 25 Z" fill={sec} />}
+      <path d="M28 24 L56 22 Q58 30 56 30 L28 32 Q24 28 28 24 Z" fill={visor} />
+      {number > 0 && (
+        <text x="20" y="50" fontFamily="var(--font-body)" fontWeight={800} fontSize={12} fill="var(--ink)">{number}</text>
       )}
-      {pattern === 'chevron' && (
-        <g clipPath={`url(#clip_${id})`}>
-          <polygon points="28,8 46,28 28,24 10,28" fill={teamPrimary} opacity="0.5" />
-          <polygon points="28,16 40,28 28,26 16,28" fill="rgba(255,255,255,0.15)" />
-        </g>
-      )}
-      {pattern === 'halo' && (
-        <g clipPath={`url(#clip_${id})`}>
-          <ellipse cx="28" cy="22" rx="18" ry="6" fill="none" stroke={teamPrimary} strokeWidth="3" opacity="0.6" />
-        </g>
-      )}
-      {/* 'solid' has no overlay — base gradient only */}
-
-      {/* Dome highlight */}
-      <ellipse cx="20" cy="17" rx="9" ry="6" fill="rgba(255,255,255,0.11)" />
-
-      {/* Visor */}
-      <rect x="8" y="27" width="40" height="13" rx="5"
-        fill="rgba(20,30,50,0.88)" clipPath={`url(#clip_${id})`} />
-      {/* Visor mirror sheen */}
-      <rect x="8" y="27" width="40" height="5" rx="5"
-        fill="rgba(255,255,255,0.07)" clipPath={`url(#clip_${id})`} />
-
-      {/* Chin guard */}
-      <ellipse cx="28" cy="50" rx="17" ry="8" fill={sec} clipPath={`url(#clip_${id})`} />
-
-      {/* Driver number */}
-      <text
-        x="28" y="23"
-        textAnchor="middle"
-        fontFamily="monospace"
-        fontWeight="bold"
-        fontSize={number > 9 ? '10' : '12'}
-        fill="rgba(255,255,255,0.82)"
-        letterSpacing="-0.5"
-      >
-        {number > 0 ? number : ''}
-      </text>
-
-      {/* Team colour crown stripe */}
-      <rect x="18" y="3" width="20" height="4" rx="2" fill={teamPrimary} opacity="0.9" clipPath={`url(#clip_${id})`} />
-
-      {/* Selection ring */}
-      {selected && (
-        <ellipse cx="28" cy="28" rx="25" ry="25" fill="none" stroke={ring} strokeWidth="2.5" />
-      )}
+      {selected && <circle cx="32" cy="32" r="30.5" fill="none" stroke={ring} strokeWidth={3} />}
     </svg>
   )
 }

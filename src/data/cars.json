@@ -10,7 +10,7 @@
     },
     {
       "id": "meridian", "name": "Meridian GP",
-      "colorPrimary": "#E8344E", "colorSecondary": "#FFFFFF", "liveryAccent": "#FFFFFF",
+      "colorPrimary": "#EA3850", "colorSecondary": "#FFFFFF", "liveryAccent": "#FFFFFF",
       "archetype": "Close challenger — best engine on the grid",
       "facets": { "power": 98, "aero": 91, "handling": 89, "reliability": 90, "pitCrew": 88 },
       "developmentRate": 1.0, "nationality": "Italian", "flag": "🇮🇹",
@@ -35,7 +35,7 @@
     {
       "id": "solstice", "name": "Solstice Racing",
       "colorPrimary": "#FF8A3D", "colorSecondary": "#0A0E1A", "liveryAccent": "#120E2B",
-      "archetype": "Solid midfield — fastest pit crew on the grid",
+      "archetype": "Front-runner pace — fastest pit crew on the grid",
       "facets": { "power": 93, "aero": 91, "handling": 93, "reliability": 87, "pitCrew": 95 },
       "developmentRate": 1.0, "nationality": "American", "flag": "🇺🇸",
       "history": "Runs the tightest pit crew on the grid by design — the team's philosophy is that races are won and lost in 2.4 seconds, not 90 minutes."

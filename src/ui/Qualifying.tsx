@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useSettingsStore } from '@state/settingsStore'
@@ -6,22 +6,14 @@ import { loadGameData } from '@data/validators'
 import { openingTimeline, type WeatherState } from '@engine/index'
 import type { Compound, AttackLevel, QualifyingLap } from '@engine/index'
 import { useUiTap } from '@hooks/useUiTap'
+import { ScreenFrame, ScreenHeader, Pill, TyreChip, KitButton, StandingRow, TYRE_COLOR, TYRE_NAME, PRESS } from '@ui/kit'
 
 const GAME_DATA = loadGameData()
 
 const DRY_COMPOUNDS: Compound[] = ['S', 'M', 'H']
 const WET_COMPOUNDS: Compound[] = ['I', 'W']
-const COMPOUND_LABEL: Record<Compound, string> = { S: 'SOFT', M: 'MED', H: 'HARD', I: 'INTER', W: 'WET' }
-const COMPOUND_COLORS: Record<Compound, string> = {
-  S: 'var(--tyre-soft)',
-  M: 'var(--tyre-medium)',
-  H: 'var(--tyre-hard)',
-  I: 'var(--tyre-inter, #39B54A)',
-  W: 'var(--tyre-wet, #4DA6FF)',
-}
-
 const ATTACK_ORDER: AttackLevel[] = ['conserve', 'balanced', 'attack']
-const ATTACK_LABEL: Record<AttackLevel, string> = { conserve: 'CONSERVE', balanced: 'BALANCED', attack: 'ATTACK' }
+const ATTACK_LABEL: Record<AttackLevel, string> = { conserve: 'SAFE', balanced: 'BAL', attack: 'ATTACK' }
 
 // Same seed derivation used by RaceSetup's forecast strip -- this is the
 // starting conditions the qualifying session itself will actually run under,
@@ -104,297 +96,206 @@ export function Qualifying() {
   const driverMap = new Map(GAME_DATA.drivers.drivers.map(d => [d.id, d]))
   const teamColorMap = new Map(GAME_DATA.cars.teams.map(t => [t.id, t.colorPrimary]))
   const leaderTime = laps_[0]?.time ?? 0
+  const playerLap = laps_.find(l => l.driverId === activePlayerId)
+  const aheadOnCompound = playerLap
+    ? laps_.slice(0, Math.max(0, playerPosition - 1)).filter(l => l.compound === playerLap.compound).length
+    : 0
+
+  const hasResult = qualifyingResult !== null
+  const playerRowRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (hasResult) playerRowRef.current?.scrollIntoView?.({ block: 'center' })
+  }, [hasResult])
 
   const motionLayoutProps = reducedMotion
     ? {}
     : { layout: true, 'data-animated': 'true' as const }
 
+  const selCfg = q.attackLevels[attack]
+  const colHead = { fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12, color: 'var(--lilac-dim)' } as const
+  const pickerBtn = { flex: 1, minWidth: 0, height: 48, border: 'none', cursor: 'pointer', padding: 0 } as const
+
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -40 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
-      <div style={{
-        padding: '20px 20px 16px',
-        borderBottom: '1px solid var(--line-hair)',
-        flexShrink: 0,
-      }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-          QUALIFYING
-        </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
-          One Flying Lap
-        </div>
-      </div>
+    <ScreenFrame label="Qualifying">
+      <ScreenHeader eyebrow={`QUALIFYING · ${(circuit?.name ?? circuitId).toUpperCase()}`} title="One flying lap" />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-        {/* Compound chips */}
-        <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--line-hair)' }}>
-          {/*
-            The conditions MUST be stated, not implied.
-            Before this, `weather` only gated which chips existed -- the player
-            was never told it was wet. Found on device: a dry tyre picked in a
-            wet session qualified P20, and because the session derives from the
-            race seed it cannot be re-run. A decision that is irreversible by
-            design has to be an informed one.
-          */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-            marginBottom: 12,
-          }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em' }}>
-              COMPOUND
-            </span>
-            <span
-              data-testid="qualifying-conditions"
-              style={{
-                fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
-                letterSpacing: '0.12em',
-                color: weather === 'DRY' ? 'var(--text-mid)' : 'var(--accent-warm)',
-              }}
-            >
-              {weather === 'DRY' ? 'TRACK DRY' : weather === 'DAMP' ? 'TRACK DAMP · WETS ADVISED' : 'TRACK WET · WETS ADVISED'}
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {availableCompounds.map(c => {
-              const color = COMPOUND_COLORS[c]
-              const selected = compound === c
-              return (
-                <motion.button
-                  key={c}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => { uiTap(); setCompound(c) }}
-                  style={{
-                    flex: 1, border: selected ? `1.5px solid ${color}` : '1px solid var(--line-hair)',
-                    borderRadius: 10, padding: '10px 4px',
-                    background: selected
-                      ? `linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0)), ${color}`
-                      : 'var(--bg-panel)',
-                    cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{
-                    width: 22, height: 22, borderRadius: '50%',
-                    background: color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: 'var(--bg-deep)',
-                  }}>
-                    {c}
-                  </div>
-                  <div style={{
-                    fontFamily: 'var(--font-display)', fontSize: 8.5,
-                    color: selected ? 'var(--bg-deep)' : 'var(--text-mid)',
-                    letterSpacing: '0.02em', fontWeight: selected ? 700 : 400,
-                  }}>
-                    {COMPOUND_LABEL[c]}
-                  </div>
-                </motion.button>
-              )
-            })}
-          </div>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* The conditions MUST be stated: the session cannot be re-run, so the tyre call has to be informed. */}
+        <div data-testid="qualifying-conditions" style={{ alignSelf: 'flex-start' }}>
+          <Pill tone={weather === 'DRY' ? 'default' : 'rain'}>
+            {weather === 'DRY' ? 'TRACK DRY' : weather === 'DAMP' ? 'TRACK DAMP · WETS ADVISED' : 'TRACK WET · WETS ADVISED'}
+          </Pill>
         </div>
 
-        {/* Attack level chips -- same selected-state language as PaceModeToggle */}
-        <div style={{ background: 'var(--bg-elevated)', borderRadius: 14, padding: '14px 16px', border: '1px solid var(--line-hair)' }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.15em', marginBottom: 12 }}>
-            ATTACK LEVEL
-          </div>
-          <div style={{
-            display: 'flex', gap: 6,
-            background: 'var(--bg-panel)', borderRadius: 8,
-            padding: 6, border: '1px solid var(--line-hair)',
-          }}>
-            {ATTACK_ORDER.map(level => {
-              const active = attack === level
-              const cfg = q.attackLevels[level]
-              const color = level === 'attack' ? 'var(--accent-warm)' : level === 'conserve' ? 'var(--positive)' : 'var(--text-mid)'
-              return (
-                <motion.button
-                  key={level}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => { uiTap(); setAttack(level) }}
-                  role="button"
-                  aria-pressed={active}
-                  style={{
-                    flex: 1, border: 'none', borderRadius: 6, padding: '8px 6px',
-                    cursor: 'pointer',
-                    background: active ? color : 'transparent',
-                    outline: active ? 'none' : '1px solid var(--line-hair)',
-                    transition: 'background 0.2s',
-                  }}
-                >
-                  <div style={{
-                    fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-                    color: active ? 'var(--bg-deep)' : color,
-                    letterSpacing: '0.08em',
-                  }}>
-                    {ATTACK_LABEL[level]}
-                  </div>
-                  <div style={{
-                    fontFamily: 'var(--font-mono)', fontSize: 9,
-                    color: active ? 'rgba(0,0,0,0.6)' : 'var(--text-dim)',
-                    marginTop: 2, fontVariantNumeric: 'tabular-nums',
-                  }}>
-                    {`${formatDelta(cfg.paceDelta)} · ${Math.round(cfg.errorChance * 100)}% risk`}
-                  </div>
-                </motion.button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Run / Simulate */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            onClick={handleRunLap}
-            style={{
-              flex: 2, border: 'none', borderRadius: 10, padding: '14px 10px',
-              background: 'var(--accent)', color: 'var(--bg-deep)', cursor: 'pointer',
-              fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, letterSpacing: '0.1em',
-            }}
-          >
-            RUN LAP
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            onClick={handleSimulate}
-            style={{
-              flex: 1, border: '1px solid var(--line-hair)', borderRadius: 10, padding: '14px 10px',
-              background: 'var(--bg-elevated)', color: 'var(--text-mid)', cursor: 'pointer',
-              fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
-            }}
-          >
-            SIMULATE
-          </motion.button>
-        </div>
-
-        {/* Result */}
-        {qualifyingResult && (
-          <div style={{
-            background: 'var(--bg-elevated)', borderRadius: 10,
-            border: '1px solid var(--line-hair)', overflow: 'hidden',
-            // flexShrink 0 is load-bearing, not cosmetic. This box is a child
-            // of a flex column, so by default it SHRINKS to fit the space
-            // left over -- and with overflow hidden that silently clipped the
-            // list to the first four rows. On device the player could not see
-            // their own row unless they qualified in the top four, which is
-            // precisely when they least need to look. The parent already
-            // scrolls; this lets the box claim its natural height so there is
-            // something to scroll to.
-            flexShrink: 0,
-          }}>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '7px 10px 5px', borderBottom: '1px solid var(--line-hair)',
-            }}>
-              <span style={{
-                fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
-                color: 'var(--accent)', letterSpacing: '0.14em',
-              }}>
-                QUALIFYING RESULT
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {laps_.map((lap: QualifyingLap, i: number) => {
-                const isPlayer = lap.driverId === activePlayerId
-                const driver = driverMap.get(lap.driverId)
-                const teamColor = driver ? teamColorMap.get(driver.teamId) : undefined
-                const gap = lap.time - leaderTime
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+            <span style={colHead}>TYRE</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {availableCompounds.map(c => {
+                const selected = compound === c
                 return (
-                  <motion.div
-                    key={lap.driverId}
-                    data-testid="qualifying-row"
-                    layoutId={lap.driverId}
-                    {...motionLayoutProps}
+                  <motion.button
+                    key={c}
+                    type="button"
+                    className="slant-sm kit-focus"
+                    aria-label={TYRE_NAME[c]}
+                    aria-pressed={selected}
+                                        whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+                    transition={PRESS}
+                    onClick={() => { uiTap(); setCompound(c) }}
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: '18px 1fr 60px 60px',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '6px 10px',
-                      background: isPlayer ? 'rgba(var(--accent-rgb), 0.07)' : 'transparent',
-                      borderLeft: isPlayer ? '2px solid var(--accent)' : `2px solid ${teamColor ? teamColor + '44' : 'transparent'}`,
-                      borderBottom: '0.5px solid var(--line-hair)',
+                      ...pickerBtn,
+                      background: selected ? 'var(--volt)' : 'var(--grape)',
+                      color: selected ? 'var(--ink)' : 'var(--white)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
-                    <span style={{
-                      fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-dim)',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}>
-                      {i + 1}
-                    </span>
-                    <span style={{
-                      fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-                      color: isPlayer ? 'var(--accent)' : 'var(--text-hi)', letterSpacing: '0.04em',
-                      display: 'flex', alignItems: 'center', gap: 6, minWidth: 0,
-                    }}>
-                      <span style={{
-                        width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-                        background: isPlayer ? 'var(--accent)' : (teamColor ?? 'var(--text-dim)'),
-                      }} />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {driver?.code ?? lap.driverId}
-                      </span>
-                      {lap.scrappy && (
-                        <span style={{
-                          fontFamily: 'var(--font-mono)', fontSize: 8.5, fontWeight: 700,
-                          color: 'var(--accent-warm)', letterSpacing: '0.06em',
-                          border: '1px solid var(--accent-warm)', borderRadius: 4,
-                          padding: '1px 4px', flexShrink: 0,
-                        }}>
-                          SCRAPPY
-                        </span>
-                      )}
-                    </span>
-                    <span style={{
-                      fontFamily: 'var(--font-mono)', fontSize: 10, color: COMPOUND_COLORS[lap.compound],
-                      fontVariantNumeric: 'tabular-nums', textAlign: 'right',
-                    }}>
-                      {lap.compound}
-                    </span>
-                    <span style={{
-                      fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--text-hi)',
-                      fontVariantNumeric: 'tabular-nums', textAlign: 'right',
-                    }}>
-                      {i === 0 ? formatTime(lap.time) : `+${gap.toFixed(3)}`}
-                    </span>
-                  </motion.div>
+                    <TyreChip compound={c} size={26} onInk={!selected} />
+                  </motion.button>
                 )
               })}
             </div>
           </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+            <span style={colHead}>
+              {`${ATTACK_LABEL[attack]} · ${formatDelta(selCfg.paceDelta)} · ${Math.round(selCfg.errorChance * 100)}% risk`}
+            </span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {ATTACK_ORDER.map(level => {
+                const active = attack === level
+                const cfg = q.attackLevels[level]
+                const fill = active ? (level === 'attack' ? 'var(--hot)' : 'var(--white)') : 'var(--grape)'
+                return (
+                  <motion.button
+                    key={level}
+                    type="button"
+                    className="slant-sm kit-focus"
+                    aria-pressed={active}
+                                        whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+                    transition={PRESS}
+                    onClick={() => { uiTap(); setAttack(level) }}
+                    style={{
+                      ...pickerBtn,
+                      background: fill,
+                      color: active ? 'var(--ink)' : level === 'conserve' ? 'var(--gain)' : 'var(--white)',
+                      fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12,
+                    }}
+                  >
+                    <div>{ATTACK_LABEL[level]}</div>
+                    <div style={{ fontWeight: 700, fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>{`${Math.round(cfg.errorChance * 100)}%`}</div>
+                  </motion.button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {!hasResult && (
+          <div className="slant-lg" style={{
+            background: 'var(--grape)', color: 'var(--lilac)', padding: '18px 24px',
+            fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 15,
+          }}>
+            Pick a tyre and an attack level, then run your lap.
+          </div>
+        )}
+        {!hasResult && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <KitButton variant="secondary" size="lg" display={false} onClick={handleSimulate} style={{ width: 120, padding: 0 }}>↺ SIMULATE</KitButton>
+            <KitButton variant="primary" size="lg" onClick={handleRunLap} style={{ flex: 1 }}>RUN LAP</KitButton>
+          </div>
         )}
 
-        <span role="status" data-testid="qualifying-status" style={{
-          fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)',
-          letterSpacing: '0.06em', fontVariantNumeric: 'tabular-nums',
-        }}>
-          {qualifyingResult ? `Qualified P${playerPosition}` : ''}
-        </span>
+        {playerLap && (
+          <div className="slant-lg" style={{
+            background: 'var(--volt)', color: 'var(--ink)', padding: '14px 24px',
+            display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              {/* Big Shoulders has no tabular figures: an invisible 0:00.000 twin reserves the width so P{n} never moves. */}
+              <span style={{
+                position: 'relative', display: 'inline-block',
+                fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 54, lineHeight: 0.9,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                <span aria-hidden="true" style={{ visibility: 'hidden' }}>0:00.000</span>
+                <span style={{ position: 'absolute', left: 0, top: 0, whiteSpace: 'nowrap' }}>{formatTime(playerLap.time)}</span>
+              </span>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 40, lineHeight: 0.9 }}>
+                {`P${playerPosition}`}
+              </span>
+            </div>
+            <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
+              {`+${(playerLap.time - leaderTime).toFixed(3)} to pole · ${aheadOnCompound} ${aheadOnCompound === 1 ? 'car' : 'cars'} on ${TYRE_NAME[playerLap.compound]}s ahead of you`}
+            </span>
+            {playerLap.scrappy && (
+              <span style={{
+                alignSelf: 'flex-start', background: 'var(--ink)', color: 'var(--hot)', borderRadius: 999,
+                padding: '4px 10px', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 1,
+              }}>SCRAPPY LAP · ERROR ON THE LAP</span>
+            )}
+          </div>
+        )}
 
-        {qualifyingResult && (
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            onClick={handleToGrid}
-            style={{
-              border: 'none', borderRadius: 10, padding: '14px 10px',
-              background: 'var(--accent)', color: 'var(--bg-deep)', cursor: 'pointer',
-              fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, letterSpacing: '0.1em',
-            }}
-          >
-            TO THE GRID →
-          </motion.button>
+        {hasResult && (
+          <span role="status" data-testid="qualifying-status" style={{
+            fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12, color: 'var(--lilac-dim)',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {`Qualified P${playerPosition}`}
+          </span>
+        )}
+
+        {hasResult && (
+          // flexShrink 0 is load-bearing: without it this flex child shrank and clipped the grid to 4 rows on device.
+          <div aria-label="Grid" style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
+            {laps_.map((lap: QualifyingLap, i: number) => {
+              const isPlayer = lap.driverId === activePlayerId
+              const driver = driverMap.get(lap.driverId)
+              const teamColor = (driver ? teamColorMap.get(driver.teamId) : undefined) ?? 'var(--lilac-dim)'
+              const gap = lap.time - leaderTime
+              return (
+                <motion.div
+                  key={lap.driverId}
+                  ref={isPlayer ? playerRowRef : undefined}
+                  layoutId={lap.driverId}
+                  {...motionLayoutProps}
+                >
+                  <StandingRow
+                    pos={i + 1}
+                    teamColor={teamColor}
+                    mine={isPlayer}
+                    name={
+                      <span data-testid="qualifying-row">
+                        {driver?.code ?? lap.driverId}
+                        {lap.scrappy && !isPlayer && (
+                          <span style={{
+                            marginLeft: 6, background: 'var(--hot)', color: 'var(--ink)', borderRadius: 999,
+                            padding: '1px 6px', fontWeight: 800, fontSize: 10, letterSpacing: 0.5,
+                          }}>SCRAPPY</span>
+                        )}
+                      </span>
+                    }
+                    value={i === 0 ? formatTime(lap.time) : `+${gap.toFixed(3)}`}
+                    trailing={
+                      <span aria-label={TYRE_NAME[lap.compound]} style={{
+                        fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14,
+                        color: isPlayer ? 'var(--ink)' : TYRE_COLOR[lap.compound],
+                      }}>{lap.compound}</span>
+                    }
+                  />
+                </motion.div>
+              )
+            })}
+          </div>
         )}
       </div>
-    </motion.div>
+
+      {hasResult && (
+        <div style={{ padding: '8px 16px calc(16px + var(--safe-bottom, 0px))', display: 'flex', gap: 8, flexShrink: 0 }}>
+          <KitButton variant="secondary" size="lg" display={false} onClick={handleSimulate} style={{ width: 120, padding: 0 }}>↺ SIMULATE</KitButton>
+          <KitButton variant="primary" size="lg" onClick={handleToGrid} style={{ flex: 1 }}>TO THE GRID →</KitButton>
+        </div>
+      )}
+    </ScreenFrame>
   )
 }

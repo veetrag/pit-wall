@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion'
+import type { KeyboardEvent } from 'react'
 import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
 import { HelmetAvatar, type HelmetPattern } from './HelmetAvatar'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
+import { ScreenFrame, ScreenHeader, StatTile, KitButton, snapIn, useReducedMotion } from '@ui/kit'
 
 type DriverFacets = { pace: number; racecraft: number; tyreManagement: number; consistency: number; wetWeather: number; experience: number }
 type DriverEntry = { id: string; name: string; code: string; teamId: string; flag?: string; facets: DriverFacets }
@@ -13,7 +15,7 @@ const allDrivers = driversData.drivers as DriverEntry[]
 const allTeams   = (carsData as unknown as { teams: TeamEntry[] }).teams
 
 function teamEntry(teamId: string): TeamEntry {
-  return allTeams.find(t => t.id === teamId) ?? { id: teamId, name: teamId, colorPrimary: '#888' }
+  return allTeams.find(t => t.id === teamId) ?? { id: teamId, name: teamId, colorPrimary: 'var(--lilac-dim)' }
 }
 
 function avgFacets(f: DriverFacets): number {
@@ -21,10 +23,8 @@ function avgFacets(f: DriverFacets): number {
   return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0
 }
 
-function driverTier(overall: number): { label: string; color: string } {
-  if (overall >= 90) return { label: 'ELITE',  color: 'var(--accent)' }
-  if (overall >= 80) return { label: 'PRO',    color: 'var(--tyre-medium)' }
-  return              { label: 'ROOKIE', color: 'var(--text-dim)' }
+function driverTier(overall: number): string {
+  return overall >= 90 ? 'ELITE' : overall >= 80 ? 'PRO' : 'ROOKIE'
 }
 
 function driverPattern(driverId: string, teamId: string): HelmetPattern {
@@ -50,168 +50,83 @@ export function DriverSelect() {
   const confirmDriver  = useSeasonStore(s => s.confirmDriver)
   const backToTeamSelect = useSeasonStore(s => s.backToTeamSelect)
   const uiTap = useUiTap()
+  const reduced = useReducedMotion()
 
   const team    = selectedTeamId ? teamEntry(selectedTeamId) : null
   const drivers = allDrivers.filter(d => d.teamId === selectedTeamId)
+  const chosen  = allDrivers.find(d => d.id === playerDriverId)
+
+  // WAI-ARIA radio group: one tab stop, arrows move and select (wrapping).
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (step === 0 || drivers.length === 0) return
+    e.preventDefault()
+    const i = drivers.findIndex(d => d.id === playerDriverId)
+    const next = drivers[(i + step + drivers.length) % drivers.length]
+    if (!next) return
+    uiTap(); selectDriver(next.id)
+    e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]')[drivers.indexOf(next)]?.focus()
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
-      {/* Header */}
-      <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-            NEW SEASON · STEP 2 OF 2
-          </div>
-          {team && (
-            <div style={{
-              fontFamily: 'var(--font-mono)', fontSize: 10, color: team.colorPrimary,
-              padding: '2px 7px', borderRadius: 4, border: `1px solid ${team.colorPrimary}66`,
-              background: `${team.colorPrimary}12`, letterSpacing: '0.06em',
-            }}>
-              {team.name.toUpperCase()}
-            </div>
-          )}
-        </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)' }}>
-          Field a Driver
-        </div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
-          Pick which driver you'll race this round.
-        </div>
-        </div>
-        <motion.button whileTap={{ scale: 0.94 }} onClick={() => { uiTap(); backToTeamSelect() }}
-          style={{ flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
-          ← BACK
-        </motion.button>
-      </div>
+    <ScreenFrame label="Driver select">
+      <ScreenHeader eyebrow="NEW CAREER · STEP 2 OF 2" title="Pick your driver" onBack={backToTeamSelect} />
 
-      {/* Driver cards — only this team's 2 drivers */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {drivers.map((driver, i) => {
-          const selected   = playerDriverId === driver.id
-          const overall    = avgFacets(driver.facets)
-          const tier       = driverTier(overall)
-          const pattern    = driverPattern(driver.id, driver.teamId)
-          const teamColor  = team?.colorPrimary ?? '#888'
-          const teamSec    = team?.colorSecondary
-
-          return (
-            <motion.button
-              key={driver.id}
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => selectDriver(driver.id)}
-              style={{
-                border: selected ? `1.5px solid ${teamColor}` : '1px solid var(--line-hair)',
-                borderRadius: 16, padding: '16px 14px',
-                background: selected
-                  ? `linear-gradient(135deg, ${teamColor}18 0%, var(--bg-elevated) 100%)`
-                  : 'var(--bg-elevated)',
-                cursor: 'pointer', outline: 'none', textAlign: 'left',
-                boxShadow: selected ? `0 3px 24px ${teamColor}30` : 'none',
-                transition: 'all 0.15s',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <HelmetAvatar
-                  teamPrimary={teamColor}
-                  teamSecondary={teamSec}
-                  pattern={pattern}
-                  number={gridNumber(driver.id)}
-                  size={64}
-                  selected={selected}
-                  selectionColor={teamColor}
-                />
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* Flag + name */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                    {driver.flag && <span style={{ fontSize: 16 }}>{driver.flag}</span>}
-                    <span style={{
-                      fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700,
-                      color: selected ? teamColor : 'var(--text-hi)', letterSpacing: '0.03em',
-                    }}>
-                      {driver.name}
-                    </span>
-                  </div>
-
-                  {/* Tier + overall */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <span style={{
-                      fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.1em',
-                      color: tier.color, padding: '2px 7px', borderRadius: 4,
-                      border: `1px solid ${tier.color}66`, background: `${tier.color}10`,
-                    }}>
-                      {tier.label}
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', fontVariantNumeric: 'tabular-nums' }}>
-                      {overall} OVR
-                    </span>
-                  </div>
-
-                  {/* Facet stats — 2x2 grid, not a single lined-up bar strip */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 14, rowGap: 6 }}>
-                    {FACET_LABELS.map(([key, label]) => {
-                      const val = driver.facets[key]
-                      return (
-                        <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-dim)', letterSpacing: '0.04em' }}>{label}</span>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-mid)', fontVariantNumeric: 'tabular-nums' }}>{val}</span>
-                          </div>
-                          <div style={{ height: 4, borderRadius: 2, background: 'var(--line-hair)', overflow: 'hidden' }}>
-                            <div style={{
-                              height: '100%', borderRadius: 2, width: `${val}%`,
-                              background: selected ? teamColor : 'var(--text-mid)',
-                              transition: 'background 0.2s',
-                            }} />
-                          </div>
-                        </div>
-                      )
-                    })}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div role="radiogroup" aria-label="Drivers" onKeyDown={onKeyDown} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {drivers.map((driver, i) => {
+            const selected  = playerDriverId === driver.id
+            const overall   = avgFacets(driver.facets)
+            const teamColor = team?.colorPrimary ?? 'var(--lilac-dim)'
+            return (
+              <motion.div key={driver.id} role="radio" aria-checked={selected} aria-label={`${driver.name}, ${overall} overall`}
+                tabIndex={selected || (!playerDriverId && i === 0) ? 0 : -1} className="slant-md kit-focus"
+                {...snapIn(reduced, i)}
+                whileTap={reduced ? undefined : { scale: 0.98 }}
+                onClick={() => { uiTap(); selectDriver(driver.id) }}
+                onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); uiTap(); selectDriver(driver.id) } }}
+                style={{ position: 'relative', background: 'var(--grape)', cursor: 'pointer', overflow: 'hidden',
+                  boxShadow: selected ? 'inset 0 0 0 3px var(--volt)' : 'none', padding: '18px 16px 14px' }}>
+                <div aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8, background: teamColor }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 4 }}>
+                  <HelmetAvatar
+                    teamPrimary={teamColor}
+                    teamSecondary={team?.colorSecondary}
+                    pattern={driverPattern(driver.id, driver.teamId)}
+                    number={gridNumber(driver.id)}
+                    size={72}
+                    selected={selected}
+                    selectionColor="var(--volt)"
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 26, lineHeight: 1, textTransform: 'uppercase', color: 'var(--white)', overflowWrap: 'anywhere' }}>{driver.name}</div>
+                    <div style={{ marginTop: 6, fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12, letterSpacing: 1, color: 'var(--lilac-dim)' }}>
+                      {driver.flag} {driver.code} · {driverTier(overall)} {overall} OVR
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.button>
-          )
-        })}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginTop: 14 }}>
+                  {FACET_LABELS.map(([key, label]) => (
+                    <StatTile key={key} value={driver.facets[key]} label={label} />
+                  ))}
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
 
         {drivers.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 20px', fontFamily: 'var(--font-body)', color: 'var(--text-dim)' }}>
+          <div style={{ textAlign: 'center', padding: '40px 20px', fontFamily: 'var(--font-body)', color: 'var(--lilac-dim)' }}>
             No drivers found. Go back and select a team.
           </div>
         )}
       </div>
 
-      {/* CTA */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0 }}>
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); confirmDriver() }}
-          disabled={!playerDriverId}
-          style={{
-            width: '100%', border: 'none', borderRadius: 10, padding: '16px',
-            background: playerDriverId ? 'var(--accent)' : 'var(--bg-elevated)',
-            color: playerDriverId ? 'var(--bg-deep)' : 'var(--text-dim)',
-            fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700,
-            letterSpacing: '0.08em', cursor: playerDriverId ? 'pointer' : 'default',
-            outline: playerDriverId ? 'none' : '1px solid var(--line-hair)',
-            transition: 'all 0.2s',
-          }}
-        >
-          {playerDriverId
-            ? `RACE WITH ${allDrivers.find(d => d.id === playerDriverId)?.code ?? '...'} →`
-            : 'SELECT A DRIVER'}
-        </motion.button>
+      <div style={{ padding: '0 16px 16px', flexShrink: 0 }}>
+        <KitButton variant="primary" size="lg" disabled={!playerDriverId} onClick={confirmDriver} style={{ width: '100%' }}>
+          {playerDriverId ? `RACE WITH ${chosen?.code ?? '...'} →` : 'SELECT A DRIVER'}
+        </KitButton>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

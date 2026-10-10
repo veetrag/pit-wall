@@ -8,7 +8,7 @@ import { BADGES } from '@state/badges'
 import { BadgeToast } from './BadgeToast'
 import { DebriefCard } from './DebriefCard'
 import { HelmetAvatar } from './HelmetAvatar'
-import { HeroBand, KitButton, Pill, liveryOf, snapIn, useCountUp, useReducedMotion } from '@ui/kit'
+import { HeroBand, KitButton, Pill, liveryOf, snapIn, useCountUp, useReducedMotion, ScreenFrame } from '@ui/kit'
 import { useDebriefStore } from '@state/debriefStore'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
@@ -168,15 +168,7 @@ export function RaceResult() {
   const podiumHeights = [156, 132, 120]
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--ink)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-        position: 'relative', overflow: 'hidden',
-      }}
-    >
+    <ScreenFrame label="Race result">
       {isTopThree && <Confetti />}
       <BadgeToast ids={previewBadges} />
 
@@ -333,7 +325,7 @@ export function RaceResult() {
                         borderBottom: i < sorted.length - 1 ? '1px solid var(--grape)' : 'none',
                       }}
                     >
-                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, color: r.retired ? 'var(--hot)' : 'var(--lilac-dim)', ...numeric }}>
+                      <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: r.retired ? 'var(--hot)' : 'var(--lilac-dim)', ...numeric }}>
                         {r.retired ? 'DNF' : r.position}
                       </span>
                       <span style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 16, fontWeight: 800, color: isPlayer ? 'var(--volt)' : 'var(--white)', opacity: r.retired ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -341,7 +333,7 @@ export function RaceResult() {
                         <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
                         {d.code}
                       </span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, color: r.points > 0 ? 'var(--gain)' : 'var(--lilac-dim)', textAlign: 'right', ...numeric }}>
+                      <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: r.points > 0 ? 'var(--gain)' : 'var(--lilac-dim)', textAlign: 'right', ...numeric }}>
                         +{r.points}
                       </span>
                     </motion.div>
@@ -375,6 +367,6 @@ export function RaceResult() {
           </KitButton>
         </div>
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

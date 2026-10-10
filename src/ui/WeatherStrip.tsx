@@ -65,15 +65,15 @@ function WeatherCell({
     >
       <span style={{ fontSize: iconSz, lineHeight: 1 }}>{WEATHER_ICON[state]}</span>
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: isNow ? 12 : 10, fontWeight: 700,
-        color: isNow ? 'var(--white)' : 'var(--text-mid)',
+        fontFamily: 'var(--font-body)', fontSize: isNow ? 12 : 10, fontWeight: 700,
+        color: isNow ? 'var(--white)' : 'var(--lilac)',
         letterSpacing: '0.06em', marginTop: 3,
       }}>
         {WEATHER_LABEL[state]}
       </span>
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 9,
-        color: 'var(--text-dim)', letterSpacing: '0.05em', marginTop: 1,
+        fontFamily: 'var(--font-body)', fontSize: 9,
+        color: 'var(--lilac-dim)', letterSpacing: '0.05em', marginTop: 1,
       }}>
         {label}{index >= 2 ? ` · ${Math.round(confidence * 100)}%` : ''}
       </span>
@@ -174,14 +174,14 @@ export function WeatherStrip() {
     <div style={{
       display: 'flex', flexDirection: 'column', gap: 5,
       padding: '7px 8px',
-      background: 'var(--bg-panel)',
+      background: 'var(--grape)',
       borderBottom: '1px solid var(--line-hair)',
       flexShrink: 0,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 9,
-          color: 'var(--text-dim)', letterSpacing: '0.14em',
+          fontFamily: 'var(--font-body)', fontSize: 9,
+          color: 'var(--lilac-dim)', letterSpacing: '0.14em',
         }}>
           WEATHER
         </span>
@@ -190,8 +190,8 @@ export function WeatherStrip() {
             animate={{ opacity: [1, 0.4, 1] }}
             transition={{ duration: 1.4, repeat: Infinity }}
             style={{
-              fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
-              color: wetIncoming ? 'var(--accent-warm)' : 'var(--tyre-inter)',
+              fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 700,
+              color: wetIncoming ? 'var(--hot)' : 'var(--tyre-inter)',
               letterSpacing: '0.06em',
             }}
           >

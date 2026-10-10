@@ -86,9 +86,9 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
-      <div style={{ height: '100%', overflow: 'hidden', position: 'relative' }}>
+      <div style={{ height: '100%', overflow: 'hidden', position: 'relative', background: 'var(--ink)' }}>
         <RaceWatcher />
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false}>
           {phase === 'menu' && <MainMenu key="menu" />}
           {phase === 'grid' && <GridStats key="grid" />}
           {phase === 'team_select' && <TeamSelect key="team_select" />}

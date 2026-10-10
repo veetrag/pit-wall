@@ -5,28 +5,17 @@ import { useScenarioStore } from '@state/scenarioStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useUiTap } from '@hooks/useUiTap'
 import { loadGameData, type ScenarioSpecData } from '@data/validators'
+import type { Compound } from '@engine/types'
+import { ScreenFrame, ScreenHeader, Pill, TyreChip, KitButton, CircuitOutline, snapIn, EASE } from '@ui/kit'
 
 // Module scope, not per render -- this screen never needs to re-parse the
-// scenario data on every re-render, and the brief calls this out explicitly.
+// scenario data on every re-render.
 const GAME = loadGameData()
 const SCENARIOS = GAME.scenarios
 
-/**
- * Compound letter -> its colour, read from the validated compound data.
- *
- * src/data/compounds.json already carries `colorToken` per compound and it is
- * zod-validated on load, so a local letter->token map here would be a second
- * source of truth that a new compound could silently fall out of -- the `??`
- * fallback would render it in grey rather than failing. RaceSetup.tsx already
- * reads colorToken the same way.
- */
-function compoundToken(letter: string): string {
-  const token = GAME.compounds[letter]?.colorToken
-  return token ? `var(${token})` : 'var(--text-mid)'
-}
-
-function ScenarioCard({ spec, expanded, onToggle }: {
+function ScenarioCard({ spec, index, expanded, onToggle }: {
   spec: ScenarioSpecData
+  index: number
   expanded: boolean
   onToggle: () => void
 }) {
@@ -35,6 +24,7 @@ function ScenarioCard({ spec, expanded, onToggle }: {
   const select = useScenarioStore(s => s.select)
   const startScenarioPhase = useSeasonStore(s => s.startScenarioPhase)
   const circuit = GAME.circuits[spec.circuitId]
+  const circuitName = circuit?.name ?? spec.circuitId
 
   function takeOver() {
     uiTap()
@@ -43,193 +33,104 @@ function ScenarioCard({ spec, expanded, onToggle }: {
   }
 
   return (
-    <motion.div
-      layout={!reducedMotion}
-      whileTap={{ scale: 0.97 }}
-      onClick={onToggle}
-      /*
-       * A non-native element with role="button" does NOT synthesise a click
-       * from Enter or Space, so without this a keyboard or switch user could
-       * focus the card and never open it -- and TAKE OVER only exists inside
-       * the expanded region, making the whole mode unreachable for them.
-       */
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-expanded={expanded}
-      style={{
-        border: expanded ? '1px solid var(--accent)' : '1px solid var(--line-hair)',
-        borderRadius: 14,
-        background: 'var(--bg-elevated)',
-        overflow: 'hidden',
-        cursor: 'pointer',
-      }}
-    >
-      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <div style={{
-          fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700,
-          color: 'var(--text-hi)', letterSpacing: '0.02em',
-        }}>
-          {spec.name}
-        </div>
-        <div style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--text-mid)', letterSpacing: '0.06em',
-        }}>
-          {circuit?.name.toUpperCase() ?? spec.circuitId.toUpperCase()}
-        </div>
-      </div>
-
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            key="briefing"
-            initial={reducedMotion ? false : { height: 0, opacity: 0 }}
-            animate={reducedMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
-            exit={reducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{
-                height: 1, background: 'var(--line-hair)', margin: '0 0 2px',
-              }} />
-
-              <div style={{
-                fontFamily: 'var(--font-body)', fontSize: 12.5, color: 'var(--text-mid)', lineHeight: 1.45,
-              }}>
-                {spec.blurb}
-              </div>
-
-              {/* Situation readout, derived from `expect` -- never re-simulated
-                  on this screen. It keeps this screen instant, and the source
-                  of truth (Task 2's test) guarantees `expect` matches what the
-                  engine will actually hand the player. */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-                fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700,
-                fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em',
-              }}>
-                <span style={{ color: 'var(--text-hi)' }}>{`P${spec.expect.position}`}</span>
-                <span style={{ color: 'var(--line-hair)' }} aria-hidden>·</span>
-                <span style={{ color: 'var(--text-hi)' }}>{`${spec.expect.lapsRemaining} LAPS LEFT`}</span>
-                <span style={{ color: 'var(--line-hair)' }} aria-hidden>·</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  <span
-                    aria-hidden
-                    style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: compoundToken(spec.expect.compound),
-                      border: '1px solid rgba(255,255,255,0.3)',
-                      flexShrink: 0,
-                    }}
-                  />
-                  {/* Colour is never the only signal (CLAUDE.md §6.3) -- the
-                      compound letter is always printed alongside the dot. */}
-                  <span style={{ color: 'var(--text-hi)' }}>{`${spec.expect.compound}${spec.expect.tyreAge}`}</span>
-                </span>
-                {/* The safety car is the whole premise of one of these
-                    scenarios, so it belongs in the situation line and not only
-                    in the prose blurb. --caution is the race-control token and
-                    measures 9.66:1 on --bg-panel; the warning glyph carries the
-                    same signal without colour (CLAUDE.md §6.3). */}
-                {spec.expect.safetyCarOut && (
-                  <>
-                    <span style={{ color: 'var(--line-hair)' }} aria-hidden>·</span>
-                    <span style={{ color: 'var(--caution)' }}>{'\u26A0 SAFETY CAR'}</span>
-                  </>
-                )}
-              </div>
-
-              <div style={{
-                fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-                color: 'var(--accent)', letterSpacing: '0.04em',
-              }}>
-                {`FINISH P${spec.goal.position} OR BETTER`}
-              </div>
-
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.97 }}
-                onClick={(e) => { e.stopPropagation(); takeOver() }}
-                style={{
-                  width: '100%', border: 'none', borderRadius: 10, padding: '14px',
-                  background: 'var(--accent)', color: 'var(--bg-deep)',
-                  fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700,
-                  letterSpacing: '0.08em', cursor: 'pointer',
-                  // NOT outline:'none'. This repo has no global :focus-visible
-                  // style, so suppressing the UA outline here would leave the
-                  // screen's primary action with no visible focus state at all.
-                  outlineOffset: 2,
-                }}
-              >
-                TAKE OVER
-              </motion.button>
+    <motion.div {...snapIn(reducedMotion, index)}>
+      <div
+        className="slant-lg kit-focus"
+        onClick={onToggle}
+        // A non-native element with role="button" does NOT synthesise a click
+        // from Enter or Space; TAKE OVER lives in the expanded region, so
+        // without this a keyboard user could never reach it.
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        style={{ background: 'var(--grape)', cursor: 'pointer', padding: '16px 20px 16px 24px' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 28,
+              lineHeight: 1, textTransform: 'uppercase', color: 'var(--white)', overflowWrap: 'anywhere',
+            }}>
+              {spec.name}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div style={{
+              marginTop: 6, fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12,
+              letterSpacing: 1, color: 'var(--lilac-dim)',
+            }}>
+              {circuitName.toUpperCase()}
+            </div>
+          </div>
+          <CircuitOutline circuitId={spec.circuitId} width={72} height={56} label={`${circuitName} layout`} />
+        </div>
+
+        <AnimatePresence initial={false}>
+          {expanded && (
+            <motion.div
+              key="briefing"
+              initial={reducedMotion ? false : { height: 0, opacity: 0 }}
+              animate={reducedMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+              exit={reducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+              transition={{ duration: 0.18, ease: EASE }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{ paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--lilac)', lineHeight: 1.45 }}>
+                  {spec.blurb}
+                </div>
+
+                {/* Situation readout from `expect` -- never re-simulated here. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Pill tone="dusk">{`P${spec.expect.position}`}</Pill>
+                  <Pill tone="dusk">{`${spec.expect.lapsRemaining} LAPS LEFT`}</Pill>
+                  <Pill tone="dusk">
+                    <TyreChip compound={spec.expect.compound as Compound} size={20} />
+                    {/* The compound letter is printed with the age too: colour is never the only signal. */}
+                    <span>{`${spec.expect.compound}${spec.expect.tyreAge}`}</span>
+                  </Pill>
+                  {spec.expect.safetyCarOut && <Pill tone="caution">{'⚠ SAFETY CAR'}</Pill>}
+                </div>
+
+                <div style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 15, letterSpacing: 1, color: 'var(--volt)' }}>
+                  {`FINISH P${spec.goal.position} OR BETTER`}
+                </div>
+
+                {/* stopPropagation: a tap on the button must not also collapse the card. */}
+                <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  <KitButton variant="primary" size="md" onClick={takeOver}>TAKE OVER</KitButton>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.div>
   )
 }
 
 export function ScenarioSelect() {
-  const uiTap = useUiTap()
-  const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const exitScenarios = useSeasonStore(s => s.exitScenarios)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   return (
-    <motion.div
-      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, x: 40 }}
-      animate={reducedMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
-      exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -40 }}
-      transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      }}
-    >
-      {/* Header */}
-      <div style={{
-        padding: '20px 20px 14px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0,
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
-      }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-            SCENARIOS
-          </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
-            Drop into a race already in progress.
-          </div>
-        </div>
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.94 }}
-          onClick={() => { uiTap(); exitScenarios() }}
-          style={{
-            flexShrink: 0, background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)',
-            borderRadius: 8, padding: '8px 14px', cursor: 'pointer',
-            fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em',
-          }}
-        >
-          BACK
-        </motion.button>
+    <ScreenFrame label="Scenarios">
+      <ScreenHeader eyebrow="SCENARIOS" title="Jump in" onBack={exitScenarios} />
+      <div style={{ padding: '6px 16px 0', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--lilac)', flexShrink: 0 }}>
+        Drop into a race already in progress.
       </div>
-
-      {/* Cards */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {SCENARIOS.map(spec => (
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {SCENARIOS.map((spec, i) => (
           <ScenarioCard
             key={spec.id}
             spec={spec}
+            index={i}
             expanded={expandedId === spec.id}
             onToggle={() => setExpandedId(prev => (prev === spec.id ? null : spec.id))}
           />
         ))}
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

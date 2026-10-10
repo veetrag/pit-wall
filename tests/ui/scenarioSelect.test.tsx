@@ -72,7 +72,7 @@ describe('ScenarioSelect', () => {
 
   it('BACK returns to the menu', () => {
     render(<ScenarioSelect />)
-    act(() => { screen.getByText('BACK').click() })
+    act(() => { screen.getByRole('button', { name: 'Back' }).click() })
     expect(useSeasonStore.getState().phase).toBe('menu')
   })
 
@@ -125,5 +125,11 @@ describe('ScenarioSelect — keyboard', () => {
     act(() => { screen.getByText(cliff.name).click() })
     const stint = `${cliff.expect.compound}${cliff.expect.tyreAge}`
     expect(screen.getByText(stint), `the ${stint} stint renders`).toBeTruthy()
+  })
+  it('situation pills on the grape card use the dusk tone', () => {
+    render(<ScenarioSelect />)
+    const first = SCENARIOS[0]!
+    act(() => { screen.getByText(first.name).click() })
+    expect((screen.getByText(`P${first.expect.position}`) as HTMLElement).style.background).toContain('--dusk')
   })
 })

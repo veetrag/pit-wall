@@ -22,7 +22,7 @@ import { SettingsPanel } from './SettingsPanel'
 import { PitTimer } from './PitTimer'
 import { Component, type ReactNode } from 'react'
 import { useUiTap } from '@hooks/useUiTap'
-import { useReducedMotion, PRESS } from '@ui/kit'
+import { useReducedMotion, PRESS, ScreenFrame, HOLD_EXIT } from '@ui/kit'
 
 class CanvasBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
   constructor(props: { children: ReactNode }) { super(props); this.state = { error: null } }
@@ -30,7 +30,7 @@ class CanvasBoundary extends Component<{ children: ReactNode }, { error: string 
   componentDidCatch(e: unknown) { console.error('[CanvasBoundary]', e) }
   render() {
     if (this.state.error) return (
-      <div style={{ padding: 16, color: 'var(--accent-warm)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+      <div style={{ padding: 16, color: 'var(--hot)', fontFamily: 'var(--font-body)', fontSize: 11 }}>
         Canvas error: {this.state.error}
       </div>
     )
@@ -83,7 +83,7 @@ function SpeedControl() {
   )
 }
 
-function StatusBar() {
+export function StatusBar() {
   const raceState = useRaceStore(s => s.raceState)
   const config = useRaceStore(s => s.config)
   const phase = useRaceStore(s => s.phase)
@@ -109,8 +109,9 @@ function StatusBar() {
           color: 'var(--white)', lineHeight: 1, fontVariantNumeric: 'tabular-nums',
         }}>
           {/* Big Shoulders has no tabular figures (tnum is a no-op): a box sized
-              to the total's digit count keeps "/58" from twitching each lap. */}
-          L<span style={{ display: 'inline-block', minWidth: `${String(raceState.totalLaps).length * 0.55}em`, textAlign: 'right' }}>{raceState.lap + 1}</span><span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span>
+              to the total's digit count, reserved after the counter, keeps it from twitching each lap. */}
+          <span data-testid="lap-counter">L{raceState.lap + 1}<span style={{ color: 'var(--lilac-dim)' }}>/{raceState.totalLaps}</span></span>
+          <span data-testid="lap-reserve" aria-hidden="true" style={{ visibility: 'hidden' }}>{'0'.repeat(Math.max(0, String(raceState.totalLaps).length - String(raceState.lap + 1).length))}</span>
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -162,15 +163,15 @@ function FinishBanner() {
       animate={{ opacity: 1, y: 0 }}
       style={{
         position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)',
-        background: 'var(--bg-elevated)', border: '1px solid var(--accent)',
+        background: 'var(--dusk)', border: '1px solid var(--volt)',
         borderRadius: 10, padding: '12px 28px', textAlign: 'center', zIndex: 50,
         whiteSpace: 'nowrap',
       }}
     >
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.1em' }}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--lilac-dim)', letterSpacing: '0.1em' }}>
         RACE FINISHED
       </div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--accent)', marginTop: 2 }}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--volt)', marginTop: 2 }}>
         {driverCode} WINS
       </div>
     </motion.div>
@@ -237,23 +238,19 @@ export function RaceHUD() {
   const live = phase === 'racing' || phase === 'starting'
 
   return (
-    <div style={{
-      height: '100%', display: 'flex', flexDirection: 'column',
-      background: 'var(--bg-deep)',
-      paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-      position: 'relative', overflow: 'hidden',
-    }}>
+    <ScreenFrame label="Race">
       <GameClock />
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence initial={false}>
         {phase === 'idle' ? (
           <StartScreen key="start" />
         ) : (
           <motion.div
             key="race"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}
+            initial={{ opacity: 0, zIndex: 1 }}
+            animate={{ opacity: 1, zIndex: 1 }}
+            exit={HOLD_EXIT}
+            style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)', boxSizing: 'border-box', background: 'var(--ink)', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}
           >
             {phase === 'finished' && <FinishBanner />}
             {phase === 'starting' && <StartLights />}
@@ -319,6 +316,6 @@ export function RaceHUD() {
         title="WHAT PITTING COSTS YOU"
         body="This is where you would rejoin if you boxed right now, traffic included. Compare it with where you are before you commit."
       />
-    </div>
+    </ScreenFrame>
   )
 }

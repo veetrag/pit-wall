@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
-import { PRESS } from '@ui/kit'
-import { useSeasonStore } from '@state/seasonStore'
+import { ScreenFrame, ScreenHeader, HeroBand, Tabs, StandingRow, StatTile, ProgressStrip, KitButton, Pill, snapIn } from '@ui/kit'
+import { HelmetAvatar } from './HelmetAvatar'
+import { useSeasonStore, TOTAL_RACES } from '@state/seasonStore'
 import { useCareerStore, erodeTiers } from '@state/careerStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { BadgeToast } from './BadgeToast'
@@ -14,10 +15,20 @@ import driversData from '@data/drivers.json'
 
 type DriverEntry = { id: string; name: string; teamId: string }
 const drivers = driversData.drivers as DriverEntry[]
+const TEAM_COLOR = new Map(loadGameData().cars.teams.map(t => [t.id, t.colorPrimary] as [string, string]))
 
 function driverName(id: string): string {
   return drivers.find(d => d.id === id)?.name ?? id.replace('d_', '').toUpperCase()
 }
+/** A driver's team colour, from data; dusk for an id the data does not know. */
+function driverColor(id: string): string {
+  const teamId = drivers.find(d => d.id === id)?.teamId
+  return (teamId && TEAM_COLOR.get(teamId)) || 'var(--dusk)'
+}
+
+/** Drivers shown before the ALL {n} DRIVERS fold. */
+const FOLD = 10
+const sectionLabel: CSSProperties = { fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 2 }
 
 export function Championship() {
   const { standings, playerDriverId, purchasedTiers, lastSeasonBonus, startNextSeason, endCareer, lastLadder, selectedTeamId } = useSeasonStore()
@@ -25,7 +36,8 @@ export function Championship() {
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const uiTap = useUiTap()
   const [confirmingEnd, setConfirmingEnd] = useState(false)
-  const [table, setTable] = useState<'drivers' | 'constructors'>('drivers')
+  const [table, setTable] = useState<'drivers' | 'teams'>('drivers')
+  const [showAll, setShowAll] = useState(false)
 
   const { tierCosts, attributes } = loadGameData().upgrades
   /*
@@ -65,20 +77,12 @@ export function Championship() {
     if (playerRank === 1) void maybeAskForReview(playerRank)
   }, [playerRank])
 
+  const playerWon = winner !== undefined && winner.driverId === playerDriverId
+  const leaderPts = winner?.points ?? 0
+  const shownDrivers = showAll ? standings : standings.slice(0, FOLD)
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      style={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        background: 'var(--bg-deep)',
-        paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)',
-        // BadgeToast is absolutely positioned and needs a positioned ancestor,
-        // exactly as in RaceResult.tsx.
-        position: 'relative',
-      }}
-    >
+    <ScreenFrame label="Championship">
       {/*
         The season was banked by careerStore.recordSeasonEnd on the transition
         into this phase, so by the time this renders the career record already
@@ -87,214 +91,108 @@ export function Championship() {
         upgrades screen afterwards.
       */}
       <BadgeToast />
-      {/* Header */}
-      <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0 }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>
-          SEASON 2025 COMPLETE
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
+        <div>
+          <ScreenHeader eyebrow={`SEASON ${seasonNumber} · FINAL`} title="Championship" />
+          <div style={{ padding: '10px 16px 0' }}>
+            <ProgressStrip total={TOTAL_RACES} done={TOTAL_RACES} ariaLabel="Season complete" />
+          </div>
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>
-          Championship
-        </div>
-      </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-        {/* Champion card */}
+        {/* 1. The verdict: the ladder's one orchestrated moment */}
+        {lastLadder && selectedTeamId && (
+          <LadderReveal moves={lastLadder} playerTeamId={selectedTeamId} />
+        )}
+
+        {/* 2. The champion, on their team's colour (ink text: every
+            colorPrimary clears 4.5:1 against ink) */}
         {winner && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 }}
-            style={{
-              background: 'var(--bg-elevated)', borderRadius: 14,
-              border: '1px solid var(--tyre-medium)',
-              padding: '20px', marginBottom: 20, textAlign: 'center',
-              boxShadow: '0 0 40px rgba(242,201,76,0.15)',
-            }}
-          >
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--tyre-medium)', letterSpacing: '0.2em', marginBottom: 6 }}>
-              🏆 CHAMPION
+          <motion.div {...snapIn(reducedMotion, 1)}>
+            <div style={{ position: 'relative', overflow: 'hidden', minHeight: 186, padding: '40px 22px 30px', boxSizing: 'border-box' }}>
+              <HeroBand color={driverColor(winner.driverId)} height={150} top={18} />
+              <div style={{ position: 'relative', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <HelmetAvatar teamPrimary="var(--ink)" teamSecondary="var(--white)" size={72} />
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span style={sectionLabel}>{playerWon ? 'YOU ARE THE CHAMPION' : 'CHAMPION'}</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 38, lineHeight: 0.95, textTransform: 'uppercase', overflowWrap: 'anywhere' }}>
+                    {driverName(winner.driverId)}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 15 }}>{winner.points} pts</span>
+                </div>
+              </div>
             </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 800, color: winner.driverId === playerDriverId ? 'var(--accent)' : 'var(--text-hi)' }}>
-              {driverName(winner.driverId).toUpperCase()}
-            </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, color: 'var(--tyre-medium)', marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
-              {winner.points} PTS
-            </div>
-            {winner.driverId === playerDriverId && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: 'var(--positive)', marginTop: 8, letterSpacing: '0.1em' }}
-              >
-                YOU ARE THE CHAMPION
-              </motion.div>
+            {playerDriverId && !playerWon && playerStanding && (
+              <div style={{ margin: '0 16px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6 }}>
+                <StatTile value={`P${playerRank}`} label="YOU FINISHED" />
+                <StatTile value={playerStanding.points} label="PTS" />
+              </div>
             )}
           </motion.div>
         )}
 
-        {/* Player summary if not champion */}
-        {playerDriverId && winner?.driverId !== playerDriverId && playerStanding && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            style={{
-              background: 'rgba(var(--volt-rgb), 0.06)', borderRadius: 10,
-              border: '1px solid var(--accent)',
-              padding: '14px 18px', marginBottom: 16,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}
-          >
-            <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--accent)', letterSpacing: '0.1em' }}>YOU FINISHED</div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: 'var(--text-hi)' }}>P{playerRank}</div>
+        {/* 3. Standings */}
+        <div style={{ margin: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Tabs ariaLabel="Standings" value={table} onChange={v => setTable(v)}
+            tabs={[{ value: 'drivers', label: 'DRIVERS' }, { value: 'teams', label: 'TEAMS' }]} />
+          {table === 'teams' && selectedTeamId && (
+            <ConstructorsList standings={standings} playerTeamId={selectedTeamId} />
+          )}
+          {table === 'drivers' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {shownDrivers.map((s, i) => (
+                <motion.div key={s.driverId} {...snapIn(reducedMotion, Math.min(i, FOLD))}>
+                  <StandingRow pos={i + 1} teamColor={driverColor(s.driverId)} name={driverName(s.driverId)}
+                    value={s.points} bar={leaderPts > 0 ? s.points / leaderPts : 0} mine={s.driverId === playerDriverId} />
+                </motion.div>
+              ))}
+              {standings.length > FOLD && (
+                <button type="button" className="kit-focus" aria-expanded={showAll}
+                  onClick={() => { uiTap(); setShowAll(v => !v) }}
+                  style={{ minHeight: 48, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--lilac)',
+                    fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 13 }}>
+                  {showAll ? 'TOP 10 ↑' : `ALL ${standings.length} DRIVERS ↓`}
+                </button>
+              )}
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)' }}>TOTAL PTS</div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>{playerStanding.points}</div>
-            </div>
-          </motion.div>
-        )}
-
-        {lastLadder && selectedTeamId && (
-          <LadderReveal moves={lastLadder} playerTeamId={selectedTeamId} />
-        )}
-        {/* Full standings */}
-        <div role="tablist" style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-          {(['drivers', 'constructors'] as const).map(k => (
-            <button key={k} role="tab" aria-selected={table === k} onClick={() => { uiTap(); setTable(k) }}
-              style={{
-                background: table === k ? 'var(--bg-elevated)' : 'transparent',
-                border: '1px solid var(--line-hair)', borderRadius: 999, padding: '4px 10px', cursor: 'pointer',
-                fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.15em',
-                color: table === k ? 'var(--text-hi)' : 'var(--text-dim)',
-              }}>
-              {k === 'drivers' ? 'DRIVERS' : "CONSTRUCTORS'"}
-            </button>
-          ))}
+          )}
         </div>
-        {table === 'constructors' && selectedTeamId && (
-          <ConstructorsList standings={standings} playerTeamId={selectedTeamId} />
-        )}
-        {table === 'drivers' && standings.map((s, i) => (
-          <motion.div
-            key={s.driverId}
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.05 * i }}
-            style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '10px 14px', borderRadius: 8,
-              background: s.driverId === playerDriverId ? 'rgba(var(--volt-rgb), 0.08)' : i === 0 ? 'rgba(var(--gain-rgb), 0.06)' : 'transparent',
-              borderLeft: s.driverId === playerDriverId ? '2px solid var(--accent)' : i === 0 ? '2px solid var(--gain)' : '2px solid transparent',
-              marginBottom: 4,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', width: 20 }}>
-                {i + 1}
-              </span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: s.driverId === playerDriverId ? 'var(--accent)' : i === 0 ? 'var(--white)' : 'var(--text-hi)' }}>
-                {driverName(s.driverId).toUpperCase()}
-              </span>
-            </div>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-hi)', fontVariantNumeric: 'tabular-nums' }}>
-              {s.points} PTS
-            </span>
-          </motion.div>
-        ))}
       </div>
 
       {/* Season boundary */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ padding: '12px 16px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {/*
           The podium bonus. Shown only when it was paid -- a "+0 POINTS" row
           for a midfield season would read as a taunt, and an absent row says
           the same thing without the sneer.
         */}
         {lastSeasonBonus > 0 && (
-          <motion.div
-            initial={reducedMotion ? false : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              background: 'rgba(61,220,132,0.08)', border: '1px solid var(--positive)',
-              borderRadius: 10, padding: '10px 14px',
-            }}
-          >
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, color: 'var(--positive)', letterSpacing: '0.1em' }}>
-              CHAMPIONSHIP BONUS
-            </span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 15, fontWeight: 700, color: 'var(--positive)', fontVariantNumeric: 'tabular-nums' }}>
-              +{lastSeasonBonus} PTS
-            </span>
+          <motion.div {...snapIn(reducedMotion, 2)} style={{ display: 'flex', justifyContent: 'center' }}>
+            <Pill tone="volt">CHAMPIONSHIP BONUS +{lastSeasonBonus} PTS</Pill>
           </motion.div>
         )}
-        <motion.button
-          whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
-          onClick={() => { uiTap(); startNextSeason(); pushCloudSave() }}
-          style={{
-            width: '100%', border: 'none', borderRadius: 10, padding: '14px 16px',
-            background: 'var(--accent)', color: 'var(--bg-deep)',
-            fontFamily: 'var(--font-display)', textAlign: 'left', cursor: 'pointer',
-          }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '0.08em' }}>
-            NEXT SEASON
-          </div>
-          <div style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.02em', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+        <KitButton variant="primary" size="lg" onClick={() => { startNextSeason(); pushCloudSave() }}
+          style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 22px' }}>
+          <span>NEXT SEASON →</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontStyle: 'normal', fontWeight: 700, fontSize: 12, textTransform: 'none', letterSpacing: 0, lineHeight: 1.3 }}>
             Season {seasonNumber + 1} · You keep {keptTiers} of {maxTiers} upgrade tiers · Rivals developed over the winter
-          </div>
-        </motion.button>
+          </span>
+        </KitButton>
 
         {!confirmingEnd ? (
-          <motion.button
-            whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
-            onClick={() => { uiTap(); setConfirmingEnd(true) }}
-            style={{
-              width: '100%', borderRadius: 10, padding: '12px 16px',
-              background: 'transparent', border: '1px solid var(--line-hair)', color: 'var(--text-mid)',
-              fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600,
-              letterSpacing: '0.06em', cursor: 'pointer',
-            }}
-          >
+          <KitButton variant="secondary" size="sm" onClick={() => setConfirmingEnd(true)} style={{ width: '100%' }}>
             END CAREER
-          </motion.button>
+          </KitButton>
         ) : (
-          <motion.div
-            initial={reducedMotion ? false : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ display: 'flex', gap: 8 }}
-          >
-            <motion.button
-              whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
-              onClick={() => { uiTap(); setConfirmingEnd(false) }}
-              style={{
-                flex: 1, borderRadius: 10, padding: '12px 16px',
-                background: 'transparent', border: '1px solid var(--line-hair)', color: 'var(--text-mid)',
-                fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600,
-                letterSpacing: '0.04em', cursor: 'pointer',
-              }}
-            >
+          <motion.div {...snapIn(reducedMotion)} style={{ display: 'flex', gap: 8 }}>
+            <KitButton variant="secondary" size="sm" onClick={() => setConfirmingEnd(false)} style={{ flex: 1 }}>
               CANCEL
-            </motion.button>
-            <motion.button
-              whileTap={reducedMotion ? undefined : { scale: 0.97 }} transition={PRESS}
-              onClick={() => { uiTap(); endCareer() }}
-              style={{
-                flex: 2, borderRadius: 10, padding: '12px 16px',
-                background: 'transparent', border: '1px solid var(--accent-warm)', color: 'var(--accent-warm)',
-                fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-                letterSpacing: '0.04em', cursor: 'pointer',
-              }}
-            >
+            </KitButton>
+            <KitButton variant="urgent" size="sm" onClick={() => endCareer()} style={{ flex: 2 }}>
               CONFIRM — END CAREER
-            </motion.button>
+            </KitButton>
           </motion.div>
         )}
       </div>
-    </motion.div>
+    </ScreenFrame>
   )
 }

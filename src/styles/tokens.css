@@ -9,30 +9,26 @@
   --lilac:      #CFC8F2;
   --lilac-dim:  #A99FDB;
   --white:      #FFFFFF;
+  --start-light-rgb: 255, 59, 74; /* physical red start lamp, deliberately not --hot */
+  --start-light: rgb(var(--start-light-rgb));
+  --floodlight-rgb: 255, 251, 230;
+  --floodlight: #FFFBE6; /* warm floodlight white */
   --volt-rgb:   255, 214, 10;
+  --ink-rgb:    18, 14, 43;
+  --white-rgb:  255, 255, 255;
   --volt:       rgb(var(--volt-rgb));
   /* Spec #FF2E63 measured 3.92:1 on --grape; lightened to #FF4F84 (4.5:1 floor). The ONE pink: accent-warm, negative and tyre-soft follow it. */
   --hot-rgb:    255, 79, 132;
   --hot:        rgb(var(--hot-rgb));
-  --gain-rgb:   61, 220, 132; /* same channels as --positive-rgb */
+  --gain-rgb:   61, 220, 132; 
   --gain:       rgb(var(--gain-rgb));
 
-  /* Legacy names, re-pointed so every existing screen re-skins at once. */
-  --bg-deep:      #120E2B;
-  --bg-panel:     #2A2160;
-  --bg-elevated:  #3A2F7A;
-  /* Distinct from --bg-elevated (#3A2F7A): a hairline the same colour as the
+  /* Distinct from --dusk (#3A2F7A): a hairline the same colour as the
      elevated surface it outlines vanishes. Lighter so borders read on dusk. */
   --line-hair:    #4A3D96;
-  --text-hi:      #FFFFFF;
-  --text-mid:     #CFC8F2;
-  --text-dim:     #A99FDB;
   /* Channels first, colour derived -- same shape as --caution-rgb below, and
      for the same reason: a translucent wash of this token needs something to
      reference, and color-mix() is unavailable at minSdkVersion 30. */
-  --accent-rgb:   255, 214, 10;
-  --accent:       rgb(var(--accent-rgb));
-  --accent-warm:  var(--hot);
   /* Race control caution. Deliberately NOT --tyre-medium (#FFD60A): that is a
      compound colour, and reusing it would tie race-control state to tyre
      semantics in violation of CLAUDE.md 6.3. Shifted orange of the compound
@@ -47,7 +43,6 @@
      comment asking whoever edited the token to remember to change it too. */
   --caution-rgb:  255, 176, 32;
   --caution:      rgb(var(--caution-rgb));
-  --accent-violet: #9B8CFF;
   --tyre-soft:    var(--hot);
   --tyre-medium:  #FFD60A;
   --tyre-hard:    #FFFFFF;
@@ -56,13 +51,9 @@
      same colour on the timing tower and on the scenario picker. */
   --tyre-inter:   #3DDC84;
   --tyre-wet:     #4DA6FF;
-  --positive-rgb: 61, 220, 132;
-  --positive:     rgb(var(--positive-rgb));
-  --negative:     var(--hot);
 
   --font-display: 'Big Shoulders Display', sans-serif;
   --font-body:    'Barlow', sans-serif;
-  --font-mono:    'Barlow', sans-serif;
 
   --safe-top:    env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -76,15 +67,10 @@ html, body, #root {
 }
 
 body {
-  background: var(--bg-deep);
-  color: var(--text-hi);
+  background: var(--ink);
+  color: var(--white);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  font-variant-numeric: tabular-nums;
-}
-
-.mono {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 

@@ -37,7 +37,7 @@ export function PitTimer() {
         style={{
           position: 'absolute', top: 8, left: 8, right: 8,
           background: 'var(--night)', borderRadius: 8,
-          border: '1px solid var(--accent-warm)',
+          border: '1px solid var(--hot)',
           padding: '10px 14px', zIndex: 10,
           display: 'flex', flexDirection: 'column', gap: 6,
         }}
@@ -45,17 +45,17 @@ export function PitTimer() {
         <div style={{
           display: 'flex', justifyContent: 'space-between',
           fontFamily: 'var(--font-display)', fontSize: 11,
-          color: 'var(--accent-warm)', letterSpacing: '0.1em',
+          color: 'var(--hot)', letterSpacing: '0.1em',
         }}>
           <span>PIT STOP</span>
           <span>{stopDuration.toFixed(1)}s</span>
         </div>
-        <div style={{ height: 4, borderRadius: 2, background: 'var(--bg-deep)', overflow: 'hidden' }}>
+        <div style={{ height: 4, borderRadius: 2, background: 'var(--ink)', overflow: 'hidden' }}>
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: '100%' }}
             transition={{ duration: stopDuration / 10, ease: 'linear' }}
-            style={{ height: '100%', background: 'var(--accent-warm)', borderRadius: 2 }}
+            style={{ height: '100%', background: 'var(--hot)', borderRadius: 2 }}
           />
         </div>
       </motion.div>
