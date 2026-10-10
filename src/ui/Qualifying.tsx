@@ -198,10 +198,12 @@ export function Qualifying() {
             Pick a tyre and an attack level, then run your lap.
           </div>
         )}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <KitButton variant="secondary" size={hasResult ? 'md' : 'lg'} display={false} onClick={handleSimulate} style={{ width: 120, padding: 0 }}>↺ SIMULATE</KitButton>
-          <KitButton variant={hasResult ? 'secondary' : 'primary'} size={hasResult ? 'md' : 'lg'} onClick={handleRunLap} style={{ flex: 1 }}>RUN LAP</KitButton>
-        </div>
+        {!hasResult && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <KitButton variant="secondary" size="lg" display={false} onClick={handleSimulate} style={{ width: 120, padding: 0 }}>↺ SIMULATE</KitButton>
+            <KitButton variant="primary" size="lg" onClick={handleRunLap} style={{ flex: 1 }}>RUN LAP</KitButton>
+          </div>
+        )}
 
         {playerLap && (
           <div className="slant-lg" style={{
@@ -209,10 +211,15 @@ export function Qualifying() {
             display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0,
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              {/* Big Shoulders has no tabular figures: an invisible 0:00.000 twin reserves the width so P{n} never moves. */}
               <span style={{
+                position: 'relative', display: 'inline-block',
                 fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 54, lineHeight: 0.9,
-                fontVariantNumeric: 'tabular-nums', minWidth: '5.2ch',
-              }}>{formatTime(playerLap.time)}</span>
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                <span aria-hidden="true" style={{ visibility: 'hidden' }}>0:00.000</span>
+                <span style={{ position: 'absolute', left: 0, top: 0, whiteSpace: 'nowrap' }}>{formatTime(playerLap.time)}</span>
+              </span>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 40, lineHeight: 0.9 }}>
                 {`P${playerPosition}`}
               </span>
@@ -229,14 +236,17 @@ export function Qualifying() {
           </div>
         )}
 
-        <span role="status" data-testid="qualifying-status" style={{
-          fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12, color: 'var(--lilac-dim)',
-          fontVariantNumeric: 'tabular-nums',
-        }}>
-          {qualifyingResult ? `Qualified P${playerPosition}` : ''}
-        </span>
+        {hasResult && (
+          <span role="status" data-testid="qualifying-status" style={{
+            fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 12, color: 'var(--lilac-dim)',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {`Qualified P${playerPosition}`}
+          </span>
+        )}
 
         {hasResult && (
+          // flexShrink 0 is load-bearing: without it this flex child shrank and clipped the grid to 4 rows on device.
           <div aria-label="Grid" style={{ display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0 }}>
             {laps_.map((lap: QualifyingLap, i: number) => {
               const isPlayer = lap.driverId === activePlayerId
@@ -282,6 +292,7 @@ export function Qualifying() {
 
       {hasResult && (
         <div style={{ padding: '8px 16px calc(16px + var(--safe-bottom, 0px))', display: 'flex', gap: 8, flexShrink: 0 }}>
+          <KitButton variant="secondary" size="lg" display={false} onClick={handleSimulate} style={{ width: 120, padding: 0 }}>↺ SIMULATE</KitButton>
           <KitButton variant="primary" size="lg" onClick={handleToGrid} style={{ flex: 1 }}>TO THE GRID →</KitButton>
         </div>
       )}
