@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PRESS, ScreenFrame } from '@ui/kit'
+import { EASE, PRESS, ScreenFrame, ScreenHeader, KitToggle, Segmented, Pill, useReducedMotion } from '@ui/kit'
 import { useSettingsStore, type SimSpeed, type Difficulty } from '@state/settingsStore'
 import { useCoachStore } from '@state/coachStore'
 import { useSeasonStore } from '@state/seasonStore'
@@ -8,115 +8,39 @@ import { useUiTap } from '@hooks/useUiTap'
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
 
-function Toggle({ label, sublabel, value, onChange }: {
-  label: string; sublabel: string; value: boolean; onChange: (v: boolean) => void
-}) {
-  const uiTap = useUiTap()
+function GroupHead({ title, right }: { title: string; right?: ReactNode }) {
   return (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '13px 0', borderBottom: '1px solid var(--line-hair)',
-    }}>
-      <div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--text-hi)', letterSpacing: '0.03em' }}>{label}</div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>{sublabel}</div>
-      </div>
-      {/* 48px touch target around a 50x28 track: the button is the hit area,
-          the inner span is what you see. */}
-      <motion.button
-        type="button" role="switch" aria-checked={value} aria-label={label} className="kit-focus"
-        whileTap={{ scale: 0.96 }} transition={PRESS}
-        onClick={() => { uiTap(); onChange(!value) }}
-        style={{
-          width: 66, height: 48, margin: '-10px -8px', border: 'none', background: 'transparent',
-          cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >
-        <span style={{
-          width: 50, height: 28, borderRadius: 14, position: 'relative',
-          background: value ? 'var(--accent)' : 'var(--bg-elevated)',
-          outline: value ? 'none' : '1px solid var(--line-hair)',
-          transition: 'background 0.2s',
-        }}>
-          <motion.span
-            animate={{ x: value ? 22 : 3 }}
-            transition={PRESS}
-            style={{
-              position: 'absolute', top: 3, left: 0, width: 22, height: 22, borderRadius: '50%',
-              background: value ? 'var(--bg-deep)' : 'var(--text-dim)',
-            }}
-          />
-        </span>
-      </motion.button>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, marginBottom: 8 }}>
+      <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, textTransform: 'uppercase', color: 'var(--lilac-dim)' }}>{title}</h2>
+      {right}
     </div>
   )
 }
 
-function SpeedSelect({ value, onChange }: { value: SimSpeed; onChange: (v: SimSpeed) => void }) {
-  const opts: SimSpeed[] = [1, 2, 4]
+/** Grape slanted row: label and sub on the left, a segmented control on the right. */
+function SegRow({ label, sub, children }: { label: string; sub: string; children: ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 0', borderBottom: '1px solid var(--line-hair)' }}>
-      <div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--text-hi)' }}>Sim speed</div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Default playback speed</div>
+    <div className="slant-row" style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 64, padding: '8px 18px 8px 20px', background: 'var(--grape)' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 15, color: 'var(--white)' }}>{label}</span>
+        <span style={{ fontFamily: 'var(--font-body)', fontWeight: 500, fontSize: 12, color: 'var(--lilac)' }}>{sub}</span>
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {opts.map(o => (
-          <motion.button key={o} whileTap={{ scale: 0.92 }} transition={PRESS} onClick={() => onChange(o)}
-            style={{
-              width: 44, height: 48, borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: value === o ? 'var(--accent)' : 'var(--bg-elevated)',
-              color: value === o ? 'var(--bg-deep)' : 'var(--text-mid)',
-              outline: value === o ? 'none' : '1px solid var(--line-hair)',
-              fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-            }}>
-            {o}×
-          </motion.button>
-        ))}
-      </div>
+      {children}
     </div>
   )
 }
 
-function DifficultySelect({ value, onChange }: { value: Difficulty; onChange: (v: Difficulty) => void }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 0', borderBottom: '1px solid var(--line-hair)' }}>
-      <div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--text-hi)' }}>Difficulty</div>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Pro fields sharper, more aggressive rival strategy</div>
-      </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {(['rookie', 'pro'] as Difficulty[]).map(d => (
-          <motion.button key={d} whileTap={{ scale: 0.92 }} transition={PRESS} onClick={() => onChange(d)}
-            style={{
-              minHeight: 48, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: value === d ? 'var(--accent)' : 'var(--bg-elevated)',
-              color: value === d ? 'var(--bg-deep)' : 'var(--text-mid)',
-              outline: value === d ? 'none' : '1px solid var(--line-hair)',
-              fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700,
-              letterSpacing: '0.05em', textTransform: 'capitalize',
-            }}>
-            {d}
-          </motion.button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.15em', marginTop: 20, marginBottom: 2 }}>
-      {title}
-    </div>
-  )
-}
+const SPEED_OPTIONS = [
+  { value: '1', label: '1×' }, { value: '2', label: '2×' }, { value: '4', label: '4×' },
+]
+const DIFFICULTY_OPTIONS: { value: Difficulty; label: string }[] = [
+  { value: 'rookie', label: 'Rookie' }, { value: 'pro', label: 'Pro' },
+]
 
 // ── Full settings screen (menu nav) ──────────────────────────────────────────
 
 export function SettingsScreen() {
   const exitSettings = useSeasonStore(s => s.exitSettings)
-  const uiTap = useUiTap()
   const {
     soundEnabled, hapticsEnabled, reducedMotion,
     simSpeed, proMode, skipStartSequence, difficulty, coachMarksSeen,
@@ -126,51 +50,40 @@ export function SettingsScreen() {
 
   return (
     <ScreenFrame label="Settings">
-      <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>CONFIG</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>Settings</div>
-        </div>
-        <motion.button whileTap={{ scale: 0.94 }} transition={PRESS} onClick={() => { uiTap(); exitSettings() }}
-          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, minHeight: 48, padding: '0 16px', cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 13, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
-          BACK
-        </motion.button>
-      </div>
-
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 20px 24px' }}>
-        <SectionHeader title="AUDIO" />
-        <Toggle label="Sound effects" sublabel="Engine, pit, and UI audio" value={soundEnabled} onChange={setSoundEnabled} />
-
-        <SectionHeader title="HAPTICS & MOTION" />
-        <Toggle label="Haptic feedback" sublabel="Vibration on pit stops and actions" value={hapticsEnabled} onChange={setHapticsEnabled} />
-        <Toggle label="Reduce motion" sublabel="Simplifies animations throughout" value={reducedMotion} onChange={setReducedMotion} />
-
-        <SectionHeader title="GAMEPLAY" />
-        <SpeedSelect value={simSpeed} onChange={setSimSpeed} />
-        <Toggle label="Skip start sequence" sublabel="Jump straight to racing" value={skipStartSequence} onChange={setSkipStartSequence} />
-        <DifficultySelect value={difficulty} onChange={setDifficulty} />
-        <Toggle label="Pro mode" sublabel="Hides recommended tyre hints" value={proMode} onChange={setProMode} />
-        <Toggle
-          label="Replay tutorial"
-          sublabel="Show the first-race coaching again"
-          value={!coachMarksSeen}
-          onChange={(v) => { setCoachMarksSeen(!v); useCoachStore.getState().reset() }}
-        />
-
-        <SectionHeader title="ABOUT" />
-        <div style={{ padding: '13px 0', borderBottom: '1px solid var(--line-hair)', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-mid)' }}>Version</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-dim)' }}>v{__APP_VERSION__}</span>
-        </div>
-        <div style={{ padding: '13px 0', borderBottom: '1px solid var(--line-hair)', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--text-mid)' }}>Privacy policy</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent)', letterSpacing: '0.04em' }}>Coming soon</span>
+      <ScreenHeader title="Settings" onBack={exitSettings} />
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 24px' }}>
+        <GroupHead title="Audio & feel" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <KitToggle label="Sound effects" sub="Engine, pit and UI audio" checked={soundEnabled} onChange={setSoundEnabled} />
+          <KitToggle label="Haptic feedback" sub="Vibration on pit stops and actions" checked={hapticsEnabled} onChange={setHapticsEnabled} />
+          <KitToggle label="Reduce motion" sub="Simpler animations everywhere" checked={reducedMotion} onChange={setReducedMotion} />
         </div>
 
-        {/* Cloud save seam */}
-        <div style={{ marginTop: 20, padding: '13px 16px', borderRadius: 10, border: '1px solid var(--line-hair)', opacity: 0.35 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600, color: 'var(--text-mid)', letterSpacing: '0.04em' }}>Cloud save</div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--text-dim)', marginTop: 3 }}>Google Play sign-in — coming in a future update</div>
+        <GroupHead title="Gameplay" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <SegRow label="Sim speed" sub="Default playback speed">
+            <Segmented ariaLabel="Sim speed" options={SPEED_OPTIONS} value={String(simSpeed)}
+              onChange={v => setSimSpeed(Number(v) as SimSpeed)} />
+          </SegRow>
+          <SegRow label="Difficulty" sub="Pro fields sharper, more aggressive rival strategy">
+            <Segmented ariaLabel="Difficulty" options={DIFFICULTY_OPTIONS} value={difficulty} onChange={setDifficulty} />
+          </SegRow>
+          <KitToggle label="Skip start sequence" sub="Jump straight to racing" checked={skipStartSequence} onChange={setSkipStartSequence} />
+          <KitToggle label="Pro mode" sub="Hides recommended tyre hints" checked={proMode} onChange={setProMode} />
+          <KitToggle
+            label="Replay tutorial"
+            sub="Show the first-race coaching again"
+            checked={!coachMarksSeen}
+            onChange={(v) => { setCoachMarksSeen(!v); useCoachStore.getState().reset() }}
+          />
+        </div>
+
+        <GroupHead title="Account" right={<Pill>Coming soon</Pill>} />
+        <KitToggle label="Cloud save" sub="Google Play Games" checked={false} onChange={() => {}} disabled />
+
+        <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--lilac)' }}>Privacy policy · soon</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--lilac-dim)' }}>Pit Wall v{__APP_VERSION__}</span>
         </div>
       </div>
     </ScreenFrame>
@@ -182,26 +95,31 @@ export function SettingsScreen() {
 function SettingsPanelDrawer({ onClose }: { onClose: () => void }) {
   const { soundEnabled, hapticsEnabled, reducedMotion, setSoundEnabled, setHapticsEnabled, setReducedMotion } = useSettingsStore()
   const uiTap = useUiTap()
+  const reduced = useReducedMotion()
+  const slide = reduced
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.12 } }
+    : { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' }, transition: { duration: 0.22, ease: EASE } }
   return (
     <motion.div
-      initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-      transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+      role="dialog" aria-modal="true" aria-label="Settings" {...slide}
       style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        background: 'var(--night)', borderRadius: '16px 16px 0 0',
-        padding: '20px 20px 32px', borderTop: '1px solid var(--line-hair)', zIndex: 100,
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100,
+        background: 'var(--night)', clipPath: 'polygon(0 3%,100% 0,100% 100%,0 100%)',
+        padding: 'calc(16px + 3%) 16px calc(24px + var(--safe-bottom, 0px))',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text-hi)', letterSpacing: '0.05em' }}>SETTINGS</span>
-        <motion.button whileTap={{ scale: 0.9 }} transition={PRESS} onClick={() => { uiTap(); onClose() }}
-          className="kit-focus" style={{ background: 'transparent', border: '1px solid var(--line-hair)', borderRadius: 6, minHeight: 48, minWidth: 64, padding: '0 14px', color: 'var(--lilac)', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 30, color: 'var(--white)' }}>SETTINGS</span>
+        <motion.button type="button" whileTap={{ scale: 0.96 }} transition={PRESS} onClick={() => { uiTap(); onClose() }}
+          className="kit-focus" style={{ height: 48, minWidth: 80, padding: '0 20px', borderRadius: 999, border: 'none', background: 'var(--grape)', color: 'var(--white)', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14, letterSpacing: 1, cursor: 'pointer' }}>
           DONE
         </motion.button>
       </div>
-      <Toggle label="Sound" sublabel="Engine, pit, and UI sound effects" value={soundEnabled} onChange={setSoundEnabled} />
-      <Toggle label="Haptics" sublabel="Vibration feedback on device" value={hapticsEnabled} onChange={setHapticsEnabled} />
-      <Toggle label="Reduce motion" sublabel="Simplifies animations" value={reducedMotion} onChange={setReducedMotion} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <KitToggle label="Sound" sub="Engine, pit, and UI sound effects" checked={soundEnabled} onChange={setSoundEnabled} />
+        <KitToggle label="Haptics" sub="Vibration feedback on device" checked={hapticsEnabled} onChange={setHapticsEnabled} />
+        <KitToggle label="Reduce motion" sub="Simplifies animations" checked={reducedMotion} onChange={setReducedMotion} />
+      </div>
     </motion.div>
   )
 }
@@ -210,12 +128,12 @@ export function SettingsPanel() {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <motion.button whileTap={{ scale: 0.9 }} transition={PRESS} onClick={() => setOpen(true)} title="Settings" aria-label="Settings"
+      <motion.button type="button" whileTap={{ scale: 0.96 }} transition={PRESS} onClick={() => setOpen(true)} title="Settings" aria-label="Settings"
+        className="kit-focus"
         style={{
-          background: 'transparent', border: '1px solid var(--line-hair)', borderRadius: 6,
-          minWidth: 48, minHeight: 48, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          padding: '6px 10px', cursor: 'pointer', color: 'var(--text-dim)',
-          fontFamily: 'var(--font-display)', fontSize: 14, lineHeight: 1,
+          background: 'var(--grape)', border: 'none', borderRadius: 999, width: 48, height: 48,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', color: 'var(--lilac)', fontSize: 20, lineHeight: 1,
         }}>
         ⚙
       </motion.button>
@@ -224,7 +142,7 @@ export function SettingsPanel() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
-              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99 }} />
+              style={{ position: 'absolute', inset: 0, background: 'rgba(var(--ink-rgb), 0.6)', zIndex: 99 }} />
             <SettingsPanelDrawer onClose={() => setOpen(false)} />
           </>
         )}

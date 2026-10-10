@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
-import { ScreenFrame } from '@ui/kit'
+import { ScreenFrame, ScreenHeader, KitButton, snapIn, useReducedMotion, PRESS } from '@ui/kit'
 
 const STEPS = [
   {
@@ -44,83 +44,61 @@ export function HowToPlay() {
   const isLast = step === STEPS.length - 1
   const current = STEPS[step]!
   const uiTap = useUiTap()
+  const reduced = useReducedMotion()
+  const enter = snapIn(reduced)
 
   return (
     <ScreenFrame label="How to play">
-      {/* Header */}
-      <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: '0.2em' }}>HOW TO PLAY</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text-hi)', marginTop: 2 }}>Strategy primer</div>
-        </div>
-        <motion.button whileTap={{ scale: 0.94 }} onClick={() => { uiTap(); exitHowToPlay() }}
-          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-hair)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-mid)', letterSpacing: '0.08em' }}>
-          SKIP
-        </motion.button>
-      </div>
+      <ScreenHeader
+        eyebrow={`HOW TO PLAY · ${step + 1} OF ${STEPS.length}`}
+        title={current.title}
+        right={
+          <motion.button type="button" whileTap={{ scale: 0.96 }} transition={PRESS} className="kit-focus"
+            onClick={() => { uiTap(); exitHowToPlay() }}
+            style={{ height: 48, padding: '0 8px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--lilac)', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14, letterSpacing: 1 }}>
+            SKIP
+          </motion.button>
+        }
+      />
 
-      {/* Step card */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '24px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
-            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.18 }}
-            style={{
-              background: 'var(--bg-elevated)', borderRadius: 20, border: '1px solid var(--line-hair)',
-              padding: '36px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16,
-            }}
+            initial={enter.initial} animate={enter.animate} exit={{ opacity: 0 }} transition={enter.transition}
+            className="slant-lg"
+            style={{ background: 'var(--grape)', padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}
           >
-            <div style={{ fontSize: 54, lineHeight: 1 }}>{current.icon}</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.04em' }}>
-              {current.title}
-            </div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--text-mid)', lineHeight: 1.65, maxWidth: 280 }}>
+            <div aria-hidden="true" style={{ fontSize: 48, lineHeight: 1 }}>{current.icon}</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--lilac)', lineHeight: 1.5 }}>
               {current.body}
             </div>
           </motion.div>
         </AnimatePresence>
 
-        {/* Progress dots */}
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))`, gap: 3, marginTop: 20 }}>
           {STEPS.map((_, i) => (
-            <motion.div
-              key={i}
-              animate={{ width: i === step ? 22 : 8, background: i === step ? 'var(--accent)' : 'var(--line-hair)' }}
-              style={{ height: 8, borderRadius: 4, cursor: 'pointer' }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              onClick={() => setStep(i)}
-            />
+            <button key={i} type="button" aria-label={`Step ${i + 1}`} aria-current={i === step ? 'step' : undefined}
+              className="kit-focus" onClick={() => { uiTap(); setStep(i) }}
+              style={{ height: 48, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <span aria-hidden="true" style={{ display: 'block', width: '100%', height: 8, transform: 'skewX(-20deg)',
+                background: i < step ? 'var(--volt)' : i === step ? 'var(--white)' : 'var(--dusk)' }} />
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Nav */}
-      <div style={{ padding: '12px 24px 16px', display: 'flex', gap: 10, flexShrink: 0 }}>
+      <div style={{ padding: '12px 16px calc(16px + var(--safe-bottom, 0px))', display: 'flex', gap: 10, flexShrink: 0 }}>
         {step > 0 && (
-          <motion.button whileTap={{ scale: 0.97 }} onClick={() => { uiTap(); setStep(s => s - 1) }}
-            style={{
-              flex: 1, background: 'transparent', color: 'var(--text-mid)',
-              border: '1px solid var(--line-hair)', borderRadius: 10, padding: '14px 0',
-              fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600,
-              letterSpacing: '0.08em', cursor: 'pointer',
-            }}>
-            ← BACK
-          </motion.button>
+          <div style={{ flex: 1 }}>
+            <KitButton variant="secondary" size="lg" onClick={() => setStep(s => s - 1)} style={{ width: '100%' }}>← BACK</KitButton>
+          </div>
         )}
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => { uiTap(); if (isLast) startNewSeason(); else setStep(s => s + 1) }}
-          style={{
-            flex: 2, background: isLast ? 'var(--accent)' : 'var(--bg-elevated)',
-            color: isLast ? 'var(--bg-deep)' : 'var(--text-hi)',
-            border: isLast ? 'none' : '1px solid var(--line-hair)',
-            borderRadius: 10, padding: '16px 0',
-            fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700,
-            letterSpacing: '0.08em', cursor: 'pointer',
-          }}>
-          {isLast ? 'START RACING →' : 'NEXT →'}
-        </motion.button>
+        <div style={{ flex: 2 }}>
+          <KitButton variant="primary" size="lg" onClick={() => { if (isLast) startNewSeason(); else setStep(s => s + 1) }} style={{ width: '100%' }}>
+            {isLast ? 'START RACING →' : 'NEXT →'}
+          </KitButton>
+        </div>
       </div>
     </ScreenFrame>
   )
