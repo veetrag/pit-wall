@@ -60,16 +60,16 @@ export function HowToPlay() {
         }
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px' }}>
-            <motion.div
-              key={step}
-              initial={reduced ? false : { x: -18 }} animate={{ x: 0 }} transition={{ duration: 0.18, ease: EASE }}
-              className="slant-lg"
-              style={{ background: 'var(--grape)', padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}
-            >
-              <div aria-hidden="true" style={{ fontSize: 48, lineHeight: 1 }}>{current.icon}</div>
-              <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--lilac)', lineHeight: 1.5 }}>
-                {current.body}
+  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px' }}>
+        <motion.div
+          key={step}
+          initial={reduced ? false : { x: -18 }} animate={{ x: 0 }} transition={{ duration: 0.18, ease: EASE }}
+          className="slant-lg"
+          style={{ background: 'var(--grape)', padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}
+        >
+          <div aria-hidden="true" style={{ fontSize: 48, lineHeight: 1 }}>{current.icon}</div>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--lilac)', lineHeight: 1.5 }}>
+            {current.body}
               </div>
             </motion.div>
 
