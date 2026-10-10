@@ -198,9 +198,11 @@ Checked against the repo and the Play Console on 2026-09-24.
 
 ### Still Veet's, unchanged
 
-- **Screenshots.** The 7 in `store/screenshots/` are from August and
-  September: no qualifying, no career, no badges, and shot before the font
-  fix. The icon and feature graphic are fine and were reused for PGS.
+- **Screenshots.** Replaced 2026-10-10 with 6 Race Day Bold shots in
+  `store/screenshots/` (menu, race setup, qualifying, live race, pit panel,
+  trophy room; status and nav bars cropped). Ready to upload; a race result
+  and a team-select shot are still missing (see the Plan 2 phone pass). The
+  icon and feature graphic predate the redesign.
 - **Privacy policy hosting.** Still not at a public URL, and 1.3 needs it to
   say more than 1.2 did.
 - **1.2 review status.** Submitted 2026-09-24; unknown since.
@@ -235,8 +237,7 @@ Checked against the repo and the Play Console on 2026-09-24.
 3. **A contact address for the privacy policy**, and hosting for it. Play
    will not accept the policy without an address, and 1.3 cannot ship without
    the policy.
-4. **Screenshots.** Still August and September: no qualifying, no career, no
-   badges, shot before the font fix.
+4. **Screenshots.** Replaced 2026-10-10 (Race Day Bold, 6 shots).
 5. **1.2's review status**, still unknown.
 
 ## 2026-10-09: the team ladder
@@ -334,3 +335,17 @@ replied inside the Capacitor WebView on the Pixel 10 Pro XL
 - Untouched screens readable in the new palette: development, race setup, qualifying.
 - Fixed after the first pass: invisible car on the menu band, digit gaps, empty space above the tower, "1 laps", projection only after a tyre tap.
 - Left for Plan 2: race-setup circuit card renders collapsed (pre-existing); a small gap remains in "+ 15 PTS"; podium helmets look soft at small size; menu "next race" shows the pending round while a result is unkept (old semantics).
+
+## 2026-10-10: Race Day Bold — Plan 2 phone pass
+
+Release build on the Pixel-class test phone (1080x2404), Veet's season-5 career, round 6.
+
+- Seen and working: the factory, race setup (circuit card full height, laps 2–4 forecast pills, REC on the recommended tyre, stint split dragged L21→L33 and the PLAN line followed), qualifying (lap card, grid, SIMULATE + TO THE GRID after a lap), race (tower, tyre meter, PIT sheet with ghost row and sets left), result (flat helmets, DNF band), menu (RESULT WAITING, TROPHIES 7/15), trophy room, garage (collectible cards, white visors), settings, scenarios.
+- Fixed during the pass (f4bd690): settings speed/difficulty selectors crushed; factory eyebrow clipped at "6 OF"; selected tyre too faint in race setup; HUD lap counter gap "L   1/46"; scenario pills invisible on the card.
+- Not exercised on the phone: team and driver select (reachable only through NEW SEASON, which would discard the career), the season-end verdict, start lights (the race started without the sequence), the dry-track spin radio (unit-tested).
+- The round-6 result was left unkept on purpose (two test races: P19, then a retry that ended DNF) — RETRY or play it out.
+- For Veet:
+  - Status-bar icons render dark on the dark ground (StatusBar style); pick light icons.
+  - RETRY ROUND re-rolls the weather but keeps the start tyre from the plan, so a wet-start plan retried into a dry race starts P20 on wets. Pre-existing; decide whether retry should reopen setup.
+  - The pit sheet's slanted top cuts a tower row in half behind it.
+  - Championship footer is ~260px tall on short phones; badge tiles' text sits close to the slant edge.
