@@ -349,3 +349,10 @@ Release build on the Pixel-class test phone (1080x2404), Veet's season-5 career,
   - RETRY ROUND re-rolls the weather but keeps the start tyre from the plan, so a wet-start plan retried into a dry race starts P20 on wets. Pre-existing; decide whether retry should reopen setup.
   - The pit sheet's slanted top cuts a tower row in half behind it.
   - Championship footer is ~260px tall on short phones; badge tiles' text sits close to the slant edge.
+
+## 2026-10-10: 1.4 submitted to production
+
+- versionCode 5 / 1.4 (`bb4995d`), signed AAB uploaded as production release "5 (1.4) Race Day Bold", full rollout, release notes cover the redesign, wing setup, debrief, team ladder and the winter reset of rival development.
+- Submitting it cancelled the 1.3 review (in review since 3 Oct) and restarted review with 1.4, which contains everything in 1.3. Managed publishing is off, so it goes live when approved.
+- Only warning: no native debug symbols uploaded.
+- Not done: the new store screenshots are not uploaded to the listing yet; the privacy-policy hosting/contact address is still open and may come up in review.
