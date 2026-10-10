@@ -22,7 +22,7 @@ export function HelmetAvatar({
   selected = false,
   selectionColor,
 }: HelmetAvatarProps) {
-  const sec = teamSecondary ?? '#0A0E1A'
+  const sec = teamSecondary ?? '#120E2B'
   const ring = selectionColor ?? teamPrimary
   const id = `h${teamPrimary.replace('#', '')}${pattern}${number}`
 

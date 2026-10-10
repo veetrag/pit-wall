@@ -51,6 +51,9 @@ describe('race result in Race Day Bold (hero 3)', () => {
     render(<RaceResult />)
     expect(screen.getByText('P2')).toBeTruthy()
     expect(screen.getByText(/PTS/)).toBeTruthy()
+    // "+" sits flush against the digits: one visible "+18" node (its twin is
+    // the aria-hidden width reserve).
+    expect(screen.getAllByText('+18').filter(el => el.getAttribute('aria-hidden') !== 'true')).toHaveLength(1)
     expect(screen.getByText(/From P14 on the grid ▲12/)).toBeTruthy()
     const toggle = screen.getByRole('button', { name: /FULL RESULTS/ })
     expect(toggle.getAttribute('aria-expanded')).toBe('false')

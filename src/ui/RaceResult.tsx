@@ -198,9 +198,13 @@ export function RaceResult() {
               <span style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 10, minWidth: 0 }}>
                 <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 36, lineHeight: 1, ...numeric }}>
                   {scored
-                    // Big Shoulders has no tabular figures: a fixed 1.1em box keeps
-                    // the count-up from shifting PTS sideways as digits change.
-                    ? <>+<span style={{ display: 'inline-block', minWidth: '1.1em', textAlign: 'right', marginRight: '0.2em' }}>{points}</span>PTS</>
+                    // Big Shoulders has no tabular figures: an invisible twin of the
+                    // final value sizes the box, so the count-up never shifts PTS and
+                    // "+" sits flush against the digits.
+                    ? <><span style={{ display: 'inline-grid' }}>
+                        <span aria-hidden="true" style={{ gridArea: '1 / 1', visibility: 'hidden' }}>+{playerResult?.points ?? 0}</span>
+                        <span style={{ gridArea: '1 / 1', textAlign: 'right' }}>+{points}</span>
+                      </span> PTS</>
                     : 'NO POINTS'}
                 </span>
                 {gridLine && (
