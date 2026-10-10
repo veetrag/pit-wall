@@ -1,6 +1,6 @@
 # Privacy Policy — Pit Wall
 
-**Last updated: 26 September 2026**
+**Last updated: 10 October 2026**
 
 Pit Wall is a single-player game. It has no advertising, no in-app purchases,
 no account of its own, and no analytics. It does use three Google services,
@@ -74,6 +74,4 @@ to an account we hold.
 
 ## Contact
 
-<!-- TODO(Veet): a contact address is REQUIRED by Play and this policy cannot
-     be published without one. It is the only thing still missing. -->
-_Contact address to be added before publication._
+Questions about this policy or your data: **veetrag@gmail.com**
