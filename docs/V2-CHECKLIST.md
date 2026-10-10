@@ -356,3 +356,12 @@ Release build on the Pixel-class test phone (1080x2404), Veet's season-5 career,
 - Submitting it cancelled the 1.3 review (in review since 3 Oct) and restarted review with 1.4, which contains everything in 1.3. Managed publishing is off, so it goes live when approved.
 - Only warning: no native debug symbols uploaded.
 - Not done: the new store screenshots are not uploaded to the listing yet; the privacy-policy hosting/contact address is still open and may come up in review.
+
+### 2026-10-10, later: store paperwork for 1.4
+
+- **Data safety updated in the console** (it still said "collects nothing" from August). As submitted: crash logs (required, app functionality), device or other IDs (required, app functionality), app activity → other actions = career progress via Play Games (optional, app functionality); nothing shared; encrypted in transit; no account creation. Two departures from `docs/store/data-safety.md`: crash logs and IDs are *required* (there is no in-app switch to turn crash reporting off), and game progress is "Other actions" (Google's definition names gameplay). The optional "can users request deletion" question is left blank — answering Yes requires a public deletion-request URL, which does not exist yet.
+- **Store listing:** full description replaced with the 1.4 copy (wing, debrief, team ladder, rival-development reset; tyre meter wording), 7 old screenshots replaced by the 6 Race Day Bold ones, which are labelled as AI-assisted in the new AI-asset declaration. App name and short description unchanged.
+- **Achievements:** the 8 Play Games achievements are published (IDs match `src/sync/achievements.ts`). Permanent.
+- **Debug symbols:** not possible — the only native library is AndroidX DataStore's `libdatastore_shared_counter.so`, which ships stripped. The console warning is harmless.
+- All of the above plus the 1.4 release were submitted together; the review restarted once more.
+- **Still open, needs Veet:** a contact address and a public URL for the privacy policy (and with them a data-deletion URL); a git remote to push to.
