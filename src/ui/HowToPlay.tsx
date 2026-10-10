@@ -59,8 +59,7 @@ export function HowToPlay() {
           </motion.button>
         }
       />
-
-  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px' }}>
         <motion.div
           key={step}
           initial={reduced ? false : { x: -18 }} animate={{ x: 0 }} transition={{ duration: 0.18, ease: EASE }}
@@ -70,8 +69,8 @@ export function HowToPlay() {
           <div aria-hidden="true" style={{ fontSize: 48, lineHeight: 1 }}>{current.icon}</div>
           <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--lilac)', lineHeight: 1.5 }}>
             {current.body}
-              </div>
-            </motion.div>
+          </div>
+        </motion.div>
 
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))`, gap: 3, marginTop: 20 }}>
           {STEPS.map((_, i) => (
