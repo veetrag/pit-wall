@@ -365,3 +365,5 @@ Release build on the Pixel-class test phone (1080x2404), Veet's season-5 career,
 - **Debug symbols:** not possible — the only native library is AndroidX DataStore's `libdatastore_shared_counter.so`, which ships stripped. The console warning is harmless.
 - All of the above plus the 1.4 release were submitted together; the review restarted once more.
 - **Still open, needs Veet:** a contact address and a public URL for the privacy policy (and with them a data-deletion URL); a git remote to push to.
+- **Privacy policy hosted (2026-10-10):** https://veetrag.github.io/pit-wall/privacy/ — the `gh-pages` branch of the now-public repo github.com/veetrag/pit-wall (an HTML render of `docs/store/privacy-policy.md`, contact veetrag@gmail.com). Play's privacy-policy URL now points there (it was an old Google Doc) and is in review with 1.4. If the policy text changes, re-render the page on `gh-pages`.
+- Worth doing: restrict the Firebase API key in `google-services.json` to the Android app in Google Cloud, now that the repo is public.
