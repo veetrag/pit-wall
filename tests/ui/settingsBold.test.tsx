@@ -48,4 +48,10 @@ describe('settings and how to play in Race Day Bold', () => {
     fireEvent.click(screen.getByRole('button', { name: /START RACING/ }))
     expect(startNewSeason).toHaveBeenCalled()
   })
+  it('the how to play card is never transparent right after a step change', () => {
+    render(<HowToPlay />)
+    fireEvent.click(screen.getByRole('button', { name: 'Step 2' }))
+    const card = screen.getByText(/Switch modes live/).parentElement as HTMLElement
+    expect(parseFloat(card.style.opacity || '1')).toBeGreaterThan(0)
+  })
 })

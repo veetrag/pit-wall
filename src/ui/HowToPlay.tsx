@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
-import { ScreenFrame, ScreenHeader, KitButton, snapIn, useReducedMotion, PRESS } from '@ui/kit'
+import { ScreenFrame, ScreenHeader, KitButton, useReducedMotion, PRESS, EASE } from '@ui/kit'
 
 const STEPS = [
   {
@@ -45,7 +45,6 @@ export function HowToPlay() {
   const current = STEPS[step]!
   const uiTap = useUiTap()
   const reduced = useReducedMotion()
-  const enter = snapIn(reduced)
 
   return (
     <ScreenFrame label="How to play">
@@ -62,17 +61,17 @@ export function HowToPlay() {
       />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '16px' }}>
-          <motion.div
-            key={step}
-            initial={enter.initial} animate={enter.animate} transition={enter.transition}
-            className="slant-lg"
-            style={{ background: 'var(--grape)', padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}
-          >
-            <div aria-hidden="true" style={{ fontSize: 48, lineHeight: 1 }}>{current.icon}</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--lilac)', lineHeight: 1.5 }}>
-              {current.body}
-            </div>
-          </motion.div>
+            <motion.div
+              key={step}
+              initial={reduced ? false : { x: -18 }} animate={{ x: 0 }} transition={{ duration: 0.18, ease: EASE }}
+              className="slant-lg"
+              style={{ background: 'var(--grape)', padding: '32px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}
+            >
+              <div aria-hidden="true" style={{ fontSize: 48, lineHeight: 1 }}>{current.icon}</div>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: 'var(--lilac)', lineHeight: 1.5 }}>
+                {current.body}
+              </div>
+            </motion.div>
 
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))`, gap: 3, marginTop: 20 }}>
           {STEPS.map((_, i) => (
