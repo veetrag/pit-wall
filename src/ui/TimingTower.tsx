@@ -1,11 +1,13 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
 import type { CarState } from '@engine/types'
-import { TyreChip, PRESS, EASE } from '@ui/kit'
+import { TyreChip, PRESS, EASE, snapIn } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSafetyCarDeployCount } from '@hooks/useSafetyCar'
+import { rivalIntel } from '@engine/rivalIntel'
+import { RivalIntelCard, intelAriaLabel } from './RivalIntelCard'
 
 // Default compact view targets a fixed row count centred on the player (not a
 // fixed radius) so a P1 or P20 player still gets a full-looking window instead
@@ -23,13 +25,15 @@ function formatGap(gap: number, position: number): string {
   return `+${gap.toFixed(1)}`
 }
 
-function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed }: {
+function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, intel }: {
   car: CarState
   leaderTime: number
   displayName?: string
   teamColor?: string
   wide?: boolean
   compressed?: boolean
+  /** Present on rival rows only: the row becomes a button that opens the intel card. */
+  intel?: { label: string; selected: boolean; onSelect: () => void }
 }) {
   const gap = car.raceTime - leaderTime
   const driverCode = displayName ?? car.driverId.replace('d_', '').toUpperCase().slice(0, 3)
@@ -92,8 +96,17 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed }:
       layout
       layoutId={car.driverId}
       data-tower-row
-      className="slant-row"
+      data-intel-row={intel ? car.driverId : undefined}
+      className={intel ? 'slant-row kit-focus' : 'slant-row'}
       transition={ROW_SPRING}
+      role={intel ? 'button' : undefined}
+      tabIndex={intel ? 0 : undefined}
+      aria-label={intel?.label}
+      aria-expanded={intel ? intel.selected : undefined}
+      onClick={intel?.onSelect}
+      onKeyDown={intel ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); intel.onSelect() }
+      } : undefined}
       style={{
         display: 'grid',
         gridTemplateColumns: wide ? GRID_WIDE : GRID,
@@ -107,6 +120,9 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed }:
         // --hot DNF/OUT, both >= 4.5:1 on --grape (an opacity fade drops them below).
         color: textColor,
         transition: 'background 0.4s ease',
+        cursor: intel ? 'pointer' : undefined,
+        // Inset, because the slant clip-path would cut an outside outline.
+        boxShadow: intel?.selected ? 'inset 0 0 0 2px var(--lilac)' : undefined,
       }}
     >
       <span style={{
@@ -234,6 +250,46 @@ export function TimingTower() {
     return () => clearTimeout(t)
   }, [deployCount, reducedMotion])
 
+  // The rival whose intel card is open, by driverId, so the card follows the
+  // car through position changes and out of the compact window.
+  const [intelId, setIntelId] = useState<string | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  // A tap anywhere outside the tower closes the card. The race keeps running.
+  useEffect(() => {
+    if (intelId === null) return
+    const onDown = (e: Event) => {
+      const root = rootRef.current
+      if (root && e.target instanceof Node && root.contains(e.target)) return
+      setIntelId(null)
+    }
+    document.addEventListener('pointerdown', onDown)
+    return () => document.removeEventListener('pointerdown', onDown)
+  }, [intelId])
+
+  // Intel moves only at lap boundaries (or a retirement / stop), so it is
+  // memoised on the lap plus a cheap signature: sector ticks do not recompute
+  // it, and rows are not handed new objects every sector.
+  const lap = raceState?.lap
+  const sig = raceState ? raceState.cars.map(c => `${c.retired ? 1 : 0}${c.pitsDone}${c.compound}`).join() : ''
+  const labels = useMemo(() => {
+    const m = new Map<string, string>()
+    if (!raceState || !config) return m
+    for (const car of raceState.cars) {
+      if (car.isPlayer) continue
+      const info = rivalIntel(config, raceState, car.driverId)
+      if (info) m.set(car.driverId, intelAriaLabel(info, config.drivers.find(d => d.id === car.driverId)?.code ?? car.driverId))
+    }
+    return m
+    // raceState is deliberately keyed by lap + sig, not identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config, lap, sig])
+  const openIntel = useMemo(
+    () => (intelId && raceState && config ? rivalIntel(config, raceState, intelId) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config, lap, sig, intelId])
+  const onSelectRef = useRef<(id: string) => void>(() => {})
+  onSelectRef.current = (id) => { uiTap(); setIntelId(cur => (cur === id ? null : id)) }
+
   if (!raceState || !config) return null
 
   const wide = nameFormat === 'full'
@@ -244,6 +300,7 @@ export function TimingTower() {
   const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
   const totalCars = sorted.length
 
+  const openCar = intelId ? raceState.cars.find(c => c.driverId === intelId) : undefined
   const ghostPos = pitPanelOpen && projectionResult ? projectionResult.rejoinPosition : null
   const playerDriver = player ? driverMap.get(player.driverId) : undefined
   const playerCode = wide ? (playerDriver?.name ?? 'Player') : (playerDriver?.code ?? 'PLY')
@@ -279,7 +336,7 @@ export function TimingTower() {
   }
 
   return (
-    <div style={{
+    <div ref={rootRef} style={{
       background: 'var(--night)', width: '100%', height: '100%',
       overflow: 'hidden', display: 'flex', flexDirection: 'column',
     }}>
@@ -335,11 +392,27 @@ export function TimingTower() {
                 teamColor={teamColorMap.get(row.car.teamId)}
                 wide={wide}
                 compressed={compressing}
+                intel={labels.has(row.car.driverId) ? {
+                  label: labels.get(row.car.driverId)!,
+                  selected: intelId === row.car.driverId,
+                  onSelect: () => onSelectRef.current(row.car.driverId),
+                } : undefined}
               />
             )
           )}
         </AnimatePresence>
       </div>
+      <AnimatePresence initial={false}>
+        {openIntel && openCar && (
+          <motion.div key="rival-intel" {...snapIn(reducedMotion)} style={{ flexShrink: 0, padding: '0 8px 8px' }}>
+            <RivalIntelCard
+              intel={openIntel}
+              code={driverMap.get(openCar.driverId)?.code ?? openCar.driverId}
+              teamColor={teamColorMap.get(openCar.teamId) ?? 'var(--lilac-dim)'}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
