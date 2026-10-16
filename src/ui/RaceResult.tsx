@@ -7,6 +7,7 @@ import { loadGameData } from '@data/validators'
 import { BADGES } from '@state/badges'
 import { BadgeToast } from './BadgeToast'
 import { DebriefCard } from './DebriefCard'
+import { LapChartCard } from './LapChart'
 import { HelmetAvatar } from './HelmetAvatar'
 import { HeroBand, KitButton, Pill, liveryOf, snapIn, useCountUp, useReducedMotion, ScreenFrame } from '@ui/kit'
 import { useDebriefStore } from '@state/debriefStore'
@@ -272,7 +273,8 @@ export function RaceResult() {
             </div>
           </motion.div>
 
-          {/* 4. Debrief (re-skins via tokens) */}
+          {/* 4. Lap chart, then the debrief verdicts (spec 1.5 §4) */}
+          <LapChartCard />
           <DebriefCard />
 
           {/* 5. Key moments */}
