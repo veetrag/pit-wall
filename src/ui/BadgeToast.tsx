@@ -24,7 +24,17 @@ import { BADGES } from '@state/badges'
  * navTap sound, which is the acknowledgement of a press. A badge arriving is
  * not a press.
  */
-export function BadgeToast({ ids }: { ids?: readonly string[] } = {}) {
+export function BadgeToast({ ids, placement = 'overlay' }: {
+  ids?: readonly string[]
+  /**
+   * 'overlay' floats over the bottom of the screen. 'inline' takes its own
+   * space in the layout instead, for a screen whose pinned footer it would
+   * otherwise cover (Championship: the toast does not time out there, and as
+   * an overlay it hid NEXT SEASON, and END CAREER under it, for as long as the
+   * player stayed).
+   */
+  placement?: 'overlay' | 'inline'
+} = {}) {
   const storeEarned = useCareerStore(s => s.justEarned)
   const justEarned = ids ?? storeEarned
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
@@ -52,9 +62,11 @@ export function BadgeToast({ ids }: { ids?: readonly string[] } = {}) {
 
   return (
     <div style={{
-      position: 'absolute', left: 0, right: 0, bottom: 'calc(var(--safe-bottom) + 16px)',
+      ...(placement === 'overlay'
+        ? { position: 'absolute', left: 0, right: 0, bottom: 'calc(var(--safe-bottom) + 16px)', zIndex: 5 }
+        : { flexShrink: 0, padding: '8px 0' }),
       display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center',
-      pointerEvents: 'none', zIndex: 5,
+      pointerEvents: 'none',
     }}>
       <AnimatePresence>
         {earned.map((b, i) => (
@@ -63,7 +75,10 @@ export function BadgeToast({ ids }: { ids?: readonly string[] } = {}) {
             className="slant-md"
             {...(() => { const e = snapIn(reducedMotion, i * 8); return { initial: e.initial, animate: e.animate, transition: e.transition } })()}
             exit={{ opacity: 0 }}
-            style={{ padding: '10px 22px', background: 'var(--volt)', color: 'var(--ink)', textAlign: 'center', maxWidth: '86%' }}
+            // 32px sides, not 22: slant-md cuts 6% of the width at two corners,
+            // up to ~19px on an 86%-wide tile, and 22px left the first and last
+            // letters brushing the slant (1.4 phone pass).
+            style={{ padding: '12px 32px', background: 'var(--volt)', color: 'var(--ink)', textAlign: 'center', maxWidth: '86%' }}
           >
             <div style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 11, letterSpacing: 2 }}>
               BADGE EARNED

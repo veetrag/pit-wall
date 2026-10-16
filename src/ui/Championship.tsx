@@ -8,6 +8,7 @@ import { useSettingsStore } from '@state/settingsStore'
 import { BadgeToast } from './BadgeToast'
 import { LadderReveal, ConstructorsList } from './LadderReveal'
 import { useUiTap } from '@hooks/useUiTap'
+import { useShortViewport } from '@hooks/useShortViewport'
 import { pushCloudSave } from '@sync/storeBridge'
 import { maybeAskForReview } from '@sync/platformBridge'
 import { loadGameData } from '@data/validators'
@@ -38,6 +39,7 @@ export function Championship() {
   const [confirmingEnd, setConfirmingEnd] = useState(false)
   const [table, setTable] = useState<'drivers' | 'teams'>('drivers')
   const [showAll, setShowAll] = useState(false)
+  const short = useShortViewport()
 
   const { tierCosts, attributes } = loadGameData().upgrades
   /*
@@ -81,6 +83,23 @@ export function Championship() {
   const leaderPts = winner?.points ?? 0
   const shownDrivers = showAll ? standings : standings.slice(0, FOLD)
 
+  // One element, placed by viewport: the footer on a tall phone, the end of
+  // the scrolling content on a short one. Either way it must be confirmed.
+  const endCareerControls = !confirmingEnd ? (
+    <KitButton variant="secondary" size="sm" onClick={() => setConfirmingEnd(true)} style={{ width: '100%' }}>
+      END CAREER
+    </KitButton>
+  ) : (
+    <motion.div {...snapIn(reducedMotion)} style={{ display: 'flex', gap: 8 }}>
+      <KitButton variant="secondary" size="sm" onClick={() => setConfirmingEnd(false)} style={{ flex: 1 }}>
+        CANCEL
+      </KitButton>
+      <KitButton variant="urgent" size="sm" onClick={() => endCareer()} style={{ flex: 2 }}>
+        CONFIRM — END CAREER
+      </KitButton>
+    </motion.div>
+  )
+
   return (
     <ScreenFrame label="Championship">
       {/*
@@ -90,8 +109,14 @@ export function Championship() {
         here, on the screen that celebrates the season, rather than on the
         upgrades screen afterwards.
       */}
-      <BadgeToast />
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
+      {/*
+        The content area: the scrolling season story, then the badge toast IN
+        FLOW beneath it. The toast does not time out here, and as an overlay it
+        covered NEXT SEASON (and, scrolled down, END CAREER) for as long as the
+        player stayed. In flow it takes its height from the scroll area instead.
+      */}
+      <div data-testid="season-content" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
         <div>
           <ScreenHeader eyebrow={`SEASON ${seasonNumber} · FINAL`} title="Championship" />
           <div style={{ padding: '10px 16px 0' }}>
@@ -156,10 +181,17 @@ export function Championship() {
             </div>
           )}
         </div>
+
+        {/* On a short phone END CAREER lives at the end of the content: it is
+            rare and destructive, and pinned it cost the footer ~60px. */}
+        {short && <div style={{ margin: '0 16px' }}>{endCareerControls}</div>}
+      </div>
+      <BadgeToast placement="inline" />
       </div>
 
-      {/* Season boundary */}
-      <div style={{ padding: '12px 16px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Season boundary. Compact on a short phone (1.4 phone pass: ~260px of
+          footer at 360x640). */}
+      <div data-testid="season-footer" style={{ padding: short ? '8px 16px 10px' : '12px 16px 16px', borderTop: '1px solid var(--line-hair)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: short ? 6 : 10 }}>
         {/*
           The podium bonus. Shown only when it was paid -- a "+0 POINTS" row
           for a midfield season would read as a taunt, and an absent row says
@@ -171,27 +203,14 @@ export function Championship() {
           </motion.div>
         )}
         <KitButton variant="primary" size="lg" onClick={() => { startNextSeason(); pushCloudSave() }}
-          style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 22px' }}>
-          <span>NEXT SEASON →</span>
-          <span style={{ fontFamily: 'var(--font-body)', fontStyle: 'normal', fontWeight: 700, fontSize: 12, textTransform: 'none', letterSpacing: 0, lineHeight: 1.3 }}>
+          style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: short ? '6px 22px' : '8px 22px' }}>
+          <span style={{ lineHeight: short ? 1.05 : undefined }}>NEXT SEASON →</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontStyle: 'normal', fontWeight: 700, fontSize: short ? 11 : 12, textTransform: 'none', letterSpacing: 0, lineHeight: short ? 1.2 : 1.3 }}>
             Season {seasonNumber + 1} · You keep {keptTiers} of {maxTiers} upgrade tiers · Rivals developed over the winter
           </span>
         </KitButton>
 
-        {!confirmingEnd ? (
-          <KitButton variant="secondary" size="sm" onClick={() => setConfirmingEnd(true)} style={{ width: '100%' }}>
-            END CAREER
-          </KitButton>
-        ) : (
-          <motion.div {...snapIn(reducedMotion)} style={{ display: 'flex', gap: 8 }}>
-            <KitButton variant="secondary" size="sm" onClick={() => setConfirmingEnd(false)} style={{ flex: 1 }}>
-              CANCEL
-            </KitButton>
-            <KitButton variant="urgent" size="sm" onClick={() => endCareer()} style={{ flex: 2 }}>
-              CONFIRM — END CAREER
-            </KitButton>
-          </motion.div>
-        )}
+        {!short && endCareerControls}
       </div>
     </ScreenFrame>
   )
