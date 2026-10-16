@@ -56,6 +56,23 @@ export const CIRCUIT_ORDER = [
 
 let alertCounter = 0
 
+/**
+ * The seed for a pit projection made at (lap, sector) of the race with this
+ * seed. Pure, so the same moment of the same race always gets the same
+ * advice, and every tick gets fresh dice.
+ *
+ * Integer-only mixing (mulberry-style finaliser over seed XOR tick * golden
+ * ratio). Every step is a bijection on 32 bits, so two ticks of one race can
+ * never share a seed.
+ */
+export function projectionSeed(raceSeed: number, lap: number, sector: number): number {
+  const tick = lap * 3 + sector + 1
+  let h = (raceSeed ^ Math.imul(tick, 0x9E3779B1)) >>> 0
+  h = Math.imul(h ^ (h >>> 16), 0x85EBCA6B) >>> 0
+  h = Math.imul(h ^ (h >>> 13), 0xC2B2AE35) >>> 0
+  return (h ^ (h >>> 16)) >>> 0
+}
+
 export const useRaceStore = create<RaceStore>((set, get) => ({
   phase: 'idle',
   config: null,
@@ -214,15 +231,19 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
      * from a seed, which made the projection impossible to test or to reproduce
      * from a bug report.
      *
-     * rngState is the live race RNG, so it is fully determined by the race seed
-     * and advances every tick: the projection is stable at a given moment and
-     * still moves as the race moves. Reading it does not consume it.
+     * From the race seed AND the moment (lap, sector), via projectionSeed:
+     * stable at a given moment, fresh dice every tick. The 1.4 version used
+     * raceState.rngState, believing it advanced every tick; it does not
+     * (initRace sets it to the seed and nothing writes it again), so every
+     * projection in a race drew the same dice, and one unlucky stop-time draw
+     * biased the advice for the whole race. Nothing is consumed from the live
+     * race RNG either way.
      *
      * The compound is deliberately NOT mixed in, so soft/medium/hard are
      * projected under identical luck and the only difference the player sees
      * between them is the tyre.
      */
-    const result = projectPitNow(config, raceState, compound, raceState.rngState)
+    const result = projectPitNow(config, raceState, compound, projectionSeed(config.seed, raceState.lap, raceState.sector))
     set({ projectionResult: result })
   },
 }))

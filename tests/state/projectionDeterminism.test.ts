@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useRaceStore } from '@state/raceStore'
+import { useRaceStore, projectionSeed } from '@state/raceStore'
+import { projectPitNow } from '@engine/index'
 
 /*
  * The pit projection is the single highest-stakes number the game shows: the
@@ -69,5 +70,41 @@ describe('the pit projection is reproducible', () => {
     expect(hard).not.toBeNull()
     // They must differ (different tyre), but only because of the tyre.
     expect(JSON.stringify(soft)).not.toBe(JSON.stringify(hard))
+  })
+})
+
+describe('the projection seed', () => {
+  /*
+   * The 1.4 fix seeded the projection from raceState.rngState on the belief
+   * that it "advances every tick". It does not: initRace sets it to the race
+   * seed and nothing in the engine ever writes it again. So every projection
+   * in a race drew the SAME dice -- the same stationary-time draw on lap 3
+   * and lap 43. Reproducible, but one unlucky draw biased the whole race's
+   * advice in the same direction. It is now derived from the race seed and
+   * the moment (lap, sector): reproducible, and fresh dice each tick.
+   */
+  beforeEach(() => {
+    useRaceStore.setState({ phase: 'idle', config: null, raceState: null, projectionResult: null, pitPanelOpen: false, rng: null })
+    useRaceStore.getState().startRace()
+  })
+
+  it('IS A PURE FUNCTION OF (race seed, lap, sector)', () => {
+    expect(projectionSeed(42, 10, 2)).toBe(projectionSeed(42, 10, 2))
+    expect(projectionSeed(42, 10, 2)).not.toBe(projectionSeed(43, 10, 2))
+    expect(Number.isInteger(projectionSeed(42, 10, 2))).toBe(true)
+  })
+
+  it('never repeats within a race', () => {
+    const seen = new Set<number>()
+    for (let lap = 0; lap < 80; lap++) for (const sector of [0, 1, 2]) seen.add(projectionSeed(42, lap, sector))
+    expect(seen.size).toBe(80 * 3)
+  })
+
+  it('IS WHAT THE PIT PANEL ACTUALLY PROJECTS WITH', () => {
+    for (let i = 0; i < 40; i++) useRaceStore.getState().step()
+    const { config, raceState } = useRaceStore.getState()
+    useRaceStore.getState().updateProjection('M')
+    const expected = projectPitNow(config!, raceState!, 'M', projectionSeed(config!.seed, raceState!.lap, raceState!.sector))
+    expect(useRaceStore.getState().projectionResult).toEqual(expected)
   })
 })
