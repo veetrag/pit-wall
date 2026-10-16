@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { initRace, stepSector, projectPitNow } from '@engine/index'
+import { initRace, stepSector, projectPitNow, neutralisationKind } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
 import { makeTuning } from '../fixtures/tuning'
@@ -237,7 +237,7 @@ describe('safety car pace and duration', () => {
     let deployLap: number | null = null
     let endLap: number | null = null
     const final = runRace(config, 5, (prev, next) => {
-      if (prev.safetyCar === null && next.safetyCar !== null) deployLap = next.safetyCar.deployedLap
+      if (prev.safetyCar === null && next.safetyCar !== null && neutralisationKind(next.safetyCar) === 'sc') deployLap = next.safetyCar.deployedLap
       if (prev.safetyCar !== null && next.safetyCar === null && endLap === null) endLap = next.lap
     })
     expect(deployLap, 'no deployment, so expiry cannot be asserted').not.toBeNull()
