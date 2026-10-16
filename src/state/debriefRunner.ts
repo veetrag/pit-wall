@@ -2,6 +2,7 @@ import type { RaceConfig } from '@engine/types'
 import type { DebriefResult } from '@engine/types'
 import type { PlayerCall } from '@engine/playerCalls'
 import { judgeCalls } from '@engine/debrief'
+import { lapHistory, type LapHistory } from '@engine/raceHistory'
 
 export interface DebriefJob { config: RaceConfig; seed: number; calls: PlayerCall[] }
 export interface DebriefHandle { cancel(): void }
@@ -10,6 +11,8 @@ export interface DebriefRunner {
     progress(done: number, total: number): void
     done(result: DebriefResult): void
     failed(reason: string): void
+    /** The lap chart's data, delivered before judging starts so a judging timeout never costs the chart. */
+    history(h: LapHistory): void
   }): DebriefHandle
 }
 
@@ -22,6 +25,11 @@ export const inProcessRunner: DebriefRunner = {
   start(job, on) {
     let cancelled = false
     setTimeout(() => {
+      if (cancelled) return
+      try {
+        const h = lapHistory(job.config, job.seed, job.calls)
+        if (!cancelled) on.history(h)
+      } catch { /* the chart is optional; the verdicts still run */ }
       if (cancelled) return
       try {
         let lastPct = -1

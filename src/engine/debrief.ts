@@ -15,6 +15,10 @@ export function isFinished(state: RaceState): boolean {
  * Runs a race forward from `start`, applying every call whose step is at or
  * after start.step at exactly that step (before the step is simulated), until
  * `untilStep` (exclusive of calls at that step) or the flag.
+ *
+ * `observe`, if given, sees the state after every simulated step (and the
+ * step count it reached). It is read-only by contract: it must not mutate the
+ * state or draw from `rng`, so passing one never changes the race.
  */
 export function simulate(
   config: RaceConfig,
@@ -22,6 +26,7 @@ export function simulate(
   rng: Rng,
   calls: readonly PlayerCall[],
   untilStep = Number.POSITIVE_INFINITY,
+  observe?: (state: Readonly<RaceState>, step: number) => void,
 ): { state: RaceState; step: number } {
   const pending = calls.filter(c => c.step >= start.step).slice().sort((a, b) => a.step - b.step)
   let { state, step } = start
@@ -35,6 +40,7 @@ export function simulate(
     if (isFinished(state)) break
     state = stepSector(config, state, rng)
     step++
+    observe?.(state, step)
   }
   return { state, step }
 }
@@ -42,9 +48,10 @@ export function simulate(
 /** The race as it happened: (config, seed, calls) -> identical state. */
 export function replay(
   config: RaceConfig, seed: number, calls: readonly PlayerCall[], untilStep?: number,
+  observe?: (state: Readonly<RaceState>, step: number) => void,
 ): { state: RaceState; step: number; rng: Rng } {
   const rng = createRng(seed)
-  const out = simulate(config, { state: initRace(config), step: 0 }, rng, calls, untilStep)
+  const out = simulate(config, { state: initRace(config), step: 0 }, rng, calls, untilStep, observe)
   return { ...out, rng }
 }
 
