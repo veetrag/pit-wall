@@ -6,7 +6,7 @@ import { useCoachingActive } from '@hooks/useCoachingActive'
 import type { Compound } from '@engine/types'
 import type { ProjectionResult } from '@engine/projection'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
-import { effectivePitLaneLoss } from '@engine/incidents'
+import { effectivePitLaneLoss, neutralisationKind } from '@engine/incidents'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { useSafetyCar } from '@hooks/useSafetyCar'
 import { soundService } from '@audio/soundService'
@@ -114,7 +114,11 @@ function PitLossLine() {
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, fontVariantNumeric: 'tabular-nums' }}>
       <Pill>PIT LOSS {loss.toFixed(1)}s</Pill>
-      {discounted && <Pill tone="caution">−{saving.toFixed(1)}s UNDER SAFETY CAR</Pill>}
+      {discounted && (
+        <Pill tone="caution">
+          −{saving.toFixed(1)}s UNDER {neutralisationKind(safetyCar) === 'vsc' ? 'VSC' : 'SAFETY CAR'}
+        </Pill>
+      )}
     </div>
   )
 }

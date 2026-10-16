@@ -25,6 +25,13 @@ interface RaceStore {
   playerCalls: PlayerCall[]
   stepCount: number
   pitEndTime: number
+  /**
+   * The lane loss the player's current (or last) stop was CHARGED. Latched at
+   * the stop rather than recomputed from the live safetyCar, because the
+   * neutralisation can change mid-stop -- an SC superseding a VSC would
+   * otherwise re-price a stop already made, and the pit timer would jump.
+   */
+  pitLaneLoss: number
   rng: Rng | null
   hudAlerts: AlertMessage[]
   radioState: RadioState
@@ -83,6 +90,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   playerCalls: [],
   stepCount: 0,
   pitEndTime: 0,
+  pitLaneLoss: 0,
   rng: null,
   hudAlerts: [],
   radioState: makeRadioState(),
@@ -92,14 +100,14 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0 })
+    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0 })
   },
 
   startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart) {
     const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart)
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0 })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0 })
   },
 
   /**
@@ -114,7 +122,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   startScenarioRace(spec) {
     const config = buildScenarioConfig(spec)
     const { state, rng } = startScenario(config, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, hudAlerts: [], radioState: makeRadioState() })
+    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, hudAlerts: [], radioState: makeRadioState() })
   },
 
   initForStartSequence() {
@@ -122,7 +130,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0 })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0 })
   },
 
   confirmRaceStart() {
@@ -130,7 +138,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   resetRace() {
-    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, hudAlerts: [], radioState: makeRadioState() })
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, hudAlerts: [], radioState: makeRadioState() })
   },
 
   step() {
@@ -145,10 +153,11 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const autoStopped = !!before && !!after && after.pitsDone > before.pitsDone
 
     const playerNow = after?.raceTime ?? 0
-    // Same effective loss the stop itself was charged, so a stop taken under
-    // yellow is not held "in the pit lane" for the full green-flag duration.
-    const stillInPit = autoStopped || (playerInPit &&
-      playerNow < pitEndTime + effectivePitLaneLoss(config.circuit, nextState.safetyCar, config.tuning))
+    // A plan stop executes inside stepSector at the lap boundary and is charged
+    // with the post-tick neutralisation -- nextState.safetyCar.
+    const autoLoss = effectivePitLaneLoss(config.circuit, nextState.safetyCar, config.tuning)
+    const chargedLoss = autoStopped ? autoLoss : get().pitLaneLoss
+    const stillInPit = autoStopped || (playerInPit && playerNow < pitEndTime + chargedLoss)
 
     const nextRadio = processRadioTick(nextState, config, radioState, (msg, severity) => {
       const id = `alert-${++alertCounter}`
@@ -165,6 +174,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
         pitPanelOpen: false,      // a plan stop can land while the panel is open; confirming would charge a second stop
         projectionResult: null,
         pitEndTime: after.raceTime,
+        pitLaneLoss: autoLoss,
         hudAlerts: [...s.hudAlerts, { id: `alert-${++alertCounter}`, severity: 'caution' as const, category: 'RADIO', message: 'Box box -- plan stop.', icon: '📻' }],
       } : {}),
     }))
@@ -192,6 +202,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       pitPanelOpen: false,
       playerInPit: true,
       pitEndTime: playerTime,
+      pitLaneLoss: effectivePitLaneLoss(config.circuit, raceState.safetyCar, config.tuning),
       hudAlerts: [...s.hudAlerts, { id, severity: 'caution' as const, category: 'RADIO', message: 'Box box box. Come in now.', icon: '📻' }],
     }))
   },

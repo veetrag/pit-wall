@@ -53,6 +53,7 @@ export interface RadioState {
   cliffWarned: boolean
   prevRetired: boolean
   lowWingWarned: boolean
+  prevVscCount: number
 }
 
 export function makeRadioState(): RadioState {
@@ -67,6 +68,7 @@ export function makeRadioState(): RadioState {
     cliffWarned: false,
     prevRetired: false,
     lowWingWarned: false,
+    prevVscCount: 0,
   }
 }
 
@@ -94,6 +96,19 @@ export function processRadioTick(
   }
   next.prevRetired = player.retired
   if (player.retired) return next // nothing else is relevant once retired
+
+  // 0b. A VSC opening with the player's planned stop close: the cheap stop is a
+  // now-or-never call. Same window the AI reacts on (tuning.ai), so the
+  // engineer never tells the player to box for a stop the smart teams would
+  // not take. (Pre-flight ruling P6: planned stop only, no tyre-wear clause.)
+  const vscCount = state.incidents.reduce((n, i) => n + (i.kind === 'vsc_deployed' ? 1 : 0), 0)
+  if (vscCount > radio.prevVscCount) {
+    const nextStop = player.strategy.plannedStops[player.pitsDone]
+    if (nextStop !== undefined && nextStop.lap - player.lap <= config.tuning.ai.neutralisationWindowLaps) {
+      tryPush('vsc_box', 2, {}, pushAlert)
+    }
+  }
+  next.prevVscCount = vscCount
 
   // 1. Tyre cliff (high priority, fire once per stint)
   if (compound) {

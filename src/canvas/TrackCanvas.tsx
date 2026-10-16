@@ -1,3 +1,4 @@
+import { cautionWashAlpha } from './cautionWash'
 import { useEffect, useRef } from 'react'
 import * as PIXI from 'pixi.js'
 import { useRaceStore } from '@state/raceStore'
@@ -355,7 +356,7 @@ export function TrackCanvas() {
     // R2/R4: redrawn only when atmosphere/weather actually change, not per frame.
     let lastAtmosphere = ''
     let lastWeather: WeatherState | '' = ''
-    let lastSafetyCar = false
+    let lastWashAlpha = 0
 
     const cw = container.clientWidth || 400
     const ch = container.clientHeight || 300
@@ -448,13 +449,13 @@ export function TrackCanvas() {
           // screen would sit under an unexplained yellow wash, with every
           // surface that could explain it already gone.
           const { raceState: scState, phase: scPhase } = useRaceStore.getState()
-          const scActive = scState?.safetyCar != null && (scPhase === 'racing' || scPhase === 'starting')
-          if (scActive !== lastSafetyCar) {
+          const washAlpha = cautionWashAlpha(scState?.safetyCar ?? null, scPhase)
+          if (washAlpha !== lastWashAlpha) {
             cautionGfx.clear()
-            if (scActive) {
-              cautionGfx.rect(0, 0, cw, ch).fill({ color: 0xFFB020, alpha: 0.05 })
+            if (washAlpha > 0) {
+              cautionGfx.rect(0, 0, cw, ch).fill({ color: 0xFFB020, alpha: washAlpha })
             }
-            lastSafetyCar = scActive
+            lastWashAlpha = washAlpha
           }
 
           const cars = useRaceStore.getState().raceState?.cars

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
-import { effectivePitLaneLoss } from '@engine/incidents'
 
 export function PitTimer() {
   const playerInPit = useRaceStore(s => s.playerInPit)
   const config = useRaceStore(s => s.config)
-  const safetyCar = useRaceStore(s => s.raceState?.safetyCar ?? null)
+  const pitLaneLoss = useRaceStore(s => s.pitLaneLoss)
   const [visible, setVisible] = useState(false)
   const [key, setKey] = useState(0)
 
@@ -22,10 +21,9 @@ export function PitTimer() {
 
   if (!visible || !config) return null
 
-  // Must be the SAME effective loss raceStore charged the stop, or the timer
-  // counts down from a duration the race never used.
-  const stopDuration = effectivePitLaneLoss(config.circuit, safetyCar, config.tuning) +
-    config.tuning.pit.stopMean
+  // The loss raceStore latched when the stop was charged -- never recomputed
+  // from the live neutralisation, which can change while the car is in the lane.
+  const stopDuration = pitLaneLoss + config.tuning.pit.stopMean
 
   return (
     <AnimatePresence>
