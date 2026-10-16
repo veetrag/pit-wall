@@ -270,7 +270,19 @@ export function StartLights() {
    * Found by setting it to 4x on a device and watching the race start at 1x.
    */
   const simSpeed = useSettingsStore(s => s.simSpeed)
+  /*
+   * Reduced motion does NOT skip the lights; it only drops their movement
+   * (lamp pulse, gantry drop-in, GO scale-in). It used to skip the whole
+   * sequence, which is how the round-6 race on the 1.4 phone pass "started
+   * without the sequence": reduced motion defaults from the OS and sticks
+   * once toggled. Five lamps lighting one by one is a state sequence, not
+   * movement (CLAUDE.md 6.3), and the race start is the game's hook (6.2).
+   *
+   * Skipping is the player's explicit choice: the "Skip start sequence"
+   * setting, which until now was persisted and shown but read by nothing.
+   */
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
+  const skipStartSequence = useSettingsStore(s => s.skipStartSequence)
   const { impact } = useHaptics()
   const config = useRaceStore(s => s.config)
   const [litCount, setLitCount] = useState(0)
@@ -279,7 +291,7 @@ export function StartLights() {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    if (reducedMotion) {
+    if (skipStartSequence) {
       soundService.play('lightsOut')
       confirmRaceStart()
       setSpeed(simSpeed)
@@ -353,8 +365,8 @@ export function StartLights() {
 
       {/* Lights gantry */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: -16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
+        initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: -16 }}
+        animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.22, ease: EASE }}
         style={{ position: 'relative' }}
       >
@@ -385,11 +397,16 @@ export function StartLights() {
                   border: '1px solid rgba(var(--white-rgb), 0.1)',
                 }} />
                 <motion.div
-                  animate={lit
-                    ? { scale: [1, 1.18, 1], boxShadow: [`0 0 0px rgba(${lampRgb}, 0)`, `0 0 32px rgba(${lampRgb}, 1)`, `0 0 20px rgba(${lampRgb}, 1)`] }
-                    : lightsOut
-                      ? { scale: 0.85, opacity: 0.15 }
-                      : {}
+                  data-lit={lit}
+                  // Under reduced motion the lamp simply turns on and, at
+                  // lights out, off: colour only, no pulse or shrink.
+                  animate={reducedMotion
+                    ? (lightsOut ? { opacity: 0.15 } : {})
+                    : lit
+                      ? { scale: [1, 1.18, 1], boxShadow: [`0 0 0px rgba(${lampRgb}, 0)`, `0 0 32px rgba(${lampRgb}, 1)`, `0 0 20px rgba(${lampRgb}, 1)`] }
+                      : lightsOut
+                        ? { scale: 0.85, opacity: 0.15 }
+                        : {}
                   }
                   transition={{ duration: 0.3 }}
                   style={{
@@ -412,8 +429,8 @@ export function StartLights() {
           {showGo ? (
             <motion.div
               key="go"
-              initial={{ opacity: 0, scale: 0.4 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.4 }}
+              animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
               transition={{ duration: 0.22, ease: EASE }}
               style={{
                 fontFamily: 'var(--font-display)', fontSize: 72, fontWeight: 900, fontStyle: 'italic',

@@ -14,9 +14,11 @@ vi.mock('@audio/soundService', () => ({ soundService: { play: vi.fn() } }))
 beforeEach(() => {
   useClockStore.setState({ speed: 0 })
   useRaceStore.setState({ phase: 'starting' })
-  // The reduced-motion path runs the whole lights sequence synchronously on
-  // mount, which is what makes this testable without fake timers.
-  useSettingsStore.setState({ reducedMotion: true, simSpeed: 1 })
+  // The skip-start path runs lights-out synchronously on mount, which is what
+  // makes this testable without fake timers. (It used to be reduced motion;
+  // reduced motion now runs the full sequence -- the timed path is covered
+  // with the sim speed in tests/ui/startLightsSequence.test.tsx.)
+  useSettingsStore.setState({ skipStartSequence: true, simSpeed: 1 })
 })
 
 describe('the sim speed setting', () => {
