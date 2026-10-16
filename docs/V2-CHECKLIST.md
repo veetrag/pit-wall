@@ -370,3 +370,80 @@ Release build on the Pixel-class test phone (1080x2404), Veet's season-5 career,
 - **Firebase keys (2026-10-13):** the Android key is restricted to `com.veetrag.pitwall` + the Play signing and upload SHA-1s; the unused Browser key is deleted (restorable for 30 days).
 - **Data deletion (2026-10-13):** https://veetrag.github.io/pit-wall/delete-data/ (source `docs/store/delete-data.md`). Saved in the data-safety form but **not sent for review** — send it from Publishing overview once 1.4 is live, so 1.4's review doesn't restart.
 - BillDesk KYC banner: only affects paid sales; Pit Wall has none. Ignored.
+
+---
+
+## 2026-10-16: open to-do and feature ideas
+
+### Fixes for 1.5 (from the 1.4 phone pass)
+
+- [ ] Status-bar icons: light style on the dark ground.
+- [ ] Pit sheet's slanted top cuts a tower row in half.
+- [ ] Championship footer ~260px on short phones; badge text too close to the slant.
+- [ ] RETRY ROUND keeps the plan's start tyre into re-rolled weather (proposal: retry reopens race setup).
+- [ ] Start lights did not play before the round-6 race; confirm or fix.
+- [ ] Backgrounding mid-race (no `visibilitychange`/`appStateChange` handler).
+- [ ] On-device: team/driver select, season-end verdict.
+- [ ] Round one of every new season is wet (seed 42 at bengaluru); a new player's first race is the punishing one.
+- [ ] `projectPitNow` seeded from `Date.now()`, so pit advice changes each time the panel opens.
+- [ ] Predictive back gesture (API 36); low-end phone frame rate; tablet/foldable layout.
+
+### Store, once 1.4 is live
+
+- [ ] Send the data-deletion change for review.
+- [ ] Missing screenshots: race result, team select.
+
+### Feature ideas (proposals, not decided — each needs Veet's call)
+
+Already ruled out and not repeated here: run both cars, practice, driver market,
+weekend tyre allocation, daily rewards/streaks, leaderboards/friends.
+
+**In the race (the core loop)**
+- [ ] **Virtual safety car.** The full safety car exists; a VSC would add a
+      second, cheaper "free-ish stop" window (~half the pit loss saved, gaps
+      frozen rather than bunched), creating a different decision from the SC.
+      Engine change against the locked `MODEL_SPEC.md`, so it needs his sign-off
+      and a re-run of the Monte-Carlo bands.
+- [ ] **Driver radio requests.** The driver occasionally asks for something —
+      "tyres are gone, box?", "I'm faster than him, let me push" — and the
+      player answers yes/no in one tap. Uses the existing pace and pit levers,
+      so no new mechanics; it makes the race talk back. Data in `radio.json`.
+- [ ] **Rival intel on the tower.** Tap a rival row to see tyre compound and
+      age, stops made, and a "likely to box in N laps" hint from `strategy.ts`.
+      Makes undercut/overcut a deliberate play rather than a lucky one.
+
+**After the race**
+- [ ] **Lap chart in the debrief.** Position-by-lap lines for you and the cars
+      around you, with pit stops and SC periods marked. The race is
+      deterministic and already recorded, so this is pure UI, and it shows the
+      player *why* their strategy worked.
+- [ ] **Share a result card.** Render the podium/result as an image and open
+      the Android share sheet (Capacitor Share). No server, no account — the
+      only free growth channel the game has.
+
+**Career and seasons**
+- [ ] **Team offers (the deferred "promotion" idea).** After a strong season a
+      bigger team offers a seat with a harder board target; the player can
+      decline. Gives an endless career an arc. Open questions are in
+      `docs/superpowers/specs/2026-09-19-v2-roadmap.md` (development tiers,
+      demotion, what the target is).
+- [ ] **Regulation shake-up between seasons.** Each winter one rule changes —
+      tyre deg up, pit loss down, a new circuit swapped in, a points tweak —
+      announced on the season-end screen. Makes season five feel unlike season
+      one at low cost (it is `tuning.json` overlays).
+- [ ] **Sprint weekends.** A few rounds run a short race with no mandatory
+      stop before the main one. A different strategic shape using the same
+      engine; needs a points-table and calendar change.
+- [ ] **Career stats and records page.** Best finish per circuit, win rate by
+      start compound, longest stint, biggest comeback. Data the career record
+      mostly holds already; feeds the trophy room.
+
+**Reach and quality**
+- [ ] **In-App Review prompt** (planned as Step 4 of the Play services plan,
+      not yet built): once per career, after a title or first win.
+- [ ] **Colour-blind tyre palette** in Settings. Letters already back up the
+      colours, but S (hot pink) and M (volt) are the two most-used and the
+      hardest pair for deuteranopia. Token swap via `styles/tokens.css`.
+
+**Suggested order:** 1.5 fixes → lap chart + share card (cheap, visible) →
+driver radio requests → rival intel → regulation shake-up → team offers.
