@@ -114,11 +114,47 @@ describe('LapChart', () => {
   })
 })
 
+describe('retirement marker', () => {
+  it('sits at the last vertex of the line for a car retired mid-race', () => {
+    const h = history(cars => cars.map((c, i) => i === 6
+      ? { ...c, positions: [7, 7, 8, 9, 10, 11], pitLaps: [], retiredLap: 6, finish: 20 }
+      : c))
+    const { container } = render(<LapChart history={h} playerDriverId={id(6)} />)
+    const line = container.querySelector('[data-tier="player"] polyline')!
+    const pts = line.getAttribute('points')!.split(' ')
+    const [lx, ly] = pts[pts.length - 1]!.split(',').map(Number)
+    const cross = container.querySelector('[data-tier="player"] [data-retired] line')!
+    const mid = (Number(cross.getAttribute('x1')) + Number(cross.getAttribute('x2'))) / 2
+    const midY = (Number(cross.getAttribute('y1')) + Number(cross.getAttribute('y2'))) / 2
+    expect(mid).toBeCloseTo(lx!, 1)
+    expect(midY).toBeCloseTo(ly!, 1)
+  })
+})
+
 describe('LapChartCard', () => {
   it('renders nothing without a history (a race resumed from a save)', () => {
     useSeasonStore.setState({ playerDriverId: id(6) })
     const { container } = render(<LapChartCard />)
     expect(container.innerHTML).toBe('')
+  })
+
+  it('shows a busy placeholder while the debrief runs with no history yet', () => {
+    useSeasonStore.setState({ playerDriverId: id(6) })
+    useDebriefStore.setState({ history: null, raceKey: 'k', status: 'running' })
+    render(<LapChartCard />)
+    const region = screen.getByRole('region', { name: 'Lap chart' })
+    expect(region.getAttribute('aria-busy')).toBe('true')
+    expect(region.textContent).toContain('BUILDING LAP CHART')
+  })
+
+  it('renders nothing when idle or failed without a history', () => {
+    useSeasonStore.setState({ playerDriverId: id(6) })
+    for (const status of ['idle', 'failed'] as const) {
+      useDebriefStore.setState({ history: null, raceKey: 'k', status })
+      const { container, unmount } = render(<LapChartCard />)
+      expect(container.innerHTML).toBe('')
+      unmount()
+    }
   })
 
   it('renders the chart once the debrief has delivered the history', () => {

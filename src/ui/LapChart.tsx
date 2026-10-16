@@ -89,8 +89,9 @@ function Line({ car, g, tier, colour, reduced }: { car: CarHistory; g: Geometry;
       })}
       {car.retiredLap !== null && last !== undefined && (
         <g data-retired style={{ stroke, strokeWidth: Math.max(1.5, width) }}>
-          <line x1={g.x(car.retiredLap) - 3} y1={g.y(last) - 3} x2={g.x(car.retiredLap) + 3} y2={g.y(last) + 3} />
-          <line x1={g.x(car.retiredLap) - 3} y1={g.y(last) + 3} x2={g.x(car.retiredLap) + 3} y2={g.y(last) - 3} />
+          {/* At the line's final vertex, not at retiredLap: the line ends at the last completed lap. */}
+          <line x1={g.x(car.positions.length - 1) - 3} y1={g.y(last) - 3} x2={g.x(car.positions.length - 1) + 3} y2={g.y(last) + 3} />
+          <line x1={g.x(car.positions.length - 1) - 3} y1={g.y(last) + 3} x2={g.x(car.positions.length - 1) + 3} y2={g.y(last) - 3} />
         </g>
       )}
     </g>
@@ -173,9 +174,21 @@ export function LapChart({ history, playerDriverId }: { history: LapHistory; pla
 export function LapChartCard() {
   const history = useDebriefStore(s => s.history)
   const playerDriverId = useSeasonStore(s => s.playerDriverId)
+  const status = useDebriefStore(s => s.status)
+  const cardStyle: CSSProperties = { background: 'var(--grape)', border: '1px solid var(--line-hair)', borderRadius: 10, padding: '12px 14px' }
+  if (!history && status === 'running') {
+    // Same outer size as the finished chart (SVG aspect + legend row) so the verdicts do not shift when it arrives.
+    return (
+      <section aria-label="Lap chart" aria-busy="true" style={cardStyle}>
+        <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)', letterSpacing: '0.12em' }}>BUILDING LAP CHART</span>
+        <div style={{ aspectRatio: `${W} / ${H}`, marginTop: 6 }} />
+        <div style={{ minHeight: 44, marginTop: 8 }} />
+      </section>
+    )
+  }
   if (!history || !playerDriverId) return null
   return (
-    <section aria-label="Lap chart" style={{ background: 'var(--grape)', border: '1px solid var(--line-hair)', borderRadius: 10, padding: '12px 14px' }}>
+    <section aria-label="Lap chart" style={cardStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
         <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)', letterSpacing: '0.12em' }}>LAP CHART</span>
         <span aria-hidden="true" style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)' }}>● stop · × out · ▮ SC · ▨ VSC</span>
