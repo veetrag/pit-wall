@@ -233,3 +233,26 @@ describe('the app declares exactly the permissions it means to', () => {
     expect([...sample.matchAll(PERMISSION)].map(m => m[1])).toEqual(['android.permission.INTERNET'])
   })
 })
+
+describe('predictive back', () => {
+  it('OPTS IN WITH enableOnBackInvokedCallback ON <application>', () => {
+    /*
+     * targetSdk is 36. On Android 16 an app targeting 36 already gets
+     * predictive back by default; on Android 13-15 it is opt-in, so without
+     * the attribute the same build took two different back paths depending on
+     * the phone. Declaring it makes every supported device use the
+     * OnBackInvokedCallback route.
+     *
+     * Safe with our back handling: @capacitor/app (8.x) registers its
+     * backButton handler as an androidx OnBackPressedCallback, which androidx
+     * activity routes through OnBackInvokedCallback when this is set, and
+     * BridgeActivity does not override onBackPressed. useAndroidBackButton's
+     * listener is reached the same way either way.
+     */
+    const manifest = readFileSync(join(ANDROID, 'AndroidManifest.xml'), 'utf8')
+    const doc = new DOMParser().parseFromString(manifest, 'application/xml')
+    const app = doc.getElementsByTagName('application')[0]
+    expect(app, 'no <application> element').toBeDefined()
+    expect(app!.getAttribute('android:enableOnBackInvokedCallback')).toBe('true')
+  })
+})

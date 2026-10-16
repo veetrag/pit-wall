@@ -16,8 +16,18 @@
     -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+        enableOnBackInvokedCallback: predictive back (targetSdk 36). Android 16
+        already defaults it on for apps targeting 36; this opts Android 13 to 15
+        in too, so every phone takes the same back path. Safe with
+        @capacitor/app 8.x, whose backButton handler is an androidx
+        OnBackPressedCallback (routed through OnBackInvokedCallback when this
+        is set); useAndroidBackButton still receives every press.
+        Guarded by tests/data/androidManifest.test.ts.
+    -->
     <application
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
