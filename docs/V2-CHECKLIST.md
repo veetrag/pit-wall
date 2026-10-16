@@ -367,3 +367,6 @@ Release build on the Pixel-class test phone (1080x2404), Veet's season-5 career,
 - **Still open, needs Veet:** a contact address and a public URL for the privacy policy (and with them a data-deletion URL); a git remote to push to.
 - **Privacy policy hosted (2026-10-10):** https://veetrag.github.io/pit-wall/privacy/ — the `gh-pages` branch of the now-public repo github.com/veetrag/pit-wall (an HTML render of `docs/store/privacy-policy.md`, contact veetrag@gmail.com). Play's privacy-policy URL now points there (it was an old Google Doc) and is in review with 1.4. If the policy text changes, re-render the page on `gh-pages`.
 - Worth doing: restrict the Firebase API key in `google-services.json` to the Android app in Google Cloud, now that the repo is public.
+- **Firebase keys (2026-10-13):** the Android key is restricted to `com.veetrag.pitwall` + the Play signing and upload SHA-1s; the unused Browser key is deleted (restorable for 30 days).
+- **Data deletion (2026-10-13):** https://veetrag.github.io/pit-wall/delete-data/ (source `docs/store/delete-data.md`). Saved in the data-safety form but **not sent for review** — send it from Publishing overview once 1.4 is live, so 1.4's review doesn't restart.
+- BillDesk KYC banner: only affects paid sales; Pit Wall has none. Ignored.
