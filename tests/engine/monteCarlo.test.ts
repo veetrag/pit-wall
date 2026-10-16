@@ -231,6 +231,8 @@ describe('Monte-Carlo regression', () => {
     expect(b.mechanicalDnfPerCarRace[0]).toBeLessThan(b.mechanicalDnfPerCarRace[1])
     expect(b.minPaceRankCorrelation).toBeLessThanOrEqual(1)
     expect(b.minDistinctWinners).toBeGreaterThanOrEqual(1)
+    expect(b.vscPerRace[0]).toBeLessThan(b.vscPerRace[1])
+    expect(b.aiNeutralisationStopsPerRace[0]).toBeLessThan(b.aiNeutralisationStopsPerRace[1])
   })
 })
 

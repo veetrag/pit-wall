@@ -173,6 +173,10 @@ const TuningSchema = z.object({
     minCliffFracToCover: z.number(),
     minRemainingLaps: z.number(),
   }),
+  ai: z.object({
+    neutralisationWindowLaps: z.number().int().min(0),
+    neutralisationCliffFrac: z.number().min(0),
+  }),
   projection: z.object({
     horizonLaps: z.number(), useOvertakeRolls: z.boolean(),
     netEstimateHorizonLaps: z.number(),
@@ -240,6 +244,8 @@ const TuningSchema = z.object({
     mechanicalDnfPerCarRace: z.tuple([z.number(), z.number()]),
     crashesPerCarRace: z.tuple([z.number(), z.number()]),
     safetyCarsPerRace: z.tuple([z.number(), z.number()]),
+    vscPerRace: z.tuple([z.number(), z.number()]),
+    aiNeutralisationStopsPerRace: z.tuple([z.number(), z.number()]),
     _note: z.string(),
   }).optional(),
 }).passthrough()

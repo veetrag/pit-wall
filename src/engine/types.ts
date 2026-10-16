@@ -104,6 +104,8 @@ export interface TuningConstants {
     minCliffFracToCover: number
     minRemainingLaps: number
   }
+  /** AI reaction to a neutralisation (SC or VSC), spec 2026-10-16 §1. */
+  ai: { neutralisationWindowLaps: number; neutralisationCliffFrac: number }
   projection: { horizonLaps: number; useOvertakeRolls: boolean; netEstimateHorizonLaps: number }
   incidents: {
     // dnfPerLap is dead: no consumer in src/engine/. Kept because removing it

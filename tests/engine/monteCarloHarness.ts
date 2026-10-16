@@ -48,6 +48,13 @@ export type Metrics = {
   crashesPerCarRace: number
   safetyCarsPerRace: number
   driverErrorsPerRace: number
+  // 1.5 neutralisation metrics. vscPerRace counts 'vsc_deployed' events.
+  // aiNeutralisationStopsPerRace counts every AI stop taken on a lap boundary
+  // while a neutralisation is out AFTER that tick (the value the AI decides
+  // on): reaction stops plus stops that were due anyway. Banded in
+  // tuning.json, provenance in MODEL_SPEC.md section 3.
+  vscPerRace: number
+  aiNeutralisationStopsPerRace: number
 }
 
 // Duplicated from src/state/raceStore.ts:53 and :57-62 (BRAIN_ORDER and
@@ -195,6 +202,8 @@ export function runRaces(opts: HarnessOptions): Metrics {
   let mechanicalDnfs = 0
   let crashes = 0
   let safetyCars = 0
+  let vscs = 0
+  let neutralisationStops = 0
   let driverErrors = 0
   let carRaces = 0
   const finishSumByTeam = new Map<string, number>()
@@ -209,7 +218,16 @@ export function runRaces(opts: HarnessOptions): Metrics {
     let state = initRace(config)
     const grid = new Map(state.cars.map(c => [c.driverId, c.position]))
     const rng = createRng(seed)
-    for (let i = 0; i < config.circuit.laps * 3; i++) state = stepSector(config, state, rng)
+    for (let i = 0; i < config.circuit.laps * 3; i++) {
+      const next = stepSector(config, state, rng)
+      if (state.sector === 2 && next.safetyCar !== null) {
+        for (const c of next.cars) {
+          const before = state.cars.find(b => b.driverId === c.driverId)
+          if (!c.isPlayer && before && c.pitsDone > before.pitsDone) neutralisationStops++
+        }
+      }
+      state = next
+    }
 
     const winnerTeam = driverTeam.get(state.cars[0]!.driverId)!
     winsByTeam[winnerTeam] = (winsByTeam[winnerTeam] ?? 0) + 1
@@ -230,6 +248,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
 
     crashes += state.cars.filter(c => c.retiredCause === 'crash').length
     safetyCars += state.incidents.filter(i => i.kind === 'safety_car_deployed').length
+    vscs += state.incidents.filter(i => i.kind === 'vsc_deployed').length
     driverErrors += state.incidents.filter(i => i.kind === 'driver_error').length
 
     const ot = state.overtakeEvents.length
@@ -267,5 +286,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
     crashesPerCarRace: crashes / carRaces,
     safetyCarsPerRace: safetyCars / races,
     driverErrorsPerRace: driverErrors / races,
+    vscPerRace: vscs / races,
+    aiNeutralisationStopsPerRace: neutralisationStops / races,
   }
 }

@@ -228,6 +228,9 @@ describe('safety car pace and duration', () => {
         ...SC_CERTAIN.incidents,
         driverErrorPerLap: 0.004,   // one crash early, then quiet
         safetyCar: { crashDeployChance: 1, mechanicalDeployChance: 0, durationLapsMin: duration, durationLapsMax: duration, maxPerRace: 1 },
+        // A later crash would otherwise roll a VSC (live since 1.5) and the
+        // observer below would read its deployment as this SC's.
+        vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 },
       },
     } as TuningOverrides, 5)
 

@@ -387,7 +387,11 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       updated.lapsInDirtyAir = inDirtyAir.has(car.driverId) ? car.lapsInDirtyAir + 1 : 0
       if (!updated.isPlayer) {
         // Build a state view for the AI decision (current positions, new lap)
-        const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes }
+        // `safetyCar` here is the post-tick value (deployed, ticked down or
+        // ended this tick), the same one pitStopTime charges below. Handing the
+        // AI the pre-tick value would let it box "under yellow" on the boundary
+        // the neutralisation ends and pay the green-flag price.
+        const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes, safetyCar }
         const decision = aiDecision(config, updated, stateForAI, rng)
         updated.paceMode = decision.paceMode
         if (decision.pit) {

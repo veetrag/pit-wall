@@ -75,6 +75,19 @@ export function aiDecision(
     return pitWith(car, nextStop?.compound ?? bestDryCompound(config, remainingLaps), 'push')
   }
 
+  // Neutralisation reaction, SC and VSC alike (spec 2026-10-16 §1). A cheap
+  // stop is a race against the smart teams: box at this lap boundary if the
+  // planned stop was coming within the window anyway, or the tyres are already
+  // well worn. Naive brains never get here. A pure threshold -- NO rng draw --
+  // so it cannot shift the stream. state.safetyCar is the neutralisation as it
+  // stands AFTER this tick (race.ts), so a car never boxes on the boundary
+  // where it ends and pays the full green-flag loss.
+  const ai = config.tuning.ai
+  if (state.safetyCar !== null && nextStop &&
+      (nextStop.lap - car.lap <= ai.neutralisationWindowLaps || cliffFrac >= ai.neutralisationCliffFrac)) {
+    return pitWith(car, nextStop.compound, 'neutral')
+  }
+
   // Pit when tyre is near the real cliff (not buffered by tyreManagement)
   // Use a fraction slightly past nominal to avoid pitting too early on managed tyres
   const pitThreshold = brain === 'optimal' ? 0.94 : 0.90
