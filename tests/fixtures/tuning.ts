@@ -80,6 +80,7 @@ export function zeroIncidents(
     ...incidents,
     driverErrorPerLap: 0,
     safetyCar: { ...incidents.safetyCar, crashDeployChance: 0, mechanicalDeployChance: 0 },
+    vsc: { ...incidents.vsc, crashDeployChance: 0, mechanicalDeployChance: 0 },
   }
 }
 
@@ -101,6 +102,9 @@ export function makeDeterministicTuning(overrides: DeepPartial<TuningConstants> 
       // maxPerRace checked after the roll would still consume a draw and
       // shift the stream for every existing test.
       safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0 },
+      // Same reason as the SC chances above: zero CHANCES, so the VSC roll
+      // draws nothing and the golden race stays byte-identical.
+      vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 },
     },
     mechanicalFailure: { baseChancePerLap: 0 },
   }, overrides) as DeepPartial<TuningConstants>)

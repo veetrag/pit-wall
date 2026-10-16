@@ -1,4 +1,4 @@
-import type { CircuitSpec, SafetyCarState, TuningConstants } from './types'
+import type { CircuitSpec, NeutralisationKind, SafetyCarState, TuningConstants } from './types'
 import type { Rng } from './rng'
 import { gaussianPair } from './rng'
 
@@ -95,16 +95,61 @@ export function compressRaceTimes(raceTimes: number[], compression: number): num
  *
  * SINGLE SOURCE OF TRUTH, and that is the point. `pitLaneTimeLoss` is read at
  * five call sites (race.ts, projection.ts, raceStore.ts x2, PitTimer.tsx). If
- * the safety-car discount were applied at some of them and not others, the
+ * a neutralisation discount were applied at some of them and not others, the
  * projection overlay would promise the player a discount the race then failed
- * to give -- by 8-12s, on the game's centrepiece decision. Every call site must
- * route through here.
+ * to give, on the game's centrepiece decision. Every call site must route
+ * through here. A VSC discounts proportionally (the field keeps racing speed
+ * relationships); a full SC uses its own absolute figure.
  */
 export function effectivePitLaneLoss(
   circuit: CircuitSpec,
   safetyCar: SafetyCarState | null,
   tuning: TuningConstants,
 ): number {
-  if (safetyCar) return tuning.incidents.safetyCar.laneTimeLossUnderSc
-  return circuit.pitLaneTimeLoss
+  const kind = neutralisationKind(safetyCar)
+  switch (kind) {
+    case null: return circuit.pitLaneTimeLoss
+    case 'sc': return tuning.incidents.safetyCar.laneTimeLossUnderSc
+    case 'vsc': return circuit.pitLaneTimeLoss * tuning.incidents.vsc.laneLossFactor
+    default: { const never: never = kind; return never }
+  }
+}
+
+/** The neutralisation in force. A state from before the VSC has no `kind`: it was a safety car. */
+export function neutralisationKind(safetyCar: SafetyCarState | null): NeutralisationKind | null {
+  if (safetyCar === null) return null
+  return safetyCar.kind ?? 'sc'
+}
+
+/**
+ * VSC deployment roll. Same guard idiom as the SC roll: a zero chance performs
+ * NO rng() call, which is what keeps the golden race byte-identical with the
+ * VSC switched off.
+ */
+export function rollVscDeployment(
+  cause: 'crash' | 'mechanical',
+  tuning: TuningConstants,
+  rng: Rng,
+): boolean {
+  const v = tuning.incidents.vsc
+  const chance = cause === 'crash' ? v.crashDeployChance : v.mechanicalDeployChance
+  return chance > 0 && rng() < chance
+}
+
+/** Inclusive of both bounds. */
+export function rollVscDuration(tuning: TuningConstants, rng: Rng): number {
+  const v = tuning.incidents.vsc
+  const span = v.durationLapsMax - v.durationLapsMin + 1
+  return v.durationLapsMin + Math.floor(rng() * span)
+}
+
+/** Every car is scaled by the same factor, so this changes no gaps. No rng. */
+export function neutralisationPaceMultiplier(safetyCar: SafetyCarState | null, tuning: TuningConstants): number {
+  const kind = neutralisationKind(safetyCar)
+  switch (kind) {
+    case null: return 1
+    case 'sc': return tuning.incidents.safetyCar.paceMultiplier
+    case 'vsc': return tuning.incidents.vsc.paceMultiplier
+    default: { const never: never = kind; return never }
+  }
 }

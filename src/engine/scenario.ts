@@ -2,6 +2,7 @@ import type { RaceConfig, RaceState } from './types'
 import type { Rng } from './rng'
 import { createRng } from './rng'
 import { initRace, stepSector } from './race'
+import { neutralisationKind } from './incidents'
 
 /**
  * Scenarios — "you are P8 with 12 laps left and a safety car is coming."
@@ -143,6 +144,6 @@ export function describeSituation(state: RaceState, playerDriverId: string): Sce
     gapAhead: ahead,
     compound: car.compound,
     tyreAge: car.tyreAge,
-    safetyCarOut: state.safetyCar !== null,
+    safetyCarOut: neutralisationKind(state.safetyCar) === 'sc',
   }
 }

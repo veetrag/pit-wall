@@ -124,6 +124,16 @@ export function processCommentaryTick(
         if (line) lines.push(line)
         break
       }
+      case 'vsc_deployed': {
+        const line = fill('vsc_deployed', { lap: evLap })
+        if (line) lines.push(line)
+        break
+      }
+      case 'vsc_ended': {
+        const line = fill('vsc_ended', { lap: evLap })
+        if (line) lines.push(line)
+        break
+      }
       default: {
         const _exhaustive: never = ev.kind
         void _exhaustive

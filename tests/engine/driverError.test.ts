@@ -40,6 +40,7 @@ const ERRORS_ON = {
   incidents: {
     driverErrorPerLap: 0.0105,
     safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0 },
+    vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 },
   },
   mechanicalFailure: { baseChancePerLap: 0 },
   tyreFailure: { chancePerLapOverThreshold: 0, maxChancePerLap: 0 },

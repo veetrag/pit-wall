@@ -3,10 +3,10 @@ import { initRace, stepSector, projectPitNow } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
 import { makeTuning } from '../fixtures/tuning'
+import { makeConfig, runRace, type TuningOverrides } from '../fixtures/raceHarness'
 import type { RaceConfig, RaceState } from '@engine/types'
 
 const DATA = loadGameData()
-type TuningOverrides = Parameters<typeof makeTuning>[0]
 
 /*
  * Crashes forced on and made certain to deploy, so the state machine is
@@ -26,31 +26,6 @@ const SC_CERTAIN = {
   },
   mechanicalFailure: { baseChancePerLap: 0 },
   tyreFailure: { chancePerLapOverThreshold: 0, maxChancePerLap: 0 },
-}
-
-function makeConfig(overrides: TuningOverrides, seed: number, circuitId = 'bengaluru'): RaceConfig {
-  return {
-    circuit: DATA.circuits[circuitId]!,
-    tuning: makeTuning(overrides),
-    compounds: DATA.compounds,
-    drivers: DATA.drivers.drivers,
-    teams: DATA.cars.teams,
-    strategies: DATA.strategies.defaults,
-    playerDriverId: '__none__',
-    seed,
-  }
-}
-
-/** Steps a whole race, handing every intermediate state to `onTick`. */
-function runRace(config: RaceConfig, seed: number, onTick?: (prev: RaceState, next: RaceState) => void): RaceState {
-  let state = initRace(config)
-  const rng = createRng(seed)
-  for (let i = 0; i < config.circuit.laps * 3; i++) {
-    const next = stepSector(config, state, rng)
-    onTick?.(state, next)
-    state = next
-  }
-  return state
 }
 
 describe('safety car deployment', () => {
@@ -73,7 +48,7 @@ describe('safety car deployment', () => {
   it('never deploys when both chances are zero, even with retirements', () => {
     const config = makeConfig({
       ...SC_CERTAIN,
-      incidents: { ...SC_CERTAIN.incidents, safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0 } },
+      incidents: { ...SC_CERTAIN.incidents, safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0 }, vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 } },
     } as TuningOverrides, 5)
     let sawActive = false
     const final = runRace(config, 5, (_p, n) => { if (n.safetyCar !== null) sawActive = true })

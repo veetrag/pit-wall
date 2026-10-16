@@ -197,6 +197,17 @@ const TuningSchema = z.object({
       durationLapsMax: z.number().int(),
       maxPerRace: z.number().int(),
     }),
+    // Same bounds philosophy as safetyCar above: a fat-fingered 2.5 where 0.25
+    // was meant must fail at load time, not deploy a VSC on every retirement.
+    vsc: z.object({
+      crashDeployChance: z.number().min(0).max(1),
+      mechanicalDeployChance: z.number().min(0).max(1),
+      paceMultiplier: z.number().min(1),
+      laneLossFactor: z.number().min(0).max(1),
+      durationLapsMin: z.number().int().min(1),
+      durationLapsMax: z.number().int().min(1),
+      maxPerRace: z.number().int().min(0),
+    }),
   }),
   weather: z.object({
     crossoverPenalty: z.record(z.string(), z.record(z.string(), z.number())),

@@ -10,6 +10,7 @@ import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, resolveAllocatedCompound, ef
 import {
   rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
+  rollVscDeployment, rollVscDuration, neutralisationKind,
 } from './incidents'
 
 // Grid-conditions tyre rule. A team that has not made a deliberate choice fits
@@ -222,37 +223,58 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     return updated
   })
 
-  // Safety car deployment. Rolled at most ONCE per tick even if two cars
-  // retire in it, and never while one is already active or once maxPerRace
-  // deployments have happened.
+  // Neutralisation deployment: a safety car or a VSC. Rolled at most ONCE per
+  // tick even if two cars retire in it.
   //
   // `retiredThisTick` diffs against the PREVIOUS state's retired set rather
   // than testing `retiredLap === state.lap`, because several cars can retire on
   // the same lap across different sectors and we must not re-trigger on a
   // retirement an earlier tick already accounted for.
+  //
+  // Order is load-bearing (spec 2026-10-16 §1): the SC roll happens FIRST and
+  // exactly as it did before the VSC existed, then the VSC roll only if the SC
+  // did not come out. With both VSC chances at 0 the VSC roll draws nothing, so
+  // the stream is untouched (tests/engine/byteIdentity.test.ts). An SC may
+  // supersede a running VSC; nothing supersedes an SC; a VSC only opens on a
+  // green track.
   let safetyCar = state.safetyCar
   const scCfg = config.tuning.incidents.safetyCar
+  const vscCfg = config.tuning.incidents.vsc
+  const activeKind = neutralisationKind(state.safetyCar)
   const wasRetired = new Set(state.cars.filter(c => c.retired).map(c => c.driverId))
   const retiredThisTick = updatedCars.filter(c => c.retired && !wasRetired.has(c.driverId))
   const scDeployedCount = state.incidents.filter(i => i.kind === 'safety_car_deployed').length
+  const vscDeployedCount = state.incidents.filter(i => i.kind === 'vsc_deployed').length
 
-  if (safetyCar === null && scDeployedCount < scCfg.maxPerRace && retiredThisTick.length > 0) {
+  if (activeKind !== 'sc' && retiredThisTick.length > 0) {
     // The first retirement of the tick is the trigger. A tyre failure counts as
     // 'mechanical' for deployment purposes: a puncture strands a car the same
     // way a broken gearbox does, and only a crash blocks the track outright.
     const trigger = retiredThisTick[0]!
     const cause: 'crash' | 'mechanical' = trigger.retiredCause === 'crash' ? 'crash' : 'mechanical'
-    if (rollSafetyCarDeployment(cause, config.tuning, rng)) {
-      safetyCar = { deployedLap: state.lap, lapsRemaining: rollSafetyCarDuration(config.tuning, rng), cause }
+    if (scDeployedCount < scCfg.maxPerRace && rollSafetyCarDeployment(cause, config.tuning, rng)) {
+      if (activeKind === 'vsc') {
+        // Logged so every period in the incident log is closed: the lap chart
+        // reads VSC and SC bands straight from these events.
+        newIncidents.push({ lap: state.lap, sector, kind: 'vsc_ended', driverId: null, timeLoss: null })
+      }
+      safetyCar = { deployedLap: state.lap, lapsRemaining: rollSafetyCarDuration(config.tuning, rng), cause, kind: 'sc' }
       newIncidents.push({
         lap: state.lap, sector, kind: 'safety_car_deployed', driverId: null, timeLoss: null,
+      })
+    } else if (activeKind === null && vscDeployedCount < vscCfg.maxPerRace && rollVscDeployment(cause, config.tuning, rng)) {
+      safetyCar = { deployedLap: state.lap, lapsRemaining: rollVscDuration(config.tuning, rng), cause, kind: 'vsc' }
+      newIncidents.push({
+        lap: state.lap, sector, kind: 'vsc_deployed', driverId: null, timeLoss: null,
       })
     }
   }
 
-  // Compression happens ONCE, on the tick the safety car deploys. Applying it
-  // every tick while deployed would walk the whole field onto the leader.
-  const justDeployed = safetyCar !== null && state.safetyCar === null
+  // Compression happens ONCE, on the tick a SAFETY CAR deploys -- including one
+  // that replaces a VSC. A VSC freezes the gaps: it never compresses. Applying
+  // compression every tick while deployed would walk the whole field onto the
+  // leader.
+  const justDeployed = neutralisationKind(safetyCar) === 'sc' && activeKind !== 'sc'
   let carsAfterSc = updatedCars
   if (justDeployed) {
     const active = updatedCars.filter(c => !c.retired)
@@ -324,15 +346,17 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const nextSector = ((sector + 1) % 3) as SectorIndex
   const lapCompleted = sector === 2
 
-  // Tick the safety car down once per LAP, not per sector -- durationLapsMin/Max
-  // are laps, so decrementing per sector would make a "3 lap" safety car last
-  // one. Expiry is logged so the UI and the commentary can react to the restart.
+  // Tick the neutralisation down once per LAP, not per sector -- durations are
+  // laps, so decrementing per sector would make a "3 lap" period last one.
+  // Expiry is logged by kind so the UI, the commentary and the lap chart can
+  // react to the restart.
   if (safetyCar !== null && lapCompleted) {
     const remaining = safetyCar.lapsRemaining - 1
     if (remaining <= 0) {
+      const endedKind = neutralisationKind(safetyCar)
       safetyCar = null
       newIncidents.push({
-        lap: state.lap, sector, kind: 'safety_car_ended', driverId: null, timeLoss: null,
+        lap: state.lap, sector, kind: endedKind === 'vsc' ? 'vsc_ended' : 'safety_car_ended', driverId: null, timeLoss: null,
       })
     } else {
       safetyCar = { ...safetyCar, lapsRemaining: remaining }

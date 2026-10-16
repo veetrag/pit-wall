@@ -10,6 +10,7 @@ export { computeSectorTime } from './lapModel'
 export {
   driverErrorChancePerSector, rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
+  rollVscDeployment, rollVscDuration, neutralisationKind, neutralisationPaceMultiplier,
 } from './incidents'
 export * from './setup'
 export { createRng, gaussianPair } from './rng'
@@ -20,7 +21,7 @@ export type {
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
   TyreAllocation, DifficultyProfile, WeatherState, WeatherForecast, SafetyCarState,
-  IncidentEvent, IncidentKind,
+  IncidentEvent, IncidentKind, NeutralisationKind,
   AttackLevel, QualifyingCall, QualifyingLap, QualifyingResult,
 } from './types'
 export type { ProjectionResult } from './projection'

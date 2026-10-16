@@ -4,6 +4,7 @@ import { gaussianPair } from './rng'
 import { tyreDelta, effectiveTyreAge } from './tyres'
 import { crossoverPenalty } from './weather'
 import { wingSectorDelta } from './setup'
+import { neutralisationPaceMultiplier } from './incidents'
 
 // Convert a 0-100 facet to the 0-9 engine rating (0=best, 9=worst)
 function facetToRating9(facet: number): number {
@@ -114,7 +115,7 @@ export function computeSectorTime(
   // Multiplied AFTER the base*0.85 floor, not before: the floor is a sanity
   // clamp on the pace model, and clamping first would let a safety-car lap come
   // out faster than the floor it is supposed to respect.
-  const scMultiplier = safetyCar ? tuning.incidents.safetyCar.paceMultiplier : 1
+  const scMultiplier = neutralisationPaceMultiplier(safetyCar, tuning)
 
   return {
     driverId: car.driverId,

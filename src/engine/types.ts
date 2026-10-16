@@ -124,6 +124,16 @@ export interface TuningConstants {
       durationLapsMax: number
       maxPerRace: number
     }
+    /** Virtual safety car (spec 2026-10-16 §1). Rolled only when the SC is not. */
+    vsc: {
+      crashDeployChance: number
+      mechanicalDeployChance: number
+      paceMultiplier: number
+      laneLossFactor: number
+      durationLapsMin: number
+      durationLapsMax: number
+      maxPerRace: number
+    }
   }
   weather: {
     crossoverPenalty: Record<string, Record<string, number>>
@@ -325,6 +335,11 @@ export type IncidentKind =
   | 'crash'
   | 'safety_car_deployed'
   | 'safety_car_ended'
+  | 'vsc_deployed'
+  | 'vsc_ended'
+
+/** A full safety car bunches the field; a virtual safety car freezes the gaps. */
+export type NeutralisationKind = 'sc' | 'vsc'
 
 export interface IncidentEvent {
   lap: number
@@ -340,6 +355,12 @@ export interface SafetyCarState {
   deployedLap: number
   lapsRemaining: number
   cause: 'crash' | 'mechanical'
+  /**
+   * Which neutralisation this is. Optional on purpose: a state built before the
+   * VSC existed (and every older test fixture) has no kind and WAS a safety car.
+   * Always read it through incidents.ts `neutralisationKind`, never directly.
+   */
+  kind?: NeutralisationKind
 }
 
 export interface WeatherForecast {

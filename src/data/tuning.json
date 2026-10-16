@@ -126,6 +126,15 @@
       "durationLapsMin": 3,
       "durationLapsMax": 5,
       "maxPerRace": 2
+    },
+    "vsc": {
+      "crashDeployChance": 0.0,
+      "mechanicalDeployChance": 0.0,
+      "paceMultiplier": 1.30,
+      "laneLossFactor": 0.60,
+      "durationLapsMin": 1,
+      "durationLapsMax": 3,
+      "maxPerRace": 2
     }
   },
   "weather": {
