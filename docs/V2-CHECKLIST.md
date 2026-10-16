@@ -377,16 +377,42 @@ Release build on the Pixel-class test phone (1080x2404), Veet's season-5 career,
 
 ### Fixes for 1.5 (from the 1.4 phone pass)
 
-- [ ] Status-bar icons: light style on the dark ground.
-- [ ] Pit sheet's slanted top cuts a tower row in half.
-- [ ] Championship footer ~260px on short phones; badge text too close to the slant.
-- [ ] RETRY ROUND keeps the plan's start tyre into re-rolled weather (proposal: retry reopens race setup).
-- [ ] Start lights did not play before the round-6 race; confirm or fix.
-- [ ] Backgrounding mid-race (no `visibilitychange`/`appStateChange` handler).
+Branch `fix/1.5`. Everything below still needs the phone pass; none of it has
+been on a device.
+
+- [x] Status-bar icons: light style on the dark ground. `34c517d`:
+      `plugins.SystemBars.style: 'DARK'` (Capacitor 8's built-in SystemBars;
+      "DARK" means light icons). Reaches the phone on the next `npx cap sync`,
+      run from the repo root, never from a worktree.
+- [x] Pit sheet's slanted top cuts a tower row in half. `bcdd815`: scrim above
+      the slant, deepest at the edge; taps still reach the speed control.
+- [x] Championship footer ~260px on short phones; badge text too close to the
+      slant. `b085632`: at <= 740px tall END CAREER moves to the end of the
+      content (210 -> 124px at 360x640); badge tiles padded 32px; the badge
+      toast is in flow above the footer, no longer over NEXT SEASON.
+- [x] RETRY ROUND keeps the plan's start tyre into re-rolled weather. `c7861b3`:
+      retry reopens race setup for the round with the plan pre-filled, start
+      tyre kept only if it suits the new opening; qualifying is re-run.
+- [x] Start lights did not play before the round-6 race. `586945d`: not the
+      qualifying path. Reduced motion skipped the whole sequence; it now runs it
+      without the pulse, and the (previously dead) "Skip start sequence"
+      setting is what skips. Check the phone's Reduce motion / Skip start
+      sequence settings during the pass.
+- [x] Backgrounding mid-race. Already fixed in 1.4 (`8d61d9f`); this item was
+      stale. `bcea2b9` adds a test for the listener wiring.
 - [ ] On-device: team/driver select, season-end verdict.
-- [ ] Round one of every new season is wet (seed 42 at bengaluru); a new player's first race is the punishing one.
-- [ ] `projectPitNow` seeded from `Date.now()`, so pit advice changes each time the panel opens.
-- [ ] Predictive back gesture (API 36); low-end phone frame rate; tablet/foldable layout.
+- [x] Round one of every new season is wet. Already fixed in 1.4 (`23dafd1`,
+      `dryStart`): the opening lap is dry; rain can still arrive later (the
+      first-ever race, seed 42, turns at lap 18 of 56). Whether the first race
+      should be fully dry is open.
+- [x] `projectPitNow` seeded from `Date.now()`. Clock removed in 1.4
+      (`59de173`), but its `rngState` seed never advanced. `6ebd11b` seeds
+      from (race seed, lap, sector).
+- [x] Predictive back gesture (API 36). `5da43db`: `enableOnBackInvokedCallback`
+      on `<application>`; @capacitor/app 8 uses an androidx
+      OnBackPressedCallback, so the back mapping is unchanged. Verify a back
+      press on every screen.
+- [ ] Low-end phone frame rate; tablet/foldable layout.
 
 ### Store, once 1.4 is live
 
