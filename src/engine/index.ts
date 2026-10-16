@@ -32,3 +32,6 @@ export { isFinished, simulate, replay, judgeCalls, pickBetter, futureSeed } from
 export type { JudgedCall, Alternative, OptionOutcome, CallVerdict, DebriefResult } from './types'
 export { lapHistory } from './raceHistory'
 export type { LapHistory, CarHistory, NeutralisationPeriod } from './raceHistory'
+export { rivalIntel, intelOffset } from './rivalIntel'
+export type { RivalIntel } from './rivalIntel'
+export { PIT_CLIFF_THRESHOLD } from './strategy'

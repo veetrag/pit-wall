@@ -177,6 +177,12 @@ const TuningSchema = z.object({
     neutralisationWindowLaps: z.number().int().min(0),
     neutralisationCliffFrac: z.number().min(0),
   }),
+  rivalIntel: z.object({
+    halfWidth: z.object({
+      naive: z.number().int().min(0), smart: z.number().int().min(0), optimal: z.number().int().min(0),
+    }),
+    maxOffsetLaps: z.number().int().min(0),
+  }),
   projection: z.object({
     horizonLaps: z.number(), useOvertakeRolls: z.boolean(),
     netEstimateHorizonLaps: z.number(),

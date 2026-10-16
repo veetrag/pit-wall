@@ -106,6 +106,8 @@ export interface TuningConstants {
   }
   /** AI reaction to a neutralisation (SC or VSC), spec 2026-10-16 §1. */
   ai: { neutralisationWindowLaps: number; neutralisationCliffFrac: number }
+  /** Rival intel box window (spec 2026-10-16 §2). Half-width in laps per brain; the brain is never shown. */
+  rivalIntel: { halfWidth: Record<StrategyBrain, number>; maxOffsetLaps: number }
   projection: { horizonLaps: number; useOvertakeRolls: boolean; netEstimateHorizonLaps: number }
   incidents: {
     // dnfPerLap is dead: no consumer in src/engine/. Kept because removing it

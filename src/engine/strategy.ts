@@ -1,8 +1,18 @@
-import type { RaceConfig, CarState, RaceState, Compound, WeatherState, PaceMode } from './types'
+import type { RaceConfig, CarState, RaceState, Compound, WeatherState, PaceMode, StrategyBrain } from './types'
 import { tyreCliffFraction, effectiveTyreAge, resolveAllocatedCompound } from './tyres'
 import { createRng, type Rng } from './rng'
 
 const CLIFF_EMERGENCY_THRESHOLD = 1.5
+
+/**
+ * The cliff fraction at which each brain boxes on wear alone. Exported so rival
+ * intel projects a rival's stop from the SAME thresholds the AI acts on --
+ * a second copy would let the card promise a window the car then ignores.
+ * Naive brains only stop on wear at the emergency threshold.
+ */
+export const PIT_CLIFF_THRESHOLD: Record<StrategyBrain, number> = {
+  naive: CLIFF_EMERGENCY_THRESHOLD, smart: 0.90, optimal: 0.94,
+}
 
 export type AIDecision = {
   pit: boolean
@@ -90,7 +100,7 @@ export function aiDecision(
 
   // Pit when tyre is near the real cliff (not buffered by tyreManagement)
   // Use a fraction slightly past nominal to avoid pitting too early on managed tyres
-  const pitThreshold = brain === 'optimal' ? 0.94 : 0.90
+  const pitThreshold = PIT_CLIFF_THRESHOLD[brain]
   if (cliffFrac >= pitThreshold && remainingLaps > 3) {
     const compound = nextStop?.compound ?? bestDryCompound(config, remainingLaps)
     return pitWith(car, compound, 'neutral')
