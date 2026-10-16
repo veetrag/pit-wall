@@ -50,6 +50,25 @@ function recommendedStartCompound(weather: WeatherState): Compound {
 }
 
 /**
+ * The start tyre setup opens with when a previous plan is being pre-filled
+ * (RETRY ROUND reopens this screen with the plan just raced).
+ *
+ * The plan's tyre is kept only while it suits the opening conditions -- a dry
+ * compound on a dry track, a wet one on a damp or wet track. A retry re-rolls
+ * the weather, and carrying full wets into a dry opening is exactly the 1.4
+ * phone-pass bug (P20 by lap 1). Otherwise it falls back to the
+ * recommendation for the new conditions, the same choice the screen makes
+ * with no plan at all. Intermediates into a wet opening (or wets into a damp
+ * one) are left alone: that is a call, not a mismatch.
+ */
+export function prefilledStartCompound(plan: PlayerStrategyChoice | null, weather: WeatherState): Compound {
+  const recommended = recommendedStartCompound(weather)
+  if (!plan) return recommended
+  const planIsWet = GAME_DATA.compounds[plan.startCompound]?.type === 'wet'
+  return planIsWet === (weather !== 'DRY') ? plan.startCompound : recommended
+}
+
+/**
  * Real, seeded forecast for THIS specific attempt -- not the circuit's base
  * probability. Uses the exact same seed derivation initRace() uses
  * (seed + 999999) so what is shown here is what the race actually opens with.
@@ -133,7 +152,18 @@ export function RaceSetup() {
   const raceIndex = useSeasonStore(s => s.raceIndex)
   const currentSeed = useSeasonStore(s => s.currentSeed)
   const defaultIdx = raceIndex % CIRCUIT_ORDER.length
-  const [selectedIdx, setSelectedIdx] = useState(defaultIdx)
+  // The plan to pre-fill: the one just raced, present after RETRY ROUND (and
+  // on a save resumed mid-round). Read ONCE: confirmRaceSetup writes a new
+  // plan on the way out, and the form must not re-seed under the player.
+  const [plan] = useState(() => useSeasonStore.getState().playerStrategy)
+  // Open on the circuit that was set for this round -- which after a retry is
+  // the one raced, even if the player picked it from the strip rather than
+  // the calendar. On every other path it IS the calendar slot.
+  const [selectedIdx, setSelectedIdx] = useState(() => {
+    const chosen = useSeasonStore.getState().selectedCircuitId
+    const i = chosen ? (CIRCUIT_ORDER as readonly string[]).indexOf(chosen) : -1
+    return i >= 0 ? i : defaultIdx
+  })
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   // The circuit strip is a horizontal overflow scroller: at round 12 the active
   // chip sits off-screen right, so the player sees rounds 1-3 with nothing
@@ -165,8 +195,8 @@ export function RaceSetup() {
   )
   const startingWeather = weatherTimeline[0] ?? 'DRY'
 
-  const [startCompound, setStartCompound] = useState<Compound>(() => recommendedStartCompound(startingWeather))
-  const [wing, setWing] = useState<Wing>(() => defaultWing(circuitId))
+  const [startCompound, setStartCompound] = useState<Compound>(() => prefilledStartCompound(plan, startingWeather))
+  const [wing, setWing] = useState<Wing>(() => plan?.wing ?? defaultWing(circuitId))
   // Re-seed the wing when the circuit changes (not on mount, which useState covers).
   const wingCircuitRef = useRef(circuitId)
   useEffect(() => {
@@ -174,11 +204,15 @@ export function RaceSetup() {
     wingCircuitRef.current = circuitId
     setWing(defaultWing(circuitId))
   }, [circuitId])
-  const [stopCount, setStopCount] = useState<1 | 2>(1)
-  const [pitLap1, setPitLap1] = useState(Math.round(circuit.laps * 0.45))
-  const [pitCompound1, setPitCompound1] = useState<Compound>('H')
-  const [pitLap2, setPitLap2] = useState(Math.round(circuit.laps * 0.7))
-  const [pitCompound2, setPitCompound2] = useState<Compound>('M')
+  // A pre-filled plan's stops are for this same circuit (the plan and
+  // selectedCircuitId are set together by confirmRaceSetup), so its laps are
+  // already within this circuit's bounds.
+  const planStops = plan?.plannedStops ?? []
+  const [stopCount, setStopCount] = useState<1 | 2>(planStops.length === 2 ? 2 : 1)
+  const [pitLap1, setPitLap1] = useState(planStops[0]?.lap ?? Math.round(circuit.laps * 0.45))
+  const [pitCompound1, setPitCompound1] = useState<Compound>(planStops[0]?.compound ?? 'H')
+  const [pitLap2, setPitLap2] = useState(planStops[1]?.lap ?? Math.round(circuit.laps * 0.7))
+  const [pitCompound2, setPitCompound2] = useState<Compound>(planStops[1]?.compound ?? 'M')
 
   function selectStopCount(n: 1 | 2) {
     setStopCount(n)

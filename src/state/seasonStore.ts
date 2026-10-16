@@ -361,11 +361,31 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   },
 
   retryRace() {
-    // Nothing to undo: the attempt was never counted. Dropping the pending
-    // result is the whole of discarding it. A retry redraws rival wings (new
-    // seed) but keeps the first attempt's qualifying grid, like other
-    // seed-driven noise.
-    set(s => ({ attemptNonce: s.attemptNonce + 1, phase: 'racing', lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null }))
+    /*
+     * Reopens RACE SETUP for the same round, the previous plan pre-filled
+     * (Veet's ruling, 2026-10-16). It used to go straight back to 'racing' on
+     * the old plan, but the new attemptNonce re-rolls the weather: a wet-start
+     * plan retried into a dry race started on full wets and was P20 by lap 1,
+     * the new forecast never shown. Setup shows it, and RaceSetup keeps the
+     * old start tyre only where it still suits the new conditions.
+     *
+     * playerStrategy and selectedCircuitId are kept on purpose: they are the
+     * plan RaceSetup pre-fills from.
+     *
+     * qualifyingResult is cleared, so the round is qualified again. The grid
+     * was set under the previous attempt's seed, and therefore its weather;
+     * keeping it would line up a wet-qualified grid for a dry race.
+     * startRaceFromQualifying refuses to race without a fresh one.
+     *
+     * Nothing to undo in the standings or the career: the attempt was never
+     * counted (see resultPending). Dropping the pending result is the whole of
+     * discarding it, and with resultPending false a later keepResult is a
+     * no-op, so the discarded attempt can never be counted.
+     */
+    set(s => ({
+      attemptNonce: s.attemptNonce + 1, phase: 'race_setup', qualifyingResult: null,
+      lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null,
+    }))
   },
 
   currentCircuitId() {

@@ -22,11 +22,13 @@ describe('M5: per-attempt seed variance', () => {
     expect(seed0).toBe(2042) // unchanged base formula at nonce 0
   })
 
-  it('retryRace bumps attemptNonce and returns to the racing phase', () => {
+  it('retryRace bumps attemptNonce and reopens race setup', () => {
+    // race_setup, not racing: the new attempt's weather must be seen before
+    // it is raced (tests/state/retryReopensSetup.test.ts).
     useSeasonStore.setState({ phase: 'result', attemptNonce: 0, lastRaceResults: [{ driverId: 'd_ver', position: 1, points: 25, retired: false, retiredCause: null }] })
     useSeasonStore.getState().retryRace()
     expect(useSeasonStore.getState().attemptNonce).toBe(1)
-    expect(useSeasonStore.getState().phase).toBe('racing')
+    expect(useSeasonStore.getState().phase).toBe('race_setup')
     expect(useSeasonStore.getState().lastRaceResults).toBeNull()
   })
 

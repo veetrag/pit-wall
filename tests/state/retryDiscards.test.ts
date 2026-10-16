@@ -92,7 +92,8 @@ describe('a race counts when it is kept', () => {
     const s = useSeasonStore.getState()
     expect(s.resultPending).toBe(false)
     expect(s.lastRaceResults).toBeNull()
-    expect(s.phase).toBe('racing')
+    // Back to race setup for the same round (tests/state/retryReopensSetup.test.ts).
+    expect(s.phase).toBe('race_setup')
   })
 
   it('a retry never awards a badge from the discarded attempt', () => {
