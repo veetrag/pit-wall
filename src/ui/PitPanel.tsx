@@ -188,109 +188,136 @@ function PitPanelDrawer() {
     : { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' } }
 
   return (
+    // The wrapper slides; the sheet inside it is clipped to the slant. Split
+    // so the scrim can live outside the clip and travel with the sheet.
     <motion.div
       {...sheetMotion}
       transition={{ duration: 0.22, ease: EASE }}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Box this lap?"
-      style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        background: 'var(--night)',
-        clipPath: 'polygon(0 3%,100% 0,100% 100%,0 100%)',
-        /*
-         * --safe-bottom, not a bare 32px.
-         *
-         * RaceHUD pads its root by --safe-bottom, but this drawer is
-         * position:absolute against that root, so it sits OUTSIDE that padding
-         * and runs under the system navigation bar. Measured on a Pixel 10 Pro
-         * XL (targetSdk 36, edge-to-edge): BOX NOW -- the primary action on the
-         * game's centrepiece interaction -- was clipped by the nav bar.
-         */
-        padding: '34px 20px calc(32px + var(--safe-bottom))',
-        zIndex: 100,
-      }}
+      style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <span style={{
-          fontFamily: 'var(--font-display)', fontSize: 38, fontWeight: 900, fontStyle: 'italic',
-          color: 'var(--white)', lineHeight: 1, textTransform: 'uppercase',
-        }}>
-          BOX THIS LAP?
-        </span>
-        <motion.button
-          type="button"
-          className="kit-focus"
-          whileTap={reduced ? undefined : { scale: 0.96 }} transition={PRESS}
-          onClick={() => { uiTap(); closePitPanel() }}
-          style={{
-            minHeight: 48, minWidth: 48, padding: '0 18px', borderRadius: 999, border: 'none',
-            background: 'var(--grape)', color: 'var(--white)', cursor: 'pointer', flexShrink: 0,
-            fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 13, letterSpacing: 1,
-          }}
-        >
-          CANCEL
-        </motion.button>
-      </div>
-
-      <PitLossLine />
-
-      {projectionResult && <ProjectionCard result={projectionResult} compoundLabel={selectedLabel} />}
-
-      <div role="radiogroup" aria-label="Compound" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-        {availableCompounds.map(({ id, label }) => {
-          const active = selected === id
-          const sets = allocation?.[id]
-          const empty = !hasSets(id)
-          return (
-            <motion.button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              aria-disabled={empty || undefined}
-              className="slant-sm kit-focus"
-              whileTap={reduced || empty ? undefined : { scale: 0.96 }} transition={PRESS}
-              onClick={() => handleSelect(id)}
-              style={{
-                flex: '1 1 calc(33% - 6px)', minWidth: 72, minHeight: 64,
-                border: 'none', padding: '6px 14px', cursor: empty ? 'default' : 'pointer',
-                opacity: empty ? 0.4 : 1,
-                background: active ? 'var(--volt)' : 'var(--grape)',
-                color: active ? 'var(--ink)' : 'var(--white)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}
-            >
-              <TyreChip compound={id} size={24} onInk={!active} />
-              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>
-                  {label}
-                </span>
-                {sets !== undefined && (
-                  <span style={{
-                    fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 11,
-                    color: active ? 'var(--dusk)' : 'var(--lilac-dim)', fontVariantNumeric: 'tabular-nums',
-                  }}>
-                    {sets} set{sets === 1 ? '' : 's'}
-                  </span>
-                )}
-              </span>
-            </motion.button>
-          )
-        })}
-      </div>
-
-      {/* haptic={false}: handleConfirm fires Heavy itself; the kit's Medium on top would double-buzz. */}
-      {!anySets && (
-        <div role="status" style={{
-          fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--lilac)', marginBottom: 10,
-        }}>
-          No sets left to fit.
+      {/*
+        * Scrim above the slant. Without it the slanted top edge sliced a
+        * timing-tower row on the diagonal and the half-row read as content
+        * (1.4 phone pass). Deepest in the band just above the edge, so the row
+        * the sheet overlaps fades out rather than being cut; lighter further
+        * up, so the race behind stays readable.
+        *
+        * bottom: 97% puts its lower edge at the slant's LOWEST point (the
+        * clip's 3%), so it fills the wedge beside the slant and the sheet
+        * paints over the rest. pointer-events none: the speed control above
+        * must stay live, because at 4x a lap passes in under a second and
+        * pausing to think is the player's only defence.
+        */}
+      <div
+        data-testid="pit-scrim"
+        aria-hidden="true"
+        style={{
+          position: 'absolute', left: 0, right: 0, bottom: '97%', height: '100vh',
+          pointerEvents: 'none',
+          background: 'linear-gradient(to top, rgba(var(--ink-rgb), 0.96) 0, rgba(var(--ink-rgb), 0.96) 16px, rgba(var(--ink-rgb), 0.55) 72px, rgba(var(--ink-rgb), 0.45) 100%)',
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Box this lap?"
+        style={{
+          position: 'relative',
+          background: 'var(--night)',
+          clipPath: 'polygon(0 3%,100% 0,100% 100%,0 100%)',
+          /*
+           * --safe-bottom, not a bare 32px.
+           *
+           * RaceHUD pads its root by --safe-bottom, but this drawer is
+           * position:absolute against that root, so it sits OUTSIDE that padding
+           * and runs under the system navigation bar. Measured on a Pixel 10 Pro
+           * XL (targetSdk 36, edge-to-edge): BOX NOW -- the primary action on the
+           * game's centrepiece interaction -- was clipped by the nav bar.
+           */
+          padding: '34px 20px calc(32px + var(--safe-bottom))',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <span style={{
+            fontFamily: 'var(--font-display)', fontSize: 38, fontWeight: 900, fontStyle: 'italic',
+            color: 'var(--white)', lineHeight: 1, textTransform: 'uppercase',
+          }}>
+            BOX THIS LAP?
+          </span>
+          <motion.button
+            type="button"
+            className="kit-focus"
+            whileTap={reduced ? undefined : { scale: 0.96 }} transition={PRESS}
+            onClick={() => { uiTap(); closePitPanel() }}
+            style={{
+              minHeight: 48, minWidth: 48, padding: '0 18px', borderRadius: 999, border: 'none',
+              background: 'var(--grape)', color: 'var(--white)', cursor: 'pointer', flexShrink: 0,
+              fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 13, letterSpacing: 1,
+            }}
+          >
+            CANCEL
+          </motion.button>
         </div>
-      )}
-      <KitButton variant="urgent" size="lg" haptic={false} disabled={!anySets} onClick={handleConfirm} style={{ width: '100%' }}>
-        BOX NOW
-      </KitButton>
+
+        <PitLossLine />
+
+        {projectionResult && <ProjectionCard result={projectionResult} compoundLabel={selectedLabel} />}
+
+        <div role="radiogroup" aria-label="Compound" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+          {availableCompounds.map(({ id, label }) => {
+            const active = selected === id
+            const sets = allocation?.[id]
+            const empty = !hasSets(id)
+            return (
+              <motion.button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-disabled={empty || undefined}
+                className="slant-sm kit-focus"
+                whileTap={reduced || empty ? undefined : { scale: 0.96 }} transition={PRESS}
+                onClick={() => handleSelect(id)}
+                style={{
+                  flex: '1 1 calc(33% - 6px)', minWidth: 72, minHeight: 64,
+                  border: 'none', padding: '6px 14px', cursor: empty ? 'default' : 'pointer',
+                  opacity: empty ? 0.4 : 1,
+                  background: active ? 'var(--volt)' : 'var(--grape)',
+                  color: active ? 'var(--ink)' : 'var(--white)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                <TyreChip compound={id} size={24} onInk={!active} />
+                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>
+                    {label}
+                  </span>
+                  {sets !== undefined && (
+                    <span style={{
+                      fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 11,
+                      color: active ? 'var(--dusk)' : 'var(--lilac-dim)', fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      {sets} set{sets === 1 ? '' : 's'}
+                    </span>
+                  )}
+                </span>
+              </motion.button>
+            )
+          })}
+        </div>
+
+        {/* haptic={false}: handleConfirm fires Heavy itself; the kit's Medium on top would double-buzz. */}
+        {!anySets && (
+          <div role="status" style={{
+            fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: 'var(--lilac)', marginBottom: 10,
+          }}>
+            No sets left to fit.
+          </div>
+        )}
+        <KitButton variant="urgent" size="lg" haptic={false} disabled={!anySets} onClick={handleConfirm} style={{ width: '100%' }}>
+          BOX NOW
+        </KitButton>
+      </div>
     </motion.div>
   )
 }

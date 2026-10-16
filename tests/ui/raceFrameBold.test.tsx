@@ -203,3 +203,29 @@ describe('weather chip', () => {
     expect(t).not.toMatch(/rain/)
   })
 })
+
+describe('pit sheet edge', () => {
+  /*
+   * Found on the 1.4 phone pass: the sheet's slanted top edge sliced straight
+   * through a timing-tower row behind it, so the screen showed half a row --
+   * code, gap and tyre cut on the diagonal -- as if it were content. A sheet
+   * needs a scrim so whatever it overlaps reads as BEHIND it.
+   */
+  it('dims what is behind it, with a scrim that sits outside the clipped sheet', () => {
+    render(<PitPanel />)
+    open()
+    const scrim = screen.getByTestId('pit-scrim')
+    const sheet = screen.getByRole('dialog', { name: /Box this lap/i })
+    // Inside the dialog, the dialog's own clip-path would cut the scrim away.
+    expect(sheet.contains(scrim), 'the scrim must not be clipped by the sheet').toBe(false)
+    expect(scrim.getAttribute('aria-hidden')).toBe('true')
+  })
+
+  it('does not swallow taps, so the race can still be paused mid-decision', () => {
+    // The speed control stays above the sheet and live: at 4x a lap passes in
+    // under a second, and pausing to think is the player's only defence.
+    render(<PitPanel />)
+    open()
+    expect(screen.getByTestId('pit-scrim').style.pointerEvents).toBe('none')
+  })
+})
