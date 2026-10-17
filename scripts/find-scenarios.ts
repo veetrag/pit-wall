@@ -67,6 +67,40 @@ const BRIEFS: Brief[] = [
     lapWindow: t => [Math.floor(t * 0.55), Math.floor(t * 0.85)],
     match: s => s.position >= 2 && s.position <= 4 && s.tyreAge >= 20 && s.lapsRemaining >= 8 && s.lapsRemaining <= 14,
   },
+  {
+    name: 'VSC gamble — a virtual safety car with your stop in the window',
+    circuitId: 'aurora',
+    lapWindow: t => [Math.floor(t * 0.3), Math.floor(t * 0.75)],
+    match: (s, st) => {
+      const car = st.cars.find(c => c.driverId === PLAYER)
+      const next = car?.strategy.plannedStops[car.pitsDone]
+      const inWindow = next !== undefined && next.lap - st.lap >= 0 && next.lap - st.lap <= DATA.tuning.ai.neutralisationWindowLaps
+      return neutralisationKind(st.safetyCar) === 'vsc' && inWindow && s.position >= 2 && s.position <= 10 && s.lapsRemaining >= 10
+    },
+    // widened from P3-P9: no hit at SEEDS=1000
+  },
+  {
+    name: 'Rain call — DAMP arriving, you on slicks',
+    circuitId: 'silverpark',
+    lapWindow: t => [Math.floor(t * 0.25), Math.floor(t * 0.75)],
+    match: (s, st) => ['S', 'M', 'H'].includes(s.compound) && st.weatherTimeline[st.lap] === 'DRY'
+      && st.weatherTimeline.slice(st.lap + 1, st.lap + 4).some(w => w !== 'DRY')
+      && s.position >= 3 && s.position <= 10 && s.lapsRemaining >= 10,
+    // widen if no hit: circuitId 'aurora', then rain within 4 laps (slice to st.lap + 5, dampAhead 4)
+  },
+  {
+    name: 'Sprint finish — six to go, P5, fresher tyres',
+    circuitId: 'harbour_lights',
+    sprint: true,
+    lapWindow: t => [t - 6, t - 6],
+    match: (s, st) => {
+      const car = st.cars.find(c => c.driverId === PLAYER)
+      if (!car || s.position !== 5 || s.lapsRemaining !== 6) return false
+      const frac = (c: typeof car) => c.tyreAge / (DATA.compounds[c.compound]?.cliff ?? 1)
+      return st.cars.some(c => !c.retired && c.position < car.position && frac(c) >= frac(car) + 0.25)
+    },
+    // widen if no hit: position 4-6, lapsRemaining 5-7 (lapWindow [t - 7, t - 5])
+  },
 ]
 
 interface Candidate {
