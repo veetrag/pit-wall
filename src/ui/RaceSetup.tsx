@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
+import { isFirstCareerRace } from '@state/buildRaceConfig'
 import { useSettingsStore } from '@state/settingsStore'
 import { isSprintRound } from '@state/sprint'
 import { useSeasonStore } from '@state/seasonStore'
@@ -86,11 +87,11 @@ export function prefilledStartCompound(plan: PlayerStrategyChoice | null, weathe
  * initRace across every circuit and round.
  */
 export function computeStartWeather(
-  circuitId: string, laps: number, seed: number, dryStart = false,
+  circuitId: string, laps: number, seed: number, dryStart = false, allDry = false,
 ): WeatherState[] {
   const spec = GAME_DATA.circuits[circuitId]
   if (!spec) return ['DRY']
-  return openingTimeline({ laps, circuit: spec, tuning: GAME_DATA.tuning, seed, dryStart })
+  return openingTimeline({ laps, circuit: spec, tuning: GAME_DATA.tuning, seed, dryStart, allDry })
 }
 
 const VISUALLY_HIDDEN = {
@@ -194,9 +195,12 @@ export function RaceSetup() {
   // Round 1 opens dry -- the race is built with dryStart, so the preview must
   // be too or this screen contradicts it. See computeStartWeather.
   const dryStart = raceIndex === 0
+  // The first career race is dry on every lap; the preview must say so.
+  const seasonNumber = useCareerStore(s => s.seasonNumber)
+  const allDry = isFirstCareerRace(seasonNumber, raceIndex)
   const weatherTimeline = useMemo(
-    () => computeStartWeather(circuitId, circuit.laps, seed, dryStart),
-    [circuitId, circuit.laps, seed, dryStart],
+    () => computeStartWeather(circuitId, circuit.laps, seed, dryStart, allDry),
+    [circuitId, circuit.laps, seed, dryStart, allDry],
   )
   const startingWeather = weatherTimeline[0] ?? 'DRY'
 
@@ -274,7 +278,7 @@ export function RaceSetup() {
                   setSelectedIdx(i)
                   setPitLap1(Math.round(c.laps * (stopCount === 2 ? 0.33 : 0.45)))
                   setPitLap2(Math.round(c.laps * 0.7))
-                  const newWeather = computeStartWeather(cId, c.laps, seed, dryStart)[0] ?? 'DRY'
+                  const newWeather = computeStartWeather(cId, c.laps, seed, dryStart, allDry)[0] ?? 'DRY'
                   setStartCompound(recommendedStartCompound(newWeather))
                 }}
                 style={{

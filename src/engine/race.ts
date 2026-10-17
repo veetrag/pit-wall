@@ -39,6 +39,7 @@ export function initRace(config: RaceConfig): RaceState {
     seed: config.seed,
     weatherSeed: config.weatherSeed,
     dryStart: config.dryStart,
+    allDry: config.allDry,
   })
   const weatherState: WeatherState = weatherTimeline[0] ?? 'DRY'
   const gridCompound = gridConditionsCompound(weatherState)

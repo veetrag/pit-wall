@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { isFirstCareerRace } from '@state/buildRaceConfig'
+import { useCareerStore } from '@state/careerStore'
 import { useRaceStore } from '@state/raceStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useClockStore } from '@state/clockStore'
@@ -65,7 +67,8 @@ export function RaceWatcher() {
       hasFiredRef.current = false
       // A sprint debrief (key sprint-<seed>) must not outlive the sprint result screen.
       useDebriefStore.getState().cancel()
-      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty, playerStrategy, useSeasonStore.getState().overlayInput(), qualifyingResult?.order, raceIndex === 0)
+      startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty, playerStrategy, useSeasonStore.getState().overlayInput(), qualifyingResult?.order, raceIndex === 0,
+        { allDry: isFirstCareerRace(useCareerStore.getState().seasonNumber, raceIndex) })
     }
   }, [seasonPhase, racePhase, playerDriverId]) // eslint-disable-line react-hooks/exhaustive-deps
 

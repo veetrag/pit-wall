@@ -62,4 +62,16 @@ describe('the setup preview agrees with the race that follows', () => {
       .some(w => w !== 'DRY')
     expect(wet, 'a non-opening round must still be able to show rain').toBe(true)
   })
+
+  it('THE FIRST CAREER RACE: the preview shows every lap dry, and so does the race', () => {
+    const circuitId = CIRCUIT_ORDER[0]!
+    const laps = circuits[circuitId]!.laps
+    for (const nonce of [0, 1, 7]) {
+      const seed = seedFor(1, 0, nonce)
+      const shown = computeStartWeather(circuitId, laps, seed, true, true)
+      const raced = initRace(buildRaceConfig(seed, 'd_voss', circuitId, 'rookie', null, null, undefined, true, false, true)).weatherTimeline
+      expect(shown).toEqual(raced)
+      expect(shown.every(w => w === 'DRY')).toBe(true)
+    }
+  })
 })

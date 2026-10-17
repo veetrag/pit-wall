@@ -16,6 +16,8 @@ export function generateWeatherTimeline(
   rng: RNG,
   /** Forces lap 1 to DRY. Later laps evolve normally -- see RaceConfig.dryStart. */
   dryStart = false,
+  /** Every lap DRY, same draws -- see RaceConfig.allDry. */
+  allDry = false,
 ): WeatherState[] {
   const { rainProbability = 0.1, weatherBias = 'stable' } = circuit
   const tl = tuning.weather.timeline
@@ -57,7 +59,9 @@ export function generateWeatherTimeline(
     timeline.push(state)
   }
 
-  return timeline
+  // Same rule as dryStart above: the rolls were consumed exactly as before, and
+  // only the result is overridden.
+  return allDry ? timeline.map((): WeatherState => 'DRY') : timeline
 }
 
 export function getWeatherForecast(
@@ -116,7 +120,9 @@ export function openingTimeline(opts: {
   weatherSeed?: number
   /** Forces lap 1 to DRY -- see RaceConfig.dryStart. */
   dryStart?: boolean
+  /** Every lap DRY -- see RaceConfig.allDry. */
+  allDry?: boolean
 }): WeatherState[] {
-  const { laps, circuit, tuning, seed, weatherSeed, dryStart } = opts
-  return generateWeatherTimeline(laps, circuit, tuning, createRng(weatherSeed ?? seed + 999999), dryStart)
+  const { laps, circuit, tuning, seed, weatherSeed, dryStart, allDry } = opts
+  return generateWeatherTimeline(laps, circuit, tuning, createRng(weatherSeed ?? seed + 999999), dryStart, allDry)
 }

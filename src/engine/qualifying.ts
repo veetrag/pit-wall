@@ -92,6 +92,7 @@ export function runQualifying(
     seed: config.seed,
     weatherSeed: config.weatherSeed,
     dryStart: config.dryStart,
+    allDry: config.allDry,
   })
   const weather: WeatherState = timeline[0] ?? 'DRY'
 

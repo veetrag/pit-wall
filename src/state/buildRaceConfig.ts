@@ -56,6 +56,16 @@ export function effectiveTeams(
   })
 }
 
+/**
+ * A new player's very first career race: season 1, round 1 (spec 2026-10-17
+ * §0.2, ruling R3). Pure, so every surface that shows or runs that race --
+ * setup preview, qualifying banner, qualifying session, the race -- computes
+ * the same answer.
+ */
+export function isFirstCareerRace(seasonNumber: number, raceIndex: number): boolean {
+  return seasonNumber === 1 && raceIndex === 0
+}
+
 export function buildRaceConfig(
   seed: number,
   playerDriverId: string,
@@ -78,6 +88,9 @@ export function buildRaceConfig(
   // no planned AI stops -- strategies.json's stops scaled to ~13 laps would send
   // the whole field in for a 20s stop. Smart/optimal brains still box on wear.
   sprint = false,
+  // The first career race is dry on every lap (spec 1.6 §0.2). Callers pass
+  // isFirstCareerRace(...); absent on every other race.
+  allDry = false,
 ): RaceConfig {
   const data = loadGameData()
   const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
@@ -134,6 +147,7 @@ export function buildRaceConfig(
   }
   // Set only for a sprint, so a Grand Prix config has no lapsOverride key at all.
   if (sprint) config.lapsOverride = sprintLaps(circuit.laps)
+  if (allDry) config.allDry = true
   // Absent wing leaves `setups` absent (not undefined) so old-path configs stay identical.
   const wing = playerStrategy?.wing
   if (wing !== undefined) config.setups = { ...aiSetups(config), [playerDriverId]: wing }

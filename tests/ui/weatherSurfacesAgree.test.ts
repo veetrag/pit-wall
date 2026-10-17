@@ -57,6 +57,7 @@ describe('every surface agrees about the opening weather', () => {
     const seed = seedFor(1, 0, 0)
     expect(computeStartWeather(circuitId, laps, seed, true)[0]).toBe('DRY')
     expect(computeQualifyingWeather(circuitId, laps, seed, true)).toBe('DRY')
+    expect(computeQualifyingWeather(circuitId, laps, seed, true, true)).toBe('DRY')
     expect(initRace(buildRaceConfig(seed, 'd_voss', circuitId, 'rookie', null, null, undefined, true)).weatherTimeline[0]).toBe('DRY')
   })
 

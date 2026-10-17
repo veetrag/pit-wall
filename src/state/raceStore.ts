@@ -18,6 +18,8 @@ export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 /** A season race's format (spec 1.5 §3). Absent = a Grand Prix. */
 export interface SeasonRaceOptions {
   sprint?: boolean
+  /** The first career race: every lap dry (spec 1.6 §0.2). */
+  allDry?: boolean
   /** The pace off the line. Logged as a step-0 call so replay and the debrief see it. */
   initialPace?: PaceMode
 }
@@ -111,7 +113,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts) {
-    const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts?.sprint ?? false)
+    const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts?.sprint ?? false, opts?.allDry ?? false)
     let raceState = initRace(config)
     const playerCalls: PlayerCall[] = []
     const pace = opts?.initialPace

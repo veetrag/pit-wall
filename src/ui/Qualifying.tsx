@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { isSprintRound } from '@state/sprint'
+import { isFirstCareerRace } from '@state/buildRaceConfig'
+import { useCareerStore } from '@state/careerStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { loadGameData } from '@data/validators'
@@ -28,10 +30,10 @@ const ATTACK_LABEL: Record<AttackLevel, string> = { conserve: 'SAFE', balanced: 
  * for a round-1 race that starts DRY. It now goes through openingTimeline
  * like everything else.
  */
-export function computeQualifyingWeather(circuitId: string, laps: number, seed: number, dryStart: boolean): WeatherState {
+export function computeQualifyingWeather(circuitId: string, laps: number, seed: number, dryStart: boolean, allDry = false): WeatherState {
   const spec = GAME_DATA.circuits[circuitId]
   if (!spec) return 'DRY'
-  const timeline = openingTimeline({ laps, circuit: spec, tuning: GAME_DATA.tuning, seed, dryStart })
+  const timeline = openingTimeline({ laps, circuit: spec, tuning: GAME_DATA.tuning, seed, dryStart, allDry })
   return timeline[0] ?? 'DRY'
 }
 
@@ -55,6 +57,7 @@ export function Qualifying() {
   // Round 1 opens dry -- see openingTimeline. Without this the screen says
   // "TRACK WET" for a race that starts DRY.
   const raceIndex = useSeasonStore(s => s.raceIndex)
+  const seasonNumber = useCareerStore(s => s.seasonNumber)
   const difficulty = useSettingsStore(s => s.difficulty)
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const uiTap = useUiTap()
@@ -63,9 +66,9 @@ export function Qualifying() {
   const circuit = GAME_DATA.circuits[circuitId]
   const laps = circuit?.laps ?? 50
   const weather = useMemo(
-    () => computeQualifyingWeather(circuitId, laps, currentSeed(), raceIndex === 0),
+    () => computeQualifyingWeather(circuitId, laps, currentSeed(), raceIndex === 0, isFirstCareerRace(seasonNumber, raceIndex)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [circuitId, laps, raceIndex],
+    [circuitId, laps, raceIndex, seasonNumber],
   )
 
   const availableCompounds = weather === 'DRY' ? DRY_COMPOUNDS : [...DRY_COMPOUNDS, ...WET_COMPOUNDS]

@@ -423,6 +423,13 @@ export interface RaceConfig {
    * would have shifted every race in the game.
    */
   dryStart?: boolean
+  /**
+   * The whole timeline is DRY (spec 2026-10-17 §0.2): a new player's very
+   * first career race. The weather rolls are consumed exactly as without it,
+   * so the stream is unchanged; only the result is overridden. ABSENT on every
+   * other config -- byteIdentity, the bands and the scenarios rely on that.
+   */
+  allDry?: true
   // Starting grid, P1 first, as driverIds. ABSENT means "use drivers.json
   // order", which is exactly what the engine did before qualifying existed --
   // byteIdentity, the Monte-Carlo bands and all three scenarios depend on that

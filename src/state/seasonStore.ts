@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { CIRCUIT_ORDER } from './raceStore'
-import { buildRaceConfig } from './buildRaceConfig'
+import { buildRaceConfig, isFirstCareerRace } from './buildRaceConfig'
 import { runQualifying, qualifyingRng, type Compound, type PaceMode, type PitStop, type QualifyingCall, type QualifyingResult } from '@engine/index'
 import type { Wing } from '@engine/setup'
 import type { Difficulty } from './settingsStore'
@@ -611,6 +611,8 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       undefined,
       // Round 1 opens dry, and qualifying must agree with the race it precedes.
       s.raceIndex === 0,
+      false,
+      isFirstCareerRace(useCareerStore.getState().seasonNumber, s.raceIndex),
     )
     set({ qualifyingResult: runQualifying(config, qualifyingRng(config), call) })
   },
