@@ -71,13 +71,15 @@ const BRIEFS: Brief[] = [
     name: 'VSC gamble — a virtual safety car with your stop in the window',
     circuitId: 'aurora',
     lapWindow: t => [Math.floor(t * 0.3), Math.floor(t * 0.75)],
+    // Ruling (Task 12): the plan-window test read plannedStops[pitsDone], which
+    // breaks after any unplanned stop and never matched. A tired, unstopped car
+    // under a VSC is the same decision without depending on the plan.
     match: (s, st) => {
       const car = st.cars.find(c => c.driverId === PLAYER)
-      const next = car?.strategy.plannedStops[car.pitsDone]
-      const inWindow = next !== undefined && next.lap - st.lap >= 0 && next.lap - st.lap <= DATA.tuning.ai.neutralisationWindowLaps
-      return neutralisationKind(st.safetyCar) === 'vsc' && inWindow && s.position >= 2 && s.position <= 10 && s.lapsRemaining >= 10
+      if (!car) return false
+      const frac = car.tyreAge / (DATA.compounds[car.compound]?.cliff ?? 1)
+      return neutralisationKind(st.safetyCar) === 'vsc' && car.pitsDone === 0 && frac >= 0.5 && s.lapsRemaining >= 10
     },
-    // widened from P3-P9: no hit at SEEDS=1000
   },
   {
     name: 'Rain call — DAMP arriving, you on slicks',
