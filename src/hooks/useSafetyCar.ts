@@ -13,8 +13,8 @@ export function useSafetyCar(): SafetyCarState | null {
 }
 
 /**
- * How many neutralisations (safety cars AND virtual safety cars) have been
- * deployed this race so far. An SC superseding a VSC counts as a new one.
+ * How many neutralisations (safety cars, virtual safety cars AND red flags,
+ * spec 1.6 §4) have been deployed this race so far. An SC superseding a VSC counts as a new one.
  *
  * DERIVED FROM THE INCIDENT LOG, not from watching `safetyCar` go null -> set.
  * The log is append-only and monotonic, so a consumer that fires a one-shot in
@@ -23,6 +23,15 @@ export function useSafetyCar(): SafetyCarState | null {
  * ever passing through null.
  */
 export function useSafetyCarDeployCount(): number {
+  return useRaceStore(s =>
+    s.raceState?.incidents.reduce(
+      (n, i) => n + (i.kind === 'safety_car_deployed' || i.kind === 'vsc_deployed' || i.kind === 'red_flag' ? 1 : 0), 0,
+    ) ?? 0,
+  )
+}
+
+/** SC and VSC deployments only (no red flags): what the safety_car coach mark counts. */
+export function useSafetyCarOnlyDeployCount(): number {
   return useRaceStore(s =>
     s.raceState?.incidents.reduce(
       (n, i) => n + (i.kind === 'safety_car_deployed' || i.kind === 'vsc_deployed' ? 1 : 0), 0,

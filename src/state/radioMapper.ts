@@ -63,6 +63,7 @@ export interface RadioState {
   lowWingWarned: boolean
   prevVscCount: number
   prevSlowStops: number
+  prevRedFlags: number
 }
 
 export function makeRadioState(): RadioState {
@@ -79,6 +80,7 @@ export function makeRadioState(): RadioState {
     lowWingWarned: false,
     prevVscCount: 0,
     prevSlowStops: 0,
+    prevRedFlags: 0,
   }
 }
 
@@ -107,13 +109,27 @@ export function processRadioTick(
   next.prevRetired = player.retired
   if (player.retired) return next // nothing else is relevant once retired
 
+  // 0a. The red flag (spec 1.6 §4): the most urgent call of the race.
+  const redFlags = state.incidents.reduce((n, i) => n + (i.kind === 'red_flag' ? 1 : 0), 0)
+  if (redFlags > radio.prevRedFlags) tryPush('red_flag', 2, {}, pushAlert)
+  next.prevRedFlags = redFlags
+
   // 0b. A VSC opening with the player's planned stop close: the cheap stop is a
   // now-or-never call. Same window the AI reacts on (tuning.ai), so the
   // engineer never tells the player to box for a stop the smart teams would
   // not take. (Pre-flight ruling P6: planned stop only, no tyre-wear clause.)
   const vscCount = state.incidents.reduce((n, i) => n + (i.kind === 'vsc_deployed' ? 1 : 0), 0)
   // Only while the VSC is still live: never call a cheap stop that has gone.
-  if (vscCount > radio.prevVscCount && neutralisationKind(state.safetyCar) === 'vsc') {
+  const liveKind = neutralisationKind(state.safetyCar)
+  let vscLive: boolean
+  switch (liveKind) {
+    case 'vsc': vscLive = true; break
+    case 'sc':
+    case 'red':
+    case null: vscLive = false; break
+    default: { const never: never = liveKind; vscLive = never }
+  }
+  if (vscCount > radio.prevVscCount && vscLive) {
     const nextStop = player.strategy.plannedStops[player.pitsDone]
     if (nextStop !== undefined && nextStop.lap - player.lap <= config.tuning.ai.neutralisationWindowLaps) {
       tryPush('vsc_box', 2, {}, pushAlert)

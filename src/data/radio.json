@@ -1,4 +1,9 @@
 {
+  "red_flag": [
+    "Red flag, red flag. Slow down and come to the pit lane.",
+    "Red flag. The race is stopped. We get a free tyre change.",
+    "Red flag! Bring it in. We'll talk tyres for the restart."
+  ],
   "vsc_box": [
     "VSC, VSC — box this lap is cheap.",
     "Virtual safety car. Box now, the stop is cheap.",

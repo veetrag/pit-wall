@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cautionWashAlpha, SC_WASH_ALPHA, VSC_WASH_ALPHA } from '@canvas/cautionWash'
+import { cautionWashAlpha, cautionWashColor, SC_WASH_ALPHA, VSC_WASH_ALPHA, RED_WASH_ALPHA } from '@canvas/cautionWash'
 import type { SafetyCarState } from '@engine/types'
 
 const base: SafetyCarState = { deployedLap: 2, lapsRemaining: 2, cause: 'crash' }
@@ -16,5 +16,10 @@ describe('caution wash', () => {
     expect(cautionWashAlpha(null, 'racing')).toBe(0)
     expect(cautionWashAlpha({ ...base, kind: 'sc' }, 'finished')).toBe(0)
     expect(cautionWashAlpha({ ...base, kind: 'vsc' }, 'idle')).toBe(0)
+  })
+
+  it('a red flag gets its own, stronger, hot wash', () => {
+    expect(cautionWashAlpha({ ...base, kind: 'red' }, 'red_flag')).toBe(RED_WASH_ALPHA)
+    expect(cautionWashColor({ ...base, kind: 'red' })).toBe(0xFF4F84)
   })
 })

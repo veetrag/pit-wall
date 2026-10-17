@@ -1,5 +1,5 @@
 import { neutralisationKind } from '@engine/incidents'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSafetyCar, useSafetyCarDeployCount } from '@hooks/useSafetyCar'
 import { useSettingsStore } from '@state/settingsStore'
@@ -67,10 +67,45 @@ export function SafetyCarBanner() {
     return () => clearTimeout(timer)
   }, [safetyCarOut])
 
+  const kind = neutralisationKind(safetyCar)
   const laps = safetyCar?.lapsRemaining ?? 0
-  const lapText = `${laps} LAP${laps === 1 ? '' : 'S'}`
-  const isVsc = neutralisationKind(safetyCar) === 'vsc'
-  const spokenName = isVsc ? 'Virtual safety car' : 'Safety car'
+  const lapsText = `${laps} LAP${laps === 1 ? '' : 'S'}`
+  let spokenName: string
+  let lapText: string
+  let spokenTail: string
+  let label: ReactElement
+  switch (kind) {
+    case 'red':
+      spokenName = 'Red flag'
+      // A red flag has no countdown: the race restarts at the lap end (spec 1.6 §4).
+      lapText = 'RESTART AT LAP END'
+      spokenTail = 'The race is suspended.'
+      label = <span>RED FLAG</span>
+      break
+    case 'vsc':
+      spokenName = 'Virtual safety car'
+      lapText = lapsText
+      spokenTail = `${laps} lap${laps === 1 ? '' : 's'} remaining.`
+      label = (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 20 }}>
+          <span style={{
+            background: 'var(--ink)', color: 'var(--caution)', borderRadius: 4, padding: '1px 6px',
+            fontSize: 14, fontStyle: 'normal', letterSpacing: 1,
+          }}>VSC</span>
+          VIRTUAL SAFETY CAR
+        </span>
+      )
+      break
+    case 'sc':
+    case null:
+      spokenName = 'Safety car'
+      lapText = lapsText
+      spokenTail = `${laps} lap${laps === 1 ? '' : 's'} remaining.`
+      label = <span>⚠ SAFETY CAR</span>
+      break
+    default: { const never: never = kind; return never }
+  }
+  const isRed = kind === 'red'
 
   return (
     <>
@@ -87,7 +122,8 @@ export function SafetyCarBanner() {
     <AnimatePresence>
       {safetyCar && (
         <motion.div
-          key={isVsc ? 'vsc-banner' : 'sc-banner'}
+          key={`${kind ?? 'none'}-banner`}
+          data-testid="neutralisation-banner" data-kind={kind ?? ''}
           initial={reducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
           animate={reducedMotion ? { opacity: 1 } : { opacity: 1, height: 'auto' }}
           exit={reducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
@@ -104,7 +140,7 @@ export function SafetyCarBanner() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               gap: 10, padding: '8px 22px', minHeight: 48,
-              background: 'var(--caution)', color: 'var(--ink)',
+              background: isRed ? 'var(--hot)' : 'var(--caution)', color: 'var(--ink)',
               fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, fontStyle: 'italic',
               letterSpacing: 0.5, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
             }}
@@ -112,18 +148,8 @@ export function SafetyCarBanner() {
             {/* --ink on --caution: dark text on amber, well above AA. The VSC
                 carries a chip instead of the warning glyph so the two read
                 apart without relying on colour. */}
-            {isVsc ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 20 }}>
-                <span style={{
-                  background: 'var(--ink)', color: 'var(--caution)', borderRadius: 4, padding: '1px 6px',
-                  fontSize: 14, fontStyle: 'normal', letterSpacing: 1,
-                }}>VSC</span>
-                VIRTUAL SAFETY CAR
-              </span>
-            ) : (
-              <span>⚠ SAFETY CAR</span>
-            )}
-            <span>{lapText}</span>
+            {label}
+            <span style={isRed ? { fontSize: 14, fontStyle: 'normal' } : undefined}>{lapText}</span>
           </motion.div>
 
           {/*
@@ -152,7 +178,7 @@ export function SafetyCarBanner() {
               overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
             }}
           >
-            {`${announcedDeploymentRef.current === deployCount ? spokenName : `${spokenName} deployed`}. ${laps} lap${laps === 1 ? '' : 's'} remaining.`}
+            {`${announcedDeploymentRef.current === deployCount ? spokenName : `${spokenName} ${isRed ? 'shown' : 'deployed'}`}. ${spokenTail}`}
           </span>
         </motion.div>
       )}

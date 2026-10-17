@@ -1,4 +1,4 @@
-import { cautionWashAlpha } from './cautionWash'
+import { cautionWashAlpha, cautionWashColor } from './cautionWash'
 import { useEffect, useRef } from 'react'
 import * as PIXI from 'pixi.js'
 import { useRaceStore } from '@state/raceStore'
@@ -357,6 +357,7 @@ export function TrackCanvas() {
     let lastAtmosphere = ''
     let lastWeather: WeatherState | '' = ''
     let lastWashAlpha = 0
+    let lastWashColor = 0xFFB020
 
     const cw = container.clientWidth || 400
     const ch = container.clientHeight || 300
@@ -450,12 +451,14 @@ export function TrackCanvas() {
           // surface that could explain it already gone.
           const { raceState: scState, phase: scPhase } = useRaceStore.getState()
           const washAlpha = cautionWashAlpha(scState?.safetyCar ?? null, scPhase)
-          if (washAlpha !== lastWashAlpha) {
+          const washColor = cautionWashColor(scState?.safetyCar ?? null)
+          if (washAlpha !== lastWashAlpha || washColor !== lastWashColor) {
             cautionGfx.clear()
             if (washAlpha > 0) {
-              cautionGfx.rect(0, 0, cw, ch).fill({ color: 0xFFB020, alpha: washAlpha })
+              cautionGfx.rect(0, 0, cw, ch).fill({ color: washColor, alpha: washAlpha })
             }
             lastWashAlpha = washAlpha
+            lastWashColor = washColor
           }
 
           const cars = useRaceStore.getState().raceState?.cars

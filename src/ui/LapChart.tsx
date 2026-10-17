@@ -23,6 +23,9 @@ type Tier = 'player' | 'near' | 'field'
 const TIER_RANK: Record<Tier, number> = { field: 0, near: 1, player: 2 }
 
 /** The player plus the four nearest finishers: two ahead, two behind, shifted at P1/P20. Finishing order. */
+/** Paint order for neutralisation bands: hatched VSC under solid SC under the red flag. */
+const NEUTRAL_LAYER: Record<'vsc' | 'sc' | 'red', number> = { vsc: 0, sc: 1, red: 2 }
+
 export function highlightedDrivers(history: LapHistory, playerDriverId: string): string[] {
   const order = [...history.cars].sort((a, b) => a.finish - b.finish).map(c => c.driverId)
   const idx = order.indexOf(playerDriverId)
@@ -132,13 +135,18 @@ export function LapChart({ history, playerDriverId }: { history: LapHistory; pla
             <line x1="0" y1="0" x2="0" y2="6" style={{ stroke: 'var(--caution)', strokeWidth: 2, opacity: 0.55 }} />
           </pattern>
         </defs>
-        {/* SC laps a solid caution band, VSC laps a hatched one (spec 1.5 §4). */}
-        {[...history.neutralisations].sort((a, b) => Number(a.kind === 'sc') - Number(b.kind === 'sc')).map((n, i) => (
-          <rect key={i} data-neutralisation={n.kind}
-            x={g.x(n.startLap - 1)} y={PAD.t}
-            width={Math.max(1, g.x(n.endLap) - g.x(n.startLap - 1))} height={H - PAD.t - PAD.b}
-            style={n.kind === 'sc' ? { fill: 'var(--caution)', opacity: 0.2 } : { fill: `url(#${hatchId})` }} />
-        ))}
+        {/* SC laps a solid caution band, VSC laps a hatched one (spec 1.5 §4), a red-flag lap a hot band (spec 1.6 §4). */}
+        {[...history.neutralisations]
+          .sort((a, b) => NEUTRAL_LAYER[a.kind] - NEUTRAL_LAYER[b.kind])
+          .map((n, i) => {
+            const fill = n.kind === 'red' ? 'var(--hot)' : n.kind === 'sc' ? 'var(--caution)' : `url(#${hatchId})`
+            return (
+              <rect key={i} data-neutralisation={n.kind} data-fill={fill}
+                x={g.x(n.startLap - 1)} y={PAD.t}
+                width={Math.max(1, g.x(n.endLap) - g.x(n.startLap - 1))} height={H - PAD.t - PAD.b}
+                style={n.kind === 'vsc' ? { fill } : { fill, opacity: n.kind === 'red' ? 0.25 : 0.2 }} />
+            )
+          })}
         {ticks.map(l => <text key={l} x={g.x(l)} y={H - 4} textAnchor="middle" style={axisText}>{`L${l}`}</text>)}
         {yLabels.map(p => <text key={p} x={PAD.l - 6} y={g.y(p) + 3} textAnchor="end" style={axisText}>{`P${p}`}</text>)}
         {ordered.map(car => (
@@ -195,7 +203,7 @@ export function LapChartCard() {
     <section aria-label="Lap chart" style={cardStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
         <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)', letterSpacing: '0.12em' }}>LAP CHART</span>
-        <span aria-hidden="true" style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)' }}>● stop · × out · ▮ SC · ▨ VSC</span>
+        <span aria-hidden="true" style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)' }}>● stop · × out · ▮ SC · ▨ VSC · ▮ RED</span>
       </div>
       <LapChart history={history} playerDriverId={playerDriverId} />
     </section>

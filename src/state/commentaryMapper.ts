@@ -164,11 +164,14 @@ export function processCommentaryTick(
     }
   }
   next.prevIncidentCount = newIncidentCount
+  // A restart consumes planned stops (the tyre change is free): those cars
+  // bump pitsDone without pitting, so no "pits" lines on that tick (spec 1.6 §4).
+  const restartTick = state.incidents.slice(prev.prevIncidentCount, newIncidentCount).some(i => i.kind === 'red_flag_restart')
 
   // Pits + retirements — any car in the top 10 by current position
   for (const car of state.cars) {
     const prevPits = prev.prevPitsDone[car.driverId] ?? 0
-    if (car.pitsDone > prevPits && car.position <= BROADCAST_POSITION_CUTOFF) {
+    if (!restartTick && car.pitsDone > prevPits && car.position <= BROADCAST_POSITION_CUTOFF) {
       const line = fill('pit', { lap, code: codeFor(config, car.driverId), compound: car.compound })
       if (line) lines.push(line)
     }
