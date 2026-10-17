@@ -103,6 +103,13 @@ const BRIEFS: Brief[] = [
     },
     // widen if no hit: position 4-6, lapsRemaining 5-7 (lapWindow [t - 7, t - 5])
   },
+  {
+    name: 'Red flag restart — stopped on track, a free tyre change ahead',
+    circuitId: 'monsoon_bay',
+    lapWindow: t => [Math.floor(t * 0.2), t - 9],
+    match: (s, st) => neutralisationKind(st.safetyCar) === 'red' && s.position >= 3 && s.position <= 12 && s.lapsRemaining >= 8,
+    // widen if no hit: circuitId 'kaido', then 'highland' (SEEDS=2000)
+  },
 ]
 
 interface Candidate {
