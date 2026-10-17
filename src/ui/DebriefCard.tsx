@@ -95,7 +95,7 @@ export function DebriefCard() {
       <KitButton variant="secondary" size="sm" disabled ariaLabel="Try another plan" style={{ width: '100%' }} onClick={() => {}}>
         TRY ANOTHER PLAN
       </KitButton>
-      <div style={{ fontSize: 11, color: 'var(--lilac-dim)', marginTop: 4 }}>Available once the review finishes.</div>
+      <div style={{ fontSize: 11, color: 'var(--lilac-dim)', marginTop: 4 }}>{status === 'failed' ? 'Review unavailable for this race.' : 'Available once the review finishes.'}</div>
     </div>
   )
   const shell = { background: 'var(--grape)', border: '1px solid var(--line-hair)', borderRadius: 10, padding: '12px 14px' }

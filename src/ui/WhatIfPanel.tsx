@@ -60,9 +60,10 @@ export function WhatIfPanel() {
   const adding = !!model && model.stops.length === 0
   const stop = model?.stops[stopIdx]
   const want: Compound = picked ?? stop?.compound ?? 'H'
+  // The branch step depends on stop and lap only, never on the tyre.
   const legal = useMemo(
-    () => (job && model ? legalAtBranch(job, adding ? { kind: 'add', lap, compound: want } : { kind: 'stop', stop: stopIdx, lap, compound: want }) : []),
-    [job, model, adding, stopIdx, lap, want],
+    () => (job ? legalAtBranch(job, adding ? { kind: 'add', lap, compound: 'H' } : { kind: 'stop', stop: stopIdx, lap, compound: 'H' }) : []),
+    [job, adding, stopIdx, lap],
   )
   if (!job || !model) return null
 
@@ -74,7 +75,11 @@ export function WhatIfPanel() {
   const edit: WhatIfEdit = adding ? { kind: 'add', lap, compound } : { kind: 'stop', stop: stopIdx, lap, compound }
   const pick = (i: number) => { const s = model.stops[i]; if (!s) return; uiTap(); setStopIdx(i); setLap(s.lap); setPicked(null) }
   const running = wi.status === 'running'
-  const lines = wi.status === 'done' && wi.result ? whatIfLines(wi.result, model.field) : null
+  // The read-out belongs to the edit that produced it; stale once the controls move.
+  const e = wi.edit
+  const matches = !!e && e.kind === edit.kind && e.lap === edit.lap && e.compound === edit.compound
+    && (e.kind !== 'stop' || (edit.kind === 'stop' && e.stop === edit.stop))
+  const lines = wi.status === 'done' && wi.result && matches ? whatIfLines(wi.result, model.field) : null
   const futures = job.config.tuning.debrief.futures
   const tap = reduced ? undefined : { scale: 0.96 }
 

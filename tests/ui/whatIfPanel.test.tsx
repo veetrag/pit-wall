@@ -85,6 +85,24 @@ describe('the panel', () => {
     expect(screen.getByText(/This plan: P3/)).toBeTruthy()
   })
 
+  it('hides the read-out once the controls move off the edit that was run', () => {
+    useDebriefStore.getState().start(job(), 'r1')
+    render(<WhatIfPanel />)
+    fireEvent.click(screen.getByRole('button', { name: /one lap earlier/i }))
+    fireEvent.click(screen.getByRole('button', { name: /run 8 futures/i }))
+    expect(screen.getByText(/This plan: P3/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /one lap later/i }))
+    expect(screen.queryByText(/This plan: P3/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /one lap earlier/i }))
+    expect(screen.getByText(/This plan: P3/)).toBeTruthy()
+  })
+
+  it('says why when the debrief itself failed', () => {
+    useDebriefStore.setState({ status: 'failed', result: null, raceKey: 'r', job: job() })
+    render(<DebriefCard />)
+    expect(screen.getByText('Review unavailable for this race.')).toBeTruthy()
+  })
+
   it('offers only compounds that have sets', () => {
     const j = job()
     useDebriefStore.getState().start({ ...j, config: { ...j.config, tyreAllocationBase: { S: 0, M: 2, H: 2, I: 0, W: 0 } } }, 'r1')
