@@ -103,6 +103,8 @@ describe('loadSnapshot rejects anything it cannot trust', () => {
     standings: [{ driverId: 'd_voss', points: 18 }], playerStrategy: null,
     attemptNonce: 0, devPoints: 30, purchasedTiers: {}, rivalDevelopment: {},
     lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null,
+    qualifyingResult: null, sprintAttemptNonce: 0, sprintStrategy: null,
+    lastSprintResults: null, lastSprintEvents: null, sprintPending: false, pendingSprint: null, sprintBanked: false,
   }
 
   it('round-trips a valid save', async () => {

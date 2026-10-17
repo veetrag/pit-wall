@@ -36,6 +36,10 @@ const RaceFactSchema = z.object({
   stops: z.number(),
   overtakes: z.number(),
   wet: z.boolean(),
+  // Optional, not defaulted: a Grand Prix fact never carries it, so every
+  // pre-1.5 career (and every GP fact after) serialises byte-for-byte as
+  // before -- cloud reconcile compares the JSON string.
+  kind: z.enum(['gp', 'sprint']).optional(),
 })
 
 const SeasonSummarySchema = z.object({

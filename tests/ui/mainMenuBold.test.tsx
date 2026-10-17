@@ -22,6 +22,8 @@ const SAVED: SeasonSnapshot = {
   standings: [{ driverId: 'd_rival', points: 50 }, { driverId: 'd_voss', points: 43 }], playerStrategy: null,
   attemptNonce: 0, devPoints: 60, purchasedTiers: {}, rivalDevelopment: {},
   lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null,
+  qualifyingResult: null, sprintAttemptNonce: 0, sprintStrategy: null,
+  lastSprintResults: null, lastSprintEvents: null, sprintPending: false, pendingSprint: null, sprintBanked: false,
 }
 
 beforeEach(() => {

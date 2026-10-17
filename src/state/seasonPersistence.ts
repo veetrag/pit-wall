@@ -3,6 +3,7 @@ import { migrateSave, SEASON_MIGRATIONS } from './saveMigration'
 import { Preferences } from '@capacitor/preferences'
 import { useSeasonStore } from './seasonStore'
 import type { SeasonPhase } from './seasonStore'
+import { isSprintRound } from './sprint'
 
 /**
  * Season save/resume.
@@ -43,7 +44,7 @@ export const SAVE_KEY = 'season.save'
 export const SAVE_VERSION = 2
 
 /** The phases a season can resume INTO. Menus and detours are not among them. */
-export type ResumePhase = 'development' | 'race_setup' | 'result' | 'championship'
+export type ResumePhase = 'development' | 'race_setup' | 'result' | 'championship' | 'sprint_setup' | 'sprint_result'
 
 /**
  * Where each phase resumes to, or null for "don't touch the save".
@@ -78,13 +79,16 @@ const RESUME_PHASE: Record<SeasonPhase, ResumePhase | null> = {
   racing: 'race_setup',
   result: 'result',
   championship: 'championship',
+  // A sprint in progress is not persisted (same reasoning as `racing`), so it
+  // resumes to its setup with the shared qualifying grid intact. A sprint
+  // result resumes to itself, pending and uncounted, like `result`.
+  sprint_setup: 'sprint_setup',
+  sprint_racing: 'sprint_setup',
+  sprint_result: 'sprint_result',
   // A scenario is not a season. It has no standings, no development and no
   // round, so there is nothing to resume INTO -- and mapping any of these to a
   // real phase would let a scenario overwrite a championship in progress.
   scenario_select: null, scenario_racing: null, scenario_result: null,
-  // Placeholders so the map stays total; Task 10 (sprint persistence) sets the
-  // real mappings.
-  sprint_setup: 'race_setup', sprint_racing: 'race_setup', sprint_result: 'race_setup',
 }
 
 const StandingSchema = z.object({ driverId: z.string(), points: z.number() })
@@ -105,10 +109,26 @@ const PlayerStrategySchema = z.object({
   plannedStops: z.array(z.object({ lap: z.number(), compound: z.enum(['S', 'M', 'H', 'I', 'W']) })),
   wing: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional(),
 })
+const CompoundSchema = z.enum(['S', 'M', 'H', 'I', 'W'])
+const QualifyingResultSchema = z.object({
+  laps: z.array(z.object({
+    driverId: z.string(), teamId: z.string(), time: z.number(), compound: CompoundSchema,
+    attack: z.enum(['conserve', 'balanced', 'attack']), scrappy: z.boolean(),
+  })),
+  order: z.array(z.string()),
+})
+const SprintStrategySchema = z.object({
+  startCompound: CompoundSchema,
+  paceMode: z.enum(['push', 'neutral', 'conserve']),
+})
+const SprintRecordSchema = z.object({
+  position: z.number(), retired: z.boolean(), round: z.number(), grid: z.number(),
+  stops: z.number(), overtakes: z.number(), wet: z.boolean(),
+})
 
 export const SeasonSnapshotSchema = z.object({
   v: z.literal(SAVE_VERSION),
-  resumePhase: z.enum(['development', 'race_setup', 'result', 'championship']),
+  resumePhase: z.enum(['development', 'race_setup', 'result', 'championship', 'sprint_setup', 'sprint_result']),
   playerDriverId: z.string(),
   selectedTeamId: z.string().nullable(),
   selectedCircuitId: z.string().nullable(),
@@ -132,6 +152,21 @@ export const SeasonSnapshotSchema = z.object({
     position: z.number(), retired: z.boolean(), pole: z.boolean(), round: z.number(),
     grid: z.number(), stops: z.number(), overtakes: z.number(), wet: z.boolean(),
   }).nullable().default(null),
+  /*
+   * Sprint weekends (spec 1.5 §3). Every field .default()ed and NOT a version
+   * bump: a save from before sprints existed has no sprint in progress, so the
+   * defaults are simply true of it. qualifyingResult is written on sprint rounds
+   * only -- the Grand Prix needs the grid the sprint used after a resume -- and
+   * stays null elsewhere, where a resume re-qualifies as before.
+   */
+  qualifyingResult: QualifyingResultSchema.nullable().default(null),
+  sprintAttemptNonce: z.number().default(0),
+  sprintStrategy: SprintStrategySchema.nullable().default(null),
+  lastSprintResults: z.array(SeasonResultSchema).nullable().default(null),
+  lastSprintEvents: RaceEventSummarySchema.nullable().default(null),
+  sprintPending: z.boolean().default(false),
+  pendingSprint: SprintRecordSchema.nullable().default(null),
+  sprintBanked: z.boolean().default(false),
 })
 
 export type SeasonSnapshot = z.infer<typeof SeasonSnapshotSchema>
@@ -169,6 +204,14 @@ export function snapshotFrom(s: SeasonState): SeasonSnapshot | null {
     lastRaceEvents: s.lastRaceEvents,
     resultPending: s.resultPending,
     pendingRace: s.pendingRace,
+    qualifyingResult: isSprintRound(s.raceIndex) ? s.qualifyingResult : null,
+    sprintAttemptNonce: s.sprintAttemptNonce,
+    sprintStrategy: s.sprintStrategy,
+    lastSprintResults: s.lastSprintResults,
+    lastSprintEvents: s.lastSprintEvents,
+    sprintPending: s.sprintPending,
+    pendingSprint: s.pendingSprint,
+    sprintBanked: s.sprintBanked,
   }
 }
 

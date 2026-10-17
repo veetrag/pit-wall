@@ -90,6 +90,31 @@ describe('sprint points', () => {
     expect(s().rivalDevelopment).toEqual(rivals)
   })
 
+  it('ONCE BANKED, THE SPRINT IS CLOSED: a late record, keep, retry or setup changes nothing', () => {
+    // Resume can restore sprintBanked (Task 10), so the store itself refuses a
+    // second sprint on a banked round rather than trusting the UI's routing.
+    atRound(3); qualify()
+    s().confirmSprintSetup({ startCompound: 'M', paceMode: 'neutral' })
+    s().recordSprintResult(finish(2), EVENTS)
+    s().toGrandPrix()
+    const standings = s().standings
+    const nonce = s().sprintAttemptNonce
+    s().recordSprintResult(finish(1), EVENTS)
+    s().keepSprint()
+    expect(s().standings).toEqual(standings)
+    expect(points('d_voss')).toBe(7)
+    expect(s().phase).toBe('racing')
+    expect(s().sprintPending).toBe(false)
+    s().retrySprint()
+    s().confirmSprintSetup({ startCompound: 'S', paceMode: 'push' })
+    s().keepSprint()
+    expect(s().phase).toBe('racing')
+    expect(s().sprintAttemptNonce).toBe(nonce)
+    expect(s().sprintStrategy).toEqual({ startCompound: 'M', paceMode: 'neutral' })
+    expect(s().standings).toEqual(standings)
+    expect(useCareerStore.getState().raceLog.filter(f => f.kind === 'sprint')).toHaveLength(1)
+  })
+
   it('RETRY SPRINT discards the attempt: no points, back to sprint setup, a new sprint seed, the same GP seed', () => {
     atRound(3); qualify()
     const gpSeed = s().currentSeed()
@@ -169,6 +194,12 @@ describe('career', () => {
     expect(c.podiums).toBe(0)
     expect(c.bestFinish).toBeNull()
     expect(sprintWins(c.raceLog)).toBe(1)
+  })
+
+  it('a retired car classified P1 is not a sprint win', () => {
+    const fact = { season: 1, round: 3, grid: 1, finish: 1, retired: true, pole: false, stops: 0, overtakes: 0, wet: false, kind: 'sprint' as const }
+    expect(sprintWins([fact])).toBe(0)
+    expect(sprintWins([fact, { ...fact, retired: false }])).toBe(1)
   })
 
   it('a sprint win earns no Grand Prix badge (achievements unchanged)', () => {

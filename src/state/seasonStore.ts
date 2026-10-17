@@ -431,9 +431,18 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     return seedFor(useCareerStore.getState().seasonNumber, raceIndex, sprintAttemptNonce, 'sprint')
   },
 
-  confirmSprintSetup(choice) { set({ sprintStrategy: choice, phase: 'sprint_racing' }) },
+  /*
+   * Once-only guards. A banked sprint is closed for the round: resume restores
+   * sprintBanked (seasonPersistence), so the store refuses a second sprint
+   * itself rather than trusting the screens never to route back into one.
+   */
+  confirmSprintSetup(choice) {
+    if (get().sprintBanked) return
+    set({ sprintStrategy: choice, phase: 'sprint_racing' })
+  },
 
   recordSprintResult(positions, events) {
+    if (get().sprintBanked) return
     const results: SeasonResult[] = positions.map(p => ({
       driverId: p.driverId,
       position: p.position,
@@ -451,7 +460,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     // Sprint points only: no development points, no rival development, no
     // wing memory -- those stay tied to the Grand Prix (spec 1.5 §3).
     const s = get()
-    if (!s.sprintPending || !s.lastSprintResults) return
+    if (s.sprintBanked || !s.sprintPending || !s.lastSprintResults) return
     set({
       standings: addResultsToStandings(s.standings, s.lastSprintResults),
       sprintPending: false, pendingSprint: null, sprintBanked: true,
@@ -466,6 +475,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   },
 
   retrySprint() {
+    if (get().sprintBanked) return
     set(s => ({
       sprintAttemptNonce: s.sprintAttemptNonce + 1, phase: 'sprint_setup',
       lastSprintResults: null, lastSprintEvents: null, sprintPending: false, pendingSprint: null,
@@ -814,6 +824,14 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       lastRaceEvents: snap.lastRaceEvents,
       resultPending: snap.resultPending,
       pendingRace: snap.pendingRace,
+      qualifyingResult: snap.qualifyingResult,
+      sprintAttemptNonce: snap.sprintAttemptNonce,
+      sprintStrategy: snap.sprintStrategy,
+      lastSprintResults: snap.lastSprintResults,
+      lastSprintEvents: snap.lastSprintEvents,
+      sprintPending: snap.sprintPending,
+      pendingSprint: snap.pendingSprint,
+      sprintBanked: snap.sprintBanked,
     })
   },
 }))
