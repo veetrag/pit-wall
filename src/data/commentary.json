@@ -28,5 +28,6 @@
   "safety_car_deployed": ["Safety car deployed on lap {lap}."],
   "safety_car_ended": ["Safety car in this lap — green flag on lap {lap}."],
   "vsc_deployed": ["Virtual safety car on lap {lap} — the field slows, no bunching."],
-  "vsc_ended": ["VSC ending — green flag on lap {lap}."]
+  "vsc_ended": ["VSC ending — green flag on lap {lap}."],
+  "slow_stop": ["L{lap} slow stop for {code}: {loss}s lost, down to P{pos}"]
 }

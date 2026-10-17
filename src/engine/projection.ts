@@ -32,7 +32,9 @@ export function projectPitNow(
   // reason safetyCar lives on RaceState (spec 5.3): the "if you pit now"
   // overlay prices a stop under yellow correctly with no extra plumbing.
   const playerTeamId = state.cars.find(c => c.driverId === playerDriverId)!.teamId
-  const stopTime = pitStopTime(config, playerTeamId, state.safetyCar, rngForStop)
+  // The EXPECTED stop: a slow stop is bad luck the player cannot plan for, so
+  // the overlay never prices one (spec 1.6 §1).
+  const stopTime = pitStopTime(config, playerTeamId, state.safetyCar, rngForStop, { allowSlow: false }).total
 
   projState = {
     ...projState,

@@ -110,5 +110,7 @@ export function makeDeterministicTuning(overrides: DeepPartial<TuningConstants> 
     // The pre-1.6 weather rule (ruling R2). The golden race is a wet race full
     // of weather stops; confirm 1 / minLapsLeft 0 reproduces it byte for byte.
     ai: { weatherConfirmLaps: 1, weatherMinLapsLeft: 0 },
+    // No slow stops in the golden race: at 0 pitStopTime is the pre-1.6 formula.
+    pit: { slowStopChance: 0 },
   }, overrides) as DeepPartial<TuningConstants>)
 }

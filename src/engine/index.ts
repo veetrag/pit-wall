@@ -14,6 +14,8 @@ export {
 } from './incidents'
 export * from './setup'
 export { createRng, gaussianPair } from './rng'
+export { pitStopTime, expectedPitStopTime, slowStopComponent, normalCdf } from './pitStop'
+export type { PitStopCost } from './pitStop'
 export { generateWeatherTimeline, getWeatherForecast, openingTimeline } from './weather'
 export { runQualifying, qualifyingRng } from './qualifying'
 export type {

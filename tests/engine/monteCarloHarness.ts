@@ -58,6 +58,8 @@ export type Metrics = {
   // 1.6 §0.1: AI stops (pitsDone up across a lap boundary) that change tyre
   // FAMILY, dry <-> wet. Counts weather stops whatever triggered them.
   aiWeatherStopsPerRace: number
+  // 1.6 §1: 'slow_stop' incidents per race, all cars.
+  slowStopsPerRace: number
 }
 
 // Duplicated from src/state/raceStore.ts:53 and :57-62 (BRAIN_ORDER and
@@ -206,6 +208,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
   let crashes = 0
   let safetyCars = 0
   let vscs = 0
+  let slowStops = 0
   let neutralisationStops = 0
   let weatherStops = 0
   let driverErrors = 0
@@ -255,6 +258,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
     crashes += state.cars.filter(c => c.retiredCause === 'crash').length
     safetyCars += state.incidents.filter(i => i.kind === 'safety_car_deployed').length
     vscs += state.incidents.filter(i => i.kind === 'vsc_deployed').length
+    slowStops += state.incidents.filter(i => i.kind === 'slow_stop').length
     driverErrors += state.incidents.filter(i => i.kind === 'driver_error').length
 
     const ot = state.overtakeEvents.length
@@ -295,5 +299,6 @@ export function runRaces(opts: HarnessOptions): Metrics {
     vscPerRace: vscs / races,
     aiNeutralisationStopsPerRace: neutralisationStops / races,
     aiWeatherStopsPerRace: weatherStops / races,
+    slowStopsPerRace: slowStops / races,
   }
 }

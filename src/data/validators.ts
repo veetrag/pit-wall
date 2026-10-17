@@ -71,7 +71,12 @@ const TuningSchema = z.object({
   pit: z.object({
     stopMean: z.number(), stopSigma: z.number(),
     pitCrewMeanRelief: z.number(), pitCrewSigmaRelief: z.number(),
-  }),
+    // A chance: a fat-fingered 0.4 where 0.04 was meant must fail at load.
+    slowStopChance: z.number().min(0).max(1),
+    slowStopMin: z.number().min(0),
+    slowStopMax: z.number().min(0),
+    pitCrewSlowRelief: z.number().min(0).max(1),
+  }).refine(p => p.slowStopMin <= p.slowStopMax, { message: 'pit.slowStopMin must not exceed pit.slowStopMax' }),
   paceModes: z.object({
     push:     z.object({ paceDelta: z.number(), degMultiplier: z.number() }),
     neutral:  z.object({ paceDelta: z.number(), degMultiplier: z.number() }),
@@ -262,6 +267,7 @@ const TuningSchema = z.object({
     vscPerRace: z.tuple([z.number(), z.number()]),
     aiNeutralisationStopsPerRace: z.tuple([z.number(), z.number()]),
     aiWeatherStopsPerRace: z.tuple([z.number(), z.number()]),
+    slowStopsPerRace: z.tuple([z.number(), z.number()]),
     _note: z.string(),
   }).optional(),
 }).passthrough()

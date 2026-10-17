@@ -134,6 +134,19 @@ export function processCommentaryTick(
         if (line) lines.push(line)
         break
       }
+      case 'slow_stop': {
+        // A rival's slow stop is news only when it cost a place (ruling R4):
+        // without the slow seconds the car would be ahead of the one now in
+        // front of it. The player's own slow stop is the radio's (radioMapper).
+        if (!ev.driverId || ev.driverId === config.playerDriverId) break
+        const car = state.cars.find(c => c.driverId === ev.driverId)
+        if (!car || car.retired) break
+        const ahead = state.cars.find(c => c.position === car.position - 1)
+        if (!ahead || car.raceTime - (ev.timeLoss ?? 0) >= ahead.raceTime) break
+        const line = fill('slow_stop', { lap: evLap, code, loss: (ev.timeLoss ?? 0).toFixed(1), pos: car.position })
+        if (line) lines.push(line)
+        break
+      }
       default: {
         const _exhaustive: never = ev.kind
         void _exhaustive

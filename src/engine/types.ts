@@ -83,6 +83,16 @@ export interface TuningConstants {
     stopSigma: number
     pitCrewMeanRelief: number
     pitCrewSigmaRelief: number
+    /**
+     * Slow stops (spec 2026-10-17 §1). Chance per stop before crew relief; a
+     * slow stop adds slowStopMin..slowStopMax seconds. Decided from the second
+     * value of the gaussianPair pitStopTime already draws, so 0 changes nothing.
+     */
+    slowStopChance: number
+    slowStopMin: number
+    slowStopMax: number
+    /** chance x (1 - pitCrew/100 x this). */
+    pitCrewSlowRelief: number
   }
   paceModes: Record<PaceMode, { paceDelta: number; degMultiplier: number }>
   qualifying: {
@@ -347,6 +357,7 @@ export type IncidentKind =
   | 'safety_car_ended'
   | 'vsc_deployed'
   | 'vsc_ended'
+  | 'slow_stop'
 
 /** A full safety car bunches the field; a virtual safety car slows every car and never bunches it. */
 export type NeutralisationKind = 'sc' | 'vsc'
@@ -357,7 +368,7 @@ export interface IncidentEvent {
   kind: IncidentKind
   /** null for safety-car events, which belong to the race rather than a car. */
   driverId: string | null
-  /** Seconds, for 'driver_error' only; null otherwise. */
+  /** Seconds, for 'driver_error' and 'slow_stop' only; null otherwise. */
   timeLoss: number | null
 }
 

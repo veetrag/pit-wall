@@ -1,7 +1,7 @@
 import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound, IncidentEvent } from './types'
 import type { Rng } from './rng'
 import { createRng } from './rng'
-import { pitStopTime } from './pitStop'
+import { pitStopTime, type PitStopCost } from './pitStop'
 import { computeSectorTime } from './lapModel'
 import { wingOvertakeFactor } from './setup'
 import { openingTimeline } from './weather'
@@ -142,6 +142,10 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const newSectorResults = [...state.sectorResults]
   const newOvertakeEvents: OvertakeEvent[] = [...state.overtakeEvents]
   const newIncidents: IncidentEvent[] = [...state.incidents]
+  // Every slow stop is logged, whoever made it (spec 1.6 §1, ruling R4).
+  const logSlow = (stop: PitStopCost, driverId: string): void => {
+    if (stop.slow > 0) newIncidents.push({ lap: state.lap, sector, kind: 'slow_stop', driverId, timeLoss: stop.slow })
+  }
 
   // 1. Compute sector time for each car. Retired cars are frozen entirely —
   // no more sector time, no more sim work happens to them.
@@ -410,16 +414,17 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         const decision = aiDecision(config, updated, stateForAI, rng)
         updated.paceMode = decision.paceMode
         if (decision.pit && !raceEndsThisTick) {
-          const stopTime = pitStopTime(config, car.teamId, safetyCar, rng)
+          const stop = pitStopTime(config, car.teamId, safetyCar, rng)
           updated = {
             ...updated,
-            raceTime: updated.raceTime + stopTime,
+            raceTime: updated.raceTime + stop.total,
             compound: decision.compound,
             tyreAge: 0,
             pitsDone: updated.pitsDone + 1,
             tyreAllocation: consumeTyreSet(updated.tyreAllocation, decision.compound),
             compoundsUsed: [...updated.compoundsUsed, decision.compound],
           }
+          logSlow(stop, car.driverId)
         }
       } else if (config.playerStrategyOverride) {
         // The player's own plan, executed exactly as the race setup screen
@@ -433,16 +438,17 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         if (nextStop && updated.lap >= nextStop.lap) {
           const compound = resolveAllocatedCompound(nextStop.compound, updated.tyreAllocation)
           if (compound) {
-            const stopTime = pitStopTime(config, car.teamId, safetyCar, rng)
+            const stop = pitStopTime(config, car.teamId, safetyCar, rng)
             updated = {
               ...updated,
-              raceTime: updated.raceTime + stopTime,
+              raceTime: updated.raceTime + stop.total,
               compound,
               tyreAge: 0,
               pitsDone: updated.pitsDone + 1,
               tyreAllocation: consumeTyreSet(updated.tyreAllocation, compound),
               compoundsUsed: [...updated.compoundsUsed, compound],
             }
+            logSlow(stop, car.driverId)
           }
         }
       }

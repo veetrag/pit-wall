@@ -21,13 +21,13 @@ export function applyPlayerPit(
   if (!player) return null
   const resolved = resolveAllocatedCompound(compound, player.tyreAllocation)
   if (!resolved) return null
-  const stopTime = pitStopTime(config, player.teamId, state.safetyCar, rng)
-  return {
+  const stop = pitStopTime(config, player.teamId, state.safetyCar, rng)
+  const next: RaceState = {
     ...state,
     cars: state.cars.map(car => car.isPlayer
       ? {
           ...car,
-          raceTime: car.raceTime + stopTime,
+          raceTime: car.raceTime + stop.total,
           compound: resolved,
           tyreAge: 0,
           pitsDone: car.pitsDone + 1,
@@ -35,6 +35,13 @@ export function applyPlayerPit(
           compoundsUsed: [...car.compoundsUsed, resolved],
         }
       : car),
+  }
+  // Logged at the moment of the call. The incidents array is only replaced
+  // when there is something to log, so a fast stop leaves the log untouched.
+  if (stop.slow <= 0) return next
+  return {
+    ...next,
+    incidents: [...state.incidents, { lap: state.lap, sector: state.sector, kind: 'slow_stop', driverId: player.driverId, timeLoss: stop.slow }],
   }
 }
 

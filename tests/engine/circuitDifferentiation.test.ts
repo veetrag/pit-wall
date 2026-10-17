@@ -284,7 +284,7 @@ describe('circuits: pit lane loss comes from the circuit', () => {
         tuning: {
           ...liveConfig.tuning,
           incidents: zeroIncidents(liveConfig.tuning.incidents),
-          pit: { ...liveConfig.tuning.pit, stopSigma: 0 },
+          pit: { ...liveConfig.tuning.pit, stopSigma: 0, slowStopChance: 0 },
           projection: { ...liveConfig.tuning.projection, horizonLaps: 0 },
         },
       }
