@@ -70,6 +70,9 @@ describe('the banner', () => {
     expect(screen.queryByText(/LAPS?$/)).toBeNull()
     expect(screen.getByTestId('safety-car-status').textContent).toMatch(/Red flag/)
     expect(screen.getByTestId('neutralisation-banner').getAttribute('data-kind')).toBe('red')
+    const band = screen.getByText('RED FLAG').parentElement as HTMLElement
+    expect(band.style.color).toBe('var(--ink)')
+    expect(band.style.background).toBe('var(--hot)')
     expect(warning).toHaveBeenCalledTimes(1)
   })
   it('a VSC and an SC still read as themselves (exhaustive switch)', () => {
@@ -109,8 +112,13 @@ describe('the lap chart', () => {
     const { container } = render(<LapChart history={history} playerDriverId="a" />)
     const red = container.querySelector('[data-neutralisation="red"]')
     expect(red).not.toBeNull()
-    expect(red!.getAttribute('data-fill')).toBe('var(--hot)')
-    expect(container.querySelector('[data-neutralisation="sc"]')!.getAttribute('data-fill')).toBe('var(--caution)')
+    const sc = container.querySelector('[data-neutralisation="sc"]')!
+    expect(sc.getAttribute('data-fill')).toBe('var(--caution)')
+    // Distinct by shape, not only colour: cross-hatch plus a top edge stroke.
+    expect(red!.getAttribute('data-pattern')).toBe('cross')
+    expect(sc.getAttribute('data-pattern')).toBe('solid')
+    expect(red!.getAttribute('data-fill')).toMatch(/^url\(#red-cross-/)
+    expect(container.querySelector('[data-red-edge]')).not.toBeNull()
   })
 })
 

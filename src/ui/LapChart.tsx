@@ -22,9 +22,10 @@ const HIGHLIGHTED = 5
 type Tier = 'player' | 'near' | 'field'
 const TIER_RANK: Record<Tier, number> = { field: 0, near: 1, player: 2 }
 
-/** The player plus the four nearest finishers: two ahead, two behind, shifted at P1/P20. Finishing order. */
 /** Paint order for neutralisation bands: hatched VSC under solid SC under the red flag. */
 const NEUTRAL_LAYER: Record<'vsc' | 'sc' | 'red', number> = { vsc: 0, sc: 1, red: 2 }
+
+/** The player plus the four nearest finishers: two ahead, two behind, shifted at P1/P20. Finishing order. */
 
 export function highlightedDrivers(history: LapHistory, playerDriverId: string): string[] {
   const order = [...history.cars].sort((a, b) => a.finish - b.finish).map(c => c.driverId)
@@ -106,6 +107,7 @@ function Line({ car, g, tier, colour, reduced }: { car: CarHistory; g: Geometry;
 export function LapChart({ history, playerDriverId }: { history: LapHistory; playerDriverId: string }) {
   const reduced = useReducedMotion()
   const uiTap = useUiTap()
+  const crossId = `red-cross-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   const hatchId = `vsc-hatch-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   const [front, setFront] = useState<string | null>(null)
 
@@ -134,17 +136,28 @@ export function LapChart({ history, playerDriverId }: { history: LapHistory; pla
           <pattern id={hatchId} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="6" style={{ stroke: 'var(--caution)', strokeWidth: 2, opacity: 0.55 }} />
           </pattern>
+          {/* Red flag: a CROSS-hatch (two diagonals) plus a top edge stroke, so it differs from the SC solid and the VSC single hatch by shape, not only colour. */}
+          <pattern id={crossId} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="6" style={{ stroke: 'var(--hot)', strokeWidth: 2, opacity: 0.8 }} />
+            <line x1="0" y1="0" x2="6" y2="0" style={{ stroke: 'var(--hot)', strokeWidth: 2, opacity: 0.8 }} />
+          </pattern>
         </defs>
         {/* SC laps a solid caution band, VSC laps a hatched one (spec 1.5 §4), a red-flag lap a hot band (spec 1.6 §4). */}
         {[...history.neutralisations]
           .sort((a, b) => NEUTRAL_LAYER[a.kind] - NEUTRAL_LAYER[b.kind])
           .map((n, i) => {
-            const fill = n.kind === 'red' ? 'var(--hot)' : n.kind === 'sc' ? 'var(--caution)' : `url(#${hatchId})`
+            const fill = n.kind === 'red' ? `url(#${crossId})` : n.kind === 'sc' ? 'var(--caution)' : `url(#${hatchId})`
+            const x = g.x(n.startLap - 1)
+            const w = Math.max(1, g.x(n.endLap) - g.x(n.startLap - 1))
             return (
-              <rect key={i} data-neutralisation={n.kind} data-fill={fill}
-                x={g.x(n.startLap - 1)} y={PAD.t}
-                width={Math.max(1, g.x(n.endLap) - g.x(n.startLap - 1))} height={H - PAD.t - PAD.b}
-                style={n.kind === 'vsc' ? { fill } : { fill, opacity: n.kind === 'red' ? 0.25 : 0.2 }} />
+              <g key={i}>
+              {n.kind === 'red' && (
+                <line data-red-edge x1={x} x2={x + w} y1={PAD.t} y2={PAD.t} style={{ stroke: 'var(--hot)', strokeWidth: 3 }} />
+              )}
+              <rect data-neutralisation={n.kind} data-fill={fill} data-pattern={n.kind === 'red' ? 'cross' : n.kind === 'vsc' ? 'hatch' : 'solid'}
+                x={x} y={PAD.t} width={w} height={H - PAD.t - PAD.b}
+                style={n.kind === 'sc' ? { fill, opacity: 0.2 } : { fill }} />
+              </g>
             )
           })}
         {ticks.map(l => <text key={l} x={g.x(l)} y={H - 4} textAnchor="middle" style={axisText}>{`L${l}`}</text>)}
@@ -203,7 +216,7 @@ export function LapChartCard() {
     <section aria-label="Lap chart" style={cardStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
         <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)', letterSpacing: '0.12em' }}>LAP CHART</span>
-        <span aria-hidden="true" style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)' }}>● stop · × out · ▮ SC · ▨ VSC · ▮ RED</span>
+        <span aria-hidden="true" style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)' }}>● stop · × out · ▮ SC · ▨ VSC · ▩ RED</span>
       </div>
       <LapChart history={history} playerDriverId={playerDriverId} />
     </section>

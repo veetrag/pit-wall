@@ -109,4 +109,18 @@ describe('TimingTower compression flash', () => {
     setState([deployed()])
     expect(flashedRowCount(container)).toBe(0)
   })
+
+  it('flashes once on a red flag and does not re-fire on later ticks', () => {
+    const { container } = render(<TimingTower />)
+    setState([])
+    const red: IncidentEvent = { lap: 3, sector: 0, kind: 'red_flag', driverId: null, timeLoss: null }
+    setState([red])
+    expect(flashedRowCount(container), 'the red flag flashes the tower').toBeGreaterThan(0)
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(flashedRowCount(container)).toBe(0)
+    // A later tick with the same log (and an unrelated incident) must not re-fire.
+    const other: IncidentEvent = { lap: 4, sector: 0, kind: 'crash', driverId: null, timeLoss: null }
+    setState([red, other])
+    expect(flashedRowCount(container), 'no re-fire without a new deployment').toBe(0)
+  })
 })
