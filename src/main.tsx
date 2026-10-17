@@ -2,11 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { useSettingsStore } from './state/settingsStore'
+import { applyDisplaySettings } from './state/displaySettings'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('No root element found')
 
 function mount() {
+  // Apply the tyre palette before the first paint, so it never flashes standard.
+  applyDisplaySettings(document.documentElement, useSettingsStore.getState())
   createRoot(root!).render(
     <StrictMode>
       <App />
