@@ -14,6 +14,7 @@ import { PaceModeToggle } from './PaceModeToggle'
 import { PitPanel, PitButton } from './PitPanel'
 import { WeatherStrip, WeatherChip } from './WeatherStrip'
 import { HudAlert } from './HudAlert'
+import { RadioRequest } from './RadioRequest'
 import { CommentaryTicker } from './CommentaryTicker'
 import { TelemetryZone } from './TelemetryZone'
 import { TrackCanvas } from '@canvas/TrackCanvas'
@@ -261,6 +262,7 @@ export function RaceHUD() {
             <TrackBand live={live} />
 
             {/* HUD alert slot — collapsed when there is nothing to say */}
+            {live && <RadioRequest />}
             {live && <HudAlert />}
 
             {/* Neutral broadcast ticker — factual events, any car */}

@@ -9,6 +9,16 @@
     "Problem on the front-left. {loss}s. We'll get it back.",
     "That was slow, {loss} seconds. Keep pushing."
   ],
+  "request_box": [
+    "Tyres are gone. Can we box?",
+    "I've got nothing left on these. Box this lap?",
+    "Rears are finished. Can I come in?"
+  ],
+  "request_push": [
+    "I'm faster than {ahead}. Let me push.",
+    "I can take {ahead}. Can I push?",
+    "Stuck behind {ahead} and I'm quicker. Push?"
+  ],
   "pit_entry": [
     "Box box box. Come in now.",
     "Box this lap. Tyres are ready.",

@@ -4,6 +4,7 @@ import { neutralisationKind } from '@engine/incidents'
 import type { RaceState, RaceConfig } from '@engine/types'
 import { wingOf } from '@engine/setup'
 import { soundService } from '@audio/soundService'
+import type { RadioRequest } from './radioRequests'
 
 const RETIREMENT_RADIO: Record<'tyre' | 'mechanical' | 'crash', string> = {
   tyre: 'retired',
@@ -19,6 +20,12 @@ function pick(trigger: string, vars: Record<string, string | number> = {}): stri
   if (!pool || pool.length === 0) return null
   const line = pool[Math.floor(Math.random() * pool.length)]!
   return line.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? `{${k}}`))
+}
+
+/** The words for a driver radio request (spec 1.6 §2). Chosen here, outside the engine. */
+export function requestLine(request: RadioRequest, config: RaceConfig): string {
+  const ahead = request.aheadId ? (config.drivers.find(d => d.id === request.aheadId)?.code ?? request.aheadId) : ''
+  return pick(request.kind === 'box' ? 'request_box' : 'request_push', { ahead }) ?? ''
 }
 
 let lastRadioMs = 0

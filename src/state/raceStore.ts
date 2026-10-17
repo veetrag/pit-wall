@@ -6,7 +6,8 @@ import {
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
 import type { AlertMessage } from '../ui/HudAlert'
-import { processRadioTick, makeRadioState, type RadioState } from './radioMapper'
+import { processRadioTick, makeRadioState, requestLine, type RadioState } from './radioMapper'
+import { detectRadioRequest, makeRequestTracker, type RadioRequest, type RequestTracker } from './radioRequests'
 import type { Difficulty } from './settingsStore'
 import type { PlayerStrategyChoice } from './seasonStore'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
@@ -23,6 +24,9 @@ export interface SeasonRaceOptions {
   /** The pace off the line. Logged as a step-0 call so replay and the debrief see it. */
   initialPace?: PaceMode
 }
+
+/** A driver radio request on screen (spec 1.6 §2). */
+export type ActiveRadioRequest = RadioRequest & { id: number; line: string }
 
 interface RaceStore {
   phase: RacePhase
@@ -52,6 +56,13 @@ interface RaceStore {
   rng: Rng | null
   hudAlerts: AlertMessage[]
   radioState: RadioState
+  /** The driver's pending yes/no question, if any. Never two at once. */
+  radioRequest: ActiveRadioRequest | null
+  requestTracker: RequestTracker
+  /** YES runs the existing logged call (pitNow / setPaceMode); NO logs nothing. */
+  answerRadioRequest: (yes: boolean) => void
+  /** Expiry = NO. */
+  dismissRadioRequest: () => void
 
   startRace: () => void
   startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null, gridOrder?: string[], dryStart?: boolean, opts?: SeasonRaceOptions) => void
@@ -79,6 +90,7 @@ export const CIRCUIT_ORDER = [
 ] as const
 
 let alertCounter = 0
+let requestCounter = 0
 
 /**
  * The seed for a pit projection made at (lap, sector) of the race with this
@@ -113,13 +125,15 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   rng: null,
   hudAlerts: [],
   radioState: makeRadioState(),
+  radioRequest: null,
+  requestTracker: makeRequestTracker(),
 
   startRace() {
     const seed = 42
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0 })
+    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
   },
 
   startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts) {
@@ -134,7 +148,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       playerCalls.push({ step: 0, kind: 'pace', mode: pace })
     }
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0 })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
   },
 
   /**
@@ -149,7 +163,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   startScenarioRace(spec) {
     const config = buildScenarioConfig(spec)
     const { state, rng } = startScenario(config, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState() })
+    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
   },
 
   initForStartSequence() {
@@ -157,7 +171,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0 })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
   },
 
   confirmRaceStart() {
@@ -165,7 +179,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   resetRace() {
-    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState() })
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
   },
 
   step() {
@@ -196,12 +210,25 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       set(s => ({ hudAlerts: [...s.hudAlerts, { id, severity, category: 'RADIO', message: msg, icon: '📻' }] }))
     })
 
+    // Driver radio requests (spec 1.6 §2). A plan stop answers a pending box
+    // request (ruling R8); the flag ends every question.
+    let radioRequest = get().radioRequest
+    if (radioRequest?.kind === 'box' && autoStopped) radioRequest = null
+    const detected = finished
+      ? { request: null, tracker: get().requestTracker }
+      : detectRadioRequest(nextState, config, get().requestTracker,
+          { inPit: stillInPit, pitPanelOpen: get().pitPanelOpen, pending: radioRequest !== null })
+    if (detected.request) radioRequest = { ...detected.request, id: ++requestCounter, line: requestLine(detected.request, config) }
+    if (finished) radioRequest = null
+
     set(s => ({
       raceState: nextState,
       stepCount: s.stepCount + 1,
       phase: finished ? 'finished' : 'racing',
       playerInPit: stillInPit,
       radioState: nextRadio,
+      radioRequest,
+      requestTracker: detected.tracker,
       ...(autoStopped && after ? {
         pitPanelOpen: false,      // a plan stop can land while the panel is open; confirming would charge a second stop
         projectionResult: null,
@@ -237,6 +264,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       raceState: next,
       playerCalls: [...s.playerCalls, { step: stepCount, kind: 'pit' as const, compound }],
       pitPanelOpen: false,
+      radioRequest: s.radioRequest?.kind === 'box' ? null : s.radioRequest,
       playerInPit: true,
       pitEndTime: playerTime,
       pitLaneLoss: effectivePitLaneLoss(config.circuit, raceState.safetyCar, config.tuning),
@@ -252,10 +280,14 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set(s => ({
       raceState: applyPlayerPace(raceState, mode),
       playerCalls: [...s.playerCalls, { step: stepCount, kind: 'pace' as const, mode }],
+      // The player pushed on their own: the driver's push request is answered.
+      radioRequest: mode === 'push' && s.radioRequest?.kind === 'push' ? null : s.radioRequest,
     }))
   },
 
-  openPitPanel() { set({ pitPanelOpen: true }) },
+  // Opening the panel dismisses a pending box request (spec 1.6 §2): the
+  // player is now answering it themselves.
+  openPitPanel() { set(s => ({ pitPanelOpen: true, radioRequest: s.radioRequest?.kind === 'box' ? null : s.radioRequest })) },
   closePitPanel() { set({ pitPanelOpen: false, projectionResult: null }) },
 
   pushAlert(alert) {
@@ -266,6 +298,17 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   dismissAlert(id) {
     set(s => ({ hudAlerts: s.hudAlerts.filter(a => a.id !== id) }))
   },
+
+  answerRadioRequest(yes) {
+    const req = get().radioRequest
+    if (!req) return
+    set({ radioRequest: null })
+    if (!yes || get().phase !== 'racing') return
+    if (req.kind === 'box') get().pitNow(req.compound ?? 'M')
+    else get().setPaceMode('push')
+  },
+
+  dismissRadioRequest() { set({ radioRequest: null }) },
 
   updateProjection(compound: Compound) {
     const { config, raceState } = get()
