@@ -310,3 +310,122 @@ export function judgeCalls(
       : null,
   }
 }
+
+// ---- "What if" (spec 1.6 §5) -------------------------------------------------
+
+export interface PlayerStop {
+  lap: number
+  compound: Compound
+  source: { kind: 'plan'; index: number } | { kind: 'call'; index: number }
+  step: number
+}
+export type WhatIfEdit =
+  | { kind: 'stop'; stop: number; lap: number; compound: Compound }
+  | { kind: 'add'; lap: number; compound: Compound }
+export interface WhatIfResult { mine: number[]; theirs: number[] }
+
+/**
+ * The player's stops as the race ran them, in order. Same walk as judgeCalls:
+ * calls apply before the step at their step; any pitsDone increase across a
+ * step is the plan's (plannedStops is indexed by pitsDone).
+ */
+export function playerStops(config: RaceConfig, seed: number, calls: readonly PlayerCall[]): PlayerStop[] {
+  const rng = createRng(seed)
+  let state = initRace(config)
+  let step = 0
+  const sorted = calls.map((c, index) => ({ c, index })).sort((a, b) => a.c.step - b.c.step)
+  const me = (s: RaceState) => s.cars.find(c => c.isPlayer)!
+  const stops: PlayerStop[] = []
+  let i = 0
+  for (;;) {
+    while (i < sorted.length && sorted[i]!.c.step === step) {
+      const { c, index } = sorted[i]!
+      const before = me(state).pitsDone
+      const lapNow = state.lap
+      state = applyCall(config, state, c, rng)
+      if (c.kind === 'pit' && me(state).pitsDone > before) {
+        stops.push({ lap: lapNow + 1, compound: me(state).compound, source: { kind: 'call', index }, step })
+      }
+      i++
+    }
+    const pitsBefore = me(state).pitsDone
+    if (isFinished(state)) break
+    state = stepSector(config, state, rng)
+    step++
+    if (me(state).pitsDone > pitsBefore) {
+      const planned = config.playerStrategyOverride?.plannedStops[pitsBefore]
+      if (planned) stops.push({ lap: planned.lap, compound: me(state).compound, source: { kind: 'plan', index: pitsBefore }, step })
+    }
+  }
+  return stops
+}
+
+/** Where stop `index` may move: ±maxShift, inside the race, never past a neighbouring stop. */
+export function whatIfLapRange(stops: readonly PlayerStop[], index: number, totalLaps: number, maxShift: number): [number, number] {
+  const s = stops[index]
+  if (!s) throw new RangeError(`whatIfLapRange: no stop ${index}`)
+  const prev = stops[index - 1]?.lap ?? 0
+  const next = stops[index + 1]?.lap ?? totalLaps
+  return [Math.max(1, s.lap - maxShift, prev + 1), Math.min(totalLaps - 1, s.lap + maxShift, next - 1)]
+}
+
+/** "Add a stop on lap N" when the player made none: lap 2 to the last lap but one. */
+export function addStopLapRange(totalLaps: number): [number, number] {
+  return [2, totalLaps - 1]
+}
+
+const clampTo = (v: number, [lo, hi]: [number, number]) => Math.min(hi, Math.max(lo, v))
+
+/**
+ * The real plan against one edited stop, over debrief.futures continuations
+ * branched two laps before the earliest change, with common random numbers.
+ * Finishes per future (a DNF is cars + 1). Never one "exact" result: the
+ * caller shows a typical finish and a range.
+ */
+export function whatIf(config: RaceConfig, seed: number, calls: readonly PlayerCall[], edit: WhatIfEdit): WhatIfResult {
+  const { futures, whatIfMaxShift } = config.tuning.debrief
+  const totalLaps = initRace(config).totalLaps
+  const stops = playerStops(config, seed, calls)
+
+  let edConfig = config
+  let edCalls: readonly PlayerCall[] = calls
+  let changeStep: number
+  if (edit.kind === 'add') {
+    if (stops.length > 0) throw new RangeError('whatIf: "add" is only for a race without a stop')
+    const lap = clampTo(edit.lap, addStopLapRange(totalLaps))
+    const newStep = 3 * (lap - 1)
+    edCalls = [...calls, { step: newStep, kind: 'pit', compound: edit.compound }]
+    changeStep = newStep
+  } else {
+    const s = stops[edit.stop]
+    if (!s) throw new RangeError(`whatIf: no stop ${edit.stop}`)
+    const lap = clampTo(edit.lap, whatIfLapRange(stops, edit.stop, totalLaps, whatIfMaxShift))
+    if (s.source.kind === 'plan') {
+      const idx = s.source.index
+      edConfig = withPlan(config, p => ({
+        ...p, plannedStops: p.plannedStops.map((x, j) => (j === idx ? { lap, compound: edit.compound } : x)),
+      }))
+      changeStep = Math.min(s.step, 3 * lap)
+    } else {
+      const idx = s.source.index
+      const call = calls[idx]
+      if (!call || call.kind !== 'pit') throw new RangeError(`whatIf: call ${idx} is not a pit call`)
+      const moved: PlayerCall = { step: call.step + 3 * (lap - s.lap), kind: 'pit', compound: edit.compound }
+      edCalls = calls.map((c, j) => (j === idx ? moved : c))
+      changeStep = Math.min(call.step, moved.step)
+    }
+  }
+
+  const branchStep = Math.max(0, changeStep - 6)
+  const shared = replay(config, seed, calls, branchStep)
+  const run = (cfg: RaceConfig, cl: readonly PlayerCall[]) => {
+    const out: number[] = []
+    for (let k = 0; k < futures; k++) {
+      const end = simulate(cfg, { state: withPlayerPlan(shared.state, cfg), step: shared.step },
+        createRng(futureSeed(seed, branchStep, k)), cl)
+      out.push(finishPosition(end.state))
+    }
+    return out
+  }
+  return { mine: run(config, calls), theirs: run(edConfig, edCalls) }
+}

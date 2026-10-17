@@ -246,6 +246,7 @@ export interface TuningConstants {
     minGain: number
     minShare: number
     timeoutMs: number
+    whatIfMaxShift: number
   }
   // Car setup (docs/superpowers/specs/2026-10-09-car-setup-design.md section 2).
   setup: {

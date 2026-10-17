@@ -153,6 +153,7 @@ const TuningSchema = z.object({
     minGain: z.number().min(0),
     minShare: z.number().min(0).max(1),
     timeoutMs: z.number().int().positive(),
+    whatIfMaxShift: z.number().int().positive(),
   }),
   setup: z.object({
     _note: z.string().optional(),

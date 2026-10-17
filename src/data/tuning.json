@@ -110,7 +110,8 @@
     "lapOffsets": [-3, -2, -1, 1, 2, 3],
     "minGain": 1.0,
     "minShare": 0.67,
-    "timeoutMs": 20000
+    "timeoutMs": 20000,
+    "whatIfMaxShift": 10
   },
   "setup": {
     "_note": "Wing level 1-5 per car; d=(w-3)/2. See docs/superpowers/specs/2026-10-09-car-setup-design.md section 2. Values measured against spec section 5 in MODEL_SPEC.md section 13 (scripts/calibrate-setup.ts).",
