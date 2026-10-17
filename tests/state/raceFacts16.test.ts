@@ -100,11 +100,13 @@ describe('raceStore tracks the player tyre changes', () => {
     for (let n = 0; n < 12 && r().phase === 'racing'; n++) r().step()
     expect(r().phase).toBe('red_flag')
     expect(r().playerTyreChanges).toEqual([])
-    r().confirmRedFlagRestart('S')
+    // The card records the choice only; the engine fits the tyre on the restart step.
+    r().confirmRedFlagRestart('H')
+    expect(r().playerTyreChanges).toEqual([])
     r().confirmRaceStart()
     r().step()
     const me = r().raceState!.cars.find(x => x.isPlayer)!
-    expect(me.compoundsUsed.length).toBe(2)
+    expect(me.compoundsUsed).toEqual(['M', 'H'])
     expect(r().playerTyreChanges).toEqual([r().raceState!.lap])
   })
 })

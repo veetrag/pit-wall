@@ -312,6 +312,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set(s => ({
       raceState: next,
       playerCalls: [...s.playerCalls, { step: stepCount, kind: 'pit' as const, compound }],
+      // A mid-lap stop counts at the completed-lap mark (raceState.lap), like every other change.
       playerTyreChanges: [...s.playerTyreChanges, raceState.lap],
       pitPanelOpen: false,
       radioRequest: s.radioRequest?.kind === 'box' ? null : s.radioRequest,
