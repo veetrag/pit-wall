@@ -38,7 +38,7 @@ export function slowStopComponent(config: RaceConfig, teamId: string, g: number)
   const p = pit.slowStopChance * (1 - crew * pit.pitCrewSlowRelief)
   if (p <= 0) return 0
   const u = normalCdf(g)
-  if (u <= 1 - p) return 0
+  if (!(u > 1 - p)) return 0 // also 0 for a NaN draw
   const frac = Math.min(1, (u - (1 - p)) / p)
   return pit.slowStopMin + (pit.slowStopMax - pit.slowStopMin) * frac
 }
