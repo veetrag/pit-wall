@@ -27,8 +27,11 @@ describe('the pit-lane loss is latched at the moment of the stop', () => {
     const vscLoss = 20 * r().config!.tuning.incidents.vsc.laneLossFactor     // bengaluru lane 20s
     expect(r().pitLaneLoss).toBeCloseTo(vscLoss, 9)
 
+    const stopShown = r().lastStopTime
     const { container } = render(<PitTimer />)
-    const shown = `${(vscLoss + r().config!.tuning.pit.stopMean).toFixed(1)}s`
+    const shown = `${r().lastStopTime.toFixed(1)}s`
+    const stationary = r().lastStopTime - vscLoss
+    expect(stationary > 1 && stationary < 3.5, 'the timer shows the stop charged at the VSC price').toBe(true)
     expect(screen.getByText(shown)).toBeTruthy()
 
     // The SC comes out on top of the VSC while the car is still in the lane.
@@ -36,6 +39,7 @@ describe('the pit-lane loss is latched at the moment of the stop', () => {
       useRaceStore.setState({ raceState: { ...r().raceState!, safetyCar: { deployedLap: 4, lapsRemaining: 4, cause: 'crash', kind: 'sc' } } })
     })
     r().step()
+    expect(r().lastStopTime, 'the stop time does not move either').toBe(stopShown)
     expect(r().pitLaneLoss, 'the charged price does not move').toBeCloseTo(vscLoss, 9)
     expect(container.textContent).toContain(shown)
   })

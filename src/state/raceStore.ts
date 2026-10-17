@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import {
   initRace, stepSector, projectPitNow, effectivePitLaneLoss,
-  applyPlayerPit, applyPlayerPace, type PlayerCall,
+  applyPlayerPit, applyPlayerPace, expectedPitStopTime, type PlayerCall,
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
@@ -41,6 +41,14 @@ interface RaceStore {
    * otherwise re-price a stop already made, and the pit timer would jump.
    */
   pitLaneLoss: number
+  /**
+   * What the player's most recent stop cost, and how much of it was a slow
+   * stop (spec 1.6 §1). The PIT button's is exact (the raceTime delta of
+   * applyPlayerPit); a plan stop's is the expected stop plus its exact slow
+   * seconds -- the engine does not report the ±0.3 s noise (ruling R5).
+   */
+  lastStopTime: number
+  lastStopSlow: number
   rng: Rng | null
   hudAlerts: AlertMessage[]
   radioState: RadioState
@@ -100,6 +108,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   stepCount: 0,
   pitEndTime: 0,
   pitLaneLoss: 0,
+  lastStopTime: 0,
+  lastStopSlow: 0,
   rng: null,
   hudAlerts: [],
   radioState: makeRadioState(),
@@ -109,7 +119,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0 })
+    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0 })
   },
 
   startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts) {
@@ -124,7 +134,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       playerCalls.push({ step: 0, kind: 'pace', mode: pace })
     }
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0 })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0 })
   },
 
   /**
@@ -139,7 +149,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   startScenarioRace(spec) {
     const config = buildScenarioConfig(spec)
     const { state, rng } = startScenario(config, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, hudAlerts: [], radioState: makeRadioState() })
+    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState() })
   },
 
   initForStartSequence() {
@@ -147,7 +157,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0 })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0 })
   },
 
   confirmRaceStart() {
@@ -155,7 +165,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   resetRace() {
-    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, hudAlerts: [], radioState: makeRadioState() })
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState() })
   },
 
   step() {
@@ -173,6 +183,11 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     // A plan stop executes inside stepSector at the lap boundary and is charged
     // with the post-tick neutralisation -- nextState.safetyCar.
     const autoLoss = effectivePitLaneLoss(config.circuit, nextState.safetyCar, config.tuning)
+    // A plan stop's slow seconds, from the incident the engine logged this tick.
+    const autoSlow = autoStopped && after
+      ? nextState.incidents.slice(raceState.incidents.length)
+          .find(i => i.kind === 'slow_stop' && i.driverId === after.driverId)?.timeLoss ?? 0
+      : 0
     const chargedLoss = autoStopped ? autoLoss : get().pitLaneLoss
     const stillInPit = autoStopped || (playerInPit && playerNow < pitEndTime + chargedLoss)
 
@@ -192,6 +207,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
         projectionResult: null,
         pitEndTime: after.raceTime,
         pitLaneLoss: autoLoss,
+        lastStopTime: expectedPitStopTime(config, after.teamId, nextState.safetyCar) + autoSlow,
+        lastStopSlow: autoSlow,
         hudAlerts: [...s.hudAlerts, { id: `alert-${++alertCounter}`, severity: 'caution' as const, category: 'RADIO', message: 'Box box -- plan stop.', icon: '📻' }],
       } : {}),
     }))
@@ -212,6 +229,9 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     }
 
     const playerTime = next.cars.find(c => c.isPlayer)?.raceTime ?? 0
+    const playerBefore = raceState.cars.find(c => c.isPlayer)?.raceTime ?? playerTime
+    // applyPlayerPit adds only the stop, so the delta IS the stop, exactly.
+    const slow = next.incidents.slice(raceState.incidents.length).find(i => i.kind === 'slow_stop')?.timeLoss ?? 0
     const id = `alert-${++alertCounter}`
     set(s => ({
       raceState: next,
@@ -220,6 +240,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       playerInPit: true,
       pitEndTime: playerTime,
       pitLaneLoss: effectivePitLaneLoss(config.circuit, raceState.safetyCar, config.tuning),
+      lastStopTime: playerTime - playerBefore,
+      lastStopSlow: slow,
       hudAlerts: [...s.hudAlerts, { id, severity: 'caution' as const, category: 'RADIO', message: 'Box box box. Come in now.', icon: '📻' }],
     }))
   },

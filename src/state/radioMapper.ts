@@ -55,6 +55,7 @@ export interface RadioState {
   prevRetired: boolean
   lowWingWarned: boolean
   prevVscCount: number
+  prevSlowStops: number
 }
 
 export function makeRadioState(): RadioState {
@@ -70,6 +71,7 @@ export function makeRadioState(): RadioState {
     prevRetired: false,
     lowWingWarned: false,
     prevVscCount: 0,
+    prevSlowStops: 0,
   }
 }
 
@@ -111,6 +113,14 @@ export function processRadioTick(
     }
   }
   next.prevVscCount = vscCount
+
+  // 0c. The player's own slow stop (spec 1.6 §1). Counted from the incident
+  // log, so a stop made by the PIT button between ticks is not missed.
+  const mySlow = state.incidents.filter(i => i.kind === 'slow_stop' && i.driverId === player.driverId)
+  if (mySlow.length > radio.prevSlowStops) {
+    tryPush('slow_stop', 2, { loss: (mySlow[mySlow.length - 1]!.timeLoss ?? 0).toFixed(1) }, pushAlert)
+  }
+  next.prevSlowStops = mySlow.length
 
   // 1. Tyre cliff (high priority, fire once per stint)
   if (compound) {

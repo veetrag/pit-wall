@@ -4,6 +4,11 @@
     "Virtual safety car. Box now, the stop is cheap.",
     "VSC is out. Box, box — cheap stop."
   ],
+  "slow_stop": [
+    "Slow stop, sorry. {loss} seconds lost. Head down.",
+    "Problem on the front-left. {loss}s. We'll get it back.",
+    "That was slow, {loss} seconds. Keep pushing."
+  ],
   "pit_entry": [
     "Box box box. Come in now.",
     "Box this lap. Tyres are ready.",
