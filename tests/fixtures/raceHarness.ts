@@ -25,7 +25,7 @@ export function makeConfig(overrides: TuningOverrides, seed: number, circuitId =
 export function runRace(config: RaceConfig, seed: number, onTick?: (prev: RaceState, next: RaceState) => void): RaceState {
   let state = initRace(config)
   const rng = createRng(seed)
-  for (let i = 0; i < config.circuit.laps * 3; i++) {
+  for (let i = 0; i < (config.lapsOverride ?? config.circuit.laps) * 3; i++) {
     const next = stepSector(config, state, rng)
     onTick?.(state, next)
     state = next

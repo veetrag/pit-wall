@@ -444,6 +444,12 @@ export interface RaceConfig {
   // configs built before M5 behave identically.
   coverReactionScale?: number
   paceModeAggression?: number
+  /**
+   * Race distance in laps when it is not the circuit's (a sprint). ABSENT
+   * means `circuit.laps`; byteIdentity, the Monte-Carlo bands and every
+   * scenario depend on absence staying meaningful, so never default it.
+   */
+  lapsOverride?: number
 }
 
 export type AttackLevel = 'conserve' | 'balanced' | 'attack'

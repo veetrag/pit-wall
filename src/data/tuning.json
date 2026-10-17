@@ -93,6 +93,13 @@
   },
   "ai": { "neutralisationWindowLaps": 6, "neutralisationCliffFrac": 0.55 },
   "rivalIntel": { "halfWidth": { "naive": 2, "smart": 3, "optimal": 5 }, "maxOffsetLaps": 1 },
+  "sprint": {
+    "_note": "Sprint weekends (spec 2026-10-16 §3). rounds are 1-based. seedSalt separates the sprint's seed stream from the Grand Prix's; see seedFor in src/state/seasonStore.ts.",
+    "rounds": [4, 8, 12],
+    "distanceFraction": 0.33,
+    "points": [8, 7, 6, 5, 4, 3, 2, 1],
+    "seedSalt": 50021
+  },
   "debrief": {
     "futures": 8,
     "lapOffsets": [-3, -2, -1, 1, 2, 3],

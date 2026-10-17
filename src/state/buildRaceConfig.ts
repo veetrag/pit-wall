@@ -2,6 +2,7 @@ import { loadGameData, type Cars } from '@data/validators'
 import type { RaceConfig, StrategyBrain, DifficultyProfile } from '@engine/index'
 import { aiSetups } from '@engine/setup'
 import { applyUpgrades, type UpgradeOverlayInput } from './upgradeOverlay'
+import { sprintLaps } from './sprint'
 import type { Difficulty } from './settingsStore'
 import type { PlayerStrategyChoice } from './seasonStore'
 
@@ -73,6 +74,10 @@ export function buildRaceConfig(
   // than derived because this module is a pure function of its arguments and
   // deliberately does not read seasonStore.
   dryStart?: boolean,
+  // A sprint (spec 1.5 §3): a third of the distance, no two-compound rule, and
+  // no planned AI stops -- strategies.json's stops scaled to ~13 laps would send
+  // the whole field in for a 20s stop. Smart/optimal brains still box on wear.
+  sprint = false,
 ): RaceConfig {
   const data = loadGameData()
   const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
@@ -82,7 +87,7 @@ export function buildRaceConfig(
   const strategies = data.strategies.defaults.map(s => ({
     ...s,
     brain: applyBrainProfile((s.brain ?? 'naive') as StrategyBrain, profile),
-    plannedStops: s.plannedStops.map(stop => ({
+    plannedStops: sprint ? [] : s.plannedStops.map(stop => ({
       ...stop,
       lap: Math.round((stop.lap / 30) * laps),
     })),
@@ -121,12 +126,14 @@ export function buildRaceConfig(
     seed,
     playerStrategyOverride,
     tyreAllocationBase: data.tuning.tyreRules.allocation[difficulty],
-    mandatoryTwoCompound: data.tuning.tyreRules.mandatoryTwoCompound[difficulty],
+    mandatoryTwoCompound: sprint ? false : data.tuning.tyreRules.mandatoryTwoCompound[difficulty],
     coverReactionScale: profile.coverReactionScale,
     paceModeAggression: profile.aiPaceModeAggression,
     gridOrder,
     dryStart,
   }
+  // Set only for a sprint, so a Grand Prix config has no lapsOverride key at all.
+  if (sprint) config.lapsOverride = sprintLaps(circuit.laps)
   // Absent wing leaves `setups` absent (not undefined) so old-path configs stay identical.
   const wing = playerStrategy?.wing
   if (wing !== undefined) config.setups = { ...aiSetups(config), [playerDriverId]: wing }

@@ -3,6 +3,7 @@ import { loadGameData } from '@data/validators'
 import { CIRCUIT_ORDER } from '@state/raceStore'
 import { TOTAL_RACES } from '@state/seasonStore'
 import { CIRCUIT_PATHS } from '@canvas/TrackCanvas'
+import { isSprintRound } from '@state/sprint'
 
 describe('calendar', () => {
   it('has an entry for every circuit in the order', () => {
@@ -71,6 +72,20 @@ describe('calendar', () => {
 
 describe('new circuits', () => {
   const NEW_IDS = ['silverpark', 'costa_verde', 'kaido', 'altiplano']
+
+  it('schedules the sprint weekends on real rounds that are not wet-leaning', () => {
+    const { circuits, tuning } = loadGameData()
+    const rounds = tuning.sprint.rounds
+    expect(rounds).toEqual([4, 8, 12])
+    expect(new Set(rounds).size).toBe(rounds.length)
+    for (const r of rounds) {
+      expect(r).toBeGreaterThanOrEqual(1)
+      expect(r).toBeLessThanOrEqual(TOTAL_RACES)
+      expect(isSprintRound(r - 1)).toBe(true)
+      const c = circuits[CIRCUIT_ORDER[r - 1]!]!
+      expect(c.rainProbability ?? 0, `round ${r} (${CIRCUIT_ORDER[r - 1]}) must not be wet-leaning`).toBeLessThan(0.35)
+    }
+  })
 
   it('defines all four new circuits', () => {
     const { circuits } = loadGameData()

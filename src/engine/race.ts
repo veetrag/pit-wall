@@ -28,11 +28,12 @@ function gridConditionsCompound(weather: WeatherState): Compound | null {
 }
 
 export function initRace(config: RaceConfig): RaceState {
+  const laps = config.lapsOverride ?? config.circuit.laps
   // Weather is resolved before the grid is built, because the starting compound
   // now depends on lap-1 conditions. Safe to reorder: this is a separate RNG
   // stream, so it consumes nothing from the main race seed.
   const weatherTimeline = openingTimeline({
-    laps: config.circuit.laps,
+    laps,
     circuit: config.circuit,
     tuning: config.tuning,
     seed: config.seed,
@@ -122,7 +123,7 @@ export function initRace(config: RaceConfig): RaceState {
   return {
     lap: 0,
     sector: 0,
-    totalLaps: config.circuit.laps,
+    totalLaps: laps,
     cars,
     sectorResults: [],
     overtakeEvents: [],

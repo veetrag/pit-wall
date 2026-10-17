@@ -183,6 +183,13 @@ const TuningSchema = z.object({
     }),
     maxOffsetLaps: z.number().int().min(0),
   }),
+  sprint: z.object({
+    _note: z.string().optional(),
+    rounds: z.array(z.number().int().min(1)).min(1),
+    distanceFraction: z.number().positive().max(1),
+    points: z.array(z.number().int().min(0)),
+    seedSalt: z.number().int().positive(),
+  }),
   projection: z.object({
     horizonLaps: z.number(), useOvertakeRolls: z.boolean(),
     netEstimateHorizonLaps: z.number(),
