@@ -124,6 +124,22 @@ export interface TuningConstants {
   ai: { neutralisationWindowLaps: number; neutralisationCliffFrac: number; weatherConfirmLaps: number; weatherMinLapsLeft: number }
   /** Rival intel box window (spec 2026-10-16 §2). Half-width in laps per brain; the brain is never shown. */
   rivalIntel: { halfWidth: Record<StrategyBrain, number>; maxOffsetLaps: number }
+  /**
+   * Driver radio requests (spec 2026-10-17 §2). Read by src/state/radioRequests.ts
+   * only -- the engine never asks. Lives here so RaceConfig.tuning carries it.
+   */
+  radioRequests: {
+    boxCliffFrac: number
+    boxPlanWindowLaps: number
+    minLapsLeft: number
+    pushGap: number
+    pushLapEnds: number
+    pushPaceMargin: number
+    pushMaxCliffFrac: number
+    cooldownLaps: number
+    maxPerRace: number
+    expirySec: number
+  }
   projection: { horizonLaps: number; useOvertakeRolls: boolean; netEstimateHorizonLaps: number }
   incidents: {
     // dnfPerLap is dead: no consumer in src/engine/. Kept because removing it

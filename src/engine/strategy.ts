@@ -77,7 +77,8 @@ function weatherPit(car: CarState, state: RaceState, config: RaceConfig): AIDeci
   return null
 }
 
-function bestDryCompound(config: RaceConfig, remainingLaps: number): Compound {
+/** The AI's dry compound for a stint of remainingLaps. Also YES-to-box's fallback (spec 1.6 §2). */
+export function bestDryCompound(config: RaceConfig, remainingLaps: number): Compound {
   if (remainingLaps > 20 && config.compounds['H']) return 'H'
   if (remainingLaps > 12 && config.compounds['M']) return 'M'
   return 'S'

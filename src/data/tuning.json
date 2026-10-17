@@ -97,6 +97,7 @@
   },
   "ai": { "neutralisationWindowLaps": 6, "neutralisationCliffFrac": 0.55, "weatherConfirmLaps": 2, "weatherMinLapsLeft": 3 },
   "rivalIntel": { "halfWidth": { "naive": 2, "smart": 3, "optimal": 5 }, "maxOffsetLaps": 1 },
+  "radioRequests": { "boxCliffFrac": 0.85, "boxPlanWindowLaps": 2, "minLapsLeft": 3, "pushGap": 1.0, "pushLapEnds": 2, "pushPaceMargin": 0.1, "pushMaxCliffFrac": 0.5, "cooldownLaps": 6, "maxPerRace": 3, "expirySec": 8 },
   "sprint": {
     "_note": "Sprint weekends (spec 2026-10-16 §3). rounds are 1-based. seedSalt separates the sprint's seed stream from the Grand Prix's; see seedFor in src/state/seasonStore.ts.",
     "rounds": [4, 8, 12],

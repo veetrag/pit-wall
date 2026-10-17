@@ -1,6 +1,6 @@
 export { initRace, stepSector } from './race'
 export { projectPitNow } from './projection'
-export { shouldAIPit, aiDecision } from './strategy'
+export { shouldAIPit, aiDecision, bestDryCompound } from './strategy'
 export type { AIDecision } from './strategy'
 export {
   tyreDelta, tyreCliffFraction, effectiveTyreAge,

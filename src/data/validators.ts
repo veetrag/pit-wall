@@ -190,6 +190,18 @@ const TuningSchema = z.object({
     }),
     maxOffsetLaps: z.number().int().min(0),
   }),
+  radioRequests: z.object({
+    boxCliffFrac: z.number().positive(),
+    boxPlanWindowLaps: z.number().int().min(0),
+    minLapsLeft: z.number().int().min(0),
+    pushGap: z.number().positive(),
+    pushLapEnds: z.number().int().min(1),
+    pushPaceMargin: z.number().min(0),
+    pushMaxCliffFrac: z.number().positive(),
+    cooldownLaps: z.number().int().min(1),
+    maxPerRace: z.number().int().min(0),
+    expirySec: z.number().positive(),
+  }),
   sprint: z.object({
     _note: z.string().optional(),
     rounds: z.array(z.number().int().min(1)).min(1),
