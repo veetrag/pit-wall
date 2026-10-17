@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { whatIf, playerStops, whatIfLapRange, addStopLapRange } from '@engine/debrief'
+import { whatIf, whatIfInputs, playerStops, whatIfLapRange, addStopLapRange } from '@engine/debrief'
 import { buildRaceConfig } from '@state/buildRaceConfig'
 import { makeDeterministicTuning } from '../fixtures/tuning'
 import type { RaceConfig } from '@engine/types'
@@ -91,5 +91,54 @@ describe('whatIf with calls of every kind', () => {
     expect(stops.map(s => s.source.kind)).toEqual(['call']) // an early pit call consumes the planned stop
     const same = whatIf(cfg, cfg.seed, calls, { kind: 'stop', stop: 0, lap: stops[0]!.lap, compound: stops[0]!.compound })
     expect(same.theirs).toEqual(same.mine)
+  })
+})
+
+describe('whatIf executes the edit (fix round 1)', () => {
+  /** The stops a replay of the edited inputs actually makes. */
+  const ranStops = (cfg: RaceConfig, calls: Parameters<typeof whatIf>[2], edit: Parameters<typeof whatIf>[3]) => {
+    const ed = whatIfInputs(cfg, cfg.seed, calls, edit)
+    return playerStops(ed.config, cfg.seed, ed.calls)
+  }
+
+  it('a plan-stop edit pits on the edited lap with the edited compound', () => {
+    const cfg = shortRace([{ lap: 10, compound: 'H' }])
+    const [s] = ranStops(cfg, [], { kind: 'stop', stop: 0, lap: 7, compound: 'S' })
+    expect(s).toMatchObject({ lap: 7, compound: 'S', step: 21, source: { kind: 'plan' } })
+  })
+
+  it('a pit-call edit pits on the edited lap with the edited compound', () => {
+    const cfg = shortRace([])
+    const calls = [{ step: 24, kind: 'pit' as const, compound: 'H' as const }]
+    const [s] = ranStops(cfg, calls, { kind: 'stop', stop: 0, lap: 5, compound: 'S' })
+    expect(s).toMatchObject({ lap: 5, compound: 'S', step: 12, source: { kind: 'call' } })
+  })
+
+  it('an early PIT call plus a later plan stop: editing the plan stop moves it', () => {
+    const cfg = shortRace([{ lap: 6, compound: 'M' }, { lap: 14, compound: 'H' }])
+    const calls = [{ step: 6, kind: 'pit' as const, compound: 'M' as const }]
+    const real = playerStops(cfg, cfg.seed, calls)
+    expect(real.map(s => [s.source.kind, s.lap])).toEqual([['call', 3], ['plan', 14]])
+    const ran = ranStops(cfg, calls, { kind: 'stop', stop: 1, lap: 16, compound: 'S' })
+    expect(ran.map(s => [s.source.kind, s.lap, s.compound])).toEqual([['call', 3, 'M'], ['plan', 16, 'S']])
+    expect(whatIf(cfg, cfg.seed, calls, { kind: 'stop', stop: 1, lap: 16, compound: 'S' }).theirs).toHaveLength(FUTURES)
+  })
+
+  it('rejects a compound with no sets left at the branch', () => {
+    const cfg = shortRace([{ lap: 10, compound: 'H' }])
+    const noWets = { ...cfg, tyreAllocationBase: { S: 3, M: 3, H: 3, I: 2, W: 0 } }
+    expect(() => whatIf(noWets, noWets.seed, [], { kind: 'stop', stop: 0, lap: 10, compound: 'W' })).toThrow(RangeError)
+  })
+})
+
+describe('whatIfLapRange edges (fix round 1)', () => {
+  const at = (lap: number, index: number) => ({ lap, compound: 'M' as const, source: { kind: 'plan' as const, index }, step: 3 * lap })
+  it('a final-lap stop keeps its own lap in range', () => {
+    expect(whatIfLapRange([at(20, 0)], 0, 20, 10)).toEqual([10, 20])
+  })
+  it('hemmed in by adjacent neighbours, the range is the stop itself', () => {
+    expect(whatIfLapRange([at(5, 0), at(6, 1), at(7, 2)], 1, 20, 10)).toEqual([6, 6])
+    // lo > hi: a neighbour on the same lap (a call and a plan stop) -- stay put, never invert
+    expect(whatIfLapRange([at(5, 0), at(5, 1), at(6, 2)], 1, 20, 10)).toEqual([5, 5])
   })
 })

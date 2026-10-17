@@ -366,7 +366,11 @@ export function whatIfLapRange(stops: readonly PlayerStop[], index: number, tota
   if (!s) throw new RangeError(`whatIfLapRange: no stop ${index}`)
   const prev = stops[index - 1]?.lap ?? 0
   const next = stops[index + 1]?.lap ?? totalLaps
-  return [Math.max(1, s.lap - maxShift, prev + 1), Math.min(totalLaps - 1, s.lap + maxShift, next - 1)]
+  const lo = Math.max(1, s.lap - maxShift, prev + 1)
+  // Never below the stop's own lap: an unchanged edit on a last-lap stop must not move it.
+  const hi = Math.max(s.lap, Math.min(totalLaps - 1, s.lap + maxShift, next - 1))
+  // Neighbours hemming it in on both sides: the stop can only stay where it is.
+  return lo > hi ? [s.lap, s.lap] : [lo, hi]
 }
 
 /** "Add a stop on lap N" when the player made none: lap 2 to the last lap but one. */
@@ -377,13 +381,13 @@ export function addStopLapRange(totalLaps: number): [number, number] {
 const clampTo = (v: number, [lo, hi]: [number, number]) => Math.min(hi, Math.max(lo, v))
 
 /**
- * The real plan against one edited stop, over debrief.futures continuations
- * branched two laps before the earliest change, with common random numbers.
- * Finishes per future (a DNF is cars + 1). Never one "exact" result: the
- * caller shows a typical finish and a range.
+ * The edited inputs whatIf runs: the edited config and call list, and the step
+ * the futures branch from (two laps before the earliest change). Laps are clamped.
  */
-export function whatIf(config: RaceConfig, seed: number, calls: readonly PlayerCall[], edit: WhatIfEdit): WhatIfResult {
-  const { futures, whatIfMaxShift } = config.tuning.debrief
+export function whatIfInputs(
+  config: RaceConfig, seed: number, calls: readonly PlayerCall[], edit: WhatIfEdit,
+): { config: RaceConfig; calls: readonly PlayerCall[]; branchStep: number } {
+  const { whatIfMaxShift } = config.tuning.debrief
   const totalLaps = initRace(config).totalLaps
   const stops = playerStops(config, seed, calls)
 
@@ -416,8 +420,21 @@ export function whatIf(config: RaceConfig, seed: number, calls: readonly PlayerC
     }
   }
 
-  const branchStep = Math.max(0, changeStep - 6)
+  return { config: edConfig, calls: edCalls, branchStep: Math.max(0, changeStep - 6) }
+}
+
+/**
+ * The real plan against one edited stop, over debrief.futures continuations
+ * branched two laps before the earliest change, with common random numbers.
+ * Finishes per future (a DNF is cars + 1). Never one "exact" result: the
+ * caller shows a typical finish and a range.
+ */
+export function whatIf(config: RaceConfig, seed: number, calls: readonly PlayerCall[], edit: WhatIfEdit): WhatIfResult {
+  const { futures } = config.tuning.debrief
+  const { config: edConfig, calls: edCalls, branchStep } = whatIfInputs(config, seed, calls, edit)
   const shared = replay(config, seed, calls, branchStep)
+  const sets = shared.state.cars.find(c => c.isPlayer)!.tyreAllocation[edit.compound] ?? 0
+  if (sets <= 0) throw new RangeError(`whatIf: no ${edit.compound} sets left at the branch`)
   const run = (cfg: RaceConfig, cl: readonly PlayerCall[]) => {
     const out: number[] = []
     for (let k = 0; k < futures; k++) {
