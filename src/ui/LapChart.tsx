@@ -15,6 +15,8 @@ const TEAM_COLOR = new Map(DATA.cars.teams.map(t => [t.id, t.colorPrimary]))
 const W = 340
 const H = 210
 const PAD = { l: 30, r: 10, t: 8, b: 20 }
+/** Below this many laps the axis ticks every 5 laps instead of every 10. */
+const SHORT_RACE_LAPS = 25
 const HIGHLIGHTED = 5
 
 type Tier = 'player' | 'near' | 'field'
@@ -114,7 +116,9 @@ export function LapChart({ history, playerDriverId }: { history: LapHistory; pla
   const ordered = [...history.cars].sort((a, b) => rankOf(a.driverId) - rankOf(b.driverId))
 
   const ticks: number[] = []
-  for (let l = 10; l <= history.totalLaps; l += 10) ticks.push(l)
+  // A sprint (13 laps) would get a single L10 at ten-lap spacing; halve it.
+  const tickStep = history.totalLaps < SHORT_RACE_LAPS ? 5 : 10
+  for (let l = tickStep; l <= history.totalLaps; l += tickStep) ticks.push(l)
   const field = history.cars.length
   const yLabels = [...new Set([1, Math.min(10, field), field])]
   const summary = lapChartSummary(history, playerDriverId)

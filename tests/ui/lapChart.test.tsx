@@ -82,6 +82,18 @@ describe('LapChart', () => {
     expect(lines[lines.length - 1]!.getAttribute('data-line')).toBe(id(8))
   })
 
+  // Final review fix 4: a 13-lap sprint has no L20, so ten-lap ticks left one label.
+  const tickLabels = (container: HTMLElement) =>
+    [...container.querySelectorAll('svg text')].map(t => t.textContent ?? '').filter(t => /^L\d+$/.test(t))
+  it('lap ticks every 10 laps on a full race, every 5 below 25 laps (a sprint)', () => {
+    expect(tickLabels(render(<LapChart history={history()} playerDriverId={id(6)} />).container))
+      .toEqual(['L10', 'L20', 'L30'])
+    const sprint = history(cars => cars.map(c => ({ ...c, positions: c.positions.slice(0, 14), pitLaps: [] })))
+    const short: LapHistory = { ...sprint, totalLaps: 13, lapsRun: 13, neutralisations: [] }
+    expect(tickLabels(render(<LapChart history={short} playerDriverId={id(6)} />).container))
+      .toEqual(['L5', 'L10'])
+  })
+
   it('reduced motion draws the lines complete', () => {
     useSettingsStore.setState({ reducedMotion: true })
     const { container } = render(<LapChart history={history()} playerDriverId={id(6)} />)
