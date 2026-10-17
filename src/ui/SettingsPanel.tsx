@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EASE, PRESS, ScreenFrame, ScreenHeader, KitToggle, Segmented, Pill, useReducedMotion } from '@ui/kit'
-import { useSettingsStore, type SimSpeed, type Difficulty } from '@state/settingsStore'
+import { useSettingsStore, type SimSpeed, type Difficulty, type TyrePalette } from '@state/settingsStore'
 import { useCoachStore } from '@state/coachStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
@@ -36,6 +36,9 @@ const SPEED_OPTIONS = [
 const DIFFICULTY_OPTIONS: { value: Difficulty; label: string }[] = [
   { value: 'rookie', label: 'Rookie' }, { value: 'pro', label: 'Pro' },
 ]
+const PALETTE_OPTIONS: { value: TyrePalette; label: string }[] = [
+  { value: 'standard', label: 'Standard' }, { value: 'cb', label: 'High contrast' },
+]
 
 // ── Full settings screen (menu nav) ──────────────────────────────────────────
 
@@ -43,9 +46,9 @@ export function SettingsScreen() {
   const exitSettings = useSeasonStore(s => s.exitSettings)
   const {
     soundEnabled, hapticsEnabled, reducedMotion,
-    simSpeed, proMode, skipStartSequence, difficulty, coachMarksSeen,
+    simSpeed, proMode, skipStartSequence, difficulty, coachMarksSeen, tyrePalette,
     setSoundEnabled, setHapticsEnabled, setReducedMotion,
-    setSimSpeed, setProMode, setSkipStartSequence, setDifficulty, setCoachMarksSeen,
+    setSimSpeed, setProMode, setSkipStartSequence, setDifficulty, setCoachMarksSeen, setTyrePalette,
   } = useSettingsStore()
 
   return (
@@ -57,6 +60,13 @@ export function SettingsScreen() {
           <KitToggle label="Sound effects" sub="Engine, pit and UI audio" checked={soundEnabled} onChange={setSoundEnabled} />
           <KitToggle label="Haptic feedback" sub="Vibration on pit stops and actions" checked={hapticsEnabled} onChange={setHapticsEnabled} />
           <KitToggle label="Reduce motion" sub="Simpler animations everywhere" checked={reducedMotion} onChange={setReducedMotion} />
+        </div>
+
+        <GroupHead title="Display" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <SegRow minWidth={196} label="Tyre colours" sub="High contrast for colour-blind players. Letters stay.">
+            <Segmented ariaLabel="Tyre colours" options={PALETTE_OPTIONS} value={tyrePalette} onChange={setTyrePalette} />
+          </SegRow>
         </div>
 
         <GroupHead title="Gameplay" />

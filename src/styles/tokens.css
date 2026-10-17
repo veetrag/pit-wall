@@ -8,6 +8,7 @@
   --dusk:       #3A2F7A;
   --lilac:      #CFC8F2;
   --lilac-dim:  #A99FDB;
+  --lilac-rgb:  207, 200, 242; /* = --lilac; for translucent lilac (pinned by tokenContrast) */
   --white:      #FFFFFF;
   --start-light-rgb: 255, 59, 74; /* physical red start lamp, deliberately not --hot */
   --start-light: rgb(var(--start-light-rgb));
@@ -49,14 +50,35 @@
   /* Wet-weather compounds. data/compounds.json points I and W at these
      tokens; matched to TimingTower's COMPOUND_COLORS so a compound reads the
      same colour on the timing tower and on the scenario picker. */
-  --tyre-inter:   #3DDC84;
-  --tyre-wet:     #4DA6FF;
+  /* Channels first, colour derived (same shape as --caution): WeatherStrip
+     washes these at an alpha, and the high-contrast palette overrides them. */
+  --tyre-inter-rgb: 61, 220, 132;
+  --tyre-inter:     rgb(var(--tyre-inter-rgb));
+  --tyre-wet-rgb:   77, 166, 255;
+  --tyre-wet:       rgb(var(--tyre-wet-rgb));
 
   --font-display: 'Big Shoulders Display', sans-serif;
   --font-body:    'Barlow', sans-serif;
 
   --safe-top:    env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/*
+ * High-contrast tyre palette (spec 1.6 §10), Settings -> Tyre colours.
+ * Okabe-Ito hues lightened for the dark ground; every one >= 3:1 on --ink and
+ * soft/medium 24 L* apart. ONLY --tyre-* tokens may appear here: --hot is the
+ * urgent colour and must not move with a tyre preference (pinned by
+ * tests/ui/tokenContrast.test.ts). Letters S/M/H/I/W stay on every chip.
+ */
+:root[data-palette="cb"] {
+  --tyre-soft:      #F57C35;
+  --tyre-medium:    #F0E442;
+  --tyre-hard:      #FFFFFF;
+  --tyre-inter-rgb: 34, 185, 140;
+  --tyre-inter:     rgb(var(--tyre-inter-rgb));
+  --tyre-wet-rgb:   110, 193, 240;
+  --tyre-wet:       rgb(var(--tyre-wet-rgb));
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

@@ -10,6 +10,7 @@ import { playGamesClient } from './sync/playGamesClient'
 import { setPlatformClients, startCrashReporting, checkForUpdate } from './sync/platformBridge'
 import { crashReporter, reviewPrompter, updateChecker, integrityChecker } from './sync/platform'
 import { useSettingsStore, startReducedMotionWatch } from './state/settingsStore'
+import { startDisplaySettingsSync } from './state/displaySettings'
 import { MainMenu } from './ui/MainMenu'
 import { GridStats } from './ui/GridStats'
 import { TeamSelect } from './ui/TeamSelect'
@@ -85,6 +86,9 @@ export default function App() {
   // applies while the player has made no explicit choice of their own -- see
   // startReducedMotionWatch.
   useEffect(() => startReducedMotionWatch(), [])
+  // Tyre palette (and, from Task 2, text size) as root data attributes. main.tsx
+  // loads settings before mount, so the first paint already has them.
+  useEffect(() => startDisplaySettingsSync(), [])
 
   return (
     <AppErrorBoundary>

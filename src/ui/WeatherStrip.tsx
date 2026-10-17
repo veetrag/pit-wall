@@ -15,27 +15,28 @@ const WEATHER_LABEL: Record<WeatherState, string> = {
   DAMP: 'DAMP',
   WET:  'WET',
 }
-// Literal hex, not CSS var() — these get alpha suffixes concatenated on
-// (e.g. `${color}55`) for the glow/border below, which only works with a
-// real hex string.
-const WEATHER_COLOR: Record<WeatherState, string> = {
-  DRY:  '#CFC8F2', // lilac: dry is the neutral state
-  DAMP: '#3DDC84', // = --tyre-inter
-  WET:  '#4DA6FF', // = --tyre-wet
+// Channel triples, not colours: the glow/border/tint below need an alpha, and
+// tokens (not literals) let the high-contrast palette reach this strip
+// (spec 1.6 §10). DAMP reads as the inter, WET as the full wet.
+const WEATHER_RGB: Record<WeatherState, string> = {
+  DRY:  'var(--lilac-rgb)',
+  DAMP: 'var(--tyre-inter-rgb)',
+  WET:  'var(--tyre-wet-rgb)',
 }
+const tint = (rgb: string, alpha: number) => `rgba(${rgb}, ${alpha})`
 
 function WeatherCell({ label, state }: { label: string; state: WeatherState }) {
-  const color = WEATHER_COLOR[state]
+  const rgb = WEATHER_RGB[state]
   return (
     <div
       style={{
         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
         padding: '7px 6px',
-        border: `1.5px solid ${color}55`,
+        border: `1.5px solid ${tint(rgb, 0.33)}`,
         borderRadius: 8,
-        background: `${color}12`,
+        background: tint(rgb, 0.07),
         // NOW gets a soft glow so the live reading feels active.
-        boxShadow: `0 0 12px ${color}40`,
+        boxShadow: `0 0 12px ${tint(rgb, 0.25)}`,
         minWidth: 0,
       }}
     >

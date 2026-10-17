@@ -37,3 +37,53 @@ describe('token contrast (spec 3.1)', () => {
     it(`--${t} on --${s} >= ${min}:1`, () => { expect(ratio(t, s)).toBeGreaterThanOrEqual(min) })
   }
 })
+
+// ── Colour-blind tyre palette (spec 1.6 §10) ──────────────────────────────
+const cbStart = css.indexOf(':root[data-palette="cb"]')
+const cb = cbStart < 0 ? '' : css.slice(cbStart, css.indexOf('}', cbStart))
+
+function cbHexOf(name: string): string {
+  const direct = new RegExp(`--${name}:\\s*(#[0-9A-Fa-f]{6})`).exec(cb)
+  if (direct) return direct[1]!
+  const rgb = new RegExp(`--${name}-rgb:\\s*(\\d+),\\s*(\\d+),\\s*(\\d+)`).exec(cb)
+  if (rgb) return '#' + [rgb[1], rgb[2], rgb[3]].map(n => Number(n).toString(16).padStart(2, '0')).join('')
+  throw new Error(`cb token --${name} not found`)
+}
+const ratioHex = (a: string, b: string) => {
+  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p)
+  return (x! + 0.05) / (y! + 0.05)
+}
+const lstar = (hex: string) => { const Y = lum(hex); return Y > 0.008856 ? 116 * Math.cbrt(Y) - 16 : 903.3 * Y }
+const TYRES = ['tyre-soft', 'tyre-medium', 'tyre-hard', 'tyre-inter', 'tyre-wet']
+
+describe('high-contrast tyre palette (spec 1.6 §10)', () => {
+  it('exists', () => { expect(cbStart, 'tokens.css needs a :root[data-palette="cb"] block').toBeGreaterThan(0) })
+
+  it.each(TYRES)('--%s is at least 3:1 on --ink', t => {
+    expect(ratioHex(cbHexOf(t), hexOf('ink'))).toBeGreaterThanOrEqual(3)
+  })
+
+  it('separates soft and medium by lightness, not hue alone', () => {
+    expect(Math.abs(lstar(cbHexOf('tyre-medium')) - lstar(cbHexOf('tyre-soft')))).toBeGreaterThanOrEqual(20)
+  })
+
+  it('OVERRIDES ONLY --tyre-* TOKENS, NEVER --hot', () => {
+    const declared = [...cb.matchAll(/(--[\w-]+)\s*:/g)].map(m => m[1]!)
+    expect(declared.length).toBeGreaterThan(0)
+    expect(declared.filter(n => !n.startsWith('--tyre-')), 'only tyre tokens may change').toEqual([])
+    expect(cbHexOf('tyre-soft').toLowerCase()).not.toBe(hexOf('hot').toLowerCase())
+  })
+
+  it('the standard tyre tokens are also at least 3:1 on --ink', () => {
+    for (const t of ['hot', 'tyre-medium', 'tyre-hard', 'tyre-inter', 'tyre-wet']) {
+      expect(ratioHex(hexOf(t), hexOf('ink')), t).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('--lilac-rgb matches --lilac', () => {
+    const rgb = /--lilac-rgb:\s*(\d+),\s*(\d+),\s*(\d+)/.exec(root)
+    expect(rgb, '--lilac-rgb must exist for translucent lilac').not.toBeNull()
+    const hex = '#' + [rgb![1], rgb![2], rgb![3]].map(n => Number(n).toString(16).padStart(2, '0')).join('')
+    expect(hex.toUpperCase()).toBe(/--lilac:\s*(#[0-9A-Fa-f]{6})/.exec(root)![1]!.toUpperCase())
+  })
+})

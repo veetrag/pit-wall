@@ -4,6 +4,8 @@ import { Preferences } from '@capacitor/preferences'
 export type SimSpeed = 1 | 2 | 4
 export type Difficulty = 'rookie' | 'pro'
 export type DriverNameFormat = 'code' | 'full'
+/** Spec 1.6 §10: 'cb' sets data-palette="cb" on the root, overriding only the tyre tokens. */
+export type TyrePalette = 'standard' | 'cb'
 
 export interface SettingsState {
   soundEnabled: boolean
@@ -22,6 +24,7 @@ export interface SettingsState {
   difficulty: Difficulty
   driverNameFormat: DriverNameFormat
   coachMarksSeen: boolean
+  tyrePalette: TyrePalette
   setSoundEnabled: (v: boolean) => void
   setHapticsEnabled: (v: boolean) => void
   setReducedMotion: (v: boolean) => void
@@ -31,6 +34,7 @@ export interface SettingsState {
   setDifficulty: (v: Difficulty) => void
   setDriverNameFormat: (v: DriverNameFormat) => void
   setCoachMarksSeen: (v: boolean) => void
+  setTyrePalette: (v: TyrePalette) => void
   loadSettings: () => Promise<void>
 }
 
@@ -44,6 +48,7 @@ const K = {
   difficulty: 'settings.difficulty',
   driverNameFormat: 'settings.driverNameFormat',
   coachMarksSeen: 'settings.coachMarksSeen',
+  tyrePalette: 'settings.tyrePalette',
 }
 
 /**
@@ -69,6 +74,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   difficulty: 'rookie',
   driverNameFormat: 'code',
   coachMarksSeen: false,
+  tyrePalette: 'standard',
 
   setSoundEnabled(v) { set({ soundEnabled: v }); void Preferences.set({ key: K.sound, value: String(v) }) },
   setHapticsEnabled(v) { set({ hapticsEnabled: v }); void Preferences.set({ key: K.haptics, value: String(v) }) },
@@ -79,11 +85,12 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setDifficulty(v) { set({ difficulty: v }); void Preferences.set({ key: K.difficulty, value: v }) },
   setDriverNameFormat(v) { set({ driverNameFormat: v }); void Preferences.set({ key: K.driverNameFormat, value: v }) },
   setCoachMarksSeen(v) { set({ coachMarksSeen: v }); void Preferences.set({ key: K.coachMarksSeen, value: String(v) }) },
+  setTyrePalette(v) { set({ tyrePalette: v }); void Preferences.set({ key: K.tyrePalette, value: v }) },
 
   async loadSettings() {
     const keys = Object.values(K)
     const results = await Promise.all(keys.map(k => Preferences.get({ key: k })))
-    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty, driverNameFormat, coachMarksSeen] = results.map(r => r.value)
+    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty, driverNameFormat, coachMarksSeen, tyrePalette] = results.map(r => r.value)
     set({
       soundEnabled:      sound     != null ? sound     === 'true' : true,
       hapticsEnabled:    haptics   != null ? haptics   === 'true' : true,
@@ -100,6 +107,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       difficulty:        difficulty === 'pro' ? 'pro' : 'rookie',
       driverNameFormat:  driverNameFormat === 'full' ? 'full' : 'code',
       coachMarksSeen:    coachMarksSeen != null ? coachMarksSeen === 'true' : false,
+      tyrePalette:       tyrePalette === 'cb' ? 'cb' : 'standard',
     })
   },
 }))

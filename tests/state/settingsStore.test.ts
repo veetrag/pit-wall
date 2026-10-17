@@ -65,4 +65,31 @@ describe('settingsStore', () => {
       expect(useSettingsStore.getState().coachMarksSeen).toBe(false)
     })
   })
+
+  describe('tyrePalette (spec 1.6 §10)', () => {
+    it('defaults to standard on a fresh install', async () => {
+      useSettingsStore.setState({ tyrePalette: 'cb' })
+      await useSettingsStore.getState().loadSettings()
+      expect(useSettingsStore.getState().tyrePalette).toBe('standard')
+    })
+    it('round-trips cb', async () => {
+      useSettingsStore.getState().setTyrePalette('cb')
+      useSettingsStore.setState({ tyrePalette: 'standard' })
+      await useSettingsStore.getState().loadSettings()
+      expect(useSettingsStore.getState().tyrePalette).toBe('cb')
+    })
+    it('reads an unknown stored value as standard', async () => {
+      mem.set('settings.tyrePalette', 'neon')
+      await useSettingsStore.getState().loadSettings()
+      expect(useSettingsStore.getState().tyrePalette).toBe('standard')
+    })
+    it('does not disturb the keys before it (positional destructure)', async () => {
+      useSettingsStore.getState().setCoachMarksSeen(true)
+      useSettingsStore.getState().setTyrePalette('cb')
+      useSettingsStore.setState({ coachMarksSeen: false, tyrePalette: 'standard' })
+      await useSettingsStore.getState().loadSettings()
+      expect(useSettingsStore.getState().coachMarksSeen).toBe(true)
+      expect(useSettingsStore.getState().tyrePalette).toBe('cb')
+    })
+  })
 })
