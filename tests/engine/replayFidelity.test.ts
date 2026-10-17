@@ -57,4 +57,23 @@ describe('replay reproduces the live race', () => {
     expect(same.some(c => c.kind === 'pit')).toBe(true)
     expect(replay(r().config!, seed, calls).state).toEqual(r().raceState!)
   })
+
+  it('a sprint with a starting PUSH call and a manual stop replays exactly', () => {
+    const seed = 9001
+    const r = () => useRaceStore.getState()
+    r().resetRace()
+    r().startSeasonRace('d_voss', seed, 'sol_desert', 'rookie',
+      { startCompound: 'S', plannedStops: [] }, null, undefined, false, { sprint: true, initialPace: 'push' })
+    expect(r().playerCalls).toEqual([{ step: 0, kind: 'pace', mode: 'push' }])
+    expect(r().raceState!.cars.find(c => c.isPlayer)!.paceMode).toBe('push')
+    useRaceStore.setState({ phase: 'racing' })
+    let n = 0
+    while (r().phase === 'racing') {
+      if (n === 20) r().pitNow('M')
+      r().step()
+      n++
+    }
+    expect(r().raceState!.totalLaps).toBe(13)
+    expect(replay(r().config!, seed, r().playerCalls).state).toEqual(r().raceState!)
+  })
 })

@@ -6,7 +6,23 @@ import { useSettingsStore } from '@state/settingsStore'
 import { useDebriefStore } from '@state/debriefStore'
 import { useScenarioStore } from '@state/scenarioStore'
 import { goalMet } from '@engine/scenario'
-import type { RaceEventSummary } from '@state/seasonStore'
+import type { RaceEventSummary, FinishPosition } from '@state/seasonStore'
+import type { RaceState } from '@engine/types'
+
+/** The classification and the player's race summary, the same for a sprint and a Grand Prix. */
+function summarise(raceState: RaceState): { positions: FinishPosition[]; events: RaceEventSummary } {
+  const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
+  const positions = sorted.map(car => ({ driverId: car.driverId, position: car.position, retired: car.retired, retiredCause: car.retiredCause }))
+  const player = raceState.cars.find(c => c.isPlayer)
+  return {
+    positions,
+    events: {
+      overtakesGained: raceState.overtakeEvents.filter(e => e.overtakerId === player?.driverId).length,
+      pitsDone: player?.pitsDone ?? 0,
+      hadRain: raceState.weatherTimeline.some(w => w !== 'DRY'),
+    },
+  }
+}
 
 export function RaceWatcher() {
   const racePhase = useRaceStore(s => s.phase)
@@ -31,13 +47,17 @@ export function RaceWatcher() {
   const activeScenario = useScenarioStore(s => s.active)
   const recordScenarioOutcome = useScenarioStore(s => s.recordOutcome)
   const toScenarioResult = useSeasonStore(s => s.toScenarioResult)
+  const recordSprintResult = useSeasonStore(s => s.recordSprintResult)
 
   const hasFiredRef = useRef(false)
   const scenarioFiredRef = useRef(false)
   const scenarioResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sprintFiredRef = useRef(false)
+  const sprintResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => () => {
     if (scenarioResetRef.current !== null) clearTimeout(scenarioResetRef.current)
+    if (sprintResetRef.current !== null) clearTimeout(sprintResetRef.current)
   }, [])
 
   useEffect(() => {
@@ -60,14 +80,7 @@ export function RaceWatcher() {
     if (racePhase === 'finished' && raceState && !hasFiredRef.current) {
       hasFiredRef.current = true
       setSpeed(0)
-      const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
-      const positions = sorted.map(car => ({ driverId: car.driverId, position: car.position, retired: car.retired, retiredCause: car.retiredCause }))
-      const player = raceState.cars.find(c => c.isPlayer)
-      const events: RaceEventSummary = {
-        overtakesGained: raceState.overtakeEvents.filter(e => e.overtakerId === player?.driverId).length,
-        pitsDone: player?.pitsDone ?? 0,
-        hadRain: raceState.weatherTimeline.some(w => w !== 'DRY'),
-      }
+      const { positions, events } = summarise(raceState)
       const { config: raceConfig, playerCalls } = useRaceStore.getState()
       if (raceConfig) {
         try {
@@ -82,6 +95,48 @@ export function RaceWatcher() {
       setTimeout(() => resetRace(), 1500)
     }
   }, [racePhase]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The sprint (spec 1.5 §3): its own seed and distance, the shared qualifying
+  // grid, the sprint setup's tyre and pace, and the Grand Prix wing.
+  useEffect(() => {
+    if (seasonPhase === 'sprint_racing' && racePhase === 'idle' && playerDriverId) {
+      sprintFiredRef.current = false
+      const s = useSeasonStore.getState()
+      const choice = s.sprintStrategy
+      startSeasonRace(
+        playerDriverId, s.currentSprintSeed(), s.currentCircuitId(), difficulty,
+        { startCompound: choice?.startCompound ?? 'M', plannedStops: [], wing: s.playerStrategy?.wing },
+        s.overlayInput(), s.qualifyingResult?.order, s.raceIndex === 0,
+        { sprint: true, initialPace: choice?.paceMode ?? 'neutral' },
+      )
+    }
+  }, [seasonPhase, racePhase, playerDriverId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (seasonPhase !== 'sprint_racing') return
+    if (racePhase !== 'finished' || !raceState || sprintFiredRef.current) return
+    sprintFiredRef.current = true
+    setSpeed(0)
+    const { positions, events } = summarise(raceState)
+    const { config: raceConfig, playerCalls } = useRaceStore.getState()
+    if (raceConfig) {
+      try {
+        useDebriefStore.getState().start(
+          { config: raceConfig, seed: raceConfig.seed, calls: playerCalls },
+          `sprint-${raceConfig.seed}`,
+        )
+      } catch { /* the debrief must never block recording the result */ }
+    }
+    recordSprintResult(positions, events)
+    /*
+     * Tracked and cleared on unmount, like the scenario reset. ON TO THE GRAND
+     * PRIX is live the instant the sprint result appears; the Grand Prix start
+     * effect waits for this reset (it needs racePhase 'idle'), so the Grand
+     * Prix starts exactly once, after it, from lap 0.
+     */
+    if (sprintResetRef.current !== null) clearTimeout(sprintResetRef.current)
+    sprintResetRef.current = setTimeout(() => { sprintResetRef.current = null; resetRace() }, 1500)
+  }, [racePhase, seasonPhase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (seasonPhase === 'scenario_racing' && racePhase === 'idle' && activeScenario) {

@@ -15,6 +15,13 @@ import { startScenario } from '@engine/scenario'
 
 export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
 
+/** A season race's format (spec 1.5 §3). Absent = a Grand Prix. */
+export interface SeasonRaceOptions {
+  sprint?: boolean
+  /** The pace off the line. Logged as a step-0 call so replay and the debrief see it. */
+  initialPace?: PaceMode
+}
+
 interface RaceStore {
   phase: RacePhase
   config: RaceConfig | null
@@ -37,7 +44,7 @@ interface RaceStore {
   radioState: RadioState
 
   startRace: () => void
-  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null, gridOrder?: string[], dryStart?: boolean) => void
+  startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null, gridOrder?: string[], dryStart?: boolean, opts?: SeasonRaceOptions) => void
   startScenarioRace: (spec: { circuitId: string; seed: number; playerDriverId: string; startLap: number }) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
@@ -103,11 +110,19 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0 })
   },
 
-  startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart) {
-    const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart)
-    const raceState = initRace(config)
+  startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts) {
+    const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts?.sprint ?? false)
+    let raceState = initRace(config)
+    const playerCalls: PlayerCall[] = []
+    const pace = opts?.initialPace
+    if (pace && pace !== 'neutral') {
+      // Exactly what setPaceMode would do at step 0, so (config, seed, calls)
+      // still reproduces the race (tests/engine/replayFidelity.test.ts).
+      raceState = applyPlayerPace(raceState, pace)
+      playerCalls.push({ step: 0, kind: 'pace', mode: pace })
+    }
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0 })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0 })
   },
 
   /**
