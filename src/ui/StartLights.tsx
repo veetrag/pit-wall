@@ -476,7 +476,7 @@ export function StartLights() {
           textAlign: 'center', padding: '0 16px',
         }}
       >
-        {config ? `${config.circuit.name.toUpperCase()} · LAP 1 OF ${config.circuit.laps}` : ''}
+        {config ? `${config.circuit.name.toUpperCase()} · LAP 1 OF ${config.lapsOverride ?? config.circuit.laps}` : ''}
       </motion.div>
     </motion.div>
   )

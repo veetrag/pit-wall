@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
+import { isSprintRound } from '@state/sprint'
 import { loadSnapshot, type SeasonSnapshot } from '@state/seasonPersistence'
 import { loadCareer } from '@state/careerPersistence'
 import { useCareerStore } from '@state/careerStore'
@@ -128,6 +129,9 @@ export function MainMenu() {
             <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 1.5, color: 'var(--lilac)' }}>
               ROUND {saved.raceIndex + 1} OF {total}{saved.resultPending ? ' · RESULT WAITING' : ''}
             </span>
+            {isSprintRound(saved.raceIndex) && (
+              <span style={{ alignSelf: 'flex-start' }}><Pill tone="dusk">SPRINT WEEKEND</Pill></span>
+            )}
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 44, lineHeight: 1, textTransform: 'uppercase', color: 'var(--white)' }}>
               {circuitName}
             </span>

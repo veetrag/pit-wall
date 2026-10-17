@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { isSprintRound } from '@state/sprint'
 import { useSeasonStore } from '@state/seasonStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { loadGameData } from '@data/validators'
@@ -121,10 +122,12 @@ export function Qualifying() {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* The conditions MUST be stated: the session cannot be re-run, so the tyre call has to be informed. */}
-        <div data-testid="qualifying-conditions" style={{ alignSelf: 'flex-start' }}>
+        <div data-testid="qualifying-conditions" style={{ alignSelf: 'flex-start', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           <Pill tone={weather === 'DRY' ? 'default' : 'rain'}>
             {weather === 'DRY' ? 'TRACK DRY' : weather === 'DAMP' ? 'TRACK DAMP · WETS ADVISED' : 'TRACK WET · WETS ADVISED'}
           </Pill>
+          {/* One session sets the grid for the sprint AND the Grand Prix. */}
+          {isSprintRound(raceIndex) && <Pill tone="dusk">SPRINT WEEKEND</Pill>}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>

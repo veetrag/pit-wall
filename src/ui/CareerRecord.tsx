@@ -1,5 +1,5 @@
 import { useSeasonStore } from '@state/seasonStore'
-import { useCareerStore } from '@state/careerStore'
+import { useCareerStore, sprintWins } from '@state/careerStore'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 import { BadgeCase } from './BadgeCase'
@@ -33,7 +33,7 @@ const SECTION_HEAD = {
 export function CareerRecord() {
   const exitCareer = useSeasonStore(s => s.exitCareer)
   const {
-    seasonNumber, titles, wins, podiums, poles, racesStarted, bestFinish, seasonHistory,
+    seasonNumber, titles, wins, podiums, poles, racesStarted, bestFinish, seasonHistory, raceLog,
   } = useCareerStore()
 
   return (
@@ -48,7 +48,7 @@ export function CareerRecord() {
           <StatTile value={bestFinish === null ? '—' : `P${bestFinish}`} label="BEST" tone={bestFinish === 1 ? 'volt' : 'default'} />
         </div>
         <p style={{ margin: '10px 0 20px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--lilac-dim)' }}>
-          {poles} poles · {racesStarted} races · {seasonNumber - 1} seasons
+          {poles} poles · {racesStarted} races · {sprintWins(raceLog)} sprint win{sprintWins(raceLog) === 1 ? '' : 's'} · {seasonNumber - 1} seasons
         </p>
 
         <BadgeCase />

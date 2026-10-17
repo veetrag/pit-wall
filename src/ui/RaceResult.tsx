@@ -90,7 +90,7 @@ export function RaceResult() {
   // made it worse (endCareer would take every season with it), which is how it
   // was noticed. backToMenu only changes phase, so the season save and the
   // career both survive and Continue still works.
-  const { lastRaceResults, lastRaceEvents, standings: committedStandings, playerDriverId, raceIndex, nextRace, backToMenu, retryRace, resultPending, pendingBadges, pendingRace, currentCircuitId } = useSeasonStore()
+  const { lastRaceResults, lastRaceEvents, standings: committedStandings, playerDriverId, raceIndex, nextRace, backToMenu, retryRace, resultPending, pendingBadges, pendingRace, currentCircuitId, lastSprintResults } = useSeasonStore()
   // The race is shown here but not yet counted -- it counts when the player
   // keeps it (NEXT RACE / FINAL STANDINGS). So the table and the badges show
   // what keeping it WOULD mean, from the same functions keepResult uses.
@@ -137,6 +137,10 @@ export function RaceResult() {
   // already includes this race in both the pending and the kept case, so the
   // "before" is the same table less this race's points.
   const racePoints = new Map((lastRaceResults ?? []).map(r => [r.driverId, r.points]))
+  // A sprint round's sprint points were banked when the player left the sprint
+  // result; they are already in `standings`. Shown beside each row as "S+N".
+  const sprintPoints = new Map((lastSprintResults ?? []).map(r => [r.driverId, r.points]))
+  const mySprint = playerDriverId ? sprintPoints.get(playerDriverId) ?? 0 : 0
   const before = standings.map(s => ({ driverId: s.driverId, points: s.points - (racePoints.get(s.driverId) ?? 0) }))
   const champPos = placeOf(standings, playerDriverId)
   const champPts = standings.find(s => s.driverId === playerDriverId)?.points ?? 0
@@ -257,6 +261,11 @@ export function RaceResult() {
                     P{champPos} · <span>{champPts}</span>
                   </span>
                   <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: deltaColor }}>{deltaLine}</span>
+                  {mySprint > 0 && (
+                    <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12, color: 'var(--lilac)', ...numeric }}>
+                      {`incl. S+${mySprint} from the sprint`}
+                    </span>
+                  )}
                 </>
               ) : (
                 <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--lilac)' }}>No standings yet</span>
@@ -320,7 +329,7 @@ export function RaceResult() {
                       initial={reduced ? false : { opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: reduced ? 0 : 0.02 * i, ease: [0.2, 0, 0, 1] }}
                       style={{
-                        display: 'grid', gridTemplateColumns: '30px 1fr 40px',
+                        display: 'grid', gridTemplateColumns: '30px 1fr auto',
                         alignItems: 'center', gap: 8, padding: '9px 12px',
                         background: isPlayer ? 'rgba(var(--volt-rgb),0.10)' : 'transparent',
                         borderLeft: isPlayer ? '3px solid var(--volt)' : '3px solid transparent',
@@ -336,7 +345,9 @@ export function RaceResult() {
                         {d.code}
                       </span>
                       <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, color: r.points > 0 ? 'var(--gain)' : 'var(--lilac-dim)', textAlign: 'right', ...numeric }}>
-                        +{r.points}
+                        {(sprintPoints.get(r.driverId) ?? 0) > 0
+                          ? `+${r.points} · S+${sprintPoints.get(r.driverId)}`
+                          : `+${r.points}`}
                       </span>
                     </motion.div>
                   )

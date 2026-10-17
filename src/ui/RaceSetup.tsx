@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSettingsStore } from '@state/settingsStore'
+import { isSprintRound } from '@state/sprint'
 import { useSeasonStore } from '@state/seasonStore'
 import type { PlayerStrategyChoice } from '@state/seasonStore'
 import { CIRCUIT_ORDER } from '@state/raceStore'
@@ -150,6 +151,10 @@ export function RaceSetup() {
   const backToDriverSelect = useSeasonStore(s => s.backToDriverSelect)
   const uiTap = useUiTap()
   const raceIndex = useSeasonStore(s => s.raceIndex)
+  const sprintRound = isSprintRound(raceIndex)
+  // Once the sprint is counted the weekend's grid exists, so a Grand Prix
+  // retry goes straight to the race on the same circuit (spec 1.5 §3).
+  const weekendLocked = useSeasonStore(s => sprintRound && s.sprintBanked && s.qualifyingResult !== null)
   const currentSeed = useSeasonStore(s => s.currentSeed)
   const defaultIdx = raceIndex % CIRCUIT_ORDER.length
   // The plan to pre-fill: the one just raced, present after RETRY ROUND (and
@@ -260,9 +265,11 @@ export function RaceSetup() {
                 type="button"
                 data-circuit-idx={i}
                 aria-pressed={active}
+                aria-disabled={weekendLocked && !active ? true : undefined}
                 className="kit-focus"
                 whileTap={{ scale: 0.96 }} transition={PRESS}
                 onClick={() => {
+                  if (weekendLocked) return
                   uiTap()
                   setSelectedIdx(i)
                   setPitLap1(Math.round(c.laps * (stopCount === 2 ? 0.33 : 0.45)))
@@ -314,6 +321,7 @@ export function RaceSetup() {
 
         {/* Actual seeded starting conditions — not just a probability */}
         <div aria-label="Conditions at lights out" role="group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flexShrink: 0 }}>
+          {sprintRound && <Pill tone="dusk">SPRINT WEEKEND</Pill>}
           <Pill tone={startingWeather === 'DRY' ? 'default' : 'rain'}>{WEATHER_START[startingWeather]}</Pill>
           {weatherTimeline.slice(1, 4).map((w, i) => (
             <span key={i} data-forecast={w}><Pill tone={w === 'DRY' ? 'default' : 'rain'}>{`+${i + 1} ${WEATHER_SHORT[w]}`}</Pill></span>
@@ -405,7 +413,7 @@ export function RaceSetup() {
             confirmRaceSetup(circuitId, strategy)
           }}
         >
-          TO QUALIFYING →
+          {weekendLocked ? 'TO THE GRAND PRIX →' : 'TO QUALIFYING →'}
         </KitButton>
       </div>
     </ScreenFrame>
