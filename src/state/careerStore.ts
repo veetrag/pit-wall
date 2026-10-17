@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { loadGameData } from '@data/validators'
 import { newlyEarned, type RaceFact } from './badges'
 import type { Wing } from '@engine/setup'
+import type { Compound } from '@engine/types'
 
 /**
  * The career: the layer above a season that owns what survives one.
@@ -174,14 +175,29 @@ interface CareerStore extends CareerRecord {
   resumeCareer: (snap: CareerRecord) => void
 }
 
+/** The 1.6 stat facts (spec §7). Optional everywhere: older races never had them. */
+export interface RaceFactExtras { circuitId?: string; startCompound?: Compound; longestStint?: number; team?: string }
+/** What the race itself knows at the flag; the season adds circuit and team. */
+export interface StintFacts { startCompound: Compound; longestStint: number }
+
+/** The extras present on `r`, in schema order, and no key for an absent one. */
+export function factExtras(r: RaceFactExtras): RaceFactExtras {
+  const out: RaceFactExtras = {}
+  if (r.circuitId !== undefined) out.circuitId = r.circuitId
+  if (r.startCompound !== undefined) out.startCompound = r.startCompound
+  if (r.longestStint !== undefined) out.longestStint = r.longestStint
+  if (r.team !== undefined) out.team = r.team
+  return out
+}
+
 /** One race, as the career records it. */
-export interface RaceRecordInput {
+export interface RaceRecordInput extends RaceFactExtras {
   position: number; retired: boolean; pole: boolean
   round: number; grid: number; stops: number; overtakes: number; wet: boolean
 }
 
 /** One sprint, as the career records it. No pole: the pole belongs to the Grand Prix. */
-export interface SprintRecordInput {
+export interface SprintRecordInput extends RaceFactExtras {
   position: number; retired: boolean; round: number; grid: number; stops: number; overtakes: number; wet: boolean
 }
 
@@ -208,6 +224,7 @@ export function nextRecordAfterRace(s: CareerRecord, r: RaceRecordInput): Career
   const fact: RaceFact = {
     season: s.seasonNumber, round, grid,
     finish: position, retired, pole, stops, overtakes, wet,
+    ...factExtras(r),
   }
 
   // Built as a whole record so the badge difference below compares two
@@ -257,6 +274,7 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     const fact: RaceFact = {
       season: s.seasonNumber, round: r.round, grid: r.grid, finish: r.position,
       retired: r.retired, pole: false, stops: r.stops, overtakes: r.overtakes, wet: r.wet, kind: 'sprint',
+      ...factExtras(r),
     }
     set({ raceLog: [...s.raceLog, fact], justEarned: [] })
   },

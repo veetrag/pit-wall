@@ -16,6 +16,8 @@
  * import. Same class of constraint as src/state/buildRaceConfig.ts:25.
  */
 
+import type { Compound } from '@engine/types'
+
 /** One race, as it happened. Every field is already computed at the
  *  recordRace call site in seasonStore -- nothing new is simulated. */
 export interface RaceFact {
@@ -38,6 +40,17 @@ export interface RaceFact {
    * exactly as before (cloud reconcile compares the JSON string).
    */
   kind?: 'gp' | 'sprint'
+  /*
+   * Spec 1.6 §7, captured at the flag. OPTIONAL and written only when known,
+   * after `kind`, so every older fact serialises exactly as before (cloud
+   * reconcile compares the JSON string). Stats say "since 1.6" where missing.
+   */
+  circuitId?: string
+  startCompound?: Compound
+  /** Longest run of completed laps on one set of tyres. */
+  longestStint?: number
+  /** Team id the player raced for. */
+  team?: string
 }
 
 /**

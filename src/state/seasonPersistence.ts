@@ -124,6 +124,9 @@ const SprintStrategySchema = z.object({
 const SprintRecordSchema = z.object({
   position: z.number(), retired: z.boolean(), round: z.number(), grid: z.number(),
   stops: z.number(), overtakes: z.number(), wet: z.boolean(),
+  // Spec 1.6 §7 stat facts: optional, last, so a reload keeps them.
+  circuitId: z.string().optional(), startCompound: CompoundSchema.optional(),
+  longestStint: z.number().optional(), team: z.string().optional(),
 })
 
 export const SeasonSnapshotSchema = z.object({
@@ -151,6 +154,9 @@ export const SeasonSnapshotSchema = z.object({
   pendingRace: z.object({
     position: z.number(), retired: z.boolean(), pole: z.boolean(), round: z.number(),
     grid: z.number(), stops: z.number(), overtakes: z.number(), wet: z.boolean(),
+    // Spec 1.6 §7 stat facts: optional, last, so a reload keeps them.
+    circuitId: z.string().optional(), startCompound: CompoundSchema.optional(),
+    longestStint: z.number().optional(), team: z.string().optional(),
   }).nullable().default(null),
   /*
    * Sprint weekends (spec 1.5 §3). Every field .default()ed and NOT a version

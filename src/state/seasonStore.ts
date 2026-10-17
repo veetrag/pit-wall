@@ -5,7 +5,7 @@ import { runQualifying, qualifyingRng, type Compound, type PaceMode, type PitSto
 import type { Wing } from '@engine/setup'
 import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
-import { useCareerStore, escalateRivals, previewRaceBadges, type RaceRecordInput, type SprintRecordInput } from './careerStore'
+import { useCareerStore, escalateRivals, previewRaceBadges, type RaceRecordInput, type SprintRecordInput, type StintFacts } from './careerStore'
 import { isSprintRound, sprintPointsFor } from './sprint'
 import { settleSeason, type LadderMove } from './teamLadder'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
@@ -223,7 +223,7 @@ interface SeasonStore {
   currentSeed: () => number
   currentSprintSeed: () => number
   confirmSprintSetup: (choice: SprintStrategyChoice) => void
-  recordSprintResult: (positions: FinishPosition[], events: RaceEventSummary) => void
+  recordSprintResult: (positions: FinishPosition[], events: RaceEventSummary, stints?: StintFacts | null) => void
   keepSprint: () => void
   toGrandPrix: () => void
   retrySprint: () => void
@@ -254,7 +254,7 @@ interface SeasonStore {
   confirmRaceSetup: (circuitId?: string, strategy?: PlayerStrategyChoice | null) => void
   runQualifyingSession: (call: QualifyingCall, difficulty: Difficulty) => void
   startRaceFromQualifying: () => void
-  recordRaceResult: (positions: FinishPosition[], events: RaceEventSummary) => void
+  recordRaceResult: (positions: FinishPosition[], events: RaceEventSummary, stints?: StintFacts | null) => void
   nextRace: () => void
   startNextSeason: () => void
   endCareer: () => void
@@ -316,7 +316,22 @@ export function addResultsToStandings(standings: readonly Standing[], results: r
  * One function for both the commit and the badge preview, so the screen can
  * never promise a badge the commit does not award.
  */
-function pendingRaceRecord(s: Pick<SeasonStore, 'lastRaceResults' | 'lastRaceEvents' | 'playerDriverId' | 'qualifyingResult' | 'raceIndex'>): RaceRecordInput | null {
+/** The player's team id, from drivers.json -- the derivation the game uses everywhere (spec 1.6 §7, §12). */
+export function playerTeamId(driverId: string | null): string | undefined {
+  return driverId ? loadGameData().drivers.drivers.find(d => d.id === driverId)?.teamId : undefined
+}
+
+/** The extras the season knows: the circuit and the player's team. Nothing without stint facts. */
+function seasonExtras(s: Pick<SeasonStore, 'playerDriverId' | 'currentCircuitId'>, stints: StintFacts | null | undefined) {
+  if (!stints) return {}
+  const team = playerTeamId(s.playerDriverId)
+  return { circuitId: s.currentCircuitId(), startCompound: stints.startCompound, longestStint: stints.longestStint, ...(team ? { team } : {}) }
+}
+
+function pendingRaceRecord(
+  s: Pick<SeasonStore, 'lastRaceResults' | 'lastRaceEvents' | 'playerDriverId' | 'qualifyingResult' | 'raceIndex' | 'currentCircuitId'>,
+  stints?: StintFacts | null,
+): RaceRecordInput | null {
   const player = s.lastRaceResults?.find(r => r.driverId === s.playerDriverId)
   if (!player || !s.lastRaceEvents) return null
   const grid = s.qualifyingResult
@@ -334,6 +349,7 @@ function pendingRaceRecord(s: Pick<SeasonStore, 'lastRaceResults' | 'lastRaceEve
     stops: s.lastRaceEvents.pitsDone,
     overtakes: s.lastRaceEvents.overtakesGained,
     wet: s.lastRaceEvents.hadRain,
+    ...seasonExtras(s, stints),
   }
 }
 
@@ -363,8 +379,8 @@ const SPRINT_CLEAR = {
 } satisfies Partial<SeasonStore>
 
 function pendingSprintRecord(
-  s: Pick<SeasonStore, 'playerDriverId' | 'qualifyingResult' | 'raceIndex'>,
-  results: readonly SeasonResult[], events: RaceEventSummary,
+  s: Pick<SeasonStore, 'playerDriverId' | 'qualifyingResult' | 'raceIndex' | 'currentCircuitId'>,
+  results: readonly SeasonResult[], events: RaceEventSummary, stints?: StintFacts | null,
 ): SprintRecordInput | null {
   const player = results.find(r => r.driverId === s.playerDriverId)
   if (!player) return null
@@ -373,6 +389,7 @@ function pendingSprintRecord(
     position: player.position, retired: player.retired, round: s.raceIndex,
     grid: slot > 0 ? slot : player.position,
     stops: events.pitsDone, overtakes: events.overtakesGained, wet: events.hadRain,
+    ...seasonExtras(s, stints),
   }
 }
 
@@ -441,7 +458,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     set({ sprintStrategy: choice, phase: 'sprint_racing' })
   },
 
-  recordSprintResult(positions, events) {
+  recordSprintResult(positions, events, stints) {
     if (get().sprintBanked) return
     const results: SeasonResult[] = positions.map(p => ({
       driverId: p.driverId,
@@ -452,7 +469,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     }))
     set({
       phase: 'sprint_result', lastSprintResults: results, lastSprintEvents: events, sprintPending: true,
-      pendingSprint: pendingSprintRecord(get(), results, events),
+      pendingSprint: pendingSprintRecord(get(), results, events, stints),
     })
   },
 
@@ -642,7 +659,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
    * on device a rival reached 65 points in a one-race season. A race now
    * counts when it is kept, in nextRace.
    */
-  recordRaceResult(positions, events) {
+  recordRaceResult(positions, events, stints) {
     const results: SeasonResult[] = positions.map(p => ({
       driverId: p.driverId,
       position: p.position,
@@ -650,7 +667,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       retired: p.retired ?? false,
       retiredCause: p.retiredCause ?? null,
     }))
-    const pendingRace = pendingRaceRecord({ ...get(), lastRaceResults: results, lastRaceEvents: events })
+    const pendingRace = pendingRaceRecord({ ...get(), lastRaceResults: results, lastRaceEvents: events }, stints)
     set({ phase: 'result', lastRaceResults: results, lastRaceEvents: events, resultPending: true, pendingRace })
   },
 

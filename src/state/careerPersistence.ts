@@ -40,6 +40,12 @@ const RaceFactSchema = z.object({
   // pre-1.5 career (and every GP fact after) serialises byte-for-byte as
   // before -- cloud reconcile compares the JSON string.
   kind: z.enum(['gp', 'sprint']).optional(),
+  // Spec 1.6 §7. Optional, never defaulted, written only when known and AFTER
+  // kind -- key order is part of the JSON cloud reconcile compares.
+  circuitId: z.string().optional(),
+  startCompound: z.enum(['S', 'M', 'H', 'I', 'W']).optional(),
+  longestStint: z.number().optional(),
+  team: z.string().optional(),
 })
 
 const SeasonSummarySchema = z.object({

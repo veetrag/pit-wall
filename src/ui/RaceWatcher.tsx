@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { isFirstCareerRace } from '@state/buildRaceConfig'
-import { useCareerStore } from '@state/careerStore'
+import { useCareerStore, type StintFacts } from '@state/careerStore'
+import { longestStint } from '@state/careerStats'
 import { useRaceStore } from '@state/raceStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useClockStore } from '@state/clockStore'
@@ -11,8 +12,8 @@ import { goalMet } from '@engine/scenario'
 import type { RaceEventSummary, FinishPosition } from '@state/seasonStore'
 import type { RaceState } from '@engine/types'
 
-/** The classification and the player's race summary, the same for a sprint and a Grand Prix. */
-function summarise(raceState: RaceState): { positions: FinishPosition[]; events: RaceEventSummary } {
+/** The classification, the player's race summary and (spec 1.6 §7) their stint facts. */
+export function summarise(raceState: RaceState, tyreChanges: readonly number[]): { positions: FinishPosition[]; events: RaceEventSummary; stints: StintFacts | null } {
   const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
   const positions = sorted.map(car => ({ driverId: car.driverId, position: car.position, retired: car.retired, retiredCause: car.retiredCause }))
   const player = raceState.cars.find(c => c.isPlayer)
@@ -23,6 +24,9 @@ function summarise(raceState: RaceState): { positions: FinishPosition[]; events:
       pitsDone: player?.pitsDone ?? 0,
       hadRain: raceState.weatherTimeline.some(w => w !== 'DRY'),
     },
+    stints: player
+      ? { startCompound: player.compoundsUsed[0] ?? player.compound, longestStint: longestStint(tyreChanges, player.lap) }
+      : null,
   }
 }
 
@@ -85,7 +89,7 @@ export function RaceWatcher() {
     if (racePhase === 'finished' && raceState && !hasFiredRef.current) {
       hasFiredRef.current = true
       setSpeed(0)
-      const { positions, events } = summarise(raceState)
+      const { positions, events, stints } = summarise(raceState, useRaceStore.getState().playerTyreChanges)
       const { config: raceConfig, playerCalls } = useRaceStore.getState()
       if (raceConfig) {
         try {
@@ -96,7 +100,7 @@ export function RaceWatcher() {
           )
         } catch { /* the debrief must never block recording the result */ }
       }
-      recordRaceResult(positions, events)
+      recordRaceResult(positions, events, stints)
       setTimeout(() => resetRace(), 1500)
     }
   }, [racePhase]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -122,7 +126,7 @@ export function RaceWatcher() {
     if (racePhase !== 'finished' || !raceState || sprintFiredRef.current) return
     sprintFiredRef.current = true
     setSpeed(0)
-    const { positions, events } = summarise(raceState)
+    const { positions, events, stints } = summarise(raceState, useRaceStore.getState().playerTyreChanges)
     const { config: raceConfig, playerCalls } = useRaceStore.getState()
     if (raceConfig) {
       try {
@@ -132,7 +136,7 @@ export function RaceWatcher() {
         )
       } catch { /* the debrief must never block recording the result */ }
     }
-    recordSprintResult(positions, events)
+    recordSprintResult(positions, events, stints)
     /*
      * Tracked and cleared on unmount, like the scenario reset. ON TO THE GRAND
      * PRIX is live the instant the sprint result appears; the Grand Prix start

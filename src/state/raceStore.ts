@@ -38,6 +38,8 @@ export type ActiveRadioRequest = RadioRequest & { id: number; line: string }
 
 interface RaceStore {
   phase: RacePhase
+  /** Completed lap at each change of the player's tyres (stop, plan stop, red-flag change), for the career's longest-stint fact (spec 1.6 §7). */
+  playerTyreChanges: number[]
   config: RaceConfig | null
   raceState: RaceState | null
   projectionResult: ProjectionResult | null
@@ -121,6 +123,7 @@ export function projectionSeed(raceSeed: number, lap: number, sector: number): n
 
 export const useRaceStore = create<RaceStore>((set, get) => ({
   phase: 'idle',
+  playerTyreChanges: [],
   config: null,
   raceState: null,
   projectionResult: null,
@@ -143,7 +146,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
+    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
   },
 
   startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts) {
@@ -158,7 +161,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       playerCalls.push({ step: 0, kind: 'pace', mode: pace })
     }
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
   },
 
   /**
@@ -173,7 +176,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   startScenarioRace(spec) {
     const config = buildScenarioConfig(spec)
     const { state, rng } = startScenario(config, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
+    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
   },
 
   initForStartSequence() {
@@ -181,7 +184,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
   },
 
   confirmRaceStart() {
@@ -200,7 +203,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   resetRace() {
-    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
   },
 
   step() {
@@ -212,6 +215,11 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
     const before = raceState.cars.find(c => c.isPlayer)
     const after = nextState.cars.find(c => c.isPlayer)
+    // A tyre change is anything that grows compoundsUsed: a plan stop here, and
+    // the red-flag free change (Plan A §4) too -- confirmRedFlagRestart only
+    // records the choice; the engine fits the tyre on this restart step.
+    // Manual stops are recorded in pitNow.
+    const changed = !!before && !!after && after.compoundsUsed.length > before.compoundsUsed.length
     // A red-flag restart may consume a planned stop (pitsDone + 1) with no stop
     // time: bookkeeping, not a stop -- no timer, no "Box box" (preflight S1).
     const restarted = nextState.incidents.slice(raceState.incidents.length).some(i => i.kind === 'red_flag_restart')
@@ -258,6 +266,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       radioState: nextRadio,
       radioRequest,
       requestTracker: detected.tracker,
+      ...(changed ? { playerTyreChanges: [...s.playerTyreChanges, nextState.lap] } : {}),
       ...(autoStopped && after ? {
         pitPanelOpen: false,      // a plan stop can land while the panel is open; confirming would charge a second stop
         projectionResult: null,
@@ -303,6 +312,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set(s => ({
       raceState: next,
       playerCalls: [...s.playerCalls, { step: stepCount, kind: 'pit' as const, compound }],
+      playerTyreChanges: [...s.playerTyreChanges, raceState.lap],
       pitPanelOpen: false,
       radioRequest: s.radioRequest?.kind === 'box' ? null : s.radioRequest,
       playerInPit: true,
