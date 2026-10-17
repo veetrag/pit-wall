@@ -95,11 +95,48 @@ describe('rivalIntel window', () => {
       expect(late.from).toBeLessThanOrEqual(late.to)
     }
     const overdue = rivalIntel(config, state(car('naive', { lap: 15, tyreAge: 0 }, 5)), 'd1')
+    expect(overdue?.status).toBe('window')
     if (overdue?.status === 'window') expect(overdue.from).toBe(16)
   })
 
   it('null for an unknown car', () => {
     expect(rivalIntel(config, state(car('smart')), 'nobody')).toBeNull()
+  })
+})
+
+// Final review fix 2: an empty plan is not a promise to run to the flag.
+// strategy.ts still boxes smart/optimal brains at PIT_CLIFF_THRESHOLD with more
+// than 3 laps left, and naive brains at the emergency threshold with no guard.
+describe('rivalIntel with no planned stop left', () => {
+  const noPlan = (brain: StrategyBrain, o: Partial<CarState>) =>
+    car(brain, { ...o, strategy: { teamId: 't1', startCompound: 'H', plannedStops: [], brain } })
+
+  it('a worn smart car shows a window around its projected cliff', () => {
+    // S, age 10 at lap 10: eff 8, threshold 0.90 x 10 = 9 -> 1.25 -> 2 laps -> lap 12.
+    const i = rivalIntel(config, state(noPlan('smart', { compound: 'S', tyreAge: 10 })), 'd1')
+    expect(i?.status).toBe('window')
+    if (i?.status !== 'window') return
+    expect([i.from, i.to]).toEqual([Math.max(11, 12 + off - 3), 12 + off + 3])
+  })
+
+  it('fresh tyres late in the race: RUNNING TO THE FLAG', () => {
+    // H, age 0 at lap 20: 21.6 / 0.8 = 27 laps -> lap 47, far past the flag.
+    expect(rivalIntel(config, state(noPlan('smart', { lap: 20, tyreAge: 0 })), 'd1')?.status).toBe('flag')
+  })
+
+  it('the cliff must land before totalLaps - 3, as strategy.ts requires', () => {
+    // S, age 0: threshold 9 / 0.8 = 11.25 -> 12 laps. Lap 14 -> 26 (boxes), lap 15 -> 27 (does not).
+    expect(rivalIntel(config, state(noPlan('optimal', { compound: 'S', lap: 14, tyreAge: 0 })), 'd1')?.status).toBe('window')
+    expect(rivalIntel(config, state(noPlan('optimal', { compound: 'S', lap: 15, tyreAge: 0 })), 'd1')?.status).toBe('flag')
+  })
+
+  it('a naive car boxes only at the emergency threshold, so its window sits there', () => {
+    // S, age 10 at lap 10: eff 8, emergency 1.5 x 10 = 15 -> 8.75 -> 9 laps -> lap 19.
+    const worn = rivalIntel(config, state(noPlan('naive', { compound: 'S', tyreAge: 10 })), 'd1')
+    expect(worn?.status).toBe('window')
+    if (worn?.status === 'window') expect([worn.from, worn.to]).toEqual([19 + off - 2, 19 + off + 2])
+    // H, age 10 at lap 10: 1.5 x 24 = 36 -> 35 laps -> lap 45, past the flag.
+    expect(rivalIntel(config, state(noPlan('naive', {})), 'd1')?.status).toBe('flag')
   })
 })
 

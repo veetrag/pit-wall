@@ -1,4 +1,4 @@
-import type { Compound, RaceConfig, RaceState } from './types'
+import type { CarState, Compound, RaceConfig, RaceState } from './types'
 import { effectiveTyreAge } from './tyres'
 import { PIT_CLIFF_THRESHOLD } from './strategy'
 
@@ -31,29 +31,45 @@ export function intelOffset(driverId: string, maxOffsetLaps: number): number {
   return ((h >>> 0) % span) - maxOffsetLaps
 }
 
+/**
+ * The lap this car's tyres reach `threshold` x cliff at its current wear rate,
+ * or null when the compound has no cliff to project.
+ */
+function projectedCliffLap(config: RaceConfig, state: RaceState, car: CarState, threshold: number): number | null {
+  const spec = config.compounds[car.compound]
+  const driver = config.drivers.find(d => d.id === car.driverId)
+  if (!spec || !driver || spec.cliff <= 0) return null
+  // effectiveTyreAge is linear in tyreAge, so its value at age 1 is the
+  // per-lap wear rate at the car's current pace mode and conditions.
+  const effNow = effectiveTyreAge(car, driver, state.weatherState, config.tuning)
+  const perLap = effectiveTyreAge({ ...car, tyreAge: 1 }, driver, state.weatherState, config.tuning)
+  if (perLap <= 0) return null
+  const lapsToThreshold = (threshold * spec.cliff - effNow) / perLap
+  return car.lap + Math.max(0, Math.ceil(lapsToThreshold))
+}
+
 export function rivalIntel(config: RaceConfig, state: RaceState, driverId: string): RivalIntel | null {
   const car = state.cars.find(c => c.driverId === driverId)
   if (!car) return null
   const base: IntelBase = { driverId, compound: car.compound, tyreAge: car.tyreAge, stops: car.pitsDone }
   if (car.retired) return { ...base, status: 'out' }
-  // Indexed by pitsDone, exactly as strategy.ts reads the plan.
-  const nextStop = car.strategy.plannedStops[car.pitsDone]
-  if (!nextStop) return { ...base, status: 'flag' }
 
   const brain = car.strategy.brain ?? 'naive'
   const cfg = config.tuning.rivalIntel
-  let centre = nextStop.lap
-  const spec = config.compounds[car.compound]
-  const driver = config.drivers.find(d => d.id === car.driverId)
-  if (spec && driver && spec.cliff > 0) {
-    // effectiveTyreAge is linear in tyreAge, so its value at age 1 is the
-    // per-lap wear rate at the car's current pace mode and conditions.
-    const effNow = effectiveTyreAge(car, driver, state.weatherState, config.tuning)
-    const perLap = effectiveTyreAge({ ...car, tyreAge: 1 }, driver, state.weatherState, config.tuning)
-    if (perLap > 0) {
-      const lapsToThreshold = (PIT_CLIFF_THRESHOLD[brain] * spec.cliff - effNow) / perLap
-      centre = Math.min(centre, car.lap + Math.max(0, Math.ceil(lapsToThreshold)))
-    }
+  const cliffLap = projectedCliffLap(config, state, car, PIT_CLIFF_THRESHOLD[brain])
+  // Indexed by pitsDone, exactly as strategy.ts reads the plan.
+  const nextStop = car.strategy.plannedStops[car.pitsDone]
+  let centre: number
+  if (nextStop) {
+    centre = cliffLap === null ? nextStop.lap : Math.min(nextStop.lap, cliffLap)
+  } else {
+    // No planned stop left is not a promise to run to the flag: aiDecision
+    // still boxes on wear alone. Smart and optimal brains box at their
+    // threshold only with more than 3 laps to go; naive brains box at the
+    // emergency threshold (their PIT_CLIFF_THRESHOLD) with no such guard.
+    const lastBoxLap = brain === 'naive' ? state.totalLaps : state.totalLaps - 3
+    if (cliffLap === null || cliffLap >= lastBoxLap) return { ...base, status: 'flag' }
+    centre = cliffLap
   }
   centre += intelOffset(driverId, cfg.maxOffsetLaps)
 
