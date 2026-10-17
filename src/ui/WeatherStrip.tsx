@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
 import { Pill } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useRaceStore } from '@state/raceStore'
@@ -25,50 +24,25 @@ const WEATHER_COLOR: Record<WeatherState, string> = {
   WET:  '#4DA6FF', // = --tyre-wet
 }
 
-// Depth-of-forecast cues: only the border/background haze fades with distance —
-// text stays legible all the way out so the +3/+4 cells aren't just decorative.
-const CELL_BG_OPACITY = [1, 0.85, 0.65, 0.5, 0.4] as const
-const CELL_ICON_SZ    = [24, 21, 18, 18, 17] as const
-
-function WeatherCell({
-  label, state, index, confidence, pulse,
-}: {
-  label: string
-  state: WeatherState
-  index: number
-  confidence: number
-  pulse?: boolean
-}) {
+function WeatherCell({ label, state }: { label: string; state: WeatherState }) {
   const color = WEATHER_COLOR[state]
-  const bgOpacity = CELL_BG_OPACITY[index] ?? 0.4
-  const iconSz = CELL_ICON_SZ[index] ?? 17
-  const isNow = index === 0
-  const dashed = index >= 2
-
   return (
-    <motion.div
-      animate={pulse ? { opacity: [1, 0.55, 1] } : { opacity: 1 }}
-      transition={pulse ? { duration: 1.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+    <div
       style={{
         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: isNow ? '7px 6px' : '6px 4px',
-        border: dashed
-          ? `1px dashed rgba(90,102,140,${bgOpacity})`
-          : `1.5px solid ${color}55`,
+        padding: '7px 6px',
+        border: `1.5px solid ${color}55`,
         borderRadius: 8,
-        background: isNow ? `${color}12` : `rgba(27,34,56,${bgOpacity})`,
-        // NOW gets a soft glow so the live reading feels active — the hazy
-        // forecast cells (already faded via bgOpacity/iconSz) stay flat,
-        // reinforcing "this one is real, those are a forecast."
-        boxShadow: isNow ? `0 0 12px ${color}40` : 'none',
+        background: `${color}12`,
+        // NOW gets a soft glow so the live reading feels active.
+        boxShadow: `0 0 12px ${color}40`,
         minWidth: 0,
       }}
     >
-      <span style={{ fontSize: iconSz, lineHeight: 1 }}>{WEATHER_ICON[state]}</span>
+      <span style={{ fontSize: 24, lineHeight: 1 }}>{WEATHER_ICON[state]}</span>
       <span style={{
-        fontFamily: 'var(--font-body)', fontSize: isNow ? 12 : 10, fontWeight: 700,
-        color: isNow ? 'var(--white)' : 'var(--lilac)',
-        letterSpacing: '0.06em', marginTop: 3,
+        fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700,
+        color: 'var(--white)', letterSpacing: '0.06em', marginTop: 3,
       }}>
         {WEATHER_LABEL[state]}
       </span>
@@ -76,9 +50,9 @@ function WeatherCell({
         fontFamily: 'var(--font-body)', fontSize: 9,
         color: 'var(--lilac-dim)', letterSpacing: '0.05em', marginTop: 1,
       }}>
-        {label}{index >= 2 ? ` · ${Math.round(confidence * 100)}%` : ''}
+        {label}
       </span>
-    </motion.div>
+    </div>
   )
 }
 
@@ -95,7 +69,7 @@ function useForecast(): { now: WeatherState; f: WeatherForecast } | null {
   const config = useRaceStore(s => s.config)
   return useMemo(() => {
     if (lap === undefined || now === undefined || !timeline || !config) return null
-    const state = { lap, weatherState: now, weatherTimeline: timeline, totalLaps: totalLaps ?? timeline.length } as Parameters<typeof forecast>[0]
+    const state = { lap, weatherState: now, weatherTimeline: timeline, totalLaps: totalLaps ?? timeline.length }
     return { now, f: forecast(state, config) }
   }, [lap, now, timeline, totalLaps, config])
 }
@@ -171,7 +145,7 @@ export function WeatherStrip() {
       </span>
       <div style={{ display: 'flex', gap: 5, alignItems: 'stretch' }}>
         <div style={{ flex: '0 0 30%', display: 'flex' }}>
-          <WeatherCell label="NOW" state={fc.now} index={0} confidence={1} />
+          <WeatherCell label="NOW" state={fc.now} />
         </div>
         {/* The forecast: one honest line, never a lap-by-lap read of the true timeline. */}
         <div role="status" style={{

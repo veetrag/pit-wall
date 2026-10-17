@@ -26,7 +26,7 @@ export function forecastOffset(seed: number, changeLap: number): number {
 }
 
 export function forecast(
-  state: RaceState,
+  state: Pick<RaceState, 'lap' | 'weatherState' | 'weatherTimeline' | 'totalLaps'>,
   config: RaceConfig,
   horizon: number = config.tuning.weather.forecastHorizon,
 ): WeatherForecast {
