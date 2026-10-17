@@ -261,3 +261,72 @@ describe('supersession', () => {
     expect(neutralisationEvents(after.incidents.slice(withSc.incidents.length))).toEqual([])
   })
 })
+
+describe('VSC countdown starts at the next lap boundary (final review fix 1)', () => {
+  // Same one-crasher field as the supersession block: car 5 errs every sector
+  // and every error is terminal; the other nineteen never err.
+  function oneCrasher(neutralisation: 'sc' | 'vsc'): RaceConfig {
+    const base = makeConfig({
+      incidents: {
+        driverErrorPerLap: 3, consistencyReliefMax: 1, terminalFraction: 1,
+        safetyCar: neutralisation === 'sc'
+          ? { crashDeployChance: 1, mechanicalDeployChance: 0, durationLapsMin: 1, durationLapsMax: 1 }
+          : { crashDeployChance: 0, mechanicalDeployChance: 0 },
+        vsc: { ...VSC_ON, crashDeployChance: neutralisation === 'vsc' ? 1 : 0, mechanicalDeployChance: 0, durationLapsMin: 1, durationLapsMax: 1 },
+      },
+      mechanicalFailure: { baseChancePerLap: 0 },
+      tyreFailure: { chancePerLapOverThreshold: 0, maxChancePerLap: 0 },
+    } as TuningOverrides, 9)
+    return { ...base, drivers: base.drivers.map((d, i) => ({ ...d, facets: { ...d.facets, consistency: i === 5 ? 0 : 100 } })) }
+  }
+  // Calm until a sector-2 tick, so the crash lands on the lap boundary.
+  function atSector2(config: RaceConfig): RaceState {
+    const calm: RaceConfig = { ...config, tuning: { ...config.tuning, incidents: { ...config.tuning.incidents, driverErrorPerLap: 0 } } }
+    let s = initRace(calm)
+    const rng = createRng(9)
+    for (let i = 0; i < 32; i++) s = stepSector(calm, s, rng)
+    expect(s.sector, 'premise: the next tick is a sector-2 tick').toBe(2)
+    return s
+  }
+
+  it('a 1-lap VSC deployed on a sector-2 tick is still out after that tick, and ends at the next boundary', () => {
+    const config = oneCrasher('vsc')
+    let s = atSector2(config)
+    const before = s.incidents.length
+    const rng = createRng(4)
+    s = stepSector(config, s, rng)
+    expect(neutralisationEvents(s.incidents.slice(before)).map(e => e.kind)).toEqual(['vsc_deployed'])
+    expect(neutralisationKind(s.safetyCar)).toBe('vsc')
+    for (let i = 0; i < 3; i++) s = stepSector(config, s, rng)
+    expect(neutralisationEvents(s.incidents.slice(before)).map(e => e.kind)).toEqual(['vsc_deployed', 'vsc_ended'])
+    expect(s.safetyCar).toBeNull()
+  })
+
+  it('SC unchanged: a 1-lap SC deployed on a sector-2 tick is counted down on that same tick', () => {
+    const config = oneCrasher('sc')
+    const s = atSector2(config)
+    const after = stepSector(config, s, createRng(4))
+    expect(neutralisationEvents(after.incidents.slice(s.incidents.length)).map(e => e.kind))
+      .toEqual(['safety_car_deployed', 'safety_car_ended'])
+    expect(after.safetyCar).toBeNull()
+  })
+
+  it('across many seeds, no tick both deploys and ends a VSC, and a deployed VSC is always live after its tick', () => {
+    const SEEDS = 40
+    let boundaryDeploys = 0
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      const config = { ...makeConfig({
+        ...VSC_CERTAIN,
+        incidents: { ...VSC_CERTAIN.incidents, driverErrorPerLap: 0.15, vsc: { ...VSC_CERTAIN.incidents.vsc, durationLapsMin: 1, durationLapsMax: 1 } },
+      } as TuningOverrides, seed), lapsOverride: 20 }
+      runRace(config, seed, (prev, next) => {
+        const fresh = next.incidents.slice(prev.incidents.length).map(e => e.kind)
+        if (!fresh.includes('vsc_deployed')) return
+        if (prev.sector === 2) boundaryDeploys++
+        expect(fresh, `seed ${seed} lap ${prev.lap} sector ${prev.sector}`).not.toContain('vsc_ended')
+        expect(neutralisationKind(next.safetyCar), `seed ${seed} lap ${prev.lap}`).toBe('vsc')
+      })
+    }
+    expect(boundaryDeploys, 'premise: some VSCs deployed on a sector-2 tick').toBeGreaterThan(0)
+  }, 120_000)
+})

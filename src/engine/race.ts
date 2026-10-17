@@ -351,7 +351,14 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   // laps, so decrementing per sector would make a "3 lap" period last one.
   // Expiry is logged by kind so the UI, the commentary and the lap chart can
   // react to the restart.
-  if (safetyCar !== null && lapCompleted) {
+  //
+  // A VSC deployed on THIS tick is not counted down here: it starts counting at
+  // the next lap boundary, so it always runs across at least one boundary.
+  // Without this, a 1-lap VSC rolled on a sector-2 tick was deployed and ended
+  // in the same step and never reached the UI. Scoped to the VSC only: the SC
+  // countdown is unchanged, so the SC regression bands do not move.
+  const vscDeployedThisTick = activeKind === null && neutralisationKind(safetyCar) === 'vsc'
+  if (safetyCar !== null && lapCompleted && !vscDeployedThisTick) {
     const remaining = safetyCar.lapsRemaining - 1
     if (remaining <= 0) {
       const endedKind = neutralisationKind(safetyCar)

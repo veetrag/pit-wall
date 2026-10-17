@@ -1,5 +1,6 @@
 import radioData from '@data/radio.json'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
+import { neutralisationKind } from '@engine/incidents'
 import type { RaceState, RaceConfig } from '@engine/types'
 import { wingOf } from '@engine/setup'
 import { soundService } from '@audio/soundService'
@@ -102,7 +103,8 @@ export function processRadioTick(
   // engineer never tells the player to box for a stop the smart teams would
   // not take. (Pre-flight ruling P6: planned stop only, no tyre-wear clause.)
   const vscCount = state.incidents.reduce((n, i) => n + (i.kind === 'vsc_deployed' ? 1 : 0), 0)
-  if (vscCount > radio.prevVscCount) {
+  // Only while the VSC is still live: never call a cheap stop that has gone.
+  if (vscCount > radio.prevVscCount && neutralisationKind(state.safetyCar) === 'vsc') {
     const nextStop = player.strategy.plannedStops[player.pitsDone]
     if (nextStop !== undefined && nextStop.lap - player.lap <= config.tuning.ai.neutralisationWindowLaps) {
       tryPush('vsc_box', 2, {}, pushAlert)

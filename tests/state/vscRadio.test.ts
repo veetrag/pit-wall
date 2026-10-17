@@ -68,4 +68,15 @@ describe('VSC radio', () => {
     processRadioTick(state(near, [vscDeployed]), config, radio, push)
     expect(push, 'the same VSC is not announced twice').not.toHaveBeenCalled()
   })
+
+  // Final review fix 1: the radio reads the live neutralisation, not just the
+  // incident log, so it never calls a cheap stop under a VSC that has ended.
+  it('stays quiet when the VSC is no longer live', () => {
+    const push = vi.fn()
+    const near = car({ strategy: { teamId: 't1', startCompound: 'M', plannedStops: [{ lap: 8, compound: 'H' }] } })
+    const ended = { ...state(near, [vscDeployed]), safetyCar: null }
+    const next = processRadioTick(ended, config, makeRadioState(), push)
+    expect(push).not.toHaveBeenCalled()
+    expect(next.prevVscCount, 'the ended VSC is still counted, so it is never announced late').toBe(1)
+  })
 })
