@@ -1,10 +1,16 @@
-import { judgeCalls } from '@engine/debrief'
+import { judgeCalls, whatIf } from '@engine/debrief'
 import { lapHistory } from '@engine/raceHistory'
-import type { DebriefJob } from '@state/debriefRunner'
+import type { DebriefMessage } from '@state/debriefRunner'
 
-self.onmessage = (e: MessageEvent<DebriefJob>) => {
+self.onmessage = (e: MessageEvent<DebriefMessage>) => {
   const post = (m: unknown) => (self as unknown as Worker).postMessage(m)
-  const { config, seed, calls } = e.data
+  const msg = e.data
+  if (msg.type === 'whatIf') {
+    try { post({ type: 'whatIf-done', result: whatIf(msg.job.config, msg.job.seed, msg.job.calls, msg.edit) }) }
+    catch (err) { post({ type: 'failed', reason: String(err) }) }
+    return
+  }
+  const { config, seed, calls } = msg.job
   try {
     post({ type: 'history', history: lapHistory(config, seed, calls) })
   } catch { /* the chart is optional; the verdicts still run */ }

@@ -1,4 +1,4 @@
-import type { DebriefRunner } from './debriefRunner'
+import type { DebriefRunner, DebriefMessage } from './debriefRunner'
 
 /**
  * The ONLY file that constructs the debrief Worker. Imported by App.tsx
@@ -17,7 +17,18 @@ export const workerRunner: DebriefRunner = {
       else if (m.type === 'failed') { on.failed(m.reason ?? 'failed'); w.terminate() }
     }
     w.onerror = (e) => { on.failed(e.message); w.terminate() }
-    w.postMessage(job)
+    w.postMessage({ type: 'debrief', job } satisfies DebriefMessage)
+    return { cancel: () => w.terminate() }
+  },
+  whatIf(job, edit, on) {
+    const w = new Worker(new URL('../workers/debrief.worker.ts', import.meta.url), { type: 'module' })
+    w.onmessage = (e: MessageEvent<{ type: string; result?: unknown; reason?: string }>) => {
+      if (e.data.type === 'whatIf-done') on.done(e.data.result as Parameters<typeof on.done>[0])
+      else if (e.data.type === 'failed') on.failed(e.data.reason ?? 'failed')
+      w.terminate()
+    }
+    w.onerror = (e) => { on.failed(e.message); w.terminate() }
+    w.postMessage({ type: 'whatIf', job, edit } satisfies DebriefMessage)
     return { cancel: () => w.terminate() }
   },
 }

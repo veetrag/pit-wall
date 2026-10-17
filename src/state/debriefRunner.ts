@@ -1,8 +1,10 @@
 import type { RaceConfig } from '@engine/types'
 import type { DebriefResult } from '@engine/types'
 import type { PlayerCall } from '@engine/playerCalls'
-import { judgeCalls } from '@engine/debrief'
+import { judgeCalls, whatIf, type WhatIfEdit, type WhatIfResult } from '@engine/debrief'
 import { lapHistory, type LapHistory } from '@engine/raceHistory'
+
+export type DebriefMessage = { type: 'debrief'; job: DebriefJob } | { type: 'whatIf'; job: DebriefJob; edit: WhatIfEdit }
 
 export interface DebriefJob { config: RaceConfig; seed: number; calls: PlayerCall[] }
 export interface DebriefHandle { cancel(): void }
@@ -14,6 +16,11 @@ export interface DebriefRunner {
     /** The lap chart's data, delivered before judging starts so a judging timeout never costs the chart. */
     history(h: LapHistory): void
   }): DebriefHandle
+  /**
+   * Spec 1.6 §5: one edited stop against the real plan. Its own handle, its own cancel.
+   * Optional so pre-1.6 runner literals still type-check; the store treats an absent one as failed.
+   */
+  whatIf?(job: DebriefJob, edit: WhatIfEdit, on: { done(r: WhatIfResult): void; failed(reason: string): void }): DebriefHandle
 }
 
 /**
@@ -41,6 +48,15 @@ export const inProcessRunner: DebriefRunner = {
       } catch (e) {
         if (!cancelled) on.failed(String(e))
       }
+    }, 0)
+    return { cancel: () => { cancelled = true } }
+  },
+  whatIf(job, edit, on) {
+    let cancelled = false
+    setTimeout(() => {
+      if (cancelled) return
+      try { const r = whatIf(job.config, job.seed, job.calls, edit); if (!cancelled) on.done(r) }
+      catch (e) { if (!cancelled) on.failed(String(e)) }
     }, 0)
     return { cancel: () => { cancelled = true } }
   },

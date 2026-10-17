@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { DebriefResult } from '@engine/types'
+import type { WhatIfEdit, WhatIfResult } from '@engine/debrief'
 import type { LapHistory } from '@engine/raceHistory'
 import { inProcessRunner, type DebriefJob, type DebriefRunner, type DebriefHandle } from './debriefRunner'
 
@@ -14,6 +15,17 @@ function stop() {
   if (timer) { clearTimeout(timer); timer = null }
 }
 
+let whatIfHandle: DebriefHandle | null = null
+let whatIfTimer: ReturnType<typeof setTimeout> | null = null
+let whatIfToken = 0
+/** Cancels any running what-if and invalidates its callbacks (the token moves on). */
+function stopWhatIf() {
+  whatIfHandle?.cancel(); whatIfHandle = null
+  if (whatIfTimer) { clearTimeout(whatIfTimer); whatIfTimer = null }
+  whatIfToken++
+}
+const WHATIF_IDLE = { status: 'idle' as const, edit: null, result: null }
+
 interface DebriefStore {
   status: 'idle' | 'running' | 'done' | 'failed'
   done: number
@@ -23,16 +35,21 @@ interface DebriefStore {
   history: LapHistory | null
   /** Identifies the race this debrief belongs to; results for any other race are ignored. */
   raceKey: string | null
+  /** The race the debrief judged, kept until cancel so a what-if can run after raceStore resets (spec 1.6 §5). */
+  job: DebriefJob | null
+  whatIf: { status: 'idle' | 'running' | 'done' | 'failed'; edit: WhatIfEdit | null; result: WhatIfResult | null }
+  runWhatIf: (edit: WhatIfEdit) => void
+  clearWhatIf: () => void
   start: (job: DebriefJob, raceKey: string) => void
   cancel: () => void
 }
 
 export const useDebriefStore = create<DebriefStore>((set, get) => ({
-  status: 'idle', done: 0, total: 0, result: null, history: null, raceKey: null,
+  status: 'idle', done: 0, total: 0, result: null, history: null, raceKey: null, job: null, whatIf: WHATIF_IDLE,
 
   start(job, raceKey) {
-    stop()
-    set({ status: 'running', done: 0, total: 0, result: null, history: null, raceKey })
+    stop(); stopWhatIf()
+    set({ status: 'running', done: 0, total: 0, result: null, history: null, raceKey, job, whatIf: WHATIF_IDLE })
     const mine = () => get().raceKey === raceKey && get().status === 'running'
     timer = setTimeout(() => { if (mine()) { stop(); set({ status: 'failed' }) } }, job.config.tuning.debrief.timeoutMs)
     try {
@@ -48,8 +65,31 @@ export const useDebriefStore = create<DebriefStore>((set, get) => ({
     }
   },
 
+  runWhatIf(edit) {
+    const { status, job } = get()
+    if (status !== 'done' || !job) return
+    stopWhatIf()
+    const token = whatIfToken
+    const live = () => token === whatIfToken
+    const fail = () => set(s => ({ whatIf: { ...s.whatIf, status: 'failed' } }))
+    set({ whatIf: { status: 'running', edit, result: null } })
+    whatIfTimer = setTimeout(() => { if (live()) { stopWhatIf(); fail() } }, job.config.tuning.debrief.timeoutMs)
+    // A runner without whatIf (older literals) can never answer: report failed, never hang.
+    if (!runner.whatIf) { stopWhatIf(); fail(); return }
+    try {
+      whatIfHandle = runner.whatIf(job, edit, {
+        done: (result) => { if (live()) { stopWhatIf(); set({ whatIf: { status: 'done', edit, result } }) } },
+        failed: () => { if (live()) { stopWhatIf(); fail() } },
+      })
+    } catch {
+      stopWhatIf(); set({ whatIf: { status: 'failed', edit, result: null } })
+    }
+  },
+
+  clearWhatIf() { stopWhatIf(); set({ whatIf: WHATIF_IDLE }) },
+
   cancel() {
-    stop()
-    set({ status: 'idle', done: 0, total: 0, result: null, history: null, raceKey: null })
+    stop(); stopWhatIf()
+    set({ status: 'idle', done: 0, total: 0, result: null, history: null, raceKey: null, job: null, whatIf: WHATIF_IDLE })
   },
 }))

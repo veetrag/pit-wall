@@ -14,6 +14,7 @@ function manualRunner() {
   const live: { on: Parameters<DebriefRunner['start']>[1]; cancelled: boolean }[] = []
   const runner: DebriefRunner = {
     start(_job, on) { const h = { on, cancelled: false }; live.push(h); return { cancel: () => { h.cancelled = true } } },
+    whatIf() { return { cancel() {} } },
   }
   return { runner, live }
 }
