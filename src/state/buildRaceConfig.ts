@@ -176,11 +176,14 @@ export const SCENARIO_DIFFICULTY: Difficulty = 'rookie'
  * in its own autopilot id for the fast-forward and hands the car back after.
  */
 export function buildScenarioConfig(
-  spec: { circuitId: string; seed: number; playerDriverId: string },
+  spec: { circuitId: string; seed: number; playerDriverId: string; sprint?: boolean },
 ): RaceConfig {
   return buildRaceConfig(
     spec.seed, spec.playerDriverId, spec.circuitId, SCENARIO_DIFFICULTY,
     null,   // no pre-race strategy: the player takes over mid-race
     null,   // no season upgrades: a scenario must not vary with save state
+    undefined,   // no grid order
+    undefined,   // no dry start
+    spec.sprint ?? false,
   )
 }

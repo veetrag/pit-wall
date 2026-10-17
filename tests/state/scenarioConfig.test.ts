@@ -70,3 +70,18 @@ describe('buildScenarioConfig', () => {
       'no pre-race plan in a mid-race takeover').toBeUndefined()
   })
 })
+
+import { buildScenarioConfig as build16 } from '@state/buildRaceConfig'
+import { sprintLaps } from '@state/sprint'
+import { loadGameData as data16 } from '@data/validators'
+
+describe('sprint scenarios (spec 1.6 §8)', () => {
+  it('a sprint scenario runs the sprint distance without the two-compound rule', () => {
+    const c = build16({ circuitId: 'harbour_lights', seed: 1, playerDriverId: 'd_voss', sprint: true })
+    expect(c.lapsOverride).toBe(sprintLaps(data16().circuits['harbour_lights']!.laps))
+    expect(c.mandatoryTwoCompound).toBe(false)
+  })
+  it('without the flag a scenario config has no lapsOverride key at all', () => {
+    expect('lapsOverride' in build16({ circuitId: 'harbour_lights', seed: 1, playerDriverId: 'd_voss' })).toBe(false)
+  })
+})

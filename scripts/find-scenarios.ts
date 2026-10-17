@@ -23,6 +23,7 @@
 import { describeSituation } from '../src/engine/scenario'
 import { initRace, stepSector } from '../src/engine/race'
 import { createRng } from '../src/engine/rng'
+import { neutralisationKind } from '../src/engine/incidents'
 import { loadGameData } from '../src/data/validators'
 import { buildScenarioConfig } from '../src/state/buildRaceConfig'
 import type { RaceState } from '../src/engine/types'
@@ -40,6 +41,7 @@ const AUTOPILOT = '__none__'
 
 interface Brief {
   name: string
+  sprint?: boolean
   circuitId: string
   /** Inspect each lap in this window for a match. */
   lapWindow: (totalLaps: number) => [number, number]
@@ -70,6 +72,8 @@ const BRIEFS: Brief[] = [
 interface Candidate {
   lap: number
   sit: NonNullable<ReturnType<typeof describeSituation>>
+  vsc: boolean
+  red: boolean
 }
 
 /**
@@ -83,17 +87,20 @@ interface Candidate {
  * was added.
  */
 function scanSeed(brief: Brief, seed: number, from: number, to: number) {
-  const config = buildScenarioConfig({ circuitId: brief.circuitId, seed, playerDriverId: AUTOPILOT })
+  const config = buildScenarioConfig({ circuitId: brief.circuitId, seed, playerDriverId: AUTOPILOT, sprint: brief.sprint })
   const rng = createRng(seed)
   let state = initRace(config)
   const candidates: Candidate[] = []
 
-  for (let lap = 1; lap <= config.circuit.laps; lap++) {
+  for (let lap = 1; lap <= (config.lapsOverride ?? config.circuit.laps); lap++) {
     for (let s = 0; s < 3; s++) state = stepSector(config, state, rng)
     if (lap < from || lap > to) continue
     const sit = describeSituation(state, PLAYER)
     if (!sit) break
-    if (brief.match(sit, state)) candidates.push({ lap, sit })
+    if (brief.match(sit, state)) {
+      const kind = neutralisationKind(state.safetyCar)
+      candidates.push({ lap, sit, vsc: kind === 'vsc', red: kind === 'red' })
+    }
   }
 
   const car = state.cars.find(c => c.driverId === PLAYER)
@@ -101,10 +108,13 @@ function scanSeed(brief: Brief, seed: number, from: number, to: number) {
 }
 
 const SEEDS = Number(process.env.SEEDS ?? 400)
+const ONLY = process.env.BRIEF
 
 for (const brief of BRIEFS) {
+  if (ONLY && !brief.name.includes(ONLY)) continue
   const circuit = DATA.circuits[brief.circuitId]!
-  const [from, to] = brief.lapWindow(circuit.laps)
+  const laps = buildScenarioConfig({ circuitId: brief.circuitId, seed: 1, playerDriverId: AUTOPILOT, sprint: brief.sprint }).lapsOverride ?? circuit.laps
+  const [from, to] = brief.lapWindow(laps)
   const hits: string[] = []
   let rejectedRetired = 0
   let rejectedParOne = 0
@@ -124,7 +134,7 @@ for (const brief of BRIEFS) {
     hits.push(
       `    seed ${String(seed).padStart(4)} startLap ${String(c.lap).padStart(2)}  ` +
       `P${c.sit.position} · ${c.sit.lapsRemaining} to go · ${c.sit.compound}${c.sit.tyreAge} · ${gap}` +
-      (c.sit.safetyCarOut ? ' · SC' : '') +
+      (c.sit.safetyCarOut ? ' · SC' : '') + (c.vsc ? ' · VSC' : '') + (c.red ? ' · RED' : '') +
       `   PAR P${par} -> goal P${par - 1}`,
     )
   }

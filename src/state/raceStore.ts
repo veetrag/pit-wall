@@ -76,7 +76,7 @@ interface RaceStore {
 
   startRace: () => void
   startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null, gridOrder?: string[], dryStart?: boolean, opts?: SeasonRaceOptions) => void
-  startScenarioRace: (spec: { circuitId: string; seed: number; playerDriverId: string; startLap: number }) => void
+  startScenarioRace: (spec: { circuitId: string; seed: number; playerDriverId: string; startLap: number; sprint?: boolean }) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
   /** The RED FLAG card's RESTART: logs the restart_tyre call and starts the lights. */

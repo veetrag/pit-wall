@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useScenarioStore } from '@state/scenarioStore'
@@ -22,6 +22,7 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
   const uiTap = useUiTap()
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const select = useScenarioStore(s => s.select)
+  const best = useScenarioStore(s => s.best[spec.id])
   const startScenarioPhase = useSeasonStore(s => s.startScenarioPhase)
   const circuit = GAME.circuits[spec.circuitId]
   const circuitName = circuit?.name ?? spec.circuitId
@@ -62,6 +63,16 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
             }}>
               {circuitName.toUpperCase()}
             </div>
+            {best && (() => {
+              const p = best.position === null ? 'DNF' : `P${best.position}`
+              return (
+                <div style={{ marginTop: 8 }}>
+                  <Pill tone={best.met ? 'volt' : 'dusk'} ariaLabel={`Best finish ${p}, ${best.met ? 'goal met' : 'goal not met yet'}`}>
+                    {best.met ? `BEST ${p} ✓` : `BEST ${p}`}
+                  </Pill>
+                </div>
+              )
+            })()}
           </div>
           <CircuitOutline circuitId={spec.circuitId} width={72} height={56} label={`${circuitName} layout`} />
         </div>
@@ -91,6 +102,10 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
                     <span>{`${spec.expect.compound}${spec.expect.tyreAge}`}</span>
                   </Pill>
                   {spec.expect.safetyCarOut && <Pill tone="caution">{'⚠ SAFETY CAR'}</Pill>}
+                  {spec.sprint && <Pill tone="dusk">SPRINT</Pill>}
+                  {spec.expect.vscOut && <Pill tone="caution">{'⚠ VSC'}</Pill>}
+                  {spec.expect.redFlag && <Pill tone="caution">{'⚠ RED FLAG'}</Pill>}
+                  {spec.expect.dampAhead && <Pill tone="rain">{`RAIN WITHIN ${spec.expect.dampAhead} LAPS`}</Pill>}
                 </div>
 
                 <div style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 15, letterSpacing: 1, color: 'var(--volt)' }}>
@@ -113,6 +128,7 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
 export function ScenarioSelect() {
   const exitScenarios = useSeasonStore(s => s.exitScenarios)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  useEffect(() => { void useScenarioStore.getState().loadBest() }, [])
 
   return (
     <ScreenFrame label="Scenarios">

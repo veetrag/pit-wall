@@ -3,6 +3,7 @@ import { loadGameData } from '@data/validators'
 import { buildScenarioConfig } from '@state/buildRaceConfig'
 import { startScenario, describeSituation, goalMet } from '@engine/scenario'
 import { stepSector } from '@engine/race'
+import { neutralisationKind } from '@engine/incidents'
 
 const { scenarios, circuits } = loadGameData()
 
@@ -33,16 +34,23 @@ describe('every shipped scenario', () => {
       const { state } = startScenario(config, s.startLap)
       const sit = describeSituation(state, s.playerDriverId)
       expect(sit, 'the player must be in this race').not.toBeNull()
-      const { par: _par, ...situation } = s.expect   // par is asserted separately, below
+      const { par: _par, vscOut, dampAhead, redFlag, ...situation } = s.expect   // par is asserted separately, below
       expect({
         position: sit!.position, lapsRemaining: sit!.lapsRemaining,
         compound: sit!.compound, tyreAge: sit!.tyreAge,
         safetyCarOut: sit!.safetyCarOut,
       }).toEqual(situation)
+      if (vscOut) expect(neutralisationKind(state.safetyCar), 'a VSC is out at the handover').toBe('vsc')
+      if (redFlag) expect(neutralisationKind(state.safetyCar), 'a red flag stands at the handover').toBe('red')
+      if (dampAhead) {
+        expect(state.weatherTimeline[state.lap], 'dry at the handover').toBe('DRY')
+        expect(state.weatherTimeline.slice(state.lap + 1, state.lap + 1 + dampAhead).some(w => w !== 'DRY'),
+          `rain within ${dampAhead} laps`).toBe(true)
+      }
     }, 60_000)
 
     it(`${s.id}: starts inside the race with laps left to race`, () => {
-      const laps = circuits[s.circuitId]!.laps
+      const laps = buildScenarioConfig(s).lapsOverride ?? circuits[s.circuitId]!.laps
       expect(s.startLap, 'a takeover must leave laps to race').toBeLessThan(laps)
       expect(s.expect.lapsRemaining).toBeGreaterThan(0)
       /*
@@ -91,7 +99,7 @@ describe('every shipped scenario', () => {
       const auto = buildScenarioConfig({ ...s, playerDriverId: '__none__' })
       const { state, rng } = startScenario(auto, s.startLap)
       let st = state
-      for (let i = 0; i < (circuits[s.circuitId]!.laps - s.startLap) * 3; i++) {
+      for (let i = 0; i < ((auto.lapsOverride ?? circuits[s.circuitId]!.laps) - s.startLap) * 3; i++) {
         st = stepSector(auto, st, rng)
       }
       const car = st.cars.find(c => c.driverId === s.playerDriverId)!

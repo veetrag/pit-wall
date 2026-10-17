@@ -133,3 +133,14 @@ describe('ScenarioSelect — keyboard', () => {
     expect((screen.getByText(`P${first.expect.position}`) as HTMLElement).style.background).toContain('--dusk')
   })
 })
+
+describe('remembered bests (spec 1.6 §8)', () => {
+  it('shows BEST P3 ✓ when the goal was met, BEST P7 when not, nothing before a first attempt', () => {
+    const [a, b] = loadGameData().scenarios
+    useScenarioStore.setState({ best: { [a!.id]: { position: 3, met: true }, [b!.id]: { position: 7, met: false } } })
+    render(<ScenarioSelect />)
+    expect(screen.getByLabelText('Best finish P3, goal met').textContent).toContain('BEST P3 ✓')
+    expect(screen.getByLabelText('Best finish P7, goal not met yet').textContent).toContain('BEST P7')
+    expect(screen.queryAllByText(/BEST /)).toHaveLength(2)
+  })
+})

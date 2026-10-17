@@ -455,6 +455,8 @@ const ScenarioSchema = z.object({
   // .positive(): a scenario IS a mid-race takeover. startLap 0 is a normal race
   // from the grid, which is what the season mode is for.
   startLap: z.number().int().positive(),
+  // Spec 1.6 §8: a sprint scenario runs the sprint distance (buildScenarioConfig).
+  sprint: z.boolean().optional(),
   goal: z.object({ position: z.number().int().positive() }),
   // The situation the engine produced when this scenario was authored. A test
   // re-derives it on every run, so a tuning or balance change that moves the
@@ -476,6 +478,12 @@ const ScenarioSchema = z.object({
     // recorded rather than recomputed -- a tuning change that moves par must
     // fail the suite, not silently re-grade every scenario.
     par: z.number().int().positive(),
+    // Brief-bearing facts of the 1.6 scenarios, pinned like safetyCarOut so a
+    // drift fails the suite. Absent = not part of the brief.
+    vscOut: z.literal(true).optional(),
+    /** Dry now, and a non-DRY lap within this many laps of the handover. */
+    dampAhead: z.number().int().positive().optional(),
+    redFlag: z.literal(true).optional(),
   }),
 })
 const ScenariosWrapperSchema = z.object({ scenarios: z.array(ScenarioSchema).nonempty() })
