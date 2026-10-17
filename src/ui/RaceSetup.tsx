@@ -281,6 +281,7 @@ export function RaceSetup() {
                   flexShrink: 0, minHeight: 48, border: 'none', borderRadius: 999, padding: '0 16px', cursor: 'pointer',
                   background: active ? 'var(--white)' : 'var(--grape)', color: active ? 'var(--ink)' : 'var(--lilac)',
                   display: 'flex', alignItems: 'center', gap: 6,
+                  opacity: weekendLocked && !active ? 0.45 : 1,
                   fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14,
                 }}
               >
@@ -290,6 +291,11 @@ export function RaceSetup() {
             )
           })}
         </div>
+        {weekendLocked && (
+          <span style={{ flexShrink: 0, marginTop: -6, fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12, letterSpacing: 2, color: 'var(--lilac-dim)' }}>
+            CIRCUIT SET FOR THE WEEKEND
+          </span>
+        )}
 
         {/* Circuit card. flexShrink 0: it clips (overflow hidden => min-height 0),
             so in an overflowing column it would otherwise shrink to nothing. */}

@@ -36,6 +36,8 @@ export function CareerRecord() {
     seasonNumber, titles, wins, podiums, poles, racesStarted, bestFinish, seasonHistory, raceLog,
   } = useCareerStore()
 
+  const sprintWinCount = sprintWins(raceLog)
+
   return (
     <ScreenFrame label="Trophy room">
       <ScreenHeader eyebrow={`CAREER · SEASON ${seasonNumber}`} title="Trophy room" onBack={exitCareer} />
@@ -48,7 +50,7 @@ export function CareerRecord() {
           <StatTile value={bestFinish === null ? '—' : `P${bestFinish}`} label="BEST" tone={bestFinish === 1 ? 'volt' : 'default'} />
         </div>
         <p style={{ margin: '10px 0 20px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--lilac-dim)' }}>
-          {poles} poles · {racesStarted} races · {sprintWins(raceLog)} sprint win{sprintWins(raceLog) === 1 ? '' : 's'} · {seasonNumber - 1} seasons
+          {poles} poles · {racesStarted} races · {sprintWinCount} sprint win{sprintWinCount === 1 ? '' : 's'} · {seasonNumber - 1} seasons
         </p>
 
         <BadgeCase />

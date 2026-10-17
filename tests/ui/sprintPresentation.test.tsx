@@ -83,6 +83,12 @@ describe('race setup after the sprint is banked', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(elsewhere) }))
     expect(screen.getByRole('button', { name: new RegExp(here) }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: new RegExp(elsewhere) }).getAttribute('aria-disabled')).toBe('true')
+    expect(screen.getByText('CIRCUIT SET FOR THE WEEKEND')).toBeTruthy()
+  })
+
+  it('has no lock caption before the sprint is banked', () => {
+    render(<RaceSetup />)
+    expect(screen.queryByText('CIRCUIT SET FOR THE WEEKEND')).toBeNull()
   })
 })
 
@@ -105,12 +111,30 @@ describe('S+N on the Grand Prix result of a sprint round', () => {
   })
 })
 
+describe('a non-sprint round result', () => {
+  it('shows no sprint points anywhere', () => {
+    const gp = ORDER.map((driverId, i) => ({ driverId, position: i + 1, points: [25, 18, 15][i] ?? 0, retired: false, retiredCause: null }))
+    useSeasonStore.setState({
+      phase: 'result', raceIndex: 2, lastRaceResults: gp, lastSprintResults: null, resultPending: true,
+      lastRaceEvents: { overtakesGained: 0, pitsDone: 1, hadRain: false },
+      standings: gp.map(r => ({ driverId: r.driverId, points: r.points })),
+      playerDriverId: ORDER[2]!,
+    })
+    const { container } = render(<RaceResult />)
+    fireEvent.click(screen.getByRole('button', { name: /FULL RESULTS/ }))
+    expect(container.textContent).not.toContain('incl. S+')
+    expect(container.textContent).not.toContain('· S+')
+  })
+})
+
 describe('trophy room', () => {
   it('shows sprint wins, which never count as wins', () => {
     const fact = { season: 1, round: 3, grid: 4, finish: 1, retired: false, pole: false, stops: 0, overtakes: 2, wet: false, kind: 'sprint' as const }
     useCareerStore.setState({ raceLog: [fact, { ...fact, round: 7 }, { ...fact, round: 11, retired: true }], wins: 0 })
     render(<CareerRecord />)
     expect(screen.getByText(/2 sprint wins/)).toBeTruthy()
+    // The WINS tile is untouched by sprint wins.
+    expect(screen.getByText('WINS').previousElementSibling?.textContent).toBe('0')
   })
 })
 
