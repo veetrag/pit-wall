@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Pill } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useRaceStore } from '@state/raceStore'
 import type { WeatherState } from '@engine/types'
+import { forecast, type WeatherForecast } from '@engine/forecast'
 
 const WEATHER_ICON: Record<WeatherState, string> = {
   DRY:  '☀',
@@ -81,67 +82,59 @@ function WeatherCell({
   )
 }
 
-const DEFAULT_CONFIDENCE: [number, number, number, number, number] = [1.0, 1.0, 0.85, 0.65, 0.45]
-
-/** NOW plus the next four laps, and the confidence for each -- shared by the strip and the chip. */
-function useForecast(): { states: WeatherState[]; confidence: readonly number[] } | null {
-  const raceState = useRaceStore(s => s.raceState)
-  const config = useRaceStore(s => s.config)
-  if (!raceState) return null
-
-  const lap = raceState.lap
-  const timeline = raceState.weatherTimeline
-  const confidence = config?.tuning.weather.forecastConfidence ?? DEFAULT_CONFIDENCE
-
-  const now:  WeatherState = timeline[lap]     ?? raceState.weatherState ?? 'DRY'
-  const lap1: WeatherState = timeline[lap + 1] ?? now
-  const lap2: WeatherState = timeline[lap + 2] ?? lap1
-  const lap3: WeatherState = timeline[lap + 3] ?? lap2
-  const lap4: WeatherState = timeline[lap + 4] ?? lap3
-  return { states: [now, lap1, lap2, lap3, lap4], confidence }
-}
-
-const SEVERITY: Record<WeatherState, number> = { DRY: 0, DAMP: 1, WET: 2 }
-
 /**
- * The chip's one-line outlook, from the first of the next four laps whose
- * conditions differ from NOW:
- *   worse  -> "rain likely in nL" from dry, or "{WET} likely in nL" when damp
- *   better -> "DRY likely in nL" if it dries out, else "drying likely in nL"
- *   none   -> "dry ahead" when dry, else "steady"
- *
- * likely/possible comes from that lap's forecast CONFIDENCE (>= 0.70 likely).
- * It is deliberately not printed as a percentage: it is how sure the forecast
- * is, not a rain probability, and "rain 45%" would read as the latter.
+ * The forecast for the current race moment (spec 1.6 §3). Narrow selectors:
+ * the timeline array and the seed are stable for a race, so this recomputes
+ * once per lap, not once per sector.
  */
-export function weatherOutlook(states: readonly WeatherState[], confidence: readonly number[]): { text: string; worsening: boolean } {
-  const now = states[0] ?? 'DRY'
-  const n = states.findIndex((st, i) => i > 0 && SEVERITY[st] !== SEVERITY[now])
-  const next = n > 0 ? states[n] : undefined
-  if (next === undefined) return { text: now === 'DRY' ? 'dry ahead' : 'steady', worsening: false }
-  const odds = (confidence[n] ?? 1) >= 0.7 ? 'likely' : 'possible'
-  if (SEVERITY[next] > SEVERITY[now]) {
-    return { text: `${now === 'DRY' ? 'rain' : WEATHER_LABEL[next]} ${odds} in ${n}L`, worsening: true }
+function useForecast(): { now: WeatherState; f: WeatherForecast } | null {
+  const lap = useRaceStore(s => s.raceState?.lap)
+  const now = useRaceStore(s => s.raceState?.weatherState)
+  const timeline = useRaceStore(s => s.raceState?.weatherTimeline)
+  const totalLaps = useRaceStore(s => s.raceState?.totalLaps)
+  const config = useRaceStore(s => s.config)
+  return useMemo(() => {
+    if (lap === undefined || now === undefined || !timeline || !config) return null
+    const state = { lap, weatherState: now, weatherTimeline: timeline, totalLaps: totalLaps ?? timeline.length } as Parameters<typeof forecast>[0]
+    return { now, f: forecast(state, config) }
+  }, [lap, now, timeline, totalLaps, config])
+}
+
+const range = (a: number, b: number) => (a === b ? `${a}` : `${a}–${b}`)
+
+/** Words for the forecast: the strip carries the chance, the chip never prints a percentage (ruling R10). */
+export function forecastText(f: WeatherForecast, now: WeatherState): { strip: string; chip: string; worsening: boolean } {
+  switch (f.kind) {
+    case 'steady':
+      return { strip: 'NO CHANGE EXPECTED', chip: now === 'DRY' ? 'dry ahead' : 'steady', worsening: false }
+    case 'rain':
+    case 'drying': {
+      const word = f.kind === 'rain' ? 'RAIN' : 'DRYING'
+      const when = f.fromLap === 1 && f.toLap === 1 ? 'NEXT LAP' : `IN ${range(f.fromLap, f.toLap)} LAP${f.toLap === 1 ? '' : 'S'}`
+      return {
+        strip: `${word} ${when} · ${Math.round(f.chance * 100)}%`,
+        chip: `${f.kind} in ${range(f.fromLap, f.toLap)}L`,
+        worsening: f.kind === 'rain',
+      }
+    }
+    default: { const never: never = f; return never }
   }
-  return { text: `${next === 'DRY' ? 'DRY' : 'drying'} ${odds} in ${n}L`, worsening: false }
 }
 
 /**
- * The collapsed forecast: "{icon} {NOW} · {outlook}" (see weatherOutlook).
+ * The collapsed forecast: "{icon} {NOW} · {outlook}" (see forecastText).
  *
  * Controlled when `expanded`/`onToggle` are passed (RaceHUD renders the full
  * strip below the track band); otherwise it keeps its own open state.
  */
 export function WeatherChip({ expanded, onToggle }: { expanded?: boolean; onToggle?: () => void }) {
-  const forecast = useForecast()
+  const fc = useForecast()
   const uiTap = useUiTap()
   const [ownOpen, setOwnOpen] = useState(false)
-  if (!forecast) return null
+  if (!fc) return null
 
   const open = expanded ?? ownOpen
-  const { states, confidence } = forecast
-  const now = states[0] ?? 'DRY'
-  const outlook = weatherOutlook(states, confidence)
+  const text = forecastText(fc.f, fc.now)
 
   return (
     <button
@@ -152,23 +145,18 @@ export function WeatherChip({ expanded, onToggle }: { expanded?: boolean; onTogg
       style={{ background: 'none', border: 'none', padding: 0, minHeight: 48, cursor: 'pointer', borderRadius: 999,
         display: 'inline-flex', alignItems: 'center' }}
     >
-      <Pill tone={outlook.worsening ? 'rain' : 'default'}>
-        <span aria-hidden="true">{WEATHER_ICON[now]}</span> {WEATHER_LABEL[now]} · {outlook.text}
+      <Pill tone={text.worsening ? 'rain' : 'default'}>
+        <span aria-hidden="true">{WEATHER_ICON[fc.now]}</span> {WEATHER_LABEL[fc.now]} · {text.chip}
       </Pill>
     </button>
   )
 }
 
 export function WeatherStrip() {
-  const forecast = useForecast()
-  if (!forecast) return null
-
-  const { states, confidence } = forecast
-  const now = states[0] ?? 'DRY'
-  const cellLabels = ['NOW', '+1', '+2', '+3', '+4']
-
-  const wetIncoming  = now !== 'WET'  && states.slice(1).some(s => s === 'WET')
-  const rainIncoming = now === 'DRY'  && states.slice(1).some(s => s !== 'DRY')
+  const fc = useForecast()
+  if (!fc) return null
+  const text = forecastText(fc.f, fc.now)
+  const urgent = fc.f.kind === 'rain'
 
   return (
     <div style={{
@@ -178,38 +166,22 @@ export function WeatherStrip() {
       borderBottom: '1px solid var(--line-hair)',
       flexShrink: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{
-          fontFamily: 'var(--font-body)', fontSize: 9,
-          color: 'var(--lilac-dim)', letterSpacing: '0.14em',
+      <span style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'var(--lilac-dim)', letterSpacing: '0.14em' }}>
+        WEATHER
+      </span>
+      <div style={{ display: 'flex', gap: 5, alignItems: 'stretch' }}>
+        <div style={{ flex: '0 0 30%', display: 'flex' }}>
+          <WeatherCell label="NOW" state={fc.now} index={0} confidence={1} />
+        </div>
+        {/* The forecast: one honest line, never a lap-by-lap read of the true timeline. */}
+        <div role="status" style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8,
+          border: `1px dashed ${urgent ? 'var(--tyre-wet)' : 'var(--dusk)'}`, padding: '6px 8px',
+          fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 15,
+          color: urgent ? 'var(--white)' : 'var(--lilac)', letterSpacing: 0.5, textAlign: 'center',
         }}>
-          WEATHER
-        </span>
-        {(wetIncoming || rainIncoming) && (
-          <motion.span
-            animate={{ opacity: [1, 0.4, 1] }}
-            transition={{ duration: 1.4, repeat: Infinity }}
-            style={{
-              fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 700,
-              color: wetIncoming ? 'var(--hot)' : 'var(--tyre-inter)',
-              letterSpacing: '0.06em',
-            }}
-          >
-            {wetIncoming ? '⚠ WET INCOMING' : '⚠ RAIN INCOMING'}
-          </motion.span>
-        )}
-      </div>
-      <div style={{ display: 'flex', gap: 5 }}>
-        {states.map((state, i) => (
-          <WeatherCell
-            key={i}
-            label={cellLabels[i]!}
-            state={state}
-            index={i}
-            confidence={confidence[i] ?? 1.0}
-            pulse={i > 0 && (wetIncoming || rainIncoming) && state !== now}
-          />
-        ))}
+          {text.strip}
+        </div>
       </div>
     </div>
   )

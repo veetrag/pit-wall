@@ -5,7 +5,8 @@ import { Haptics } from '@capacitor/haptics'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { PitPanel } from '@ui/PitPanel'
-import { WeatherChip } from '@ui/WeatherStrip'
+import { WeatherChip, forecastText } from '@ui/WeatherStrip'
+import { forecast } from '@engine/forecast'
 import { loadGameData } from '@data/validators'
 import { makeTuning } from '../fixtures/tuning'
 import type { RaceConfig, RaceState, WeatherState } from '@engine/types'
@@ -32,7 +33,7 @@ const DEFAULT_ALLOC = { S: 2, M: 1, H: 0, I: 4, W: 3 }
 
 function raceState(weatherTimeline: WeatherState[] = [], tyreAllocation: Record<string, number> = DEFAULT_ALLOC): RaceState {
   return {
-    safetyCar: null, incidents: [], lap: 10, weatherTimeline, weatherState: weatherTimeline[10] ?? 'DRY',
+    safetyCar: null, incidents: [], lap: 10, totalLaps: 20, weatherTimeline, weatherState: weatherTimeline[10] ?? 'DRY',
     cars: [{ driverId: player.id, isPlayer: true, compound: 'M', tyreAllocation }],
   } as unknown as RaceState
 }
@@ -158,49 +159,13 @@ describe('weather chip', () => {
     expect(chip.getAttribute('aria-expanded')).toBe('true')
   })
 
-  function chipText(tl: WeatherState[]): string {
-    act(() => { useRaceStore.setState({ config, raceState: raceState(tl) }) })
-    const { unmount } = render(<WeatherChip />)
-    const t = screen.getByRole('button').textContent ?? ''
-    unmount()
-    return t
-  }
-  // lap is 10, so index 10 is NOW and 11..14 are +1..+4.
-  // tuning.json forecastConfidence: [1.0, 1.0, 0.9, 0.85, 0.8, ...]
-  function tl(now: WeatherState, later: Partial<Record<1 | 2 | 3 | 4, WeatherState>>): WeatherState[] {
-    const t: WeatherState[] = Array(20).fill(now)
-    for (const [k, v] of Object.entries(later)) {
-      for (let i = Number(k); i <= 4; i++) t[10 + i] = v as WeatherState
-    }
-    return t
-  }
-
-  it('all dry reads dry ahead', () => {
-    expect(chipText(tl('DRY', {}))).toMatch(/DRY · dry ahead/)
-  })
-  it('DRY to DAMP within confident range reads rain likely', () => {
-    expect(chipText(tl('DRY', { 2: 'DAMP' }))).toMatch(/DRY · rain likely in 2L/)
-  })
-  it('DRY to DAMP at low confidence reads rain possible, and never prints a percentage', () => {
-    const t = chipText(tl('DRY', { 3: 'DAMP' }))
-    expect(t).toMatch(/DRY · rain likely in 3L/)
-    expect(t).not.toMatch(/%/)
-  })
-  it('DAMP to WET names the arriving state', () => {
-    expect(chipText(tl('DAMP', { 2: 'WET' }))).toMatch(/DAMP · WET likely in 2L/)
-  })
-  it('WET to DAMP reads drying, not rain', () => {
-    const t = chipText(tl('WET', { 1: 'DAMP' }))
-    expect(t).toMatch(/WET · drying likely in 1L/)
-    expect(t).not.toMatch(/rain/)
-  })
-  it('WET to DRY names DRY', () => {
-    expect(chipText(tl('WET', { 4: 'DRY' }))).toMatch(/WET · DRY likely in 4L/)
-  })
-  it('DAMP holding DAMP reads steady', () => {
-    const t = chipText(tl('DAMP', {}))
-    expect(t).toMatch(/DAMP · steady/)
-    expect(t).not.toMatch(/rain/)
+  it('the chip reads the forecast for NOW, without a percentage', () => {
+    const t: WeatherState[] = Array.from({ length: 20 }, (_, i) => (i < 13 ? 'DRY' : 'DAMP'))
+    act(() => { useRaceStore.setState({ config, raceState: raceState(t) }) })
+    render(<WeatherChip />)
+    const text = screen.getByRole('button').textContent ?? ''
+    expect(text).toContain(`DRY · ${forecastText(forecast(raceState(t), config), 'DRY').chip}`)
+    expect(text).not.toMatch(/%/)
   })
 })
 
