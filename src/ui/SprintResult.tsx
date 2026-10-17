@@ -81,7 +81,7 @@ export function SprintResult() {
             {rows.map(r => {
               const d = drivers.get(r.driverId)
               return (
-                <StandingRow key={r.driverId} pos={r.retired ? <span style={{ color: 'var(--hot)' }}>DNF</span> : r.position}
+                <StandingRow key={r.driverId} pos={r.retired ? <span style={{ color: r.driverId === playerDriverId ? 'var(--ink)' : 'var(--hot)' }}>DNF</span> : r.position}
                   teamColor={(d && teamColor.get(d.teamId)) || 'var(--dusk)'}
                   name={d?.code ?? r.driverId} value={<span style={numeric}>{`+${r.points}`}</span>}
                   mine={r.driverId === playerDriverId} />
