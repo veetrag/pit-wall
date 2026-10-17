@@ -10,7 +10,7 @@ import { isSprintRound, sprintPointsFor } from './sprint'
 import { settleSeason, type LadderMove } from './teamLadder'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
 
-export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result' | 'career' | 'sprint_setup' | 'sprint_racing' | 'sprint_result'
+export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result' | 'career' | 'sprint_setup' | 'sprint_racing' | 'sprint_result' | 'career_stats'
 
 // Type-only on purpose: seasonPersistence imports THIS module at runtime to
 // subscribe to the store, so a value import here would close a cycle.
@@ -234,6 +234,8 @@ interface SeasonStore {
   exitGrid: () => void
   viewCareer: () => void
   exitCareer: () => void
+  viewCareerStats: () => void
+  exitCareerStats: () => void
   viewHowToPlay: () => void
   exitHowToPlay: () => void
   viewSettings: () => void
@@ -543,6 +545,8 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   exitGrid() { set({ phase: 'menu' }) },
   viewCareer() { set({ phase: 'career' }) },
   exitCareer() { set({ phase: 'menu' }) },
+  viewCareerStats() { set({ phase: 'career_stats' }) },
+  exitCareerStats() { set({ phase: 'career' }) },
   viewHowToPlay() { set({ phase: 'how_to_play' }) },
   exitHowToPlay() { set({ phase: 'menu' }) },
   viewSettings() { set({ phase: 'settings' }) },

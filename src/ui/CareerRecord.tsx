@@ -3,7 +3,7 @@ import { useCareerStore, sprintWins } from '@state/careerStore'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 import { BadgeCase } from './BadgeCase'
-import { ScreenFrame, ScreenHeader, StatTile, StandingRow } from '@ui/kit'
+import { ScreenFrame, ScreenHeader, StatTile, StandingRow, KitButton } from '@ui/kit'
 
 type DriverEntry = { id: string; name: string; teamId: string }
 type TeamEntry = { id: string; name: string; colorPrimary: string }
@@ -32,6 +32,7 @@ const SECTION_HEAD = {
 
 export function CareerRecord() {
   const exitCareer = useSeasonStore(s => s.exitCareer)
+  const viewCareerStats = useSeasonStore(s => s.viewCareerStats)
   const {
     seasonNumber, titles, wins, podiums, poles, racesStarted, bestFinish, seasonHistory, raceLog,
   } = useCareerStore()
@@ -49,9 +50,14 @@ export function CareerRecord() {
           <StatTile value={podiums} label="PODIUMS" />
           <StatTile value={bestFinish === null ? '—' : `P${bestFinish}`} label="BEST" tone={bestFinish === 1 ? 'volt' : 'default'} />
         </div>
-        <p style={{ margin: '10px 0 20px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--lilac-dim)' }}>
+        <p style={{ margin: '10px 0 12px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--lilac-dim)' }}>
           {poles} poles · {racesStarted} races · {sprintWinCount} sprint win{sprintWinCount === 1 ? '' : 's'} · {seasonNumber - 1} seasons
         </p>
+        <div style={{ marginBottom: 20 }}>
+          <KitButton variant="secondary" size="sm" ariaLabel="Career stats" onClick={viewCareerStats} style={{ width: '100%' }}>
+            STATS →
+          </KitButton>
+        </div>
 
         <BadgeCase />
 

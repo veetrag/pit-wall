@@ -56,6 +56,10 @@ export function useAndroidBackButton() {
 
         // At the top of the tree, back should behave like any other Android app
         // and background it — not kill it.
+        case 'career_stats':
+          s.exitCareerStats()
+          return
+
         case 'menu':
           void App.minimizeApp()
           return

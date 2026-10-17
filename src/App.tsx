@@ -4,6 +4,7 @@ import './styles/kit.css'
 import { AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from './state/seasonStore'
 import { startSeasonAutosave } from './state/seasonPersistence'
+import { CareerStats } from './ui/CareerStats'
 import { startCareerAutosave } from './state/careerPersistence'
 import { setCloudClient, startCloudSync, startAchievementSync } from './sync/storeBridge'
 import { playGamesClient } from './sync/playGamesClient'
@@ -111,6 +112,7 @@ export default function App() {
           {phase === 'result' && <RaceResult key="result" />}
           {phase === 'championship' && <Championship key="championship" />}
           {phase === 'career' && <CareerRecord key="career" />}
+          {phase === 'career_stats' && <CareerStats key="career_stats" />}
           {phase === 'scenario_select' && <ScenarioSelect key="scenario_select" />}
           {phase === 'scenario_racing' && <RaceHUD key="scenario_race" />}
           {phase === 'scenario_result' && <ScenarioResult key="scenario_result" />}
