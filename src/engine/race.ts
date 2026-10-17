@@ -272,7 +272,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   }
 
   // Compression happens ONCE, on the tick a SAFETY CAR deploys -- including one
-  // that replaces a VSC. A VSC freezes the gaps: it never compresses. Applying
+  // that replaces a VSC. A VSC slows every car and never bunches the field: it
+  // never compresses, so pace differences carry on, slowed. Applying
   // compression every tick while deployed would walk the whole field onto the
   // leader.
   const justDeployed = neutralisationKind(safetyCar) === 'sc' && activeKind !== 'sc'

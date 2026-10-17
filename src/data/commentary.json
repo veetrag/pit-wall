@@ -27,6 +27,6 @@
   "crash": ["Lap {lap}: {code} is into the barriers — race over."],
   "safety_car_deployed": ["Safety car deployed on lap {lap}."],
   "safety_car_ended": ["Safety car in this lap — green flag on lap {lap}."],
-  "vsc_deployed": ["Virtual safety car on lap {lap} — gaps frozen."],
+  "vsc_deployed": ["Virtual safety car on lap {lap} — the field slows, no bunching."],
   "vsc_ended": ["VSC ending — green flag on lap {lap}."]
 }

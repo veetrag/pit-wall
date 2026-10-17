@@ -961,11 +961,14 @@ tick, and the field IS compressed, because it is now a safety car); a VSC never 
 VSCs count against their own `maxPerRace` (2), so a VSC can still come out after the SC cap is
 reached.
 
-**Under a VSC.** Every car laps at `vsc.paceMultiplier` (1.30, applied in lapModel like the SC's,
-so it changes no gap). Gaps are frozen: no `compressRaceTimes`. Overtakes are suspended (same
+**Under a VSC.** Every car laps at `vsc.paceMultiplier` (1.30, applied in lapModel like the SC's).
+Gaps are not compressed: no `compressRaceTimes`, so the existing pace differences carry on, slowed
+by the multiplier. Overtakes are suspended (same
 `safetyCar === null` gate as the SC). A stop costs `pitLaneTimeLoss × vsc.laneLossFactor` (0.60)
 through `effectivePitLaneLoss`, the single source the projection, pit panel, pit timer and race
-all read. Duration uniform 1–3 laps, ticked down per lap.
+all read. Duration uniform 1–3 laps, ticked down per lap, starting at the first lap boundary
+after the deploy tick (so a VSC always runs across at least one boundary; the SC still counts
+down on its deploy tick).
 
 **AI reaction (SC and VSC).** Smart and optimal brains box at a lap boundary when a planned stop
 remains and either it is within `ai.neutralisationWindowLaps` (6) or the tyre's cliff fraction is

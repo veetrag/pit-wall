@@ -163,7 +163,7 @@ describe('VSC in the race loop', () => {
     expect(n).toBeLessThanOrEqual(1)
   }, 60_000)
 
-  it('FREEZES gaps: gapCompression has no effect on a race whose only neutralisations are VSCs', () => {
+  it('does not bunch the field: gapCompression has no effect on a race whose only neutralisations are VSCs', () => {
     // Fails if a VSC deployment runs compressRaceTimes: the two races would then differ.
     const with35 = runRace(makeConfig({ ...VSC_CERTAIN, incidents: { ...VSC_CERTAIN.incidents, safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0, gapCompression: 0.35 } } } as TuningOverrides, 5), 5)
     const with100 = runRace(makeConfig({ ...VSC_CERTAIN, incidents: { ...VSC_CERTAIN.incidents, safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0, gapCompression: 1.0 } } } as TuningOverrides, 5), 5)

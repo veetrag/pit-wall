@@ -342,7 +342,7 @@ export type IncidentKind =
   | 'vsc_deployed'
   | 'vsc_ended'
 
-/** A full safety car bunches the field; a virtual safety car freezes the gaps. */
+/** A full safety car bunches the field; a virtual safety car slows every car and never bunches it. */
 export type NeutralisationKind = 'sc' | 'vsc'
 
 export interface IncidentEvent {
