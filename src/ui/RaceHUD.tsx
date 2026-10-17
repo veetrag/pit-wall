@@ -358,6 +358,11 @@ export function RaceHUD() {
         title="YOUR STOP IS CLOSE"
         body="Your planned stop is two laps away: open PIT to see where you'd rejoin, or let the plan run."
       />
+      <CoachMark
+        id="radio_request"
+        title="YOUR DRIVER IS ASKING"
+        body="Answer YES or NO before the bar runs out. No answer means no."
+      />
     </ScreenFrame>
   )
 }

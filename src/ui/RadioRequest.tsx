@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRaceStore, type ActiveRadioRequest } from '@state/raceStore'
 import { useClockStore } from '@state/clockStore'
+import { useCoachStore } from '@state/coachStore'
+import { useNewCoachMarkOwed } from '@hooks/useCoachingActive'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { KitButton, TYRE_NAME, EASE, useReducedMotion } from '@ui/kit'
 
@@ -82,5 +84,11 @@ function RequestCard({ req }: { req: ActiveRadioRequest }) {
 
 export function RadioRequest() {
   const req = useRaceStore(s => s.radioRequest)
+  // First request ever: explain it (spec 1.6 §9). The tip pauses the race,
+  // and under Plan A's R7 a paused clock does not run the request down.
+  const showing = req !== null
+  const owed = useNewCoachMarkOwed('radio_request')
+  const requestMark = useCoachStore(s => s.request)
+  useEffect(() => { if (showing && owed) requestMark('radio_request') }, [showing, owed, requestMark])
   return <AnimatePresence>{req && <RequestCard key={req.id} req={req} />}</AnimatePresence>
 }
