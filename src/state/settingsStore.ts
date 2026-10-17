@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { NEW_COACH_MARKS, type NewCoachMarkId } from './coachMarks'
 import { Preferences } from '@capacitor/preferences'
 
 export type SimSpeed = 1 | 2 | 4
@@ -27,6 +28,7 @@ export interface SettingsState {
   coachMarksSeen: boolean
   tyrePalette: TyrePalette
   textSize: TextSize
+  coachSeen: Partial<Record<NewCoachMarkId, true>>
   setSoundEnabled: (v: boolean) => void
   setHapticsEnabled: (v: boolean) => void
   setReducedMotion: (v: boolean) => void
@@ -38,6 +40,9 @@ export interface SettingsState {
   setCoachMarksSeen: (v: boolean) => void
   setTyrePalette: (v: TyrePalette) => void
   setTextSize: (v: TextSize) => void
+  markCoachSeen: (id: NewCoachMarkId) => void
+  resetCoachSeen: () => void
+  setAllCoachSeen: () => void
   loadSettings: () => Promise<void>
 }
 
@@ -53,6 +58,7 @@ const K = {
   coachMarksSeen: 'settings.coachMarksSeen',
   tyrePalette: 'settings.tyrePalette',
   textSize: 'settings.textSize',
+  coachSeen: 'settings.coachSeen',
 }
 
 /**
@@ -65,6 +71,18 @@ export function osPrefersReducedMotion(): boolean {
   return typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+/** Anything but a plain object of `id: true` for known new marks reads as nothing seen. */
+function parseCoachSeen(raw: string | null | undefined): Partial<Record<NewCoachMarkId, true>> {
+  if (!raw) return {}
+  try {
+    const v: unknown = JSON.parse(raw)
+    if (v === null || typeof v !== 'object' || Array.isArray(v)) return {}
+    const out: Partial<Record<NewCoachMarkId, true>> = {}
+    for (const id of NEW_COACH_MARKS) if ((v as Record<string, unknown>)[id] === true) out[id] = true
+    return out
+  } catch { return {} }
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -80,6 +98,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   coachMarksSeen: false,
   tyrePalette: 'standard',
   textSize: 'standard',
+  coachSeen: {},
 
   setSoundEnabled(v) { set({ soundEnabled: v }); void Preferences.set({ key: K.sound, value: String(v) }) },
   setHapticsEnabled(v) { set({ hapticsEnabled: v }); void Preferences.set({ key: K.haptics, value: String(v) }) },
@@ -92,11 +111,20 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setCoachMarksSeen(v) { set({ coachMarksSeen: v }); void Preferences.set({ key: K.coachMarksSeen, value: String(v) }) },
   setTyrePalette(v) { set({ tyrePalette: v }); void Preferences.set({ key: K.tyrePalette, value: v }) },
   setTextSize(v) { set({ textSize: v }); void Preferences.set({ key: K.textSize, value: v }) },
+  markCoachSeen(id) {
+    set(s => ({ coachSeen: { ...s.coachSeen, [id]: true } }))
+    void Preferences.set({ key: K.coachSeen, value: JSON.stringify(useSettingsStore.getState().coachSeen) })
+  },
+  resetCoachSeen() { set({ coachSeen: {} }); void Preferences.set({ key: K.coachSeen, value: '{}' }) },
+  setAllCoachSeen() {
+    const all = Object.fromEntries(NEW_COACH_MARKS.map(id => [id, true])) as Partial<Record<NewCoachMarkId, true>>
+    set({ coachSeen: all }); void Preferences.set({ key: K.coachSeen, value: JSON.stringify(all) })
+  },
 
   async loadSettings() {
     const keys = Object.values(K)
     const results = await Promise.all(keys.map(k => Preferences.get({ key: k })))
-    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty, driverNameFormat, coachMarksSeen, tyrePalette, textSize] = results.map(r => r.value)
+    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty, driverNameFormat, coachMarksSeen, tyrePalette, textSize, coachSeen] = results.map(r => r.value)
     set({
       soundEnabled:      sound     != null ? sound     === 'true' : true,
       hapticsEnabled:    haptics   != null ? haptics   === 'true' : true,
@@ -115,6 +143,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       coachMarksSeen:    coachMarksSeen != null ? coachMarksSeen === 'true' : false,
       tyrePalette:       tyrePalette === 'cb' ? 'cb' : 'standard',
       textSize:          textSize === 'large' ? 'large' : 'standard',
+      coachSeen:         parseCoachSeen(coachSeen),
     })
   },
 }))

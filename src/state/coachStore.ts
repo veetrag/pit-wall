@@ -1,5 +1,8 @@
 import { create } from 'zustand'
 import { useRaceStore } from './raceStore'
+import { useSettingsStore } from './settingsStore'
+import { isNewCoachMark, type CoachMarkId } from './coachMarks'
+export type { CoachMarkId } from './coachMarks'
 
 /*
  * Order matters to the player, not to this file: the marks are requested at
@@ -7,11 +10,6 @@ import { useRaceStore } from './raceStore'
  * the tower at lights-out, the pace trade once running, then the cliff and
  * the projection when those actually arise.
  */
-export type CoachMarkId =
-  | 'timing_tower'
-  | 'pace_modes'
-  | 'tyre_cliff'
-  | 'projection'
 
 interface CoachStore {
   /** At most one mark is ever on screen. */
@@ -45,6 +43,9 @@ export const useCoachStore = create<CoachStore>((set, get) => ({
   },
   dismiss(id) {
     set(s => ({ active: s.active === id ? null : s.active, done: { ...s.done, [id]: true } }))
+    // New marks are remembered across launches (spec 1.6 §9); the original
+    // four are still retired together by coachMarksSeen.
+    if (isNewCoachMark(id)) useSettingsStore.getState().markCoachSeen(id)
   },
   withdraw(id) {
     set(s => (s.active === id ? { active: null } : s))

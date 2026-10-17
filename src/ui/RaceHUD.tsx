@@ -3,7 +3,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useClockStore, type GameSpeed } from '@state/clockStore'
 import { useCoachStore } from '@state/coachStore'
-import { useCoachingActive } from '@hooks/useCoachingActive'
+import { useCoachingActive, useNewCoachMarkOwed } from '@hooks/useCoachingActive'
+import { useSafetyCarOnlyDeployCount } from '@hooks/useSafetyCar'
+import { LEGACY_COACH_MARKS } from '@state/coachMarks'
 import { useSettingsStore } from '@state/settingsStore'
 import { CoachMark } from './CoachMark'
 import { GameClock } from './GameClock'
@@ -190,9 +192,9 @@ export function useRetireCoachTutorial(): void {
   const done = useCoachStore(s => s.done)
   const setCoachMarksSeen = useSettingsStore(s => s.setCoachMarksSeen)
   useEffect(() => {
-    // All four, not just the original two. Adding a mark without adding it
-    // here would retire the tutorial before the new mark had ever been shown.
-    if (done.timing_tower && done.pace_modes && done.tyre_cliff && done.projection) {
+    // Only the original four: the 1.6 marks are persisted one by one in
+    // settings.coachSeen and never gate coachMarksSeen (plan 1.6 Task 3 ruling).
+    if (LEGACY_COACH_MARKS.every(id => done[id])) {
       setCoachMarksSeen(true)
     }
   }, [done]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -233,10 +235,36 @@ function useTutorialMarks(): void {
   }, [coaching, racePhase, lap, request])
 }
 
+/**
+ * The 1.6 marks with a trigger in the race itself (spec 1.6 §9). Like
+ * useTutorialMarks, only once the race is RUNNING, so the pause holds. Each
+ * selector returns a primitive, so a sector tick re-renders nothing.
+ * The safety_car mark counts SC/VSC only: a red flag has its own card.
+ */
+export function useNewTutorialMarks(): void {
+  const racePhase = useRaceStore(s => s.phase)
+  const scOwed = useNewCoachMarkOwed('safety_car')
+  const windowOwed = useNewCoachMarkOwed('pit_window')
+  const deployCount = useSafetyCarOnlyDeployCount()
+  const lapsToStop = useRaceStore(s => {
+    const rs = s.raceState
+    const p = rs?.cars.find(c => c.isPlayer)
+    const next = p && !p.retired ? p.strategy.plannedStops[p.pitsDone] : undefined
+    return rs && next ? next.lap - rs.lap : null
+  })
+  const request = useCoachStore(s => s.request)
+  useEffect(() => {
+    if (racePhase !== 'racing') return
+    if (scOwed && deployCount > 0) request('safety_car')
+    if (windowOwed && lapsToStop !== null && lapsToStop >= 1 && lapsToStop <= 2) request('pit_window')
+  }, [racePhase, scOwed, windowOwed, deployCount, lapsToStop, request])
+}
+
 export function RaceHUD() {
   const phase = useRaceStore(s => s.phase)
   useRetireCoachTutorial()
   useTutorialMarks()
+  useNewTutorialMarks()
   const live = phase === 'racing' || phase === 'starting' || phase === 'red_flag'
 
   return (
@@ -319,6 +347,16 @@ export function RaceHUD() {
         id="projection"
         title="WHAT PITTING COSTS YOU"
         body="This is where you would rejoin if you boxed right now, traffic included. Compare it with where you are before you commit."
+      />
+      <CoachMark
+        id="safety_car"
+        title="NEUTRALISED: PITTING IS CHEAP"
+        body="Under a safety car or VSC a stop costs far less, so if yours is close, this is the moment."
+      />
+      <CoachMark
+        id="pit_window"
+        title="YOUR STOP IS CLOSE"
+        body="Your planned stop is two laps away: open PIT to see where you'd rejoin, or let the plan run."
       />
     </ScreenFrame>
   )

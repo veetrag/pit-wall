@@ -90,7 +90,13 @@ export function SettingsScreen() {
             label="Replay tutorial"
             sub="Show the first-race coaching again"
             checked={!coachMarksSeen}
-            onChange={(v) => { setCoachMarksSeen(!v); useCoachStore.getState().reset() }}
+            onChange={(v) => {
+              // ON clears every mark, the 1.6 ones included; OFF retires all seven (spec 1.6 §9).
+              setCoachMarksSeen(!v)
+              if (v) useSettingsStore.getState().resetCoachSeen()
+              else useSettingsStore.getState().setAllCoachSeen()
+              useCoachStore.getState().reset()
+            }}
           />
         </div>
 
