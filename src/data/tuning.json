@@ -47,6 +47,7 @@
     "seasonEndBonus": [40, 25, 15],
     "rivalCatchUp": { "base": 0.5, "championBonus": 0.5 },
     "seedStride": 100000,
+    "offers": { "_note": "Spec 1.6 §12: an offer comes when the player's team beats its board target (deserved constructors' rank) by beatBy places, or the player wins the drivers' title; the offering team is stepUp places higher by effective rating.", "beatBy": 2, "stepUp": 2 },
     "teamTiers": {
       "step": 3,
       "min": -3,

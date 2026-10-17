@@ -80,6 +80,9 @@ const RESUME_PHASE: Record<SeasonPhase, ResumePhase | null> = {
   racing: 'race_setup',
   result: 'result',
   championship: 'championship',
+  // A pick in progress resumes to the offer: nothing has rolled over yet, so
+  // NEXT SEASON rolls exactly once (spec 1.6 §12).
+  new_team_driver: 'championship',
   // A sprint in progress is not persisted (same reasoning as `racing`), so it
   // resumes to its setup with the shared qualifying grid intact. A sprint
   // result resumes to itself, pending and uncounted, like `result`.

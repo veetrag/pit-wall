@@ -116,6 +116,8 @@ const TuningSchema = z.object({
       championBonus: z.number().min(0),
     }),
     seedStride: z.number().int().positive(),
+    /** Season-end team offers (spec 1.6 §12). */
+    offers: z.object({ _note: z.string().optional(), beatBy: z.number().int().min(1), stepUp: z.number().int().min(1) }),
     /**
      * The team ladder (docs/superpowers/specs/2026-10-09-team-ladder-design.md).
      * A team's offset moves one step at season end when it finishes

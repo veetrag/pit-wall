@@ -60,6 +60,10 @@ export function useAndroidBackButton() {
           s.exitCareerStats()
           return
 
+        case 'new_team_driver':
+          s.backToChampionship()
+          return
+
         case 'menu':
           void App.minimizeApp()
           return

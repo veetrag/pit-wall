@@ -9,8 +9,9 @@ import { useCareerStore, escalateRivals, previewRaceBadges, type RaceRecordInput
 import { isSprintRound, sprintPointsFor } from './sprint'
 import { settleSeason, type LadderMove } from './teamLadder'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
+import { seasonOffer } from './teamOffers'
 
-export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result' | 'career' | 'sprint_setup' | 'sprint_racing' | 'sprint_result' | 'career_stats'
+export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result' | 'career' | 'sprint_setup' | 'sprint_racing' | 'sprint_result' | 'career_stats' | 'new_team_driver'
 
 // Type-only on purpose: seasonPersistence imports THIS module at runtime to
 // subscribe to the store, so a value import here would close a cycle.
@@ -247,6 +248,13 @@ interface SeasonStore {
   backToMenu: () => void
   backToTeamSelect: () => void
   backToDriverSelect: () => void
+  /** Spec 1.6 §12: ACCEPT on the season-end offer -> pick one of the new team's drivers. */
+  toNewTeamDriver: () => void
+  backToChampionship: () => void
+  /** STAY: the offer is cleared; NEXT SEASON keeps the seat. */
+  declineOffer: () => void
+  /** Roll the season over for the old seat, then move both ids together in the SAME write. */
+  acceptOffer: (driverId: string) => void
   startNewSeason: () => void
   selectTeam: (id: string) => void
   confirmTeam: () => void
@@ -395,7 +403,64 @@ function pendingSprintRecord(
   }
 }
 
-export const useSeasonStore = create<SeasonStore>((set, get) => ({
+export const useSeasonStore = create<SeasonStore>((set, get) => {
+  /**
+   * The season roll-over behind NEXT SEASON. `seat` is an accepted offer's
+   * new seat (spec 1.6 §12), merged into the one season write (preflight F6).
+   */
+  function rollSeason(seat?: { playerDriverId: string; selectedTeamId: string; purchasedTiers: Record<string, number> }): void {
+    // An offer never outlives its season-end screen.
+    useCareerStore.getState().setPendingOffer(null)
+    const s = get()
+    const career = useCareerStore.getState()
+    const standing = s.standings.findIndex(x => x.driverId === s.playerDriverId)
+    // The title and the history entry were already banked by recordSeasonEnd
+    // when the season ended; this only starts the new one.
+    const { erodedTiers } = career.rollOverSeason(s.purchasedTiers)
+    set({
+      phase: 'development',
+      raceIndex: 0,
+      standings: [],
+      lastRaceResults: null,
+      lastRaceEvents: null,
+      selectedCircuitId: CIRCUIT_ORDER[0] ?? null,
+      playerStrategy: null,
+      qualifyingResult: null,
+      attemptNonce: 0,
+      ...SPRINT_CLEAR,
+      // devPoints are NOT reset. Unspent points bank rather than expire --
+      // the principle already stated at toRaceSetup above, applied across the
+      // season boundary as well as within one.
+      //
+      // Discarding them made the career go dead flat. Simulated over 10
+      // seasons with optimal buying, a player who loses their unspent points
+      // plateaus at 11 of 15 tiers from season 3 and then burns 21 points
+      // every season forever, because erosion keeps eating tiers they can
+      // never quite afford to replace. The Development screen becomes "rebuy
+      // what you lost, waste the rest" -- no progression and no decision,
+      // which is the outcome erosion was introduced to prevent, arriving by a
+      // different route. Banking them instead climbs 8 -> 10 -> 12 -> 13 and
+      // is still rising at season 10, while erosion still stops a max-out.
+      lastSeasonBonus: 0,
+      purchasedTiers: erodedTiers,
+      /*
+       * RESET to the winter head start, not carried forward. Carrying it
+       * forward saturated the grid: by season 4 every rival's power, aero and
+       * handling sat at 100 (docs/superpowers/specs/2026-10-09-team-ladder-design.md
+       * section 5). Rival development is now the in-season race against the
+       * player's purchases; what carries across seasons is the team ladder.
+       * escalateRivals from zero is exactly the old winter boost, so "win the
+       * title and the grid has a bigger winter" survives.
+       */
+      rivalDevelopment: escalateRivals({}, standing === 0),
+      lastLadder: null,
+      // playerDriverId and selectedTeamId are kept unless an accepted offer
+      // (spec 1.6 §12) moves the seat -- both together, in THIS set.
+      ...(seat ?? {}),
+    })
+  }
+
+  return {
   phase: 'menu',
   playerDriverId: null,
   raceIndex: 0,
@@ -561,6 +626,23 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   backToMenu() { set({ phase: 'menu' }) },
   backToTeamSelect() { set({ phase: 'team_select', playerDriverId: null }) },
   backToDriverSelect() { set({ phase: 'driver_select' }) },
+  toNewTeamDriver() {
+    if (get().phase !== 'championship' || !useCareerStore.getState().pendingOffer) return
+    set({ phase: 'new_team_driver' })
+  },
+  backToChampionship() { if (get().phase === 'new_team_driver') set({ phase: 'championship' }) },
+  declineOffer() { useCareerStore.getState().setPendingOffer(null) },
+  acceptOffer(driverId) {
+    const offer = useCareerStore.getState().pendingOffer
+    const driver = loadGameData().drivers.drivers.find(d => d.id === driverId)
+    if (get().phase !== 'new_team_driver' || !offer || !driver || driver.teamId !== offer.teamId) return
+    // Roll over for the seat just raced FIRST: the title winter and the history
+    // entry belong to it. The new ids ride in the roll-over's single set
+    // (preflight F6), so a kill can never land between them. Team tiers stay
+    // with the old team and a new driver has no pace tiers, so purchasedTiers
+    // restart at {}; devPoints and wing memory carry; the ladder is untouched.
+    rollSeason({ playerDriverId: driver.id, selectedTeamId: offer.teamId, purchasedTiers: {} })
+  },
 
   overlayInput() {
     const s = get()
@@ -750,6 +832,15 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
         })
         useCareerStore.getState().setTeamTiers(r.tiers)
         lastLadder = r.moves
+        // Spec 1.6 §12: the board's verdict can bring a seat offer. Pure and
+        // rng-free; at most one, because a season banks once.
+        const myTeam = playerTeamId(get().playerDriverId)
+        const mine = r.moves.find(m => m.teamId === myTeam)
+        const { beatBy, stepUp } = loadGameData().tuning.career.offers
+        useCareerStore.getState().setPendingOffer(mine ? seasonOffer({
+          season: useCareerStore.getState().seasonNumber, teamId: mine.teamId, deserved: mine.deserved,
+          finished: mine.finished, wonTitle: finishedPosition === 1, tiers: r.tiers, beatBy, stepUp,
+        }) : null)
       }
       set({ phase: 'championship', devPoints: get().devPoints + bonus, lastSeasonBonus: bonus, lastLadder })
     } else {
@@ -760,55 +851,10 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   /**
    * A new season inside the SAME career. Keeps the seat (the player is not on
-   * the driver market) and the eroded upgrades; resets everything season-scoped.
+   * the driver market; an accepted offer moves it via acceptOffer) and the eroded
+   * upgrades; resets everything season-scoped.
    */
-  startNextSeason() {
-    const s = get()
-    const career = useCareerStore.getState()
-    const standing = s.standings.findIndex(x => x.driverId === s.playerDriverId)
-    // The title and the history entry were already banked by recordSeasonEnd
-    // when the season ended; this only starts the new one.
-    const { erodedTiers } = career.rollOverSeason(s.purchasedTiers)
-    set({
-      phase: 'development',
-      raceIndex: 0,
-      standings: [],
-      lastRaceResults: null,
-      lastRaceEvents: null,
-      selectedCircuitId: CIRCUIT_ORDER[0] ?? null,
-      playerStrategy: null,
-      qualifyingResult: null,
-      attemptNonce: 0,
-      ...SPRINT_CLEAR,
-      // devPoints are NOT reset. Unspent points bank rather than expire --
-      // the principle already stated at toRaceSetup above, applied across the
-      // season boundary as well as within one.
-      //
-      // Discarding them made the career go dead flat. Simulated over 10
-      // seasons with optimal buying, a player who loses their unspent points
-      // plateaus at 11 of 15 tiers from season 3 and then burns 21 points
-      // every season forever, because erosion keeps eating tiers they can
-      // never quite afford to replace. The Development screen becomes "rebuy
-      // what you lost, waste the rest" -- no progression and no decision,
-      // which is the outcome erosion was introduced to prevent, arriving by a
-      // different route. Banking them instead climbs 8 -> 10 -> 12 -> 13 and
-      // is still rising at season 10, while erosion still stops a max-out.
-      lastSeasonBonus: 0,
-      purchasedTiers: erodedTiers,
-      /*
-       * RESET to the winter head start, not carried forward. Carrying it
-       * forward saturated the grid: by season 4 every rival's power, aero and
-       * handling sat at 100 (docs/superpowers/specs/2026-10-09-team-ladder-design.md
-       * section 5). Rival development is now the in-season race against the
-       * player's purchases; what carries across seasons is the team ladder.
-       * escalateRivals from zero is exactly the old winter boost, so "win the
-       * title and the grid has a bigger winter" survives.
-       */
-      rivalDevelopment: escalateRivals({}, standing === 0),
-      lastLadder: null,
-      // playerDriverId and selectedTeamId are deliberately NOT reset.
-    })
-  },
+  startNextSeason() { rollSeason() },
 
   /** Abandon the career. This is what playAgain used to do, named honestly. */
   endCareer() {
@@ -858,4 +904,5 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       sprintBanked: snap.sprintBanked,
     })
   },
-}))
+  }
+})

@@ -94,6 +94,15 @@ export const CareerSnapshotSchema = z.object({
     z.string(),
     z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
   ).default({}),
+  /*
+   * Spec 1.6 §12. OPTIONAL and written only while an offer is pending, LAST,
+   * so every career without one serialises byte for byte as before (cloud
+   * reconcile compares the JSON; pinned by the 1.4 fixture test).
+   */
+  pendingOffer: z.object({
+    season: z.number(), teamId: z.string(), reason: z.enum(['constructors', 'title']),
+    boardTarget: z.number(), rating: z.number(), currentRating: z.number(),
+  }).optional(),
 })
 
 export type CareerSnapshot = z.infer<typeof CareerSnapshotSchema>
@@ -117,6 +126,7 @@ export function careerSnapshotFrom(
     raceLog: r.raceLog,
     teamTiers: r.teamTiers,
     wingByCircuit: r.wingByCircuit,
+    ...(r.pendingOffer ? { pendingOffer: r.pendingOffer } : {}),
   }
 }
 

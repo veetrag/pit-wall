@@ -61,11 +61,25 @@ export interface CareerRecord {
    * UI falls back to the circuit's own default.
    */
   wingByCircuit: Record<string, Wing>
+  /** Spec 1.6 §12: a seat offered at season end, until NEXT SEASON decides it. Absent/null = none. */
+  pendingOffer?: PendingOffer | null
+}
+
+/** Spec 1.6 §12: a seat offered at season end, until NEXT SEASON decides it. Key order = schema order. */
+export interface PendingOffer {
+  season: number
+  teamId: string
+  reason: 'constructors' | 'title'
+  /** The offering team's board target (its deserved constructors' rank). */
+  boardTarget: number
+  rating: number
+  currentRating: number
 }
 
 const FRESH: CareerRecord = {
   seasonNumber: 1, titles: 0, wins: 0, seasonWins: 0, podiums: 0, poles: 0,
   racesStarted: 0, bestFinish: null, seasonHistory: [], raceLog: [], teamTiers: {}, wingByCircuit: {},
+  pendingOffer: null,
 }
 
 /**
@@ -170,6 +184,7 @@ interface CareerStore extends CareerRecord {
    */
   setTeamTiers: (tiers: Record<string, number>) => void
   rememberWing: (circuitId: string, wing: Wing) => void
+  setPendingOffer: (o: PendingOffer | null) => void
   beginCareer: () => void
   endCareer: () => void
   resumeCareer: (snap: CareerRecord) => void
@@ -330,7 +345,8 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
 
   setTeamTiers(teamTiers) { set({ teamTiers }) },
   rememberWing(circuitId, wing) { set(s => ({ wingByCircuit: { ...s.wingByCircuit, [circuitId]: wing } })) },
+  setPendingOffer(pendingOffer) { set({ pendingOffer }) },
   beginCareer() { set({ ...FRESH, hasCareer: true, justEarned: [] }) },
   endCareer() { set({ ...FRESH, hasCareer: false, justEarned: [] }) },
-  resumeCareer(snap) { set({ ...snap, hasCareer: true, justEarned: [] }) },
+  resumeCareer(snap) { set({ ...snap, pendingOffer: snap.pendingOffer ?? null, hasCareer: true, justEarned: [] }) },
 }))
