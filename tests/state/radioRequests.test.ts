@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { detectRadioRequest, makeRequestTracker, boxRequestCompound, type RequestTracker } from '@state/radioRequests'
+import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
 import { makeDeterministicTuning } from '../fixtures/tuning'
 import type { RaceConfig, RaceState, CarState, CircuitSpec, CompoundSpec, SectorResult, WeatherState, SafetyCarState, Compound } from '@engine/types'
 
@@ -135,5 +136,47 @@ describe('limits', () => {
     const b = detectRadioRequest(lapEnd(10, { me: WORN }), config(null), t, CTX)
     expect(a).toEqual(b)
     expect(JSON.stringify(t)).toBe(snapshot)
+  })
+})
+
+describe('fix round 1', () => {
+  it('a tracker survives a JSON round-trip and still allows a first request on an early lap', () => {
+    const t = JSON.parse(JSON.stringify(makeRequestTracker())) as RequestTracker
+    expect(run([lapEnd(8, { me: WORN })], config(null), CTX, t)[0]?.kind).toBe('box')
+  })
+
+  it('maxPerRace is enforced', () => {
+    const t = { ...makeRequestTracker(), asked: 3 }
+    expect(run([lapEnd(10, { me: WORN })], config(null), CTX, t)[0]).toBeNull()
+    const t2 = { ...makeRequestTracker(), asked: 2 }
+    expect(run([lapEnd(10, { me: WORN })], config(null), CTX, t2)[0]?.kind).toBe('box')
+  })
+
+  it('a neutralised lap end resets the push streak', () => {
+    const vsc: SafetyCarState = { deployedLap: 9, lapsRemaining: 2, cause: 'crash', kind: 'vsc' }
+    const reqs = run([lapEnd(10), lapEnd(11, { safetyCar: vsc }), lapEnd(12)], config(null))
+    expect(reqs.map(r => r?.kind ?? null)).toEqual([null, null, null])
+  })
+
+  it('a skipped lap resets the push streak', () => {
+    expect(run([lapEnd(10), lapEnd(12)], config(null))[1]).toBeNull()
+  })
+
+  it('boundaries: cliff exactly at boxCliffFrac asks; gap exactly pushGap counts; a plan 3 laps out does not suppress', () => {
+    const cfg = config(null)
+    const s = lapEnd(10, { me: { tyreAge: 12 } })
+    const me = s.cars.find(c => c.isPlayer)!
+    const drv = cfg.drivers.find(d => d.id === 'me')!
+    const frac = tyreCliffFraction(COMPOUNDS['M']!, effectiveTyreAge(me, drv, 'DRY', cfg.tuning))
+    const exact = { ...cfg, tuning: { ...cfg.tuning, radioRequests: { ...cfg.tuning.radioRequests, boxCliffFrac: frac } } }
+    expect(run([s], exact)[0]?.kind).toBe('box')
+    expect(run([lapEnd(10, { gap: 1.0 }), lapEnd(11, { gap: 1.0 })], config(null))[1]?.kind).toBe('push')
+    const plan = [{ lap: 13, compound: 'H' as Compound }]
+    expect(run([lapEnd(10, { me: WORN, plan })], config(plan))[0]?.kind).toBe('box')
+  })
+
+  it('a real safety car suppresses push', () => {
+    const sc: SafetyCarState = { deployedLap: 9, lapsRemaining: 3, cause: 'crash' }
+    expect(run([lapEnd(10, { safetyCar: sc }), lapEnd(11, { safetyCar: sc })], config(null))[1]).toBeNull()
   })
 })

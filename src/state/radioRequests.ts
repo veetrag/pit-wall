@@ -1,4 +1,4 @@
-import type { RaceConfig, RaceState, Compound } from '@engine/types'
+import type { RaceConfig, RaceState, Compound, CarState } from '@engine/types'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
 import { bestDryCompound } from '@engine/strategy'
 import { neutralisationKind } from '@engine/incidents'
@@ -36,7 +36,7 @@ export interface RequestTracker {
 export function makeRequestTracker(): RequestTracker {
   return {
     asked: 0,
-    lastAskedLap: { box: Number.NEGATIVE_INFINITY, push: Number.NEGATIVE_INFINITY },
+    lastAskedLap: { box: -1e9, push: -1e9 }, // finite: survives a JSON round-trip
     boxAskedAtPits: -1,
     closeLapEnds: 0,
     closeAheadId: null,
@@ -67,11 +67,16 @@ function lastLapTime(state: RaceState, driverId: string): number | null {
 }
 
 /** What YES to a box request fits (ruling R6): the weather family on a non-dry track, else the next planned stop, else the AI's best dry compound. */
+/** The player's next planned stop; only a configured player strategy counts. */
+function nextPlannedStop(config: RaceConfig, player: CarState) {
+  return config.playerStrategyOverride ? player.strategy.plannedStops[player.pitsDone] : undefined
+}
+
 export function boxRequestCompound(config: RaceConfig, state: RaceState): Compound {
   if (state.weatherState === 'WET') return 'W'
   if (state.weatherState === 'DAMP') return 'I'
   const player = state.cars.find(c => c.isPlayer)
-  const next = player && config.playerStrategyOverride ? player.strategy.plannedStops[player.pitsDone] : undefined
+  const next = player ? nextPlannedStop(config, player) : undefined
   if (next) return next.compound
   return bestDryCompound(config, state.totalLaps - state.lap)
 }
@@ -89,11 +94,14 @@ export function detectRadioRequest(
     return { request: null, tracker }
   }
   const t: RequestTracker = { ...tracker, lastAskedLap: { ...tracker.lastAskedLap }, lastLapSeen: state.lap }
+  const kind = neutralisationKind(state.safetyCar)
+  // A streak needs consecutive lap ends: a skipped lap or a neutralisation breaks it.
+  const consecutive = tracker.lastLapSeen < 0 || state.lap === tracker.lastLapSeen + 1
 
   // The push streak is tracked at every lap end, asked or not.
   const ahead = state.cars.find(c => !c.retired && c.position === player.position - 1) ?? null
   const gap = ahead ? player.raceTime - ahead.raceTime : Number.POSITIVE_INFINITY
-  if (ahead && gap <= rr.pushGap) {
+  if (ahead && gap <= rr.pushGap && kind === null && consecutive) {
     t.closeLapEnds = t.closeAheadId === ahead.driverId ? t.closeLapEnds + 1 : 1
     t.closeAheadId = ahead.driverId
   } else {
@@ -101,7 +109,6 @@ export function detectRadioRequest(
     t.closeAheadId = null
   }
 
-  const kind = neutralisationKind(state.safetyCar)
   if (ctx.pending || t.asked >= rr.maxPerRace) return { request: null, tracker: t }
 
   const spec = config.compounds[player.compound]
@@ -110,7 +117,7 @@ export function detectRadioRequest(
   const lapsLeft = state.totalLaps - state.lap
 
   // Box: "Tyres are gone, can we box?"
-  const next = config.playerStrategyOverride ? player.strategy.plannedStops[player.pitsDone] : undefined
+  const next = nextPlannedStop(config, player)
   const planSoon = next !== undefined && next.lap - player.lap <= rr.boxPlanWindowLaps
   if (cliff >= rr.boxCliffFrac && !planSoon && lapsLeft > rr.minLapsLeft &&
       !ctx.inPit && !ctx.pitPanelOpen && t.boxAskedAtPits !== player.pitsDone &&
@@ -122,7 +129,7 @@ export function detectRadioRequest(
   }
 
   // Push: "I'm faster than {ahead}, let me push". Never under a neutralisation (ruling R6).
-  if (ahead && kind === null && t.closeLapEnds >= rr.pushLapEnds && player.paceMode !== 'push' &&
+  if (ahead && t.closeLapEnds >= rr.pushLapEnds && player.paceMode !== 'push' &&
       cliff < rr.pushMaxCliffFrac && state.lap - t.lastAskedLap.push >= rr.cooldownLaps) {
     const mine = lastLapTime(state, player.driverId)
     const theirs = lastLapTime(state, ahead.driverId)
