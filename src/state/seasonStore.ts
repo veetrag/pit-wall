@@ -475,7 +475,8 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   },
 
   retrySprint() {
-    if (get().sprintBanked) return
+    // Only from the result screen: a double tap during the exit animation must not bump the nonce twice.
+    if (get().sprintBanked || get().phase !== 'sprint_result') return
     set(s => ({
       sprintAttemptNonce: s.sprintAttemptNonce + 1, phase: 'sprint_setup',
       lastSprintResults: null, lastSprintEvents: null, sprintPending: false, pendingSprint: null,

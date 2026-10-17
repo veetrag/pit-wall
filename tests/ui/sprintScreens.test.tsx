@@ -11,7 +11,7 @@ import { useSettingsStore } from '@state/settingsStore'
 import { useDebriefStore, setDebriefRunner } from '@state/debriefStore'
 import { buildRaceConfig } from '@state/buildRaceConfig'
 import { sprintLaps } from '@state/sprint'
-import { computeStartWeather } from '@ui/RaceSetup'
+import { computeStartWeather, WEATHER_START } from '@ui/RaceSetup'
 import { SprintSetup } from '@ui/SprintSetup'
 import { SprintResult } from '@ui/SprintResult'
 import { initRace } from '@engine/index'
@@ -82,6 +82,16 @@ describe('SprintResult', () => {
     expect(s().standings.find(x => x.driverId === 'd_voss')?.points).toBe(6)
   })
 
+  it('a retired car shows DNF and +0', () => {
+    toSprintSetup()
+    finishSprint(3)
+    const results = s().lastSprintResults!.map(r =>
+      r.position === 5 ? { ...r, retired: true, retiredCause: 'crash' as const, points: 0 } : r)
+    useSeasonStore.setState({ lastSprintResults: results })
+    render(<SprintResult />)
+    expect(screen.getByText('DNF').closest('[data-standing-row]')?.textContent).toContain('+0')
+  })
+
   it('RETRY SPRINT discards it', () => {
     toSprintSetup()
     finishSprint(1)
@@ -102,5 +112,22 @@ describe('the sprint setup forecast agrees with the sprint', () => {
       const race = initRace(buildRaceConfig(seed, 'd_voss', circuitId, 'rookie', null, null, undefined, false, true))
       expect(shown, circuitId).toEqual(race.weatherTimeline)
     }
+  })
+
+  it('the rendered weather pill matches the real sprint race opening', () => {
+    toSprintSetup()
+    const race = initRace(buildRaceConfig(s().currentSprintSeed(), 'd_voss', s().currentCircuitId(), 'rookie', null, null, undefined, false, true))
+    render(<SprintSetup />)
+    expect(screen.getByText(WEATHER_START[race.weatherTimeline[0]!])).toBeTruthy()
+  })
+})
+
+describe('retrySprint', () => {
+  it('a double tap bumps the attempt nonce once', () => {
+    toSprintSetup()
+    finishSprint(2)
+    const before = s().sprintAttemptNonce
+    s().retrySprint(); s().retrySprint()
+    expect(s().sprintAttemptNonce).toBe(before + 1)
   })
 })

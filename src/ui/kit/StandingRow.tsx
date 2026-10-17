@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 export function StandingRow({ pos, teamColor, name, value, trailing, mine = false, bar }: {
-  pos: string | number; teamColor: string; name: ReactNode; value: ReactNode; trailing?: ReactNode; mine?: boolean; bar?: number
+  pos: ReactNode; teamColor: string; name: ReactNode; value: ReactNode; trailing?: ReactNode; mine?: boolean; bar?: number
 }) {
   const cols = `28px 5px minmax(0, 1fr)${bar !== undefined ? ' 72px' : ''} auto${trailing !== undefined ? ' 26px' : ''}`
   return (
