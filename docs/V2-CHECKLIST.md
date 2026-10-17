@@ -431,32 +431,38 @@ distance, rounds 4/8/12; the 36px tower rows versus the 44px target rule.
 
 ### Feature ideas (proposals, not decided — each needs Veet's call)
 
-Already ruled out and not repeated here: run both cars, practice, driver market,
-weekend tyre allocation, daily rewards/streaks, leaderboards/friends.
+Updated 2026-10-17 after 1.5. Already ruled out and not repeated here: run both
+cars, practice, driver market, rule changes between seasons, weekend tyre
+allocation, daily rewards/streaks, leaderboards/friends.
+
+Shipped from the 2026-10-16 list (1.5): virtual safety car, rival intel, sprint
+weekends, lap chart in the debrief. The In-App Review prompt is already built
+(`src/sync/platform*.ts`).
 
 **In the race (the core loop)**
-- [x] **Virtual safety car.** The full safety car exists; a VSC adds a second,
-      cheaper "free-ish stop" window (~0.6 of the pit loss, gaps frozen rather
-      than bunched), creating a different decision from the SC. `9de1560`: VSC
-      rolled by retirement cause after the SC roll; AI teams react to every
-      neutralisation. Bands in `MODEL_SPEC.md` §3 and §14.
 - [ ] **Driver radio requests.** The driver occasionally asks for something —
       "tyres are gone, box?", "I'm faster than him, let me push" — and the
       player answers yes/no in one tap. Uses the existing pace and pit levers,
       so no new mechanics; it makes the race talk back. Data in `radio.json`.
-- [x] **Rival intel on the tower.** Tap a rival row to see tyre compound and
-      age, stops made, and a "likely to box in N laps" hint from `strategy.ts`.
-      Makes undercut/overcut a deliberate play rather than a lucky one. `c3a1107`
-      taps a rival row for the card; `71dd932` adds focus ring, keyboard and
-      flag close. The box window is a fuzzy band (half-widths 2/3/5 by brain),
-      never the exact lap.
+- [ ] **Red flag.** A big crash stops the race: cars line up in order, every
+      team gets a free tyre change, then a standing restart. A third kind of
+      neutralisation next to the SC and VSC, with its own decision (which tyre
+      for the restart sprint). Rare: rolled after the SC, like the VSC.
+- [ ] **Pit stop variance.** Most stops take the nominal time; a small chance
+      of a slow stop (wheel-gun, 2–6s) for anyone, the player included. Makes
+      "box behind your rival" a gamble and gives the commentary something to
+      call. One seeded draw per stop, rate in `tuning.json`.
+- [ ] **Weather forecast confidence.** The rain call shows a percentage that
+      firms up as it gets closer ("rain in 6–9 laps, 60%"), instead of the
+      weather arriving as a surprise. The timeline already exists; this is how
+      much of it the player sees.
 
 **After the race**
-- [x] **Lap chart in the debrief.** Position-by-lap lines for you and the cars
-      around you, with pit stops and SC periods marked. The race is
-      deterministic and already recorded, so this is pure UI, and it shows the
-      player *why* their strategy worked. `7cf6e09`: replayed from the race
-      seed on the debrief, not stored; `44789e9` fixes the retirement marker.
+- [ ] **"What if" replay in the debrief.** Pick a different stop lap or
+      compound for your stint and the debrief re-runs the race from the same
+      seed to show where you would have finished. The engine is deterministic
+      and the debrief already replays the race, so this is mostly UI. Turns the
+      verdicts into something the player can test.
 - [ ] **Share a result card.** Render the podium/result as an image and open
       the Android share sheet (Capacitor Share). No server, no account — the
       only free growth channel the game has.
@@ -467,25 +473,27 @@ weekend tyre allocation, daily rewards/streaks, leaderboards/friends.
       decline. Gives an endless career an arc. Open questions are in
       `docs/superpowers/specs/2026-09-19-v2-roadmap.md` (development tiers,
       demotion, what the target is).
-- [ ] **Regulation shake-up between seasons.** Each winter one rule changes —
-      tyre deg up, pit loss down, a new circuit swapped in, a points tweak —
-      announced on the season-end screen. Makes season five feel unlike season
-      one at low cost (it is `tuning.json` overlays).
-- [x] **Sprint weekends.** A few rounds run a short race with no mandatory
-      stop before the main one. A different strategic shape using the same
-      engine; needs a points-table and calendar change. `64e5787`, `958bc44`:
-      sprint presentation and the lock caption; rounds 4/8/12, sprint points
-      8-7-6-5-4-3-2-1 and the sprint distance are in `tuning.json`.
 - [ ] **Career stats and records page.** Best finish per circuit, win rate by
-      start compound, longest stint, biggest comeback. Data the career record
-      mostly holds already; feeds the trophy room.
+      start compound, longest stint, biggest comeback, sprint record. Data the
+      career record mostly holds already; feeds the trophy room.
+- [ ] **More scenarios.** The scenario mode has three. The `findScenarios`
+      tool can author more from real seeds (a VSC gamble, a rain call, a sprint
+      finish, a red-flag restart once it exists). Cheap content.
+
+**First-time player**
+- [ ] **A guided first race.** Short prompts the first time each lever matters
+      (first pit window, first cliff warning, first safety car), dismissible
+      and never shown again. Settles the open question of a fully dry first
+      race at the same time.
 
 **Reach and quality**
-- [ ] **In-App Review prompt** (planned as Step 4 of the Play services plan,
-      not yet built): once per career, after a title or first win.
 - [ ] **Colour-blind tyre palette** in Settings. Letters already back up the
       colours, but S (hot pink) and M (volt) are the two most-used and the
       hardest pair for deuteranopia. Token swap via `styles/tokens.css`.
+- [ ] **Text size setting.** One step larger for the tower and the pit panel,
+      for small phones and older eyes. Pairs with the tablet/foldable layout
+      already on the fix list.
 
-**Suggested order:** 1.5 fixes → lap chart + share card (cheap, visible) →
-driver radio requests → rival intel → regulation shake-up → team offers.
+**Suggested order:** driver radio requests and pit stop variance (small, make
+the race feel alive) → "what if" replay and share card (cheap, visible) →
+guided first race → red flag → career stats → team offers.
