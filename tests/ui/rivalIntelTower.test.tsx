@@ -112,4 +112,69 @@ describe('TimingTower rival intel', () => {
     show({ ...base, cars: base.cars.map(c => c.driverId === id ? { ...c, position: 20, raceTime: 999 } : c.position === 20 ? { ...c, position: 1 } : c) })
     expect(screen.getByRole('region', { name: 'Rival intel' })).toBeTruthy()
   })
+
+  it('Space opens it, and Escape closes it with focus kept on the row', () => {
+    render(<TimingTower />)
+    show(base)
+    const row = rivalRows()[0]!
+    row.focus()
+    fireEvent.keyDown(row, { key: ' ' })
+    expect(screen.getByRole('region', { name: 'Rival intel' })).toBeTruthy()
+    fireEvent.keyDown(row, { key: 'Escape' })
+    expect(screen.queryByRole('region', { name: 'Rival intel' })).toBeNull()
+    expect(document.activeElement).toBe(row)
+  })
+
+  it('a held key (repeat) does not toggle it shut', () => {
+    render(<TimingTower />)
+    show(base)
+    const row = rivalRows()[0]!
+    fireEvent.keyDown(row, { key: 'Enter' })
+    fireEvent.keyDown(row, { key: 'Enter', repeat: true })
+    expect(screen.getByRole('region', { name: 'Rival intel' })).toBeTruthy()
+  })
+
+  it('clicking the player row shows no card', () => {
+    const { container } = render(<TimingTower />)
+    show(base)
+    const playerRow = Array.from(container.querySelectorAll('[data-tower-row]')).find(r => !r.hasAttribute('data-intel-row'))!
+    fireEvent.click(playerRow)
+    expect(screen.queryByRole('region', { name: 'Rival intel' })).toBeNull()
+  })
+
+  it('a pointerdown inside the tower keeps the card open', () => {
+    render(<TimingTower />)
+    show(base)
+    fireEvent.click(rivalRows()[0]!)
+    fireEvent.pointerDown(screen.getByRole('button', { name: /FULL FIELD/ }))
+    expect(screen.getByRole('region', { name: 'Rival intel' })).toBeTruthy()
+  })
+
+  it('reaching the flag closes the card', () => {
+    render(<TimingTower />)
+    show(base)
+    fireEvent.click(rivalRows()[0]!)
+    act(() => { useRaceStore.setState({ phase: 'finished' }) })
+    expect(screen.queryByRole('region', { name: 'Rival intel' })).toBeNull()
+    act(() => { useRaceStore.setState({ phase: 'racing' }) })
+  })
+
+  it('intel is lap-stable: a sector tick keeps the label, a new lap with a stop updates card and label', () => {
+    render(<TimingTower />)
+    show(base)
+    const row = rivalRows()[0]!
+    const id = row.closest('[data-intel-row]')!.getAttribute('data-intel-row')!
+    const label0 = row.getAttribute('aria-label')!
+    fireEvent.click(row)
+    const age0 = base.cars.find(c => c.driverId === id)!.tyreAge
+    // Sector-only change: same lap, tyre age moved (as it would not mid-lap, but must be ignored).
+    show({ ...base, cars: base.cars.map(c => c.driverId === id ? { ...c, tyreAge: age0 + 5 } : c) })
+    expect(rivalRows().find(r => r.closest('[data-intel-row]')!.getAttribute('data-intel-row') === id)!.getAttribute('aria-label')).toBe(label0)
+    // Next lap, one more stop and fresh tyres.
+    show({ ...base, lap: base.lap + 1, cars: base.cars.map(c => c.driverId === id ? { ...c, tyreAge: 0, pitsDone: c.pitsDone + 1 } : c) })
+    const after = rivalRows().find(r => r.closest('[data-intel-row]')!.getAttribute('data-intel-row') === id)!
+    expect(after.getAttribute('aria-label')).not.toBe(label0)
+    expect(after.getAttribute('aria-label')).toMatch(/0 laps old/)
+    expect(within(screen.getByRole('region', { name: 'Rival intel' })).getByText('0 LAPS')).toBeTruthy()
+  })
 })

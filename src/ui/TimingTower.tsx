@@ -33,7 +33,7 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
   wide?: boolean
   compressed?: boolean
   /** Present on rival rows only: the row becomes a button that opens the intel card. */
-  intel?: { label: string; selected: boolean; onSelect: () => void }
+  intel?: { label: string; selected: boolean; onSelect: () => void; onClose: () => void }
 }) {
   const gap = car.raceTime - leaderTime
   const driverCode = displayName ?? car.driverId.replace('d_', '').toUpperCase().slice(0, 3)
@@ -103,9 +103,11 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
       tabIndex={intel ? 0 : undefined}
       aria-label={intel?.label}
       aria-expanded={intel ? intel.selected : undefined}
+      data-selected={intel?.selected ? 'true' : undefined}
       onClick={intel?.onSelect}
       onKeyDown={intel ? (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); intel.onSelect() }
+        if (e.key === 'Escape') { if (intel.selected) { e.preventDefault(); intel.onClose() } return }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!e.repeat) intel.onSelect() }
       } : undefined}
       style={{
         display: 'grid',
@@ -121,8 +123,6 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
         color: textColor,
         transition: 'background 0.4s ease',
         cursor: intel ? 'pointer' : undefined,
-        // Inset, because the slant clip-path would cut an outside outline.
-        boxShadow: intel?.selected ? 'inset 0 0 0 2px var(--lilac)' : undefined,
       }}
     >
       <span style={{
@@ -219,6 +219,7 @@ function GhostRow({ position, code, wide }: { position: number; code: string; wi
 export function TimingTower() {
   const raceState = useRaceStore(s => s.raceState)
   const config = useRaceStore(s => s.config)
+  const phase = useRaceStore(s => s.phase)
   const pitPanelOpen = useRaceStore(s => s.pitPanelOpen)
   const projectionResult = useRaceStore(s => s.projectionResult)
   // Compact (six rows around you) is the default per the Race Day Bold spec
@@ -266,9 +267,10 @@ export function TimingTower() {
     return () => document.removeEventListener('pointerdown', onDown)
   }, [intelId])
 
-  // Intel moves only at lap boundaries (or a retirement / stop), so it is
-  // memoised on the lap plus a cheap signature: sector ticks do not recompute
-  // it, and rows are not handed new objects every sector.
+  // Intel inputs move only at lap boundaries (see rivalIntel.ts), plus a stop
+  // or a retirement, so the labels and the open card's intel are memoised on
+  // the lap and a cheap signature of those. Sector ticks do not recompute
+  // them; the row prop objects below are still rebuilt each render.
   const lap = raceState?.lap
   const sig = raceState ? raceState.cars.map(c => `${c.retired ? 1 : 0}${c.pitsDone}${c.compound}`).join() : ''
   const labels = useMemo(() => {
@@ -287,8 +289,9 @@ export function TimingTower() {
     () => (intelId && raceState && config ? rivalIntel(config, raceState, intelId) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [config, lap, sig, intelId])
-  const onSelectRef = useRef<(id: string) => void>(() => {})
-  onSelectRef.current = (id) => { uiTap(); setIntelId(cur => (cur === id ? null : id)) }
+  const select = (id: string) => { uiTap(); setIntelId(cur => (cur === id ? null : id)) }
+  // The flag closes the card.
+  useEffect(() => { if (phase === 'finished') setIntelId(null) }, [phase])
 
   if (!raceState || !config) return null
 
@@ -395,7 +398,8 @@ export function TimingTower() {
                 intel={labels.has(row.car.driverId) ? {
                   label: labels.get(row.car.driverId)!,
                   selected: intelId === row.car.driverId,
-                  onSelect: () => onSelectRef.current(row.car.driverId),
+                  onSelect: () => select(row.car.driverId),
+                  onClose: () => setIntelId(null),
                 } : undefined}
               />
             )
