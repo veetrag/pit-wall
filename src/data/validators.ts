@@ -292,6 +292,7 @@ const TuningSchema = z.object({
     aiNeutralisationStopsPerRace: z.tuple([z.number(), z.number()]),
     aiWeatherStopsPerRace: z.tuple([z.number(), z.number()]),
     slowStopsPerRace: z.tuple([z.number(), z.number()]),
+    redFlagPerRace: z.tuple([z.number(), z.number()]),
     _note: z.string(),
   }).optional(),
 }).passthrough()

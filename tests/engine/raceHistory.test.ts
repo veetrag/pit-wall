@@ -93,7 +93,7 @@ describe('neutralisation periods', () => {
     tyreFailure: { chancePerLapOverThreshold: 0, maxChancePerLap: 0 },
   }
   it('SC periods come from the incident log, in order, inside the race', () => {
-    const cfg = makeConfig({ ...base, incidents: { ...base.incidents, safetyCar: { crashDeployChance: 1, mechanicalDeployChance: 0 }, vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 } } } as TuningOverrides, 5)
+    const cfg = makeConfig({ ...base, incidents: { ...base.incidents, safetyCar: { crashDeployChance: 1, mechanicalDeployChance: 0 }, vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 }, redFlag: { crashChance: 0 } } } as TuningOverrides, 5)
     const h = lapHistory(cfg, 5, [])
     const deployed = replay(cfg, 5, []).state.incidents.filter(i => i.kind === 'safety_car_deployed').length
     expect(h.neutralisations.length).toBe(deployed)

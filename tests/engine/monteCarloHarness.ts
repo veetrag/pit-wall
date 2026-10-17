@@ -60,6 +60,8 @@ export type Metrics = {
   aiWeatherStopsPerRace: number
   // 1.6 §1: 'slow_stop' incidents per race, all cars.
   slowStopsPerRace: number
+  // 1.6 §4: 'red_flag' incidents per race.
+  redFlagPerRace: number
 }
 
 // Duplicated from src/state/raceStore.ts:53 and :57-62 (BRAIN_ORDER and
@@ -209,6 +211,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
   let safetyCars = 0
   let vscs = 0
   let slowStops = 0
+  let redFlags = 0
   let neutralisationStops = 0
   let weatherStops = 0
   let driverErrors = 0
@@ -258,6 +261,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
     crashes += state.cars.filter(c => c.retiredCause === 'crash').length
     safetyCars += state.incidents.filter(i => i.kind === 'safety_car_deployed').length
     vscs += state.incidents.filter(i => i.kind === 'vsc_deployed').length
+    redFlags += state.incidents.filter(i => i.kind === 'red_flag').length
     slowStops += state.incidents.filter(i => i.kind === 'slow_stop').length
     driverErrors += state.incidents.filter(i => i.kind === 'driver_error').length
 
@@ -300,5 +304,6 @@ export function runRaces(opts: HarnessOptions): Metrics {
     aiNeutralisationStopsPerRace: neutralisationStops / races,
     aiWeatherStopsPerRace: weatherStops / races,
     slowStopsPerRace: slowStops / races,
+    redFlagPerRace: redFlags / races,
   }
 }

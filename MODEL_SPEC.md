@@ -64,6 +64,7 @@ be corrected or must update this document with an argument.
 | **AI stops under a neutralisation / race** | — (smart/optimal box within 6 laps of the plan or at cliff ≥ 0.55; naive ignores) | 4-circuit sample, n=240 per cell: pro 3.183/3.829, rookie 4.267/3.517 | **2.20 – 5.55** | **Yes** — same sizing rule. Counts every AI stop on a boundary where a neutralisation is still out, reaction or not |
 | **AI weather stops / race (showery circuits)** | — (spec 2026-10-17 §0.1: confirm 2 laps, none with ≤ 3 laps left; was ~100/race) | 5 showery circuits, n=240 per cell: pro 63.992/66.475, rookie 63.342/66.729 | **44.30 – 86.75** | **Yes** — sized [floor(0.7×min), ceil(1.3×max)] to 0.05. Counts AI stops that change tyre family |
 | **Slow pit stops / race** | — (spec 2026-10-17 §1: 4% per stop x (1 − pitCrew × 0.8), +2.0–6.0 s) | 4-circuit sample, n=240 per cell: pro 0.658/0.721, rookie 0.696/0.675 | **0.45 – 0.95** | **Yes** — same sizing rule. Decided from the second value of the gaussianPair every stop already draws: no stream shift |
+| **Red flags / race** | — (spec 2026-10-17 §4: 5% per crash, max 1, none in the last 5 laps; ≈ one every ~10–15 races) | 4-circuit sample, n=240 per cell: pro 0.067/0.054, rookie 0.037/0.063 | **0.00 – 0.10** | **Yes** — same sizing rule; gated at n=240 with a "live" assertion carrying the floor |
 | Driver errors / race | not separately published | all 12, n=720: **5.18 / 5.24** pro, **5.08 / 5.28** rookie (field-wide, non-terminal plus terminal) | — | **No — diagnostic.** The gated consequence is the crash rate above |
 | Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | **1.3454** mean over four seed bases (1.3066–1.3769, pro, n=200 per circuit) — **below the 1.5 floor, and the circuit-sensitivity plan moved it DOWN.** Reverting only the two `lapModel.ts` lines that plan changed measures **1.5238** (1.4952–1.5523) on the same seeds: inside the band. Per-circuit, wired, sorted: grand_savane 2.591, altiplano 2.639, sol_desert 2.651, veloce 2.718, silverpark 2.744, highland 2.815, costa_verde 2.835, aurora 2.897, monsoon_bay 3.033, bengaluru 3.045, kaido 3.455, harbour_lights 3.568 | **1.5 – 2.5×** — **NOT MET, and regressed** | **Yes**, but on a *fixed pair* and for a narrower purpose than the band. `tests/engine/circuitDifferentiation.test.ts` gates harbour_lights ÷ grand_savane at **> 1.15** (measured 1.2968 ± 0.0451 pro over six n=120 seed bases) as a floor against the calendar flattening. That gate **cannot** fail on a renormalising of the sensitivities — verified by mutation, which passes at 1.44 — so the wiring itself is guarded by the fingerprint pairs in that file, not by this ratio. See §7 and §4 for the mechanism |
 | Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9879** pro / **0.9152–0.9394** rookie post-incidents — it went UP, from 0.9636 / 0.9152. Chaos removed cars without decoupling results from pace, which is the reassuring result and the opposite of the lottery this gate exists to catch. **Read it narrowly.** The reference pace ranking is computed from the *global* `sectorSplit`, not from `circuit.carSensitivity`, so it is circuit-blind and disagrees with the engine's own per-circuit order on 9 of 12 circuits. An unmoved value therefore shows results are still tied to car quality **in general** — the lottery failure mode is absent — and is **not** evidence that per-circuit weighting left pace ordering untouched, which an earlier version of this row wrongly inferred. See `tests/engine/monteCarloHarness.ts` | **≥ 0.90** — final, never to be widened | **Yes** |
@@ -994,3 +995,57 @@ rather than the rng. Neither can perturb a race.
 **Sprints.** `RaceConfig.lapsOverride` (absent = circuit laps) and `mandatoryTwoCompound: false`;
 sprint AI strategies carry no planned stops. The Monte-Carlo bands are Grand Prix bands and were
 not re-measured on sprint distance.
+
+## 15. 1.6: weather confirmation, slow stops and the red flag (2026-10-17)
+
+Spec: `docs/superpowers/specs/2026-10-17-pit-wall-1.6-design.md` §0, §1, §4. Bands: §3 rows
+"AI weather stops / race (showery circuits)", "Slow pit stops / race" and "Red flags / race",
+each measured over four n=240 cells and sized [floor(0.7×min), ceil(1.3×max)] to 0.05.
+
+**AI weather stops.** A dry-tyred AI car fits inters/wets only after `ai.weatherConfirmLaps` (2)
+consecutive completed non-dry laps, or at once on a WET track; a wet-tyred car fits slicks after
+2 dry laps; no weather stop with `ai.weatherMinLapsLeft` (3) laps or fewer to go. The count reads
+the lap just completed and earlier, never the future. No AI stop is taken on the boundary that
+completes the race (its pace mode still applies). Showery circuits fell from ~100 AI weather stops
+a race to the band above. `makeDeterministicTuning` pins confirm 1 / minLapsLeft 0, the pre-1.6
+rule, so the golden race is unchanged.
+
+**Slow stops.** `pitStopTime` already drew a gaussianPair and discarded the second value; a stop
+is now slow when that value is in the top p tail, p = `pit.slowStopChance` (0.04) × (1 −
+pitCrew/100 × `pit.pitCrewSlowRelief` (0.8; the spec's start value was 0.5, raised in Task 3 so
+the crew stat still separates the apex team)), adding `slowStopMin`–`slowStopMax` (2.0–6.0 s) by
+depth into the tail. No extra draw, so the stream does not shift; at chance 0 the formula is the
+pre-1.6 one byte for byte. The projection prices the expected stop.
+
+**Red flag.** On a tick whose first retirement is a crash, eligible (max 1 a race, more than 5
+laps left), the red flag is rolled at `incidents.redFlag.crashChance` (0.05) BEFORE the SC/VSC,
+and supersedes either. While it stands: SC pace, no overtakes, no stops. At the first lap
+boundary after it was shown, the race restarts in one step: order frozen, raceTime regridded at
+`qualifying.gridSlotGapSec`, a free tyre change for every running car (a planned stop within
+`planWindowLaps` (15) fitted and consumed on a dry restart; the weather family otherwise), and the
+neutralisation clears. The player's tyre is a logged `restart_tyre` call. Tests that make crashes
+certain to study the SC, the VSC or driver errors zero `redFlag.crashChance` in their own
+overrides (ruling R14, the 1.5 P12 precedent).
+
+**Calls recorded for Veet (deviations from the spec, accepted at plan review):**
+- R1: on the boundary that completes the race, `aiDecision` still runs and its pace mode applies; only its pit request is dropped.
+- R3: callers compute `RaceConfig.allDry` with the pure helper `isFirstCareerRace`; buildRaceConfig never reads a store.
+- R5: a plan stop shows `expectedPitStopTime + slow`; the slow part is exact, the ±0.3 s stationary noise is not shown.
+- R6: radio requests are checked at lap ends only, none under a red flag and no push under any neutralisation; YES to box fits the weather family on a non-dry track, else the next planned stop, else the best dry compound.
+- R7: a radio request's expiry counts only while the race clock runs.
+- R9: the forecast is a discriminated union (steady carries no window), laps counted ahead of now, first change in the horizon only.
+- R11: the stoppage in engine terms: rolled on a first-retirement crash with eligibility checked before the draw, supersedes SC/VSC (their ends logged first), SC pace and no AI or plan stops while out; on restart the weather family overrides the plan and `bestDryCompound` is the choice off wets.
+
+Measured (Task 1, 3, 13 MEASURE lines):
+MEASURE weather pro seedBase=1000 n=240 aiWeatherStopsPerRace=63.992;
+MEASURE weather pro seedBase=7000 n=240 aiWeatherStopsPerRace=66.475;
+MEASURE weather rookie seedBase=1000 n=240 aiWeatherStopsPerRace=63.342;
+MEASURE weather rookie seedBase=7000 n=240 aiWeatherStopsPerRace=66.729;
+MEASURE slow pro seedBase=1000 n=240 slowStopsPerRace=0.658 rho=0.628 dpos=3.680 top=0.442;
+MEASURE slow pro seedBase=7000 n=240 slowStopsPerRace=0.721 rho=0.628 dpos=3.627 top=0.408;
+MEASURE slow rookie seedBase=1000 n=240 slowStopsPerRace=0.696 rho=0.664 dpos=3.398 top=0.396;
+MEASURE slow rookie seedBase=7000 n=240 slowStopsPerRace=0.675 rho=0.655 dpos=3.409 top=0.471;
+MEASURE red pro seedBase=1000 n=240 redFlagPerRace=0.067 safetyCarsPerRace=0.463 vscPerRace=0.592 rho=0.630 dpos=3.666 top=0.458;
+MEASURE red pro seedBase=7000 n=240 redFlagPerRace=0.054 safetyCarsPerRace=0.392 vscPerRace=0.567 rho=0.633 dpos=3.607 top=0.388;
+MEASURE red rookie seedBase=1000 n=240 redFlagPerRace=0.037 safetyCarsPerRace=0.579 vscPerRace=0.596 rho=0.664 dpos=3.392 top=0.404;
+MEASURE red rookie seedBase=7000 n=240 redFlagPerRace=0.063 safetyCarsPerRace=0.471 vscPerRace=0.637 rho=0.642 dpos=3.493 top=0.471.

@@ -48,7 +48,7 @@ describe('safety car deployment', () => {
   it('never deploys when both chances are zero, even with retirements', () => {
     const config = makeConfig({
       ...SC_CERTAIN,
-      incidents: { ...SC_CERTAIN.incidents, safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0 }, vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 } },
+      incidents: { ...SC_CERTAIN.incidents, safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0 }, vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 }, redFlag: { crashChance: 0 } },
     } as TuningOverrides, 5)
     let sawActive = false
     const final = runRace(config, 5, (_p, n) => { if (n.safetyCar !== null) sawActive = true })

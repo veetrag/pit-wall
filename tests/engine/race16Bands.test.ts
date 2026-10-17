@@ -46,4 +46,24 @@ describe('1.6 race bands', () => {
     expect(m.slowStopsPerRace).toBeGreaterThanOrEqual(b.slowStopsPerRace[0])
     expect(m.slowStopsPerRace).toBeLessThanOrEqual(b.slowStopsPerRace[1])
   }, 300_000)
+
+  it.runIf(process.env.MEASURE === '1')('MEASURE red flags: four cells, n=240 each', () => {
+    for (const difficulty of ['pro', 'rookie'] as const) {
+      for (const seedBase of [1000, 7000]) {
+        const m = runRaces({ races: 240, circuitIds: SAMPLE, difficulty, seedBase })
+        // eslint-disable-next-line no-console
+        console.log(`MEASURE red ${difficulty} seedBase=${seedBase} n=240 redFlagPerRace=${m.redFlagPerRace.toFixed(3)} ` +
+          `safetyCarsPerRace=${m.safetyCarsPerRace.toFixed(3)} vscPerRace=${m.vscPerRace.toFixed(3)} ` +
+          `rho=${m.gridFinishSpearman.toFixed(3)} dpos=${m.meanAbsPosChange.toFixed(3)} top=${m.topTeamShare.toFixed(3)}`)
+      }
+    }
+  }, 1_800_000)
+
+  it('red flags per race are inside their band, and live', () => {
+    const m = runRaces({ races: 240, circuitIds: SAMPLE })
+    const b = loadGameData().tuning._regressionBands!
+    expect(m.redFlagPerRace, 'red flags must be live in the shipped tuning').toBeGreaterThan(0)
+    expect(m.redFlagPerRace).toBeGreaterThanOrEqual(b.redFlagPerRace[0])
+    expect(m.redFlagPerRace).toBeLessThanOrEqual(b.redFlagPerRace[1])
+  }, 300_000)
 })
