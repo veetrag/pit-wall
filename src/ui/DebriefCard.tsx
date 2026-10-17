@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useDebriefStore } from '@state/debriefStore'
 import { useSettingsStore } from '@state/settingsStore'
+import { KitButton } from '@ui/kit'
+import { WhatIfPanel } from './WhatIfPanel'
 import type { Alternative, CallVerdict, JudgedCall, Compound } from '@engine/types'
 
 const TYRE: Record<Compound, string> = { S: 'SOFT', M: 'MEDIUM', H: 'HARD', I: 'INTER', W: 'WET' }
@@ -83,6 +85,19 @@ function Row({ v, index, finish }: { v: CallVerdict; index: number; finish: stri
 
 export function DebriefCard() {
   const { status, done, total, result } = useDebriefStore()
+  const job = useDebriefStore(s => s.job)
+  const clearWhatIf = useDebriefStore(s => s.clearWhatIf)
+  const [trying, setTrying] = useState(false)
+  // Leaving the result screen by any route drops a running what-if.
+  useEffect(() => () => clearWhatIf(), [clearWhatIf])
+  const waiting = job && (
+    <div style={{ marginTop: 10 }}>
+      <KitButton variant="secondary" size="sm" disabled ariaLabel="Try another plan" style={{ width: '100%' }} onClick={() => {}}>
+        TRY ANOTHER PLAN
+      </KitButton>
+      <div style={{ fontSize: 11, color: 'var(--lilac-dim)', marginTop: 4 }}>Available once the review finishes.</div>
+    </div>
+  )
   const shell = { background: 'var(--grape)', border: '1px solid var(--line-hair)', borderRadius: 10, padding: '12px 14px' }
   const title = <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'var(--lilac-dim)', letterSpacing: '0.12em' }}>YOUR CALLS</span>
 
@@ -90,7 +105,7 @@ export function DebriefCard() {
     return <div style={{ ...shell, fontSize: 12, color: 'var(--lilac-dim)' }}>Debrief unavailable for a resumed race.</div>
   }
   if (status === 'failed') {
-    return <div style={{ ...shell, fontSize: 12, color: 'var(--lilac-dim)' }}>Debrief unavailable.</div>
+    return <div style={{ ...shell, fontSize: 12, color: 'var(--lilac-dim)' }}>Debrief unavailable.{waiting}</div>
   }
   if (status === 'running' || !result) {
     const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -104,6 +119,7 @@ export function DebriefCard() {
           </div>
           <span style={{ ...mono, fontSize: 11, color: 'var(--lilac)' }}>{pct}%</span>
         </div>
+        {waiting}
       </div>
     )
   }
@@ -128,6 +144,14 @@ export function DebriefCard() {
           +{hidden} more judged good
         </div>
       )}
+      {job && !trying && (
+        <div style={{ marginTop: 10 }}>
+          <KitButton variant="secondary" size="sm" ariaLabel="Try another plan" style={{ width: '100%' }} onClick={() => setTrying(true)}>
+            TRY ANOTHER PLAN
+          </KitButton>
+        </div>
+      )}
+      {job && trying && <WhatIfPanel />}
     </div>
   )
 }
