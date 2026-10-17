@@ -74,6 +74,7 @@ describe('SprintResult', () => {
     toSprintSetup()
     finishSprint(3)
     render(<SprintResult />)
+    expect(screen.getByRole('button', { name: /share result card/i })).toBeTruthy()
     expect(screen.getByText('P3')).toBeTruthy()
     // Twice in the DOM: the visible count and its invisible width twin.
     expect(screen.getAllByText(/\+6 SPRINT PTS/).length).toBeGreaterThan(0)

@@ -49,6 +49,7 @@ describe('race result in Race Day Bold (hero 3)', () => {
 
   it('leads with the position and points, shows places gained, and hides the full classification', () => {
     render(<RaceResult />)
+    expect(screen.getByRole('button', { name: /share result card/i })).toBeTruthy()
     expect(screen.getByText('P2')).toBeTruthy()
     expect(screen.getByText(/PTS/)).toBeTruthy()
     // "+" sits flush against the digits: one visible "+18" node (its twin is

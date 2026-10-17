@@ -6,6 +6,8 @@ import { useSeasonStore, TOTAL_RACES } from '@state/seasonStore'
 import { useCareerStore, erodeTiers } from '@state/careerStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { BadgeToast } from './BadgeToast'
+import { ShareButton } from './share/ShareButton'
+import { buildShareData } from './share/shareCard'
 import { LadderReveal, ConstructorsList } from './LadderReveal'
 import { useUiTap } from '@hooks/useUiTap'
 import { useShortViewport } from '@hooks/useShortViewport'
@@ -153,6 +155,15 @@ export function Championship() {
               </div>
             )}
           </motion.div>
+        )}
+
+        {playerDriverId && (
+          <div style={{ margin: '0 16px' }}>
+            <ShareButton fileName={`pitwall-season-${seasonNumber}.png`} build={() => buildShareData({
+              kind: 'season', finish: playerRank > 0 ? playerRank : null, season: seasonNumber,
+              points: playerStanding?.points ?? 0, podiumIds: standings.slice(0, 3).map(s => s.driverId), playerDriverId,
+            })} />
+          </div>
         )}
 
         {/* 3. Standings */}

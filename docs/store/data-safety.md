@@ -87,3 +87,16 @@ The claim that analytics is off is checkable three ways: the manifest flag,
 the test that asserts it, and the settings payload Crashlytics fetched on
 device, which reads `"collect_analytics": false` alongside
 `"collect_reports": true`.
+
+---
+
+## 1.6: share a result card
+
+SHARE renders a PNG on the device and hands it to the Android share sheet
+(`@capacitor/share`, via a file in the app cache written with
+`@capacitor/filesystem` and served by the existing FileProvider `cache-path`).
+Nothing is uploaded by the app; the player chooses where the image goes.
+**No change to the Data Safety form.** Re-check the merged-manifest
+permission list (`tests/data/androidManifest.test.ts`) on the first release
+build with these plugins; if either adds a permission, stop and review it
+before submitting.

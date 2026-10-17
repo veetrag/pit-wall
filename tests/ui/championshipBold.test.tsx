@@ -29,6 +29,7 @@ describe('Championship in Race Day Bold', () => {
 
   it('names the real season, leads with the verdict band, and keeps the standings in tabs', () => {
     render(<Championship />)
+    expect(screen.getByRole('button', { name: /share result card/i })).toBeTruthy()
     expect(screen.getByText(/SEASON 3 · FINAL/)).toBeTruthy()
     expect(screen.queryByText(/2025/)).toBeNull()
     expect(screen.getByText('▲ STEP UP')).toBeTruthy()

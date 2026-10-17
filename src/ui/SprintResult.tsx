@@ -7,6 +7,9 @@ import { loadGameData } from '@data/validators'
 import { HeroBand, KitButton, StandingRow, ScreenFrame, snapIn, useCountUp, useReducedMotion } from '@ui/kit'
 import { DebriefCard } from './DebriefCard'
 import { LapChartCard } from './LapChart'
+import { useCareerStore } from '@state/careerStore'
+import { ShareButton } from './share/ShareButton'
+import { buildShareData } from './share/shareCard'
 
 const label = { fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: '0.14em' } as const
 const numeric = { fontVariantNumeric: 'tabular-nums' as const }
@@ -104,10 +107,17 @@ export function SprintResult() {
           onClick={() => { useDebriefStore.getState().cancel(); toGrandPrix() }}>
           ON TO THE GRAND PRIX →
         </KitButton>
-        <KitButton variant="secondary" size="sm" style={{ width: '100%' }}
-          onClick={() => { useDebriefStore.getState().cancel(); retrySprint() }}>
-          ↺ RETRY SPRINT
-        </KitButton>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <KitButton variant="secondary" size="sm" style={{ flex: 1 }}
+            onClick={() => { useDebriefStore.getState().cancel(); retrySprint() }}>
+            ↺ RETRY SPRINT
+          </KitButton>
+          <ShareButton style={{ flex: 1 }} fileName={`pitwall-sprint-${raceIndex + 1}.png`} build={() => buildShareData({
+            kind: 'sprint', finish: mine && !mine.retired ? mine.position : null, circuitName, round: raceIndex + 1,
+            season: useCareerStore.getState().seasonNumber, points: earned,
+            podiumIds: sorted.filter(r => !r.retired).slice(0, 3).map(r => r.driverId), playerDriverId,
+          })} />
+        </div>
       </div>
     </ScreenFrame>
   )

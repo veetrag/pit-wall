@@ -11,6 +11,9 @@ import { LapChartCard } from './LapChart'
 import { HelmetAvatar } from './HelmetAvatar'
 import { HeroBand, KitButton, Pill, liveryOf, snapIn, useCountUp, useReducedMotion, ScreenFrame } from '@ui/kit'
 import { useDebriefStore } from '@state/debriefStore'
+import { useCareerStore } from '@state/careerStore'
+import { ShareButton } from './share/ShareButton'
+import { buildShareData } from './share/shareCard'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 
@@ -104,6 +107,7 @@ export function RaceResult() {
   const [showFull, setShowFull] = useState(false)
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
+  const seasonNumber = useCareerStore(s => s.seasonNumber)
   const sorted = [...(lastRaceResults ?? [])].sort((a, b) => a.position - b.position)
   const podium = sorted.filter(r => r.position <= 3 && !r.retired)
   const isTopThree = !playerResult?.retired && (playerResult?.position ?? 99) <= 3
@@ -374,6 +378,11 @@ export function RaceResult() {
             onClick={() => { useDebriefStore.getState().cancel(); retryRace() }}>
             ↺ RETRY ROUND
           </KitButton>
+          <ShareButton style={{ flex: 1 }} fileName={`pitwall-round-${raceIndex + 1}.png`} build={() => buildShareData({
+            kind: 'gp', finish: playerResult && !playerResult.retired ? playerResult.position : null,
+            circuitName, round: raceIndex + 1, season: seasonNumber, points: playerResult?.points ?? 0,
+            podiumIds: podium.map(r => r.driverId), playerDriverId,
+          })} />
           <KitButton variant="secondary" size="sm" style={{ flex: 1 }}
             onClick={() => { useDebriefStore.getState().cancel(); backToMenu() }}>
             MENU
