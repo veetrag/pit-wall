@@ -37,6 +37,17 @@ export function CareerStats() {
     <ScreenFrame label="Career stats">
       <ScreenHeader eyebrow="CAREER" title="Stats" onBack={exit} />
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 24px', fontVariantNumeric: 'tabular-nums' }}>
+        {s.gpRaces === 0 && s.sprint.races === 0 ? (
+          <div className="slant-lg" style={{ background: 'var(--grape)', padding: '28px 20px', textAlign: 'center', marginTop: 16 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 20, color: 'var(--white)', marginBottom: 6 }}>
+              NO RACES YET
+            </div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--lilac)', lineHeight: 1.5 }}>
+              Your numbers start with your first Grand Prix.
+            </div>
+          </div>
+        ) : (
+          <>
         <motion.div {...next()}>
           <h2 style={HEAD}>THE BASICS</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
@@ -89,6 +100,8 @@ export function CareerStats() {
                 ))}
               </div>}
         </motion.div>
+          </>
+        )}
       </div>
     </ScreenFrame>
   )
