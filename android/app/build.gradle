@@ -22,8 +22,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // 3 (1.2) went live in production on 1 Oct 2026. Play rejects a
-        // duplicate versionCode: 1.3 is 4, so 1.4 is 5 and the next must be 6.
-        versionCode 5
+        // duplicate versionCode: 1.3 is 4, 1.4 is 5, so 1.5 is 6.
+        versionCode 6
         // MUST match package.json's version -- pinned by
         // tests/data/appVersion.test.ts, because gradle cannot import JSON and
         // nothing else in the toolchain reads Android config.
@@ -32,7 +32,9 @@ android {
         // crash reporting and the in-app review prompt.
         // 1.4: the Race Day Bold redesign, team ladder, car setup and the
         // post-race debrief.
-        versionName "1.4"
+        // 1.5: virtual safety car, rival intel, sprint weekends, the debrief
+        // lap chart, and the 1.5 phone-pass fixes.
+        versionName "1.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

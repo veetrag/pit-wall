@@ -945,3 +945,47 @@ Every band holds with setups on. The tightest margins are gridFinishSpearman (0.
 ±1 `aiNoise` level gives a quarter of the rivals a random pace offset of one step-off loss (table
 above) or more. Overtakes rise
 ~10% because unequal wings now change the pass probability on the straights.
+
+## 14. 1.5: the virtual safety car and the AI's neutralisation reaction (2026-10-16)
+
+Spec: `docs/superpowers/specs/2026-10-16-pit-wall-1.5-features-design.md` §1. Bands: §3 rows
+"VSCs / race" and "AI stops under a neutralisation / race" (measured over four n=240 cells on the
+4-circuit sample; sizing rule [floor(0.7×min), ceil(1.3×max)] to 0.05).
+
+**Trigger.** On a tick where a car newly retires, the SC is rolled first and exactly as before
+(`crashDeployChance` 0.30, `mechanicalDeployChance` 0.12, tyre failures count as mechanical).
+Only if it stays in is the VSC rolled (`incidents.vsc.crashDeployChance` 0.25,
+`mechanicalDeployChance` 0.40). One neutralisation at a time: a VSC only opens on a green track;
+an SC may supersede a running VSC (logged `vsc_ended` then `safety_car_deployed` on the same
+tick, and the field IS compressed, because it is now a safety car); a VSC never supersedes an SC.
+VSCs count against their own `maxPerRace` (2), so a VSC can still come out after the SC cap is
+reached.
+
+**Under a VSC.** Every car laps at `vsc.paceMultiplier` (1.30, applied in lapModel like the SC's,
+so it changes no gap). Gaps are frozen: no `compressRaceTimes`. Overtakes are suspended (same
+`safetyCar === null` gate as the SC). A stop costs `pitLaneTimeLoss × vsc.laneLossFactor` (0.60)
+through `effectivePitLaneLoss`, the single source the projection, pit panel, pit timer and race
+all read. Duration uniform 1–3 laps, ticked down per lap.
+
+**AI reaction (SC and VSC).** Smart and optimal brains box at a lap boundary when a planned stop
+remains and either it is within `ai.neutralisationWindowLaps` (6) or the tyre's cliff fraction is
+at least `ai.neutralisationCliffFrac` (0.55), fitting the plan's compound on neutral pace. Naive
+brains ignore it. It is a pure threshold with no rng draw. The AI decides on the neutralisation as
+it stands AFTER the tick -- the same value `pitStopTime` charges -- so it never boxes on the
+boundary where the SC/VSC ends and pays the green-flag loss. This is the balance call with real
+feel impact (spec "Balance calls"): the cheap stop becomes a race against the smart teams.
+
+**Invariants kept.** With both VSC chances at 0 the VSC roll draws nothing and the AI reaction
+can never fire, so `tests/engine/byteIdentity.test.ts` reproduces the golden race with the fixture
+unchanged (`makeDeterministicTuning` zeroes the VSC chances alongside the SC's). `SafetyCarState.kind`
+is optional and read through `neutralisationKind` (absent = SC), so no older state changes meaning.
+
+**Also pure, also outside RaceState.** `lapHistory` (`src/engine/raceHistory.ts`) replays
+(config, seed, calls) on the replay loop and samples every lap end; `rivalIntel`
+(`src/engine/rivalIntel.ts`) projects a rival's stop from the same per-brain thresholds
+strategy.ts acts on (`PIT_CLIFF_THRESHOLD`), with a ±1 lap offset from a hash of the car id
+rather than the rng. Neither can perturb a race.
+
+**Sprints.** `RaceConfig.lapsOverride` (absent = circuit laps) and `mandatoryTwoCompound: false`;
+sprint AI strategies carry no planned stops. The Monte-Carlo bands are Grand Prix bands and were
+not re-measured on sprint distance.

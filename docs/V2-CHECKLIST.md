@@ -414,6 +414,16 @@ been on a device.
       press on every screen.
 - [ ] Low-end phone frame rate; tablet/foldable layout.
 
+### Features for 1.5 (spec 2026-10-16, plan 2026-10-16-pit-wall-1.5-features)
+
+Ships as 1.5 / versionCode 6 with the fixes above. None of it has been on a
+device. Phone pass: a VSC and an SC-over-VSC in one race (banner, wash, pit
+timer), rival intel open through a stop and a retirement, a sprint weekend
+end to end including an app kill mid-sprint, the lap chart after a lap-1 DNF.
+Balance calls for Veet after the pass: VSC chances 0.25/0.40, pace 1.30, lane
+0.60; AI window 6 laps / cliff 0.55; intel widths 2/3/5; sprint 0.33 of the
+distance, rounds 4/8/12; the 36px tower rows versus the 44px target rule.
+
 ### Store, once 1.4 is live
 
 - [ ] Send the data-deletion change for review.
@@ -425,24 +435,28 @@ Already ruled out and not repeated here: run both cars, practice, driver market,
 weekend tyre allocation, daily rewards/streaks, leaderboards/friends.
 
 **In the race (the core loop)**
-- [ ] **Virtual safety car.** The full safety car exists; a VSC would add a
-      second, cheaper "free-ish stop" window (~half the pit loss saved, gaps
-      frozen rather than bunched), creating a different decision from the SC.
-      Engine change against the locked `MODEL_SPEC.md`, so it needs his sign-off
-      and a re-run of the Monte-Carlo bands.
+- [x] **Virtual safety car.** The full safety car exists; a VSC adds a second,
+      cheaper "free-ish stop" window (~0.6 of the pit loss, gaps frozen rather
+      than bunched), creating a different decision from the SC. `9de1560`: VSC
+      rolled by retirement cause after the SC roll; AI teams react to every
+      neutralisation. Bands in `MODEL_SPEC.md` §3 and §14.
 - [ ] **Driver radio requests.** The driver occasionally asks for something —
       "tyres are gone, box?", "I'm faster than him, let me push" — and the
       player answers yes/no in one tap. Uses the existing pace and pit levers,
       so no new mechanics; it makes the race talk back. Data in `radio.json`.
-- [ ] **Rival intel on the tower.** Tap a rival row to see tyre compound and
+- [x] **Rival intel on the tower.** Tap a rival row to see tyre compound and
       age, stops made, and a "likely to box in N laps" hint from `strategy.ts`.
-      Makes undercut/overcut a deliberate play rather than a lucky one.
+      Makes undercut/overcut a deliberate play rather than a lucky one. `c3a1107`
+      taps a rival row for the card; `71dd932` adds focus ring, keyboard and
+      flag close. The box window is a fuzzy band (half-widths 2/3/5 by brain),
+      never the exact lap.
 
 **After the race**
-- [ ] **Lap chart in the debrief.** Position-by-lap lines for you and the cars
+- [x] **Lap chart in the debrief.** Position-by-lap lines for you and the cars
       around you, with pit stops and SC periods marked. The race is
       deterministic and already recorded, so this is pure UI, and it shows the
-      player *why* their strategy worked.
+      player *why* their strategy worked. `7cf6e09`: replayed from the race
+      seed on the debrief, not stored; `44789e9` fixes the retirement marker.
 - [ ] **Share a result card.** Render the podium/result as an image and open
       the Android share sheet (Capacitor Share). No server, no account — the
       only free growth channel the game has.
@@ -457,9 +471,11 @@ weekend tyre allocation, daily rewards/streaks, leaderboards/friends.
       tyre deg up, pit loss down, a new circuit swapped in, a points tweak —
       announced on the season-end screen. Makes season five feel unlike season
       one at low cost (it is `tuning.json` overlays).
-- [ ] **Sprint weekends.** A few rounds run a short race with no mandatory
+- [x] **Sprint weekends.** A few rounds run a short race with no mandatory
       stop before the main one. A different strategic shape using the same
-      engine; needs a points-table and calendar change.
+      engine; needs a points-table and calendar change. `64e5787`, `958bc44`:
+      sprint presentation and the lock caption; rounds 4/8/12, sprint points
+      8-7-6-5-4-3-2-1 and the sprint distance are in `tuning.json`.
 - [ ] **Career stats and records page.** Best finish per circuit, win rate by
       start compound, longest stint, biggest comeback. Data the career record
       mostly holds already; feeds the trophy room.
