@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EASE, PRESS, ScreenFrame, ScreenHeader, KitToggle, Segmented, Pill, useReducedMotion } from '@ui/kit'
-import { useSettingsStore, type SimSpeed, type Difficulty, type TyrePalette } from '@state/settingsStore'
+import { useSettingsStore, type SimSpeed, type Difficulty, type TyrePalette, type TextSize } from '@state/settingsStore'
 import { useCoachStore } from '@state/coachStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useUiTap } from '@hooks/useUiTap'
@@ -36,6 +36,9 @@ const SPEED_OPTIONS = [
 const DIFFICULTY_OPTIONS: { value: Difficulty; label: string }[] = [
   { value: 'rookie', label: 'Rookie' }, { value: 'pro', label: 'Pro' },
 ]
+const TEXT_SIZE_OPTIONS: { value: TextSize; label: string }[] = [
+  { value: 'standard', label: 'Standard' }, { value: 'large', label: 'Large' },
+]
 const PALETTE_OPTIONS: { value: TyrePalette; label: string }[] = [
   { value: 'standard', label: 'Standard' }, { value: 'cb', label: 'High contrast' },
 ]
@@ -46,9 +49,9 @@ export function SettingsScreen() {
   const exitSettings = useSeasonStore(s => s.exitSettings)
   const {
     soundEnabled, hapticsEnabled, reducedMotion,
-    simSpeed, proMode, skipStartSequence, difficulty, coachMarksSeen, tyrePalette,
+    simSpeed, proMode, skipStartSequence, difficulty, coachMarksSeen, tyrePalette, textSize,
     setSoundEnabled, setHapticsEnabled, setReducedMotion,
-    setSimSpeed, setProMode, setSkipStartSequence, setDifficulty, setCoachMarksSeen, setTyrePalette,
+    setSimSpeed, setProMode, setSkipStartSequence, setDifficulty, setCoachMarksSeen, setTyrePalette, setTextSize,
   } = useSettingsStore()
 
   return (
@@ -66,6 +69,9 @@ export function SettingsScreen() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <SegRow minWidth={196} label="Tyre colours" sub="High contrast for colour-blind players. Letters stay.">
             <Segmented ariaLabel="Tyre colours" options={PALETTE_OPTIONS} value={tyrePalette} onChange={setTyrePalette} />
+          </SegRow>
+          <SegRow minWidth={170} label="Text size" sub="Larger timing tower, pit panel and radio">
+            <Segmented ariaLabel="Text size" options={TEXT_SIZE_OPTIONS} value={textSize} onChange={setTextSize} />
           </SegRow>
         </div>
 

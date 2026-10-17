@@ -197,6 +197,7 @@ function PitPanelDrawer() {
     <motion.div
       {...sheetMotion}
       transition={{ duration: 0.22, ease: EASE }}
+      className="text-zoom"
       style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 }}
     >
       {/*

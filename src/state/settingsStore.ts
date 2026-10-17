@@ -6,6 +6,7 @@ export type Difficulty = 'rookie' | 'pro'
 export type DriverNameFormat = 'code' | 'full'
 /** Spec 1.6 §10: 'cb' sets data-palette="cb" on the root, overriding only the tyre tokens. */
 export type TyrePalette = 'standard' | 'cb'
+export type TextSize = 'standard' | 'large'
 
 export interface SettingsState {
   soundEnabled: boolean
@@ -25,6 +26,7 @@ export interface SettingsState {
   driverNameFormat: DriverNameFormat
   coachMarksSeen: boolean
   tyrePalette: TyrePalette
+  textSize: TextSize
   setSoundEnabled: (v: boolean) => void
   setHapticsEnabled: (v: boolean) => void
   setReducedMotion: (v: boolean) => void
@@ -35,6 +37,7 @@ export interface SettingsState {
   setDriverNameFormat: (v: DriverNameFormat) => void
   setCoachMarksSeen: (v: boolean) => void
   setTyrePalette: (v: TyrePalette) => void
+  setTextSize: (v: TextSize) => void
   loadSettings: () => Promise<void>
 }
 
@@ -49,6 +52,7 @@ const K = {
   driverNameFormat: 'settings.driverNameFormat',
   coachMarksSeen: 'settings.coachMarksSeen',
   tyrePalette: 'settings.tyrePalette',
+  textSize: 'settings.textSize',
 }
 
 /**
@@ -75,6 +79,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   driverNameFormat: 'code',
   coachMarksSeen: false,
   tyrePalette: 'standard',
+  textSize: 'standard',
 
   setSoundEnabled(v) { set({ soundEnabled: v }); void Preferences.set({ key: K.sound, value: String(v) }) },
   setHapticsEnabled(v) { set({ hapticsEnabled: v }); void Preferences.set({ key: K.haptics, value: String(v) }) },
@@ -86,11 +91,12 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   setDriverNameFormat(v) { set({ driverNameFormat: v }); void Preferences.set({ key: K.driverNameFormat, value: v }) },
   setCoachMarksSeen(v) { set({ coachMarksSeen: v }); void Preferences.set({ key: K.coachMarksSeen, value: String(v) }) },
   setTyrePalette(v) { set({ tyrePalette: v }); void Preferences.set({ key: K.tyrePalette, value: v }) },
+  setTextSize(v) { set({ textSize: v }); void Preferences.set({ key: K.textSize, value: v }) },
 
   async loadSettings() {
     const keys = Object.values(K)
     const results = await Promise.all(keys.map(k => Preferences.get({ key: k })))
-    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty, driverNameFormat, coachMarksSeen, tyrePalette] = results.map(r => r.value)
+    const [sound, haptics, motion, simSpeed, proMode, skipStart, difficulty, driverNameFormat, coachMarksSeen, tyrePalette, textSize] = results.map(r => r.value)
     set({
       soundEnabled:      sound     != null ? sound     === 'true' : true,
       hapticsEnabled:    haptics   != null ? haptics   === 'true' : true,
@@ -108,6 +114,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       driverNameFormat:  driverNameFormat === 'full' ? 'full' : 'code',
       coachMarksSeen:    coachMarksSeen != null ? coachMarksSeen === 'true' : false,
       tyrePalette:       tyrePalette === 'cb' ? 'cb' : 'standard',
+      textSize:          textSize === 'large' ? 'large' : 'standard',
     })
   },
 }))

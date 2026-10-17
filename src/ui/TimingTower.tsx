@@ -14,6 +14,11 @@ import { RivalIntelCard, intelAriaLabel } from './RivalIntelCard'
 // of 2-3 rows adrift in empty space. Full field is one tap away, not gone.
 const COMPACT_WINDOW_SIZE = 6
 
+/** Large text zooms the tower 1.15x, so the compact window drops one row to keep the bottom row whole. */
+export function compactWindowSize(textSize: 'standard' | 'large'): number {
+  return textSize === 'large' ? COMPACT_WINDOW_SIZE - 1 : COMPACT_WINDOW_SIZE
+}
+
 // Race Day Bold row grid (spec §6): position | team slash | code | gap | tyre.
 // Full-name mode trades the fixed code column for the flexible one.
 const GRID = '26px 5px 46px 1fr 30px'
@@ -96,6 +101,7 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
       layout
       layoutId={car.driverId}
       data-tower-row
+      data-testid="tower-row"
       data-intel-row={intel ? car.driverId : undefined}
       className={intel ? 'slant-row kit-focus' : 'slant-row'}
       transition={ROW_SPRING}
@@ -226,6 +232,7 @@ export function TimingTower() {
   // §6; the full field is one tap away.
   const [expanded, setExpanded] = useState(false)
   const nameFormat = useSettingsStore(s => s.driverNameFormat)
+  const textSize = useSettingsStore(s => s.textSize)
   const setDriverNameFormat = useSettingsStore(s => s.setDriverNameFormat)
   const uiTap = useUiTap()
   const deployCount = useSafetyCarDeployCount()
@@ -311,12 +318,13 @@ export function TimingTower() {
   // Compact default: a fixed-size window of nearby rivals centred on the
   // player, clamped to the field so a P1 or P20 player still fills the window
   // instead of trailing off into empty space near an edge.
+  const windowSize = compactWindowSize(textSize)
   let visibleCars = sorted
-  if (!expanded && player && totalCars > COMPACT_WINDOW_SIZE) {
-    let start = player.position - Math.floor(COMPACT_WINDOW_SIZE / 2)
-    let end = start + COMPACT_WINDOW_SIZE - 1
-    if (start < 1) { start = 1; end = COMPACT_WINDOW_SIZE }
-    if (end > totalCars) { end = totalCars; start = totalCars - COMPACT_WINDOW_SIZE + 1 }
+  if (!expanded && player && totalCars > windowSize) {
+    let start = player.position - Math.floor(windowSize / 2)
+    let end = start + windowSize - 1
+    if (start < 1) { start = 1; end = windowSize }
+    if (end > totalCars) { end = totalCars; start = totalCars - windowSize + 1 }
     visibleCars = sorted.filter(c => c.position >= start && c.position <= end)
   }
 
@@ -339,7 +347,7 @@ export function TimingTower() {
   }
 
   return (
-    <div ref={rootRef} style={{
+    <div ref={rootRef} className="text-zoom" style={{
       background: 'var(--night)', width: '100%', height: '100%',
       overflow: 'hidden', display: 'flex', flexDirection: 'column',
     }}>

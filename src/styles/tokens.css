@@ -81,6 +81,13 @@
   --tyre-wet:       rgb(var(--tyre-wet-rgb));
 }
 
+/*
+ * Large text (spec 1.6 §11): whole-container scaling, not per-element -- the
+ * HUD sets ~260 inline px font sizes. Chromium WebView supports `zoom`;
+ * percentages inside are not multiplied, so height: 100% still fits its slot.
+ */
+:root[data-text-size="large"] .text-zoom { zoom: 1.15; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {

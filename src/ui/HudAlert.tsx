@@ -47,7 +47,7 @@ function AlertBanner({ alert, onDismiss }: { alert: AlertMessage; onDismiss: () 
     <motion.div
       {...enter}
       transition={{ duration: 0.18, ease: EASE }}
-      className="slant-lg"
+      className="slant-lg text-zoom"
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '0 4px 0 18px', margin: '8px 8px 0',

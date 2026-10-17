@@ -92,4 +92,23 @@ describe('settingsStore', () => {
       expect(useSettingsStore.getState().tyrePalette).toBe('cb')
     })
   })
+
+  describe('textSize (spec 1.6 §11)', () => {
+    it('defaults to standard and round-trips large', async () => {
+      await useSettingsStore.getState().loadSettings()
+      expect(useSettingsStore.getState().textSize).toBe('standard')
+      useSettingsStore.getState().setTextSize('large')
+      useSettingsStore.setState({ textSize: 'standard' })
+      await useSettingsStore.getState().loadSettings()
+      expect(useSettingsStore.getState().textSize).toBe('large')
+    })
+    it('keeps tyrePalette (the key before it) intact', async () => {
+      useSettingsStore.getState().setTyrePalette('cb')
+      useSettingsStore.getState().setTextSize('large')
+      useSettingsStore.setState({ tyrePalette: 'standard', textSize: 'standard' })
+      await useSettingsStore.getState().loadSettings()
+      expect(useSettingsStore.getState().tyrePalette).toBe('cb')
+      expect(useSettingsStore.getState().textSize).toBe('large')
+    })
+  })
 })

@@ -5,9 +5,11 @@ import { useSettingsStore, type SettingsState } from './settingsStore'
  * (tokens.css) does the work and no component re-renders when they change.
  * Spec 1.6 §10 (tyre palette); §11 (text size) adds to this in Task 2.
  */
-export function applyDisplaySettings(root: HTMLElement, s: Pick<SettingsState, 'tyrePalette'>): void {
+export function applyDisplaySettings(root: HTMLElement, s: Pick<SettingsState, 'tyrePalette' | 'textSize'>): void {
   if (s.tyrePalette === 'cb') root.setAttribute('data-palette', 'cb')
   else root.removeAttribute('data-palette')
+  if (s.textSize === 'large') root.setAttribute('data-text-size', 'large')
+  else root.removeAttribute('data-text-size')
 }
 
 /** Applies now, then follows the store. Returns an unsubscribe. */

@@ -48,7 +48,7 @@ function RequestCard({ req }: { req: ActiveRadioRequest }) {
       animate={reduced ? { opacity: 1 } : { opacity: 1, x: 0 }}
       exit={reduced ? { opacity: 0 } : { opacity: 0, x: 18 }}
       transition={{ duration: 0.18, ease: EASE }}
-      className="slant-lg"
+      className="slant-lg text-zoom"
       style={{
         margin: '8px 8px 0', padding: '8px 10px 0 18px', flexShrink: 0,
         background: 'var(--grape)', color: 'var(--white)',
