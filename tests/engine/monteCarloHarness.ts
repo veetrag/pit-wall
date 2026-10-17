@@ -55,6 +55,9 @@ export type Metrics = {
   // tuning.json, provenance in MODEL_SPEC.md section 3.
   vscPerRace: number
   aiNeutralisationStopsPerRace: number
+  // 1.6 §0.1: AI stops (pitsDone up across a lap boundary) that change tyre
+  // FAMILY, dry <-> wet. Counts weather stops whatever triggered them.
+  aiWeatherStopsPerRace: number
 }
 
 // Duplicated from src/state/raceStore.ts:53 and :57-62 (BRAIN_ORDER and
@@ -204,6 +207,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
   let safetyCars = 0
   let vscs = 0
   let neutralisationStops = 0
+  let weatherStops = 0
   let driverErrors = 0
   let carRaces = 0
   const finishSumByTeam = new Map<string, number>()
@@ -220,10 +224,12 @@ export function runRaces(opts: HarnessOptions): Metrics {
     const rng = createRng(seed)
     for (let i = 0; i < config.circuit.laps * 3; i++) {
       const next = stepSector(config, state, rng)
-      if (state.sector === 2 && next.safetyCar !== null) {
+      if (state.sector === 2) {
         for (const c of next.cars) {
           const before = state.cars.find(b => b.driverId === c.driverId)
-          if (!c.isPlayer && before && c.pitsDone > before.pitsDone) neutralisationStops++
+          if (c.isPlayer || !before || c.pitsDone <= before.pitsDone) continue
+          if (next.safetyCar !== null) neutralisationStops++
+          if (config.compounds[c.compound]?.type !== config.compounds[before.compound]?.type) weatherStops++
         }
       }
       state = next
@@ -288,5 +294,6 @@ export function runRaces(opts: HarnessOptions): Metrics {
     driverErrorsPerRace: driverErrors / races,
     vscPerRace: vscs / races,
     aiNeutralisationStopsPerRace: neutralisationStops / races,
+    aiWeatherStopsPerRace: weatherStops / races,
   }
 }

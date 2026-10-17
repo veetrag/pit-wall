@@ -233,6 +233,7 @@ describe('Monte-Carlo regression', () => {
     expect(b.minDistinctWinners).toBeGreaterThanOrEqual(1)
     expect(b.vscPerRace[0]).toBeLessThan(b.vscPerRace[1])
     expect(b.aiNeutralisationStopsPerRace[0]).toBeLessThan(b.aiNeutralisationStopsPerRace[1])
+    expect(b.aiWeatherStopsPerRace[0]).toBeLessThan(b.aiWeatherStopsPerRace[1])
   })
 })
 

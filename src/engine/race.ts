@@ -372,6 +372,11 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     }
   }
   const newLap = lapCompleted ? state.lap + 1 : state.lap
+  // The boundary that completes the race. No AI stop is taken on it (spec 1.6
+  // §0.1): a stop after the last lap only adds time. aiDecision still runs and
+  // its pace mode still applies (ruling R1) -- the golden fixture records that
+  // pace mode, and no sector follows, so it cannot change a result.
+  const raceEndsThisTick = lapCompleted && newLap >= state.totalLaps
 
   // Dirty air: a car held within gapThreshold of the car ahead across a whole
   // lap counts as a lap "stuck in traffic" — checked against the post-overtake
@@ -403,7 +408,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes, safetyCar }
         const decision = aiDecision(config, updated, stateForAI, rng)
         updated.paceMode = decision.paceMode
-        if (decision.pit) {
+        if (decision.pit && !raceEndsThisTick) {
           const stopTime = pitStopTime(config, car.teamId, safetyCar, rng)
           updated = {
             ...updated,
@@ -446,7 +451,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
 
   // Two-compound rule: apply the penalty at the exact tick the race ends, so
   // it's baked into raceTime before the final classification sort below.
-  const isRaceEnd = lapCompleted && newLap >= state.totalLaps
+  const isRaceEnd = raceEndsThisTick
   const carsBeforeSort = isRaceEnd && config.mandatoryTwoCompound
     ? finalCars.map(car => {
         if (car.retired) return car // DNFs are exempt — they never finished

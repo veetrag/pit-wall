@@ -30,12 +30,50 @@ function pitWith(car: CarState, compound: Compound, paceMode: PaceMode): AIDecis
   return { pit: true, compound: resolved, paceMode }
 }
 
-function weatherPit(car: CarState, weatherState: WeatherState, config: RaceConfig): AIDecision | null {
+/**
+ * How many consecutive COMPLETED laps, ending with the one just completed,
+ * satisfy `pred`. At a lap boundary `state.weatherState` is still the lap just
+ * completed (stepSector advances it after the AI decides), so it counts first
+ * and the walk continues through timeline[lap-2], [lap-3], ... It never reads
+ * index >= state.lap: the AI does not see the future (spec 1.6 §0.1, ruling R2).
+ */
+function weatherRun(state: RaceState, pred: (w: WeatherState) => boolean): number {
+  if (!pred(state.weatherState)) return 0
+  let n = 1
+  for (let i = state.lap - 2; i >= 0; i--) {
+    const w = state.weatherTimeline[i]
+    if (w === undefined || !pred(w)) break
+    n++
+  }
+  return n
+}
+
+/**
+ * Tyre-family changes for the weather, all brains. Before 1.6 this boxed every
+ * AI car the lap the track turned DAMP and again the lap it turned DRY, ~100
+ * stops a race on a showery circuit. Now a change must hold for
+ * ai.weatherConfirmLaps completed laps (a WET track boxes slick-shod cars at
+ * once), and there is no weather stop with ai.weatherMinLapsLeft laps or fewer
+ * to go. The AI will sit out short damp spells on slicks and lose time: that
+ * is the intended trade. Pure threshold, no rng.
+ */
+function weatherPit(car: CarState, state: RaceState, config: RaceConfig): AIDecision | null {
   const compSpec = config.compounds[car.compound]
   if (!compSpec) return null
-  if (compSpec.type === 'dry' && weatherState === 'WET') return { pit: true, compound: 'W' as Compound, paceMode: 'neutral' }
-  if (compSpec.type === 'dry' && weatherState === 'DAMP') return { pit: true, compound: 'I' as Compound, paceMode: 'neutral' }
-  if (compSpec.type === 'wet' && weatherState === 'DRY') return { pit: true, compound: 'M' as Compound, paceMode: 'neutral' }
+  const ai = config.tuning.ai
+  // lapsLeft 0 is the race-completing boundary: race.ts drops any stop there,
+  // so it is left to the old rule (pre-flight E1: confirm 1 / minLapsLeft 0 is
+  // then exactly the pre-1.6 decision on every boundary).
+  const lapsLeft = state.totalLaps - state.lap
+  if (lapsLeft > 0 && lapsLeft <= ai.weatherMinLapsLeft) return null
+  const now = state.weatherState
+  if (compSpec.type === 'dry' && now !== 'DRY' &&
+      (now === 'WET' || weatherRun(state, w => w !== 'DRY') >= ai.weatherConfirmLaps)) {
+    return { pit: true, compound: now === 'WET' ? 'W' : 'I', paceMode: 'neutral' }
+  }
+  if (compSpec.type === 'wet' && now === 'DRY' && weatherRun(state, w => w === 'DRY') >= ai.weatherConfirmLaps) {
+    return { pit: true, compound: 'M', paceMode: 'neutral' }
+  }
   return null
 }
 
@@ -55,7 +93,7 @@ export function aiDecision(
   const weatherState = state.weatherState
 
   // Weather emergency — all brains react
-  const wPit = weatherPit(car, weatherState, config)
+  const wPit = weatherPit(car, state, config)
   if (wPit) return pitWith(car, wPit.compound, wPit.paceMode)
 
   const spec = config.compounds[car.compound]

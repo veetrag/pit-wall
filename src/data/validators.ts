@@ -176,6 +176,8 @@ const TuningSchema = z.object({
   ai: z.object({
     neutralisationWindowLaps: z.number().int().min(0),
     neutralisationCliffFrac: z.number().min(0),
+    weatherConfirmLaps: z.number().int().min(1),
+    weatherMinLapsLeft: z.number().int().min(0),
   }),
   rivalIntel: z.object({
     halfWidth: z.object({
@@ -259,6 +261,7 @@ const TuningSchema = z.object({
     safetyCarsPerRace: z.tuple([z.number(), z.number()]),
     vscPerRace: z.tuple([z.number(), z.number()]),
     aiNeutralisationStopsPerRace: z.tuple([z.number(), z.number()]),
+    aiWeatherStopsPerRace: z.tuple([z.number(), z.number()]),
     _note: z.string(),
   }).optional(),
 }).passthrough()

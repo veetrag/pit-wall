@@ -104,8 +104,14 @@ export interface TuningConstants {
     minCliffFracToCover: number
     minRemainingLaps: number
   }
-  /** AI reaction to a neutralisation (SC or VSC), spec 2026-10-16 §1. */
-  ai: { neutralisationWindowLaps: number; neutralisationCliffFrac: number }
+  /**
+   * AI reaction to a neutralisation (SC or VSC), spec 2026-10-16 §1; and to a
+   * weather change, spec 2026-10-17 §0.1: a car changes tyre family only once
+   * the change has held for weatherConfirmLaps completed laps (WET switches a
+   * slick-shod car at once), and never with weatherMinLapsLeft laps or fewer
+   * to go. confirm 1 / minLapsLeft 0 is the pre-1.6 rule exactly.
+   */
+  ai: { neutralisationWindowLaps: number; neutralisationCliffFrac: number; weatherConfirmLaps: number; weatherMinLapsLeft: number }
   /** Rival intel box window (spec 2026-10-16 §2). Half-width in laps per brain; the brain is never shown. */
   rivalIntel: { halfWidth: Record<StrategyBrain, number>; maxOffsetLaps: number }
   projection: { horizonLaps: number; useOvertakeRolls: boolean; netEstimateHorizonLaps: number }

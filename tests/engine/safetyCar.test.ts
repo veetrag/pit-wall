@@ -181,6 +181,9 @@ describe('safety car pace and duration', () => {
             durationLapsMin: 5, durationLapsMax: 5, maxPerRace: 1,
           },
         },
+        // Pre-1.6 weather rule (Task 1 ruling, R2 precedent): this test is about SC
+        // pace, and seed 7 on bengaluru only deploys an SC under the old weather AI.
+        ai: { weatherConfirmLaps: 1, weatherMinLapsLeft: 0 },
       } as TuningOverrides, 7)
       // Override just the multiplier, leaving every other draw identical.
       const tuned: RaceConfig = {
