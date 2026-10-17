@@ -23,3 +23,21 @@ describe('ShareButton', () => {
     expect(await screen.findByText(/couldn.t share/i)).toBeTruthy()
   })
 })
+
+describe('ShareButton in flight', () => {
+  it('is disabled while sharing and a second fast tap never shares twice', async () => {
+    sharePng.mockClear()
+    let release!: () => void
+    sharePng.mockImplementationOnce(() => new Promise(r => { release = () => r('failed') }))
+    render(<ShareButton fileName="a.png" build={() => ({ kind: 'gp', position: 1, label: 'X', points: 25, podium: [], teamColor: '#00E5D0' })} />)
+    const b = screen.getByRole('button', { name: /share result card/i })
+    fireEvent.click(b)
+    fireEvent.click(b)
+    await waitFor(() => expect(sharePng).toHaveBeenCalledTimes(1))
+    expect((b as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(b)
+    release()
+    await waitFor(() => expect((b as HTMLButtonElement).disabled).toBe(false))
+    expect(sharePng).toHaveBeenCalledTimes(1)
+  })
+})

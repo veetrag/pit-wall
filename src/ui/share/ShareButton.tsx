@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 import { KitButton } from '@ui/kit'
 import { renderShareCard, type ShareCardData } from './shareCard'
 import { sharePng } from './sharePng'
@@ -7,13 +7,15 @@ import { sharePng } from './sharePng'
 export function ShareButton({ build, fileName, style }: { build: () => ShareCardData; fileName: string; style?: CSSProperties }) {
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
+  const inFlight = useRef(false)
   const go = async () => {
-    if (busy) return
+    if (inFlight.current) return
+    inFlight.current = true
     setBusy(true); setFailed(false)
     try {
       const outcome = await sharePng(await renderShareCard(build()), fileName, 'My Pit Wall result')
       setFailed(outcome === 'failed')
-    } catch { setFailed(true) } finally { setBusy(false) }
+    } catch { setFailed(true) } finally { inFlight.current = false; setBusy(false) }
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>

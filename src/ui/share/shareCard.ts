@@ -94,7 +94,8 @@ export function drawShareCard(ctx: ShareCtx, d: ShareCardData): void {
 /** The self-hosted faces must be loaded before drawing, or the canvas silently falls back to sans. */
 export async function loadShareFonts(): Promise<void> {
   if (typeof document === 'undefined' || !('fonts' in document)) return
-  await Promise.all([
+  // A font that fails to load degrades to the fallback face; it never blocks the card.
+  await Promise.allSettled([
     document.fonts.load(`italic 900 100px ${DISPLAY}`),
     document.fonts.load(`800 40px ${BODY}`),
   ])
@@ -108,5 +109,8 @@ export async function renderShareCard(d: ShareCardData): Promise<Blob> {
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('share card: no 2d context')
   drawShareCard(ctx, d)
-  return new Promise((res, rej) => canvas.toBlob(b => (b ? res(b) : rej(new Error('share card: toBlob failed'))), 'image/png'))
+  return new Promise((res, rej) => canvas.toBlob(b => {
+    canvas.width = 0   // release the 1080x1350 backing store promptly (mobile memory)
+    if (b) res(b); else rej(new Error('share card: toBlob failed'))
+  }, 'image/png'))
 }

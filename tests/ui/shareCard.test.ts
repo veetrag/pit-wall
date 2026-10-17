@@ -89,3 +89,23 @@ describe('share card (spec 1.6 §6)', () => {
     expect(buildShareData({ kind: 'season', finish: 4, season: 3, points: 200, podiumIds: [], playerDriverId: 'd_voss' }).label).toBe('SEASON 3 · FINAL STANDINGS')
   })
 })
+
+describe('renderShareCard fonts', () => {
+  it('still renders when fonts.load rejects (fallback face)', async () => {
+    const { renderShareCard } = await import('@ui/share/shareCard')
+    const { vi } = await import('vitest')
+    const orig = Object.getOwnPropertyDescriptor(document, 'fonts')
+    Object.defineProperty(document, 'fonts', { configurable: true, value: { load: () => Promise.reject(new Error('font')) } })
+    const ctx = { fillStyle: '', font: '', textAlign: 'left', textBaseline: 'alphabetic', fillRect() {}, fill() {}, fillText() {}, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {} }
+    const canvas = { width: 0, height: 0, getContext: () => ctx, toBlob: (cb: (b: Blob | null) => void) => cb(new Blob(['x'], { type: 'image/png' })) }
+    const spy = vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement)
+    try {
+      const blob = await renderShareCard(GP)
+      expect(blob.type).toBe('image/png')
+      expect(canvas.width, 'backing store released after toBlob').toBe(0)
+    } finally {
+      spy.mockRestore()
+      if (orig) Object.defineProperty(document, 'fonts', orig); else delete (document as unknown as { fonts?: unknown }).fonts
+    }
+  })
+})
