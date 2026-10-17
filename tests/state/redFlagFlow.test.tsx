@@ -65,6 +65,19 @@ describe('the stoppage', () => {
     expect(r().radioRequest).toBeNull()
   })
 
+  it('a pending box request is gone right after the deploy tick, even for a retired player', () => {
+    startRed(true)
+    let deployed = false
+    for (let n = 0; n < 12 && !deployed; n++) {
+      useRaceStore.setState({ radioRequest: BOX })
+      const seen = r().raceState!.incidents.length
+      r().step()
+      deployed = r().raceState!.incidents.slice(seen).some(i => i.kind === 'red_flag')
+    }
+    expect(deployed).toBe(true)
+    expect(r().radioRequest).toBeNull()
+  })
+
   it('RESTART logs the call, runs the lights, and the next step fits the tyre; the race replays exactly', () => {
     startRed()
     stepToCard()

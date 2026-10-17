@@ -7,6 +7,7 @@ import { useScenarioStore } from '@state/scenarioStore'
 import { useClockStore } from '@state/clockStore'
 import { RaceWatcher } from '@ui/RaceWatcher'
 import { loadGameData } from '@data/validators'
+import { driveToFlag } from '../fixtures/driveStore'
 
 vi.mock('@capacitor/preferences', () => ({
   Preferences: {
@@ -55,10 +56,7 @@ describe('RaceWatcher — a scenario is not a season race', () => {
       const { config } = useRaceStore.getState()
       const total = config!.circuit.laps
       // step() sets phase 'finished' on its own once the flag is reached
-      for (let i = 0; i < (total - SPEC.startLap) * 3 + 3; i++) {
-        if (useRaceStore.getState().phase !== 'racing') break
-        useRaceStore.getState().step()
-      }
+      driveToFlag((total - SPEC.startLap) * 3 + 3)
       await Promise.resolve()
     })
 

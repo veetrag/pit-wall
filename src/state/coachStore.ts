@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useRaceStore } from './raceStore'
 
 /*
  * Order matters to the player, not to this file: the marks are requested at
@@ -18,6 +19,8 @@ interface CoachStore {
   done: Record<string, boolean>
   request: (id: CoachMarkId) => void
   dismiss: (id: CoachMarkId) => void
+  /** Take a mark down WITHOUT marking it done, so it can show again later. */
+  withdraw: (id: CoachMarkId) => void
   reset: () => void
 }
 
@@ -36,10 +39,15 @@ export const useCoachStore = create<CoachStore>((set, get) => ({
   request(id) {
     // Never interrupt a mark already up, and never repeat a finished one.
     if (get().active !== null || get().done[id]) return
+    // The red flag owns the screen: no new coaching while it is up.
+    if (useRaceStore.getState().phase === 'red_flag') return
     set({ active: id })
   },
   dismiss(id) {
     set(s => ({ active: s.active === id ? null : s.active, done: { ...s.done, [id]: true } }))
+  },
+  withdraw(id) {
+    set(s => (s.active === id ? { active: null } : s))
   },
   reset() { set({ active: null, done: {} }) },
 }))

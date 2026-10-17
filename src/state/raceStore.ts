@@ -246,7 +246,9 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       : detectRadioRequest(nextState, config, get().requestTracker,
           { inPit: stillInPit, pitPanelOpen: get().pitPanelOpen, pending: radioRequest !== null })
     if (detected.request) radioRequest = { ...detected.request, id: ++requestCounter, line: requestLine(detected.request, config) }
-    if (finished) radioRequest = null
+    // The flag ends every question: on the deploy tick as well as when pending.
+    const flagDeployed = nextState.incidents.slice(raceState.incidents.length).some(i => i.kind === 'red_flag')
+    if (finished || flagDeployed) radioRequest = null
 
     set(s => ({
       raceState: nextState,

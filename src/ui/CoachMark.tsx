@@ -28,9 +28,17 @@ export function CoachMark({ id, title, body }: Props) {
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const setSpeed = useClockStore(s => s.setSpeed)
   const uiTap = useUiTap()
-  const showing = active === id
+  const withdraw = useCoachStore(s => s.withdraw)
+  const racePhase = useRaceStore(s => s.phase)
+  const showing = active === id && racePhase !== 'red_flag'
   const pitPanelOpen = useRaceStore(s => s.pitPanelOpen)
   const restoreRef = useRef<GameSpeed | null>(null)
+
+  // A mark open when the flag goes pending is withdrawn, not dismissed: it is
+  // not done, so it can show again later.
+  useEffect(() => {
+    if (racePhase === 'red_flag' && active === id) withdraw(id)
+  }, [racePhase, active, id, withdraw])
 
   useEffect(() => {
     if (!showing) return

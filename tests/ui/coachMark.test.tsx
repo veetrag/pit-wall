@@ -96,3 +96,25 @@ describe('CoachMark — staying clear of the pit drawer', () => {
     expect(card().style.bottom, 'and no longer bottom-anchored').toBe('')
   })
 })
+
+describe('CoachMark under a red flag', () => {
+  beforeEach(() => {
+    useCoachStore.setState({ active: null, done: {} })
+    useClockStore.setState({ speed: 2 })
+    useRaceStore.setState({ phase: 'racing' })
+  })
+
+  it('withdraws an open mark without marking it done, restores speed, and refuses new requests', () => {
+    act(() => { useCoachStore.getState().request('tyre_cliff') })
+    render(<CoachMark id="tyre_cliff" title="Cliff" body="The cliff explained." />)
+    expect(useClockStore.getState().speed).toBe(0)
+    act(() => { useRaceStore.setState({ phase: 'red_flag' }) })
+    expect(useCoachStore.getState().active).toBeNull()
+    expect(useCoachStore.getState().done.tyre_cliff).toBeUndefined()
+    expect(useClockStore.getState().speed).toBe(2)
+    act(() => { useCoachStore.getState().request('projection') })
+    expect(useCoachStore.getState().active).toBeNull()
+    act(() => { useRaceStore.setState({ phase: 'racing' }); useCoachStore.getState().request('tyre_cliff') })
+    expect(useCoachStore.getState().active).toBe('tyre_cliff')
+  })
+})

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useRaceStore } from '@state/raceStore'
+import { driveToFlag } from '../fixtures/driveStore'
 
 function getStore() {
   return useRaceStore.getState()
@@ -53,7 +54,7 @@ describe('raceStore', () => {
   it('phase transitions to finished when all laps complete', () => {
     getStore().startRace()
     const total = getStore().raceState!.totalLaps * 3
-    for (let i = 0; i < total; i++) getStore().step()
+    driveToFlag(total * 2)
     expect(getStore().phase).toBe('finished')
   })
 
