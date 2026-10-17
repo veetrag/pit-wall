@@ -1,15 +1,16 @@
 import { create } from 'zustand'
 import { CIRCUIT_ORDER } from './raceStore'
 import { buildRaceConfig } from './buildRaceConfig'
-import { runQualifying, qualifyingRng, type Compound, type PitStop, type QualifyingCall, type QualifyingResult } from '@engine/index'
+import { runQualifying, qualifyingRng, type Compound, type PaceMode, type PitStop, type QualifyingCall, type QualifyingResult } from '@engine/index'
 import type { Wing } from '@engine/setup'
 import type { Difficulty } from './settingsStore'
 import { loadGameData } from '@data/validators'
-import { useCareerStore, escalateRivals, previewRaceBadges, type RaceRecordInput } from './careerStore'
+import { useCareerStore, escalateRivals, previewRaceBadges, type RaceRecordInput, type SprintRecordInput } from './careerStore'
+import { isSprintRound, sprintPointsFor } from './sprint'
 import { settleSeason, type LadderMove } from './teamLadder'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
 
-export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result' | 'career'
+export type SeasonPhase = 'menu' | 'grid' | 'team_select' | 'driver_select' | 'development' | 'race_setup' | 'qualifying' | 'racing' | 'result' | 'championship' | 'how_to_play' | 'settings' | 'scenario_select' | 'scenario_racing' | 'scenario_result' | 'career' | 'sprint_setup' | 'sprint_racing' | 'sprint_result'
 
 // Type-only on purpose: seasonPersistence imports THIS module at runtime to
 // subscribe to the store, so a value import here would close a cycle.
@@ -38,6 +39,18 @@ export interface PlayerStrategyChoice {
   startCompound: Compound
   plannedStops: PitStop[]
   wing?: Wing
+}
+
+export type RaceKind = 'gp' | 'sprint'
+
+/** A sprint is set up with a start tyre and a pace off the line; no planned stop (spec 1.5 §3). */
+export interface SprintStrategyChoice { startCompound: Compound; paceMode: PaceMode }
+
+export interface FinishPosition {
+  driverId: string
+  position: number
+  retired?: boolean
+  retiredCause?: 'tyre' | 'mechanical' | 'crash' | null
 }
 
 export const TOTAL_RACES = 12
@@ -166,6 +179,17 @@ interface SeasonStore {
   // advancing — varies the seed (and therefore the weather stream, which
   // derives from seed+999999) so a retry isn't a byte-identical replay.
   attemptNonce: number
+  /** The sprint's own retry counter: retrying the sprint never re-rolls the Grand Prix, and vice versa. */
+  sprintAttemptNonce: number
+  sprintStrategy: SprintStrategyChoice | null
+  lastSprintResults: SeasonResult[] | null
+  lastSprintEvents: RaceEventSummary | null
+  /** Same pending/keep contract as resultPending: shown at the flag, counted when the player leaves forward. */
+  sprintPending: boolean
+  /** The sprint as the career will log it, captured at the flag while the grid is known. */
+  pendingSprint: SprintRecordInput | null
+  /** True once this round's sprint is counted. Gates the Grand Prix and keeps the shared grid on a GP retry. */
+  sprintBanked: boolean
 
   // Season-scoped progression. Flat, separately-serialisable shapes so wiring
   // these into persistence later (deferred item 35) stays small.
@@ -197,6 +221,12 @@ interface SeasonStore {
   purchaseTier: (attributeId: string) => void
 
   currentSeed: () => number
+  currentSprintSeed: () => number
+  confirmSprintSetup: (choice: SprintStrategyChoice) => void
+  recordSprintResult: (positions: FinishPosition[], events: RaceEventSummary) => void
+  keepSprint: () => void
+  toGrandPrix: () => void
+  retrySprint: () => void
   retryRace: () => void
   currentCircuitId: () => string
   setCircuit: (id: string) => void
@@ -224,7 +254,7 @@ interface SeasonStore {
   confirmRaceSetup: (circuitId?: string, strategy?: PlayerStrategyChoice | null) => void
   runQualifyingSession: (call: QualifyingCall, difficulty: Difficulty) => void
   startRaceFromQualifying: () => void
-  recordRaceResult: (positions: { driverId: string; position: number; retired?: boolean; retiredCause?: 'tyre' | 'mechanical' | 'crash' | null }[], events: RaceEventSummary) => void
+  recordRaceResult: (positions: FinishPosition[], events: RaceEventSummary) => void
   nextRace: () => void
   startNextSeason: () => void
   endCareer: () => void
@@ -307,8 +337,43 @@ function pendingRaceRecord(s: Pick<SeasonStore, 'lastRaceResults' | 'lastRaceEve
   }
 }
 
-export function seedFor(seasonNumber: number, raceIndex: number, attemptNonce: number): number {
-  return (seasonNumber - 1) * seedStride() + raceIndex * 1000 + 42 + attemptNonce * 7919
+let cachedSalt: number | null = null
+function sprintSalt(): number {
+  if (cachedSalt === null) cachedSalt = loadGameData().tuning.sprint.seedSalt
+  return cachedSalt
+}
+
+/**
+ * kind 'gp' (the default) is byte-identical to 1.4, so every Grand Prix seed in
+ * the game is unchanged. A sprint adds tuning.sprint.seedSalt (50021). The
+ * salt cancels between two sprints, so sprint-vs-sprint is the GP argument
+ * above; sprint-vs-GP needs 7919 x dNonce = 21 (mod 1000), i.e. dNonce = 259
+ * (mod 1000) -- at least 259 retries of one round, and then also 20 seasons
+ * apart. Pinned over 200 retries in tests/state/sprintWeekend.test.ts.
+ */
+export function seedFor(seasonNumber: number, raceIndex: number, attemptNonce: number, kind: RaceKind = 'gp'): number {
+  const base = (seasonNumber - 1) * seedStride() + raceIndex * 1000 + 42 + attemptNonce * 7919
+  return kind === 'sprint' ? base + sprintSalt() : base
+}
+
+/** Every sprint field at its "no sprint this round" value. */
+const SPRINT_CLEAR = {
+  sprintAttemptNonce: 0, sprintStrategy: null, lastSprintResults: null, lastSprintEvents: null,
+  sprintPending: false, pendingSprint: null, sprintBanked: false,
+} satisfies Partial<SeasonStore>
+
+function pendingSprintRecord(
+  s: Pick<SeasonStore, 'playerDriverId' | 'qualifyingResult' | 'raceIndex'>,
+  results: readonly SeasonResult[], events: RaceEventSummary,
+): SprintRecordInput | null {
+  const player = results.find(r => r.driverId === s.playerDriverId)
+  if (!player) return null
+  const slot = s.qualifyingResult && s.playerDriverId ? s.qualifyingResult.order.indexOf(s.playerDriverId) + 1 : player.position
+  return {
+    position: player.position, retired: player.retired, round: s.raceIndex,
+    grid: slot > 0 ? slot : player.position,
+    stops: events.pitsDone, overtakes: events.overtakesGained, wet: events.hadRain,
+  }
 }
 
 export const useSeasonStore = create<SeasonStore>((set, get) => ({
@@ -325,6 +390,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
   playerStrategy: null,
   qualifyingResult: null,
   attemptNonce: 0,
+  ...SPRINT_CLEAR,
   devPoints: 0,
   purchasedTiers: {},
   rivalDevelopment: {},
@@ -360,6 +426,52 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     return seedFor(seasonNumber, raceIndex, attemptNonce)
   },
 
+  currentSprintSeed() {
+    const { raceIndex, sprintAttemptNonce } = get()
+    return seedFor(useCareerStore.getState().seasonNumber, raceIndex, sprintAttemptNonce, 'sprint')
+  },
+
+  confirmSprintSetup(choice) { set({ sprintStrategy: choice, phase: 'sprint_racing' }) },
+
+  recordSprintResult(positions, events) {
+    const results: SeasonResult[] = positions.map(p => ({
+      driverId: p.driverId,
+      position: p.position,
+      points: p.retired ? 0 : sprintPointsFor(p.position),
+      retired: p.retired ?? false,
+      retiredCause: p.retiredCause ?? null,
+    }))
+    set({
+      phase: 'sprint_result', lastSprintResults: results, lastSprintEvents: events, sprintPending: true,
+      pendingSprint: pendingSprintRecord(get(), results, events),
+    })
+  },
+
+  keepSprint() {
+    // Sprint points only: no development points, no rival development, no
+    // wing memory -- those stay tied to the Grand Prix (spec 1.5 §3).
+    const s = get()
+    if (!s.sprintPending || !s.lastSprintResults) return
+    set({
+      standings: addResultsToStandings(s.standings, s.lastSprintResults),
+      sprintPending: false, pendingSprint: null, sprintBanked: true,
+    })
+    if (s.pendingSprint) useCareerStore.getState().recordSprint(s.pendingSprint)
+  },
+
+  toGrandPrix() {
+    get().keepSprint()
+    if (!get().sprintBanked) return
+    set({ phase: 'racing' })
+  },
+
+  retrySprint() {
+    set(s => ({
+      sprintAttemptNonce: s.sprintAttemptNonce + 1, phase: 'sprint_setup',
+      lastSprintResults: null, lastSprintEvents: null, sprintPending: false, pendingSprint: null,
+    }))
+  },
+
   retryRace() {
     /*
      * Reopens RACE SETUP for the same round, the previous plan pre-filled
@@ -383,7 +495,11 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
      * no-op, so the discarded attempt can never be counted.
      */
     set(s => ({
-      attemptNonce: s.attemptNonce + 1, phase: 'race_setup', qualifyingResult: null,
+      attemptNonce: s.attemptNonce + 1, phase: 'race_setup',
+      // One qualifying sets both grids (spec 1.5 §3): once the sprint is
+      // counted on this grid, a Grand Prix retry keeps it rather than
+      // qualifying again.
+      qualifyingResult: isSprintRound(s.raceIndex) && s.sprintBanked ? s.qualifyingResult : null,
       lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null,
     }))
   },
@@ -425,7 +541,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   startNewSeason() {
     useCareerStore.getState().beginCareer()
-    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {}, lastSeasonBonus: 0, lastLadder: null })
+    set({ phase: 'team_select', playerDriverId: null, selectedTeamId: null, raceIndex: 0, standings: [], lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null, selectedCircuitId: null, playerStrategy: null, attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {}, lastSeasonBonus: 0, lastLadder: null, ...SPRINT_CLEAR })
   },
 
   selectTeam(id) { set({ selectedTeamId: id, playerDriverId: null }) },
@@ -452,6 +568,12 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
 
   confirmRaceSetup(circuitId, strategy) {
     if (circuitId) set({ selectedCircuitId: circuitId })
+    const s = get()
+    if (isSprintRound(s.raceIndex) && s.sprintBanked && s.qualifyingResult) {
+      // The sprint already ran on this grid: straight to the Grand Prix.
+      set({ phase: 'racing', playerStrategy: strategy ?? null })
+      return
+    }
     set({ phase: 'qualifying', playerStrategy: strategy ?? null, qualifyingResult: null })
   },
 
@@ -488,7 +610,8 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
     // UI does not allow. Racing with an undefined grid would silently fall back
     // to the fixed drivers.json order -- the exact defect this feature removes.
     if (!result) throw new Error('startRaceFromQualifying called with no qualifyingResult')
-    set({ phase: 'racing' })
+    const s = get()
+    set({ phase: isSprintRound(s.raceIndex) && !s.sprintBanked ? 'sprint_setup' : 'racing' })
   },
 
   // Invariant: must be called at most once per race. There is no idempotency
@@ -597,7 +720,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       set({ phase: 'championship', devPoints: get().devPoints + bonus, lastSeasonBonus: bonus, lastLadder })
     } else {
       const nextCircuit = CIRCUIT_ORDER[next % CIRCUIT_ORDER.length] ?? CIRCUIT_ORDER[0]!
-      set({ raceIndex: next, phase: 'development', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit, playerStrategy: null, attemptNonce: 0 })
+      set({ raceIndex: next, phase: 'development', lastRaceResults: null, lastRaceEvents: null, selectedCircuitId: nextCircuit, playerStrategy: null, attemptNonce: 0, qualifyingResult: null, ...SPRINT_CLEAR })
     }
   },
 
@@ -622,6 +745,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       playerStrategy: null,
       qualifyingResult: null,
       attemptNonce: 0,
+      ...SPRINT_CLEAR,
       // devPoints are NOT reset. Unspent points bank rather than expire --
       // the principle already stated at toRaceSetup above, applied across the
       // season boundary as well as within one.
@@ -660,7 +784,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => ({
       standings: [], lastRaceResults: null, lastRaceEvents: null, resultPending: false, pendingRace: null,
       selectedCircuitId: null, playerStrategy: null, qualifyingResult: null,
       attemptNonce: 0, devPoints: 0, purchasedTiers: {}, rivalDevelopment: {},
-      lastSeasonBonus: 0, lastLadder: null,
+      lastSeasonBonus: 0, lastLadder: null, ...SPRINT_CLEAR,
     })
   },
 

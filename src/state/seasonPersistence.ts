@@ -82,6 +82,9 @@ const RESUME_PHASE: Record<SeasonPhase, ResumePhase | null> = {
   // round, so there is nothing to resume INTO -- and mapping any of these to a
   // real phase would let a scenario overwrite a championship in progress.
   scenario_select: null, scenario_racing: null, scenario_result: null,
+  // Placeholders so the map stays total; Task 10 (sprint persistence) sets the
+  // real mappings.
+  sprint_setup: 'race_setup', sprint_racing: 'race_setup', sprint_result: 'race_setup',
 }
 
 const StandingSchema = z.object({ driverId: z.string(), points: z.number() })

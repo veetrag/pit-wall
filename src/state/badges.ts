@@ -32,6 +32,12 @@ export interface RaceFact {
   stops: number
   overtakes: number
   wet: boolean
+  /**
+   * 'sprint' for a sprint race; ABSENT for a Grand Prix. Only sprints write it,
+   * so every Grand Prix fact -- and every save written before 1.5 -- serialises
+   * exactly as before (cloud reconcile compares the JSON string).
+   */
+  kind?: 'gp' | 'sprint'
 }
 
 /**
@@ -63,6 +69,11 @@ export interface BadgeDef {
 /** A DNF is never a win, whatever position it was classified in. */
 function won(f: RaceFact): boolean {
   return !f.retired && f.finish === 1
+}
+
+/** Badges are Grand Prix achievements (spec 1.5 §3): sprints never count. */
+function grandPrix(log: readonly RaceFact[]): RaceFact[] {
+  return log.filter(f => f.kind !== 'sprint')
 }
 
 /** Longest run of consecutive races finished. A fold, not a counter --
@@ -103,17 +114,17 @@ export const BADGES: readonly BadgeDef[] = [
   // Event badges -- fold over the log, so they count from the first race
   // logged. They cannot be retroactive: the facts were never recorded.
   { id: 'storm_chaser', name: 'Storm Chaser', condition: 'Win a wet race',
-    earned: r => r.raceLog.some(f => f.wet && won(f)) },
+    earned: r => grandPrix(r.raceLog).some(f => f.wet && won(f)) },
   { id: 'comeback', name: 'Comeback', condition: 'Win from P10 or worse',
-    earned: r => r.raceLog.some(f => f.grid >= 10 && won(f)) },
+    earned: r => grandPrix(r.raceLog).some(f => f.grid >= 10 && won(f)) },
   { id: 'lights_to_flag', name: 'Lights To Flag', condition: 'Take pole and win the same race',
-    earned: r => r.raceLog.some(f => f.pole && won(f)) },
+    earned: r => grandPrix(r.raceLog).some(f => f.pole && won(f)) },
   { id: 'one_stop_wonder', name: 'One-Stop Wonder', condition: 'Win using exactly one pit stop',
-    earned: r => r.raceLog.some(f => f.stops === 1 && won(f)) },
+    earned: r => grandPrix(r.raceLog).some(f => f.stops === 1 && won(f)) },
   { id: 'ironman', name: 'Ironman', condition: 'Finish 12 races in a row',
-    earned: r => longestFinishStreak(r.raceLog) >= 12 },
+    earned: r => longestFinishStreak(grandPrix(r.raceLog)) >= 12 },
   { id: 'damage_limitation', name: 'Damage Limitation', condition: 'Score points from P15 or worse',
-    earned: r => r.raceLog.some(f => !f.retired && f.grid >= 15 && f.finish <= 10) },
+    earned: r => grandPrix(r.raceLog).some(f => !f.retired && f.grid >= 15 && f.finish <= 10) },
 ]
 
 /** Ids of every badge the record satisfies. */

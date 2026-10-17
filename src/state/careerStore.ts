@@ -129,6 +129,12 @@ interface CareerStore extends CareerRecord {
   justEarned: string[]
   recordRace: (r: RaceRecordInput) => void
   /**
+   * Logs a sprint. It touches NO counter -- wins, podiums, poles, races started
+   * and best finish are Grand Prix records (spec 1.5 §3) -- and awards no
+   * badge, so justEarned is cleared rather than recomputed.
+   */
+  recordSprint: (r: SprintRecordInput) => void
+  /**
    * Banks the season that has just finished: the title, the history entry,
    * the season-win reset, and the badges those earn. Called on the TRANSITION
    * to the championship screen, not when the player leaves it.
@@ -172,6 +178,16 @@ interface CareerStore extends CareerRecord {
 export interface RaceRecordInput {
   position: number; retired: boolean; pole: boolean
   round: number; grid: number; stops: number; overtakes: number; wet: boolean
+}
+
+/** One sprint, as the career records it. No pole: the pole belongs to the Grand Prix. */
+export interface SprintRecordInput {
+  position: number; retired: boolean; round: number; grid: number; stops: number; overtakes: number; wet: boolean
+}
+
+/** Sprint wins, derived from the log (a DNF is never a win), for the trophy room. */
+export function sprintWins(log: readonly RaceFact[]): number {
+  return log.filter(f => f.kind === 'sprint' && !f.retired && f.finish === 1).length
 }
 
 /**
@@ -234,6 +250,15 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     const s = get()
     const next = nextRecordAfterRace(s, r)
     set({ ...next, justEarned: newlyEarned(s, next) })
+  },
+
+  recordSprint(r) {
+    const s = get()
+    const fact: RaceFact = {
+      season: s.seasonNumber, round: r.round, grid: r.grid, finish: r.position,
+      retired: r.retired, pole: false, stops: r.stops, overtakes: r.overtakes, wet: r.wet, kind: 'sprint',
+    }
+    set({ raceLog: [...s.raceLog, fact], justEarned: [] })
   },
 
   recordSeasonEnd(summary) {
