@@ -341,7 +341,9 @@ export function PitButton() {
   const driver = player && config ? config.drivers.find(d => d.id === player.driverId) : undefined
   const effAge = spec && player && driver && raceState ? effectiveTyreAge(player, driver, raceState.weatherState, config!.tuning) : player?.tyreAge ?? 0
   const fraction = spec && player ? tyreCliffFraction(spec, effAge) : 0
-  const isUrgent = fraction >= 0.85
+  // The pit lane is closed under a red flag; the free change comes on the card.
+  const red = neutralisationKind(raceState?.safetyCar ?? null) === 'red'
+  const isUrgent = fraction >= 0.85 && !red
 
   const projLabel = projectionResult
     ? `PIT — P${projectionResult.rejoinPosition}`
@@ -360,6 +362,8 @@ export function PitButton() {
         variant="urgent"
         size="lg"
         onClick={openPitPanel}
+        disabled={red}
+        ariaLabel={red ? 'Pit lane closed: red flag' : undefined}
         style={{
           width: 112, padding: '0 8px', whiteSpace: 'nowrap',
           // "PIT — P12" does not fit 112px at the lg display size.

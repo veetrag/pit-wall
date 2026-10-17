@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import {
   initRace, stepSector, projectPitNow, effectivePitLaneLoss,
-  applyPlayerPit, applyPlayerPace, expectedPitStopTime, type PlayerCall,
+  applyPlayerPit, applyPlayerPace, applyCall, expectedPitStopTime, type PlayerCall,
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
@@ -13,8 +13,16 @@ import type { PlayerStrategyChoice } from './seasonStore'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
 import { buildRaceConfig, buildScenarioConfig } from './buildRaceConfig'
 import { startScenario } from '@engine/scenario'
+import { redFlagPending } from '@engine/redFlag'
+import { neutralisationKind } from '@engine/incidents'
 
-export type RacePhase = 'idle' | 'starting' | 'racing' | 'finished'
+/**
+ * 'red_flag' (spec 1.6 §4): the race is suspended at the step after which the
+ * restart is next. The clock stops (GameClock steps only in 'racing'); the
+ * RED FLAG card asks for the restart tyre; confirming goes to 'starting', so
+ * the start lights run a standing restart.
+ */
+export type RacePhase = 'idle' | 'starting' | 'racing' | 'red_flag' | 'finished'
 
 /** A season race's format (spec 1.5 §3). Absent = a Grand Prix. */
 export interface SeasonRaceOptions {
@@ -69,6 +77,8 @@ interface RaceStore {
   startScenarioRace: (spec: { circuitId: string; seed: number; playerDriverId: string; startLap: number }) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
+  /** The RED FLAG card's RESTART: logs the restart_tyre call and starts the lights. */
+  confirmRedFlagRestart: (compound: Compound) => void
   resetRace: () => void
   step: () => void
   pitNow: (compound: Compound) => void
@@ -178,6 +188,17 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set({ phase: 'racing' })
   },
 
+  confirmRedFlagRestart(compound) {
+    const { phase, config, raceState, rng, stepCount } = get()
+    if (phase !== 'red_flag' || !config || !raceState || !rng) return
+    const call = { step: stepCount, kind: 'restart_tyre' as const, compound }
+    set(s => ({
+      raceState: applyCall(config, raceState, call, rng),   // draws nothing
+      playerCalls: [...s.playerCalls, call],
+      phase: 'starting',
+    }))
+  },
+
   resetRace() {
     set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker() })
   },
@@ -191,7 +212,13 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
     const before = raceState.cars.find(c => c.isPlayer)
     const after = nextState.cars.find(c => c.isPlayer)
-    const autoStopped = !!before && !!after && after.pitsDone > before.pitsDone
+    // A red-flag restart may consume a planned stop (pitsDone + 1) with no stop
+    // time: bookkeeping, not a stop -- no timer, no "Box box" (preflight S1).
+    const restarted = nextState.incidents.slice(raceState.incidents.length).some(i => i.kind === 'red_flag_restart')
+    const autoStopped = !!before && !!after && after.pitsDone > before.pitsDone && !restarted
+    // The restart is the next step and the player is still racing: stop here
+    // for their tyre (ruling R13). A retired player gets no card.
+    const redPending = !finished && redFlagPending(nextState) && !!after && !after.retired
 
     const playerNow = after?.raceTime ?? 0
     // A plan stop executes inside stepSector at the lap boundary and is charged
@@ -224,7 +251,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     set(s => ({
       raceState: nextState,
       stepCount: s.stepCount + 1,
-      phase: finished ? 'finished' : 'racing',
+      phase: finished ? 'finished' : redPending ? 'red_flag' : 'racing',
       playerInPit: stillInPit,
       radioState: nextRadio,
       radioRequest,
@@ -238,6 +265,8 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
         lastStopSlow: autoSlow,
         hudAlerts: [...s.hudAlerts, { id: `alert-${++alertCounter}`, severity: 'caution' as const, category: 'RADIO', message: 'Box box -- plan stop.', icon: '📻' }],
       } : {}),
+      // The card takes the screen: nothing may be left half-decided under it.
+      ...(redPending ? { pitPanelOpen: false, projectionResult: null, radioRequest: null } : {}),
     }))
   },
 
@@ -246,6 +275,15 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     if (!config || !raceState || !rng) return
 
     const next = applyPlayerPit(config, raceState, compound, rng)
+    if (!next && neutralisationKind(raceState.safetyCar) === 'red') {
+      // The pit lane is closed under red; the free change comes on the card.
+      const id = `alert-${++alertCounter}`
+      set(s => ({
+        pitPanelOpen: false,
+        hudAlerts: [...s.hudAlerts, { id, severity: 'caution' as const, category: 'RADIO', message: 'Red flag — choose your restart tyre.', icon: '📻' }],
+      }))
+      return
+    }
     if (!next) {
       const id = `alert-${++alertCounter}`
       set(s => ({

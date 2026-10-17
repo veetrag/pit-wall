@@ -26,7 +26,7 @@ export function GameClock() {
   // Engine/crowd/rain ambience — live for the whole race (incl. the start
   // sequence), torn down once it ends or if the player mutes sound mid-race.
   useEffect(() => {
-    const active = (phase === 'starting' || phase === 'racing') && soundEnabled && appVisible
+    const active = (phase === 'starting' || phase === 'racing' || phase === 'red_flag') && soundEnabled && appVisible
     if (active) soundService.startAmbience()
     else soundService.stopAmbience()
   }, [phase, soundEnabled, appVisible])

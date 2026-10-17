@@ -21,6 +21,7 @@ import { TrackCanvas } from '@canvas/TrackCanvas'
 import { StartLights } from './StartLights'
 import { SettingsPanel } from './SettingsPanel'
 import { PitTimer } from './PitTimer'
+import { RedFlagCard } from './RedFlagCard'
 import { Component, type ReactNode } from 'react'
 import { useUiTap } from '@hooks/useUiTap'
 import { useReducedMotion, PRESS, ScreenFrame, HOLD_EXIT } from '@ui/kit'
@@ -236,7 +237,7 @@ export function RaceHUD() {
   const phase = useRaceStore(s => s.phase)
   useRetireCoachTutorial()
   useTutorialMarks()
-  const live = phase === 'racing' || phase === 'starting'
+  const live = phase === 'racing' || phase === 'starting' || phase === 'red_flag'
 
   return (
     <ScreenFrame label="Race">
@@ -297,6 +298,7 @@ export function RaceHUD() {
       </AnimatePresence>
 
       <PitPanel />
+      <RedFlagCard />
 
       <CoachMark
         id="timing_tower"

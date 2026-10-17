@@ -262,6 +262,8 @@ export function StartLights() {
   // framer-motion cannot interpolate a var() inside a shadow string, so resolve it once.
   const [lampRgb] = useState(readLampRgb)
   const confirmRaceStart = useRaceStore(s => s.confirmRaceStart)
+  // A red-flag restart reuses the lights; say so (spec 1.6 §4).
+  const restart = useRaceStore(s => s.raceState?.incidents.some(i => i.kind === 'red_flag') ?? false)
   const setSpeed = useClockStore(s => s.setSpeed)
   /*
    * The player's "Default playback speed" setting. It was persisted and
@@ -360,7 +362,7 @@ export function StartLights() {
           color: 'var(--lilac-dim)', letterSpacing: '0.25em',
         }}
       >
-        RACE DAY — LIGHTS SEQUENCE
+        {restart ? 'STANDING RESTART — LIGHTS SEQUENCE' : 'RACE DAY — LIGHTS SEQUENCE'}
       </motion.div>
 
       {/* Lights gantry */}

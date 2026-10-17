@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { useRaceStore } from '@state/raceStore'
 import { replay } from '@engine/debrief'
 import { createRng } from '@engine/rng'
+import { driveToFlag } from '../fixtures/driveStore'
 
 /*
  * THE foundation of the debrief. Drive real races through the real store
@@ -23,14 +24,14 @@ describe('replay reproduces the live race', () => {
       useRaceStore.setState({ phase: 'racing' })
       const compounds = ['S', 'M', 'H', 'I'] as const
       const modes = ['push', 'neutral', 'conserve'] as const
-      let n = 0
-      for (n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) {
-        const u = pick()
-        if (n === 12) r().pitNow('S')                  // every seed has at least one manual pit
-        else if (u < 0.01) r().pitNow(compounds[Math.floor(pick() * 4)]!)
-        else if (u < 0.03) r().setPaceMode(modes[Math.floor(pick() * 3)]!)
-        r().step()
-      }
+      driveToFlag(MAX_STEPS, {
+        before: n => {
+          const u = pick()
+          if (n === 12) r().pitNow('S')                  // every seed has at least one manual pit
+          else if (u < 0.01) r().pitNow(compounds[Math.floor(pick() * 4)]!)
+          else if (u < 0.03) r().setPaceMode(modes[Math.floor(pick() * 3)]!)
+        },
+      })
       expect(r().phase).toBe('finished')
       const live = r().raceState!
       const replayed = replay(r().config!, seed, r().playerCalls).state
@@ -48,11 +49,7 @@ describe('replay reproduces the live race', () => {
     r().startSeasonRace('d_voss', seed, 'bengaluru', 'rookie',
       { startCompound: 'M', plannedStops: [{ lap: 24, compound: 'H' }] }, null, undefined, false)
     useRaceStore.setState({ phase: 'racing' })
-    let n = 0
-    for (n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) {
-      if (n === 15) { r().setPaceMode('push'); r().pitNow('H') }
-      r().step()
-    }
+    driveToFlag(MAX_STEPS, { before: n => { if (n === 15) { r().setPaceMode('push'); r().pitNow('H') } } })
     expect(r().phase).toBe('finished')
     const calls = r().playerCalls
     const same = calls.filter(c => c.step === calls.find(x => x.kind === 'pit')!.step)
@@ -70,11 +67,7 @@ describe('replay reproduces the live race', () => {
     expect(r().playerCalls).toEqual([{ step: 0, kind: 'pace', mode: 'push' }])
     expect(r().raceState!.cars.find(c => c.isPlayer)!.paceMode).toBe('push')
     useRaceStore.setState({ phase: 'racing' })
-    let n = 0
-    for (n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) {
-      if (n === 20) r().pitNow('M')
-      r().step()
-    }
+    driveToFlag(MAX_STEPS, { before: n => { if (n === 20) r().pitNow('M') } })
     expect(r().phase).toBe('finished')
     expect(r().raceState!.totalLaps).toBe(13)
     expect(replay(r().config!, seed, r().playerCalls).state).toEqual(r().raceState!)

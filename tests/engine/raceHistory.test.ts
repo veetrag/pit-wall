@@ -4,6 +4,7 @@ import { buildRaceConfig } from '@state/buildRaceConfig'
 import { lapHistory } from '@engine/raceHistory'
 import { replay } from '@engine/debrief'
 import { createRng } from '@engine/rng'
+import { driveToFlag } from '../fixtures/driveStore'
 import { makeDeterministicTuning } from '../fixtures/tuning'
 import { makeConfig, type TuningOverrides } from '../fixtures/raceHarness'
 import type { RaceConfig } from '@engine/types'
@@ -23,20 +24,21 @@ describe('lapHistory matches the race as it was lived', () => {
       useRaceStore.setState({ phase: 'racing' })
       const live = new Map(r().raceState!.cars.map(c => [c.driverId, [c.position]]))
       const out = new Set<string>()
-      let n = 0
-      while (r().phase === 'racing' && n < MAX_STEPS) {
-        if (n === 12) r().pitNow('S')
-        else if (pick() < 0.02) r().setPaceMode('push')
-        r().step()
-        n++
-        const s = r().raceState!
-        if (s.sector !== 0) continue
-        for (const c of s.cars) {
-          if (out.has(c.driverId)) continue
-          if (c.retired) { out.add(c.driverId); continue }
-          live.get(c.driverId)!.push(c.position)
-        }
-      }
+      driveToFlag(MAX_STEPS, {
+        before: n => {
+          if (n === 12) r().pitNow('S')
+          else if (pick() < 0.02) r().setPaceMode('push')
+        },
+        after: () => {
+          const s = r().raceState!
+          if (s.sector !== 0) return
+          for (const c of s.cars) {
+            if (out.has(c.driverId)) continue
+            if (c.retired) { out.add(c.driverId); continue }
+            live.get(c.driverId)!.push(c.position)
+          }
+        },
+      })
       expect(r().phase).toBe('finished')
       const h = lapHistory(r().config!, seed, r().playerCalls)
       expect(h.cars.map(c => [c.driverId, c.positions])).toEqual([...live.entries()])

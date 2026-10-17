@@ -14,6 +14,7 @@ import { useDebriefStore, setDebriefRunner } from '@state/debriefStore'
 import { sprintLaps } from '@state/sprint'
 import { RaceWatcher } from '@ui/RaceWatcher'
 import { loadGameData } from '@data/validators'
+import { driveToFlag } from '../fixtures/driveStore'
 
 /** Far above any race's step count: reaching it means the race never finished. */
 const MAX_STEPS = 5000
@@ -66,7 +67,7 @@ describe('RaceWatcher runs the sprint', () => {
     await act(async () => {
       expect(r().raceState).not.toBeNull()
       useRaceStore.setState({ phase: 'racing' })
-      for (let n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) r().step()
+      driveToFlag(MAX_STEPS)
       expect(r().phase).toBe('finished')
       await Promise.resolve()
     })
@@ -84,7 +85,7 @@ describe('RaceWatcher runs the sprint', () => {
     await act(async () => {
       expect(r().raceState).not.toBeNull()
       useRaceStore.setState({ phase: 'racing' })
-      for (let n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) r().step()
+      driveToFlag(MAX_STEPS)
       expect(r().phase).toBe('finished')
       await Promise.resolve()
     })
@@ -110,7 +111,7 @@ describe('RaceWatcher runs the sprint', () => {
     await act(async () => {
       expect(r().raceState).not.toBeNull()
       useRaceStore.setState({ phase: 'racing' })
-      for (let n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) r().step()
+      driveToFlag(MAX_STEPS)
       expect(r().phase).toBe('finished')
       await Promise.resolve()
     })
