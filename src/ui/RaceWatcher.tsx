@@ -63,6 +63,8 @@ export function RaceWatcher() {
   useEffect(() => {
     if (seasonPhase === 'racing' && racePhase === 'idle' && playerDriverId) {
       hasFiredRef.current = false
+      // A sprint debrief (key sprint-<seed>) must not outlive the sprint result screen.
+      useDebriefStore.getState().cancel()
       startSeasonRace(playerDriverId, currentSeed(), currentCircuitId(), difficulty, playerStrategy, useSeasonStore.getState().overlayInput(), qualifyingResult?.order, raceIndex === 0)
     }
   }, [seasonPhase, racePhase, playerDriverId]) // eslint-disable-line react-hooks/exhaustive-deps

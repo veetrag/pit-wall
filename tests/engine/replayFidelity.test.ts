@@ -9,6 +9,9 @@ import { createRng } from '@engine/rng'
  * reproduces the live race exactly. If this fails, nothing the debrief says
  * can be trusted.
  */
+/** Far above any race's step count: reaching it means the race never finished. */
+const MAX_STEPS = 5000
+
 describe('replay reproduces the live race', () => {
   for (const seed of [11, 42, 777, 2024, 31337, 90001]) {
     it(`seed ${seed}`, () => {
@@ -21,14 +24,14 @@ describe('replay reproduces the live race', () => {
       const compounds = ['S', 'M', 'H', 'I'] as const
       const modes = ['push', 'neutral', 'conserve'] as const
       let n = 0
-      while (r().phase === 'racing') {
+      for (n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) {
         const u = pick()
         if (n === 12) r().pitNow('S')                  // every seed has at least one manual pit
         else if (u < 0.01) r().pitNow(compounds[Math.floor(pick() * 4)]!)
         else if (u < 0.03) r().setPaceMode(modes[Math.floor(pick() * 3)]!)
         r().step()
-        n++
       }
+      expect(r().phase).toBe('finished')
       const live = r().raceState!
       const replayed = replay(r().config!, seed, r().playerCalls).state
       expect(replayed).toEqual(live)
@@ -46,11 +49,11 @@ describe('replay reproduces the live race', () => {
       { startCompound: 'M', plannedStops: [{ lap: 24, compound: 'H' }] }, null, undefined, false)
     useRaceStore.setState({ phase: 'racing' })
     let n = 0
-    while (r().phase === 'racing') {
+    for (n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) {
       if (n === 15) { r().setPaceMode('push'); r().pitNow('H') }
       r().step()
-      n++
     }
+    expect(r().phase).toBe('finished')
     const calls = r().playerCalls
     const same = calls.filter(c => c.step === calls.find(x => x.kind === 'pit')!.step)
     expect(same.some(c => c.kind === 'pace')).toBe(true)
@@ -68,12 +71,20 @@ describe('replay reproduces the live race', () => {
     expect(r().raceState!.cars.find(c => c.isPlayer)!.paceMode).toBe('push')
     useRaceStore.setState({ phase: 'racing' })
     let n = 0
-    while (r().phase === 'racing') {
+    for (n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) {
       if (n === 20) r().pitNow('M')
       r().step()
-      n++
     }
+    expect(r().phase).toBe('finished')
     expect(r().raceState!.totalLaps).toBe(13)
     expect(replay(r().config!, seed, r().playerCalls).state).toEqual(r().raceState!)
+  })
+
+  it('a neutral starting pace logs no call', () => {
+    const r = () => useRaceStore.getState()
+    r().resetRace()
+    r().startSeasonRace('d_voss', 9001, 'sol_desert', 'rookie',
+      { startCompound: 'S', plannedStops: [] }, null, undefined, false, { sprint: true, initialPace: 'neutral' })
+    expect(r().playerCalls).toEqual([])
   })
 })

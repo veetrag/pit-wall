@@ -15,6 +15,8 @@ import { sprintLaps } from '@state/sprint'
 import { RaceWatcher } from '@ui/RaceWatcher'
 import { loadGameData } from '@data/validators'
 
+/** Far above any race's step count: reaching it means the race never finished. */
+const MAX_STEPS = 5000
 const DATA = loadGameData()
 const s = () => useSeasonStore.getState()
 const r = () => useRaceStore.getState()
@@ -62,8 +64,10 @@ describe('RaceWatcher runs the sprint', () => {
     render(<RaceWatcher />)
     await act(async () => { await Promise.resolve() })
     await act(async () => {
+      expect(r().raceState).not.toBeNull()
       useRaceStore.setState({ phase: 'racing' })
-      while (r().phase === 'racing') r().step()
+      for (let n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) r().step()
+      expect(r().phase).toBe('finished')
       await Promise.resolve()
     })
     expect(s().phase).toBe('sprint_result')
@@ -78,8 +82,10 @@ describe('RaceWatcher runs the sprint', () => {
     render(<RaceWatcher />)
     await act(async () => { await Promise.resolve() })
     await act(async () => {
+      expect(r().raceState).not.toBeNull()
       useRaceStore.setState({ phase: 'racing' })
-      while (r().phase === 'racing') r().step()
+      for (let n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) r().step()
+      expect(r().phase).toBe('finished')
       await Promise.resolve()
     })
     act(() => { s().toGrandPrix() })
@@ -92,5 +98,28 @@ describe('RaceWatcher runs the sprint', () => {
     expect(r().raceState!.lap).toBe(0)
     act(() => { vi.advanceTimersByTime(5000) })
     expect(r().phase, 'no stray reset kills the Grand Prix').toBe('starting')
+  })
+
+  it('the sprint debrief is cleared once the Grand Prix starts', async () => {
+    vi.useFakeTimers()
+    // The runner here reports history at once, as the real one does before judging.
+    setDebriefRunner({ start: (_job, cb) => { cb.history?.({} as never); return { cancel: () => {} } } })
+    toSprint()
+    render(<RaceWatcher />)
+    await act(async () => { await Promise.resolve() })
+    await act(async () => {
+      expect(r().raceState).not.toBeNull()
+      useRaceStore.setState({ phase: 'racing' })
+      for (let n = 0; n < MAX_STEPS && r().phase === 'racing'; n++) r().step()
+      expect(r().phase).toBe('finished')
+      await Promise.resolve()
+    })
+    expect(useDebriefStore.getState().raceKey).toBe(`sprint-${r().config!.seed}`)
+    expect(useDebriefStore.getState().history).not.toBeNull()
+    act(() => { s().toGrandPrix() })
+    act(() => { vi.advanceTimersByTime(1500) })
+    expect(r().phase).toBe('starting')
+    expect(useDebriefStore.getState().history).toBeNull()
+    expect(useDebriefStore.getState().raceKey).toBeNull()
   })
 })
