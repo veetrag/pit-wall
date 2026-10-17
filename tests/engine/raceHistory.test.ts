@@ -8,6 +8,10 @@ import { makeDeterministicTuning } from '../fixtures/tuning'
 import { makeConfig, type TuningOverrides } from '../fixtures/raceHarness'
 import type { RaceConfig } from '@engine/types'
 
+// Guards the live loop below: a race that never leaves 'racing' fails the
+// terminal assertion instead of hanging the suite.
+const MAX_STEPS = 5000
+
 describe('lapHistory matches the race as it was lived', () => {
   for (const seed of [42, 2024]) {
     it(`seed ${seed}: positions at every lap end equal the live race, and the finish equals the replay`, () => {
@@ -20,7 +24,7 @@ describe('lapHistory matches the race as it was lived', () => {
       const live = new Map(r().raceState!.cars.map(c => [c.driverId, [c.position]]))
       const out = new Set<string>()
       let n = 0
-      while (r().phase === 'racing') {
+      while (r().phase === 'racing' && n < MAX_STEPS) {
         if (n === 12) r().pitNow('S')
         else if (pick() < 0.02) r().setPaceMode('push')
         r().step()
@@ -33,6 +37,7 @@ describe('lapHistory matches the race as it was lived', () => {
           live.get(c.driverId)!.push(c.position)
         }
       }
+      expect(r().phase).toBe('finished')
       const h = lapHistory(r().config!, seed, r().playerCalls)
       expect(h.cars.map(c => [c.driverId, c.positions])).toEqual([...live.entries()])
       // state.cars is re-sorted every step, so match the finish by driver.
