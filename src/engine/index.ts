@@ -16,13 +16,15 @@ export * from './setup'
 export { createRng, gaussianPair } from './rng'
 export { pitStopTime, expectedPitStopTime, slowStopComponent, normalCdf } from './pitStop'
 export type { PitStopCost } from './pitStop'
-export { generateWeatherTimeline, getWeatherForecast, openingTimeline } from './weather'
+export { generateWeatherTimeline, openingTimeline } from './weather'
+export { forecast, forecastOffset } from './forecast'
+export type { WeatherForecast } from './forecast'
 export { runQualifying, qualifyingRng } from './qualifying'
 export type {
   RaceConfig, RaceState, CarState, SectorResult, OvertakeEvent,
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
-  TyreAllocation, DifficultyProfile, WeatherState, WeatherForecast, SafetyCarState,
+  TyreAllocation, DifficultyProfile, WeatherState, SafetyCarState,
   IncidentEvent, IncidentKind, NeutralisationKind,
   AttackLevel, QualifyingCall, QualifyingLap, QualifyingResult,
 } from './types'

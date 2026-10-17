@@ -1,4 +1,4 @@
-import type { WeatherState, WeatherForecast, TuningConstants, CircuitSpec } from './types'
+import type { WeatherState, TuningConstants, CircuitSpec } from './types'
 import { createRng } from './rng'
 
 type RNG = () => number
@@ -62,20 +62,6 @@ export function generateWeatherTimeline(
   // Same rule as dryStart above: the rolls were consumed exactly as before, and
   // only the result is overridden.
   return allDry ? timeline.map((): WeatherState => 'DRY') : timeline
-}
-
-export function getWeatherForecast(
-  currentLap: number,
-  timeline: WeatherState[],
-  confidence: number,
-  rng: RNG,
-): WeatherForecast {
-  const currentState = timeline[currentLap] ?? 'DRY'
-  const lap1 = timeline[currentLap + 1] ?? currentState
-  const actualLap2 = timeline[currentLap + 2] ?? lap1
-  const lap2 = rng() < confidence ? actualLap2 : currentState
-
-  return { currentState, lap1, lap2, lap2Confidence: confidence }
 }
 
 export function optimalCompoundType(state: WeatherState): 'dry' | 'wet' {

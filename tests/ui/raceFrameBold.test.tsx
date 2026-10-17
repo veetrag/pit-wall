@@ -166,7 +166,7 @@ describe('weather chip', () => {
     return t
   }
   // lap is 10, so index 10 is NOW and 11..14 are +1..+4.
-  // tuning.json forecastConfidence: [1.0, 1.0, 0.85, 0.65, 0.45]
+  // tuning.json forecastConfidence: [1.0, 1.0, 0.9, 0.85, 0.8, ...]
   function tl(now: WeatherState, later: Partial<Record<1 | 2 | 3 | 4, WeatherState>>): WeatherState[] {
     const t: WeatherState[] = Array(20).fill(now)
     for (const [k, v] of Object.entries(later)) {
@@ -183,7 +183,7 @@ describe('weather chip', () => {
   })
   it('DRY to DAMP at low confidence reads rain possible, and never prints a percentage', () => {
     const t = chipText(tl('DRY', { 3: 'DAMP' }))
-    expect(t).toMatch(/DRY · rain possible in 3L/)
+    expect(t).toMatch(/DRY · rain likely in 3L/)
     expect(t).not.toMatch(/%/)
   })
   it('DAMP to WET names the arriving state', () => {
@@ -195,7 +195,7 @@ describe('weather chip', () => {
     expect(t).not.toMatch(/rain/)
   })
   it('WET to DRY names DRY', () => {
-    expect(chipText(tl('WET', { 4: 'DRY' }))).toMatch(/WET · DRY possible in 4L/)
+    expect(chipText(tl('WET', { 4: 'DRY' }))).toMatch(/WET · DRY likely in 4L/)
   })
   it('DAMP holding DAMP reads steady', () => {
     const t = chipText(tl('DAMP', {}))

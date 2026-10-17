@@ -256,13 +256,17 @@ const TuningSchema = z.object({
       spinTimeLossSigma: z.number(),
       dryTrackSpinChance: z.number(),
     }),
-    forecastConfidence: z.tuple([z.number(), z.number(), z.number(), z.number(), z.number()]),
+    forecastHorizon: z.number().int().min(1),
+    forecastSpread: z.array(z.number().int().min(0)).min(1),
+    forecastConfidence: z.array(z.number().min(0).max(1)).min(1),
     timeline: z.object({
       onsetWindow: z.tuple([z.number(), z.number()]),
       minDuration: z.number(),
       maxDuration: z.number(),
       intensityBias: z.record(z.string(), z.number()),
     }),
+  }).refine(w => w.forecastSpread.length > w.forecastHorizon && w.forecastConfidence.length > w.forecastHorizon, {
+    message: 'weather.forecastSpread and forecastConfidence need an entry for every lap up to forecastHorizon',
   }),
   // Bands and their provenance live in MODEL_SPEC.md §3. Read only by tests —
   // src/engine/ never touches them (engine/types.ts keeps its own looser

@@ -186,7 +186,12 @@ export interface TuningConstants {
       // scales with how wet it actually is.
       dryTrackSpinChance: number
     }
-    forecastConfidence: [number, number, number, number, number]
+    /** Laps ahead the forecast looks (spec 2026-10-17 §3). */
+    forecastHorizon: number
+    /** Half-width of the forecast window by laps ahead (index 0 unused). Length >= forecastHorizon + 1. */
+    forecastSpread: number[]
+    /** Shown chance by laps ahead. Length >= forecastHorizon + 1. */
+    forecastConfidence: number[]
     timeline: {
       onsetWindow: [number, number]
       minDuration: number
@@ -398,13 +403,6 @@ export interface SafetyCarState {
    * Always read it through incidents.ts `neutralisationKind`, never directly.
    */
   kind?: NeutralisationKind
-}
-
-export interface WeatherForecast {
-  currentState: WeatherState
-  lap1: WeatherState
-  lap2: WeatherState
-  lap2Confidence: number
 }
 
 export interface RaceState {
