@@ -264,6 +264,8 @@ export function StartLights() {
   const confirmRaceStart = useRaceStore(s => s.confirmRaceStart)
   // A red-flag restart reuses the lights; say so (spec 1.6 §4).
   const restart = useRaceStore(s => s.raceState?.incidents.some(i => i.kind === 'red_flag') ?? false)
+  const restartLap = useRaceStore(s => (s.raceState ? s.raceState.lap + 1 : 1))
+  const raceLaps = useRaceStore(s => s.raceState?.totalLaps ?? 0)
   const setSpeed = useClockStore(s => s.setSpeed)
   /*
    * The player's "Default playback speed" setting. It was persisted and
@@ -454,7 +456,7 @@ export function StartLights() {
               }}
             >
               {litCount === 0
-                ? 'FORMATION LAP COMPLETE'
+                ? (restart ? 'RACE RESUMING' : 'FORMATION LAP COMPLETE')
                 : litCount < NUM_LIGHTS
                   ? `LIGHT ${litCount} OF ${NUM_LIGHTS}`
                   : 'LIGHTS OUT IMMINENT…'
@@ -478,7 +480,7 @@ export function StartLights() {
           textAlign: 'center', padding: '0 16px',
         }}
       >
-        {config ? `${config.circuit.name.toUpperCase()} · LAP 1 OF ${config.lapsOverride ?? config.circuit.laps}` : ''}
+        {config ? `${config.circuit.name.toUpperCase()} · LAP ${restart ? `${restartLap} OF ${raceLaps}` : `1 OF ${config.lapsOverride ?? config.circuit.laps}`}` : ''}
       </motion.div>
     </motion.div>
   )

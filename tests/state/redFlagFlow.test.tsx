@@ -147,6 +147,20 @@ describe('the RED FLAG card', () => {
     expect(r().playerCalls[r().playerCalls.length - 1]).toMatchObject({ kind: 'restart_tyre', compound: 'S' })
   })
 
+  it('takes focus on mount (the selected tyre) and roves it with the arrow keys', () => {
+    startRed()
+    stepToCard()
+    render(<RedFlagCard />)
+    const dialog = screen.getByRole('dialog', { name: /red flag/i })
+    const checked = screen.getByRole('radio', { checked: true })
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    expect(document.activeElement).toBe(checked)
+    fireEvent.keyDown(checked, { key: 'ArrowRight' })
+    const now = screen.getByRole('radio', { checked: true })
+    expect(now).not.toBe(checked)
+    expect(document.activeElement).toBe(now)
+  })
+
   it('renders nothing outside the red_flag phase', () => {
     r().resetRace()
     const { container } = render(<RedFlagCard />)

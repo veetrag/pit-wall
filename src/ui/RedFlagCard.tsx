@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { defaultRestartCompound, restartConditions } from '@engine/redFlag'
@@ -36,6 +36,22 @@ function Card({ config, state }: { config: RaceConfig; state: RaceState }) {
   const hasSets = (c: Compound) => !alloc || alloc[c] > 0
   // Exactly what the engine would fit with no call (preflight E20).
   const [selected, setSelected] = useState<Compound>(() => defaultRestartCompound(config, state))
+  const chips = useRef(new Map<Compound, HTMLButtonElement>())
+  // Focus moves into the dialog, onto the selected tyre (a modal must own focus).
+  useEffect(() => { chips.current.get(selected)?.focus() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Arrow-key roving across the radiogroup, skipping compounds with no sets.
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const dir = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (dir === 0) return
+    e.preventDefault()
+    const usable = offered.filter(hasSets)
+    if (usable.length === 0) return
+    const i = usable.indexOf(selected)
+    const next = usable[(i + dir + usable.length) % usable.length]!
+    setSelected(next)
+    chips.current.get(next)?.focus()
+  }
 
   return (
     <motion.div
@@ -77,7 +93,7 @@ function Card({ config, state }: { config: RaceConfig; state: RaceState }) {
       </ol>
 
       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, letterSpacing: 1 }}>FREE TYRE CHANGE</div>
-      <div role="radiogroup" aria-label="Restart tyre" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      <div role="radiogroup" aria-label="Restart tyre" onKeyDown={onKeyDown} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {offered.map(c => {
           const on = selected === c
           const empty = !hasSets(c)
@@ -85,7 +101,8 @@ function Card({ config, state }: { config: RaceConfig; state: RaceState }) {
           return (
             <motion.button key={c} type="button" role="radio" aria-checked={on} aria-disabled={empty || undefined}
               aria-label={`${TYRE_NAME[c]}${sets !== undefined ? `, ${sets} set${sets === 1 ? '' : 's'}` : ''}`}
-              data-compound={c} className="slant-sm kit-focus"
+              data-compound={c} className="slant-sm kit-focus" tabIndex={on ? 0 : -1}
+              ref={el => { if (el) chips.current.set(c, el); else chips.current.delete(c) }}
               whileTap={reduced || empty ? undefined : { scale: 0.96 }} transition={PRESS}
               onClick={() => { if (empty) return; uiTap(); setSelected(c) }}
               style={{

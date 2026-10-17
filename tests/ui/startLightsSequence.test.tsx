@@ -80,3 +80,16 @@ describe('the start lights', () => {
     expect(vi.mocked(soundService.play)).toHaveBeenCalledWith('lightsOut')
   })
 })
+
+describe('a red-flag standing restart', () => {
+  it('says RACE RESUMING and shows the restart lap of the race laps (lapsOverride honoured)', () => {
+    const config = { circuit: { name: 'Bengaluru', laps: 50 }, lapsOverride: 30 } as unknown as NonNullable<ReturnType<typeof useRaceStore.getState>['config']>
+    const raceState = { lap: 20, totalLaps: 30, incidents: [{ kind: 'red_flag' }] } as unknown as NonNullable<ReturnType<typeof useRaceStore.getState>['raceState']>
+    useRaceStore.setState({ phase: 'starting', config, raceState })
+    const { container } = render(<StartLights />)
+    expect(container.textContent).toContain('RACE RESUMING')
+    expect(container.textContent).not.toContain('FORMATION LAP COMPLETE')
+    expect(container.textContent).toContain('BENGALURU · LAP 21 OF 30')
+    useRaceStore.setState({ raceState: null })
+  })
+})
