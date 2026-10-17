@@ -133,9 +133,9 @@ describe('saves written by 1.4', () => {
     s().nextRace()
     expect(s().raceIndex).toBe(4)
     expect(s().phase).toBe('development')
-    expect(points()).toBe(1)   // d_voss finished P10 in the saved race
+    expect(points()).toBe(25)   // d_voss won the saved race
     s().keepResult()
-    expect(points(), 'kept exactly once').toBe(1)
+    expect(points(), 'kept exactly once').toBe(25)
   })
 
   it('A REAL 1.4 SAVE ON WHAT IS NOW A SPRINT ROUND, RETRIED (ruling P5): the fresh attempt may offer the sprint, the saved GP is never counted', async () => {
