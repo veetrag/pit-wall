@@ -16,6 +16,8 @@ import { TeamSelect } from './ui/TeamSelect'
 import { DriverSelect } from './ui/DriverSelect'
 import { RaceSetup } from './ui/RaceSetup'
 import { Qualifying } from './ui/Qualifying'
+import { SprintSetup } from './ui/SprintSetup'
+import { SprintResult } from './ui/SprintResult'
 import { Development } from './ui/Development'
 import { HowToPlay } from './ui/HowToPlay'
 import { RaceHUD } from './ui/RaceHUD'
@@ -96,6 +98,9 @@ export default function App() {
           {phase === 'development' && <Development key="development" />}
           {phase === 'race_setup' && <RaceSetup key="race_setup" />}
           {phase === 'qualifying' && <Qualifying key="qualifying" />}
+          {phase === 'sprint_setup' && <SprintSetup key="sprint_setup" />}
+          {phase === 'sprint_racing' && <RaceHUD key="sprint_race" />}
+          {phase === 'sprint_result' && <SprintResult key="sprint_result" />}
           {phase === 'how_to_play' && <HowToPlay key="how_to_play" />}
           {phase === 'settings' && <SettingsScreen key="settings" />}
           {phase === 'racing' && <RaceHUD key="race" />}

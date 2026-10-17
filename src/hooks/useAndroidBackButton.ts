@@ -22,12 +22,16 @@ export function useAndroidBackButton() {
         // silently binning the race (as it did before) is far worse than
         // ignoring the press. Revisit when a pause/quit menu exists.
         case 'racing':
+        case 'sprint_racing':
           return
 
         // Terminal screens own their own navigation (NEXT RACE / NEW SEASON /
-        // PLAY AGAIN); backing out of them has no sensible meaning.
+        // PLAY AGAIN / ON TO THE GRAND PRIX); backing out of them has no
+        // sensible meaning. Sprint setup has no back either: qualifying is done.
         case 'result':
         case 'championship':
+        case 'sprint_result':
+        case 'sprint_setup':
           return
 
         case 'grid':

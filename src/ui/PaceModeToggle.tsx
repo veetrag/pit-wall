@@ -2,8 +2,8 @@ import { useRaceStore } from '@state/raceStore'
 import type { PaceMode, TuningConstants } from '@engine/types'
 import { Segmented } from '@ui/kit'
 
-const LABEL: Record<PaceMode, string> = { conserve: 'SAVE', neutral: 'HOLD', push: 'PUSH' }
-const ORDER: PaceMode[] = ['conserve', 'neutral', 'push']
+export const PACE_LABEL: Record<PaceMode, string> = { conserve: 'SAVE', neutral: 'HOLD', push: 'PUSH' }
+export const PACE_ORDER: PaceMode[] = ['conserve', 'neutral', 'push']
 // Used only when no race config is loaded (CLAUDE.md 6.2 consequence preview).
 const FALLBACK_SUB: Record<PaceMode, string> = {
   conserve: '+0.20s · −25% wear', neutral: 'base', push: '−0.15s · +30% wear',
@@ -19,8 +19,8 @@ export function paceSub(mode: { paceDelta: number; degMultiplier: number }): str
 }
 
 function optionsFor(paceModes: TuningConstants['paceModes'] | undefined) {
-  return ORDER.map(value => ({
-    value, label: LABEL[value], sub: paceModes ? paceSub(paceModes[value]) : FALLBACK_SUB[value],
+  return PACE_ORDER.map(value => ({
+    value, label: PACE_LABEL[value], sub: paceModes ? paceSub(paceModes[value]) : FALLBACK_SUB[value],
   }))
 }
 

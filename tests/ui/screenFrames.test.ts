@@ -10,6 +10,7 @@ const SCREENS: [string, string][] = [
   ['Qualifying', 'ui/Qualifying.tsx'], ['HowToPlay', 'ui/HowToPlay.tsx'], ['SettingsScreen', 'ui/SettingsPanel.tsx'],
   ['RaceHUD', 'ui/RaceHUD.tsx'], ['RaceResult', 'ui/RaceResult.tsx'], ['Championship', 'ui/Championship.tsx'],
   ['CareerRecord', 'ui/CareerRecord.tsx'], ['ScenarioSelect', 'ui/ScenarioSelect.tsx'], ['ScenarioResult', 'ui/ScenarioResult.tsx'],
+  ['SprintSetup', 'ui/SprintSetup.tsx'], ['SprintResult', 'ui/SprintResult.tsx'],
 ]
 
 describe('screen transitions never show a blank frame', () => {

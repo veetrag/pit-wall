@@ -33,7 +33,7 @@ function defaultWing(circuitId: string): Wing {
 
 const DRY_COMPOUNDS: Compound[] = ['S', 'M', 'H']
 const START_COMPOUNDS: Compound[] = ['S', 'M', 'H', 'I', 'W']
-const WEATHER_START: Record<WeatherState, string> = { DRY: '☀ Dry start', DAMP: '⛅ Damp start', WET: '🌧 Wet start' }
+export const WEATHER_START: Record<WeatherState, string> = { DRY: '☀ Dry start', DAMP: '⛅ Damp start', WET: '🌧 Wet start' }
 // Icon AND word, so the forecast never relies on the glyph alone.
 const WEATHER_SHORT: Record<WeatherState, string> = { DRY: '☀ Dry', DAMP: '⛅ Damp', WET: '🌧 Wet' }
 
@@ -96,7 +96,7 @@ const VISUALLY_HIDDEN = {
   position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap',
 } as const
 
-const SECTION_HEAD = {
+export const SECTION_HEAD = {
   margin: 0, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20,
   textTransform: 'uppercase', color: 'var(--lilac-dim)',
 } as const
@@ -105,7 +105,7 @@ const SECTION_HEAD = {
  * A radio group of tyre chips (WAI-ARIA: one tab stop, arrows move and select).
  * `tall` is the start-tyre row (56 high, fills the width); otherwise compact 48×48.
  */
-function TyreRadios({ options, value, onChange, ariaLabel, tall = false, recommended }: {
+export function TyreRadios({ options, value, onChange, ariaLabel, tall = false, recommended }: {
   options: Compound[]; value: Compound; onChange: (c: Compound) => void; ariaLabel: string; tall?: boolean
   /** Marked with a visible REC tag and described as recommended to assistive tech. */
   recommended?: Compound
