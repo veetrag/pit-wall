@@ -115,6 +115,11 @@ describe('push request', () => {
 })
 
 describe('limits', () => {
+  it('no request of either kind under a red flag', () => {
+    const red: SafetyCarState = { deployedLap: 9, lapsRemaining: 0, cause: 'crash', kind: 'red' }
+    expect(run([lapEnd(10, { me: WORN, safetyCar: red })], config(null))[0]).toBeNull()
+  })
+
   it('per-kind cooldown of cooldownLaps laps, and maxPerRace in total', () => {
     const laps = Array.from({ length: 18 }, (_, i) => 5 + i)
     const reqs = run(laps.map(l => lapEnd(l)), config(null)).filter(Boolean)

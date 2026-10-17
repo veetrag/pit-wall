@@ -10,8 +10,9 @@ import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, resolveAllocatedCompound, ef
 import {
   rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
-  rollVscDeployment, rollVscDuration, neutralisationKind,
+  rollVscDeployment, rollVscDuration, neutralisationKind, rollRedFlag,
 } from './incidents'
+import { applyRedFlagRestart, restartConditions } from './redFlag'
 
 // Grid-conditions tyre rule. A team that has not made a deliberate choice fits
 // the compound that matches the weather at lights out. Deliberately simple: no
@@ -243,6 +244,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   // the stream is untouched (tests/engine/byteIdentity.test.ts). An SC may
   // supersede a running VSC; nothing supersedes an SC; a VSC only opens on a
   // green track.
+  // A red flag (1.6) is rolled before both, on a crash only -- see below.
   let safetyCar = state.safetyCar
   const scCfg = config.tuning.incidents.safetyCar
   const vscCfg = config.tuning.incidents.vsc
@@ -251,28 +253,44 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const retiredThisTick = updatedCars.filter(c => c.retired && !wasRetired.has(c.driverId))
   const scDeployedCount = state.incidents.filter(i => i.kind === 'safety_car_deployed').length
   const vscDeployedCount = state.incidents.filter(i => i.kind === 'vsc_deployed').length
+  const rfCfg = config.tuning.incidents.redFlag
+  const redFlagCount = state.incidents.filter(i => i.kind === 'red_flag').length
 
-  if (activeKind !== 'sc' && retiredThisTick.length > 0) {
+  // Nothing is rolled under a red flag: the race is already stopped.
+  if (activeKind !== 'red' && retiredThisTick.length > 0) {
     // The first retirement of the tick is the trigger. A tyre failure counts as
     // 'mechanical' for deployment purposes: a puncture strands a car the same
     // way a broken gearbox does, and only a crash blocks the track outright.
     const trigger = retiredThisTick[0]!
     const cause: 'crash' | 'mechanical' = trigger.retiredCause === 'crash' ? 'crash' : 'mechanical'
-    if (scDeployedCount < scCfg.maxPerRace && rollSafetyCarDeployment(cause, config.tuning, rng)) {
-      if (activeKind === 'vsc') {
-        // Logged so every period in the incident log is closed: the lap chart
-        // reads VSC and SC bands straight from these events.
-        newIncidents.push({ lap: state.lap, sector, kind: 'vsc_ended', driverId: null, timeLoss: null })
+    // RED FLAG FIRST (spec 1.6 §4, ruling R11), and only on a crash. Every
+    // eligibility check precedes the roll, and the roll draws nothing at a zero
+    // chance, so with crashChance 0 the SC/VSC stream below is untouched.
+    if (cause === 'crash' && redFlagCount < rfCfg.maxPerRace &&
+        state.totalLaps - state.lap > rfCfg.minLapsLeft && rollRedFlag(config.tuning, rng)) {
+      // A red flag supersedes a running SC or VSC; close that period first so
+      // the lap chart reads every period from the log.
+      if (activeKind === 'sc') newIncidents.push({ lap: state.lap, sector, kind: 'safety_car_ended', driverId: null, timeLoss: null })
+      if (activeKind === 'vsc') newIncidents.push({ lap: state.lap, sector, kind: 'vsc_ended', driverId: null, timeLoss: null })
+      safetyCar = { deployedLap: state.lap, lapsRemaining: 0, cause, kind: 'red' }
+      newIncidents.push({ lap: state.lap, sector, kind: 'red_flag', driverId: null, timeLoss: null })
+    } else if (activeKind !== 'sc') {
+      if (scDeployedCount < scCfg.maxPerRace && rollSafetyCarDeployment(cause, config.tuning, rng)) {
+        if (activeKind === 'vsc') {
+          // Logged so every period in the incident log is closed: the lap chart
+          // reads VSC and SC bands straight from these events.
+          newIncidents.push({ lap: state.lap, sector, kind: 'vsc_ended', driverId: null, timeLoss: null })
+        }
+        safetyCar = { deployedLap: state.lap, lapsRemaining: rollSafetyCarDuration(config.tuning, rng), cause, kind: 'sc' }
+        newIncidents.push({
+          lap: state.lap, sector, kind: 'safety_car_deployed', driverId: null, timeLoss: null,
+        })
+      } else if (activeKind === null && vscDeployedCount < vscCfg.maxPerRace && rollVscDeployment(cause, config.tuning, rng)) {
+        safetyCar = { deployedLap: state.lap, lapsRemaining: rollVscDuration(config.tuning, rng), cause, kind: 'vsc' }
+        newIncidents.push({
+          lap: state.lap, sector, kind: 'vsc_deployed', driverId: null, timeLoss: null,
+        })
       }
-      safetyCar = { deployedLap: state.lap, lapsRemaining: rollSafetyCarDuration(config.tuning, rng), cause, kind: 'sc' }
-      newIncidents.push({
-        lap: state.lap, sector, kind: 'safety_car_deployed', driverId: null, timeLoss: null,
-      })
-    } else if (activeKind === null && vscDeployedCount < vscCfg.maxPerRace && rollVscDeployment(cause, config.tuning, rng)) {
-      safetyCar = { deployedLap: state.lap, lapsRemaining: rollVscDuration(config.tuning, rng), cause, kind: 'vsc' }
-      newIncidents.push({
-        lap: state.lap, sector, kind: 'vsc_deployed', driverId: null, timeLoss: null,
-      })
     }
   }
 
@@ -364,7 +382,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   // in the same step and never reached the UI. Scoped to the VSC only: the SC
   // countdown is unchanged, so the SC regression bands do not move.
   const vscDeployedThisTick = activeKind === null && neutralisationKind(safetyCar) === 'vsc'
-  if (safetyCar !== null && lapCompleted && !vscDeployedThisTick) {
+  // A red flag is never counted down: the restart below ends it.
+  if (safetyCar !== null && lapCompleted && !vscDeployedThisTick && neutralisationKind(safetyCar) !== 'red') {
     const remaining = safetyCar.lapsRemaining - 1
     if (remaining <= 0) {
       const endedKind = neutralisationKind(safetyCar)
@@ -397,6 +416,13 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     }
   }
 
+  // The red flag (spec 1.6 §4). `redOut`: a red flag stands after this tick's
+  // deployment rolls (shown this tick or earlier). `restartNow`: one stood
+  // BEFORE this tick and this tick completes a lap -- the restart. A red flag
+  // shown on a lap-completing tick therefore waits a whole lap (ruling R11).
+  const redOut = neutralisationKind(safetyCar) === 'red'
+  const restartNow = lapCompleted && activeKind === 'red'
+
   const finalCars: CarState[] = afterOvertakes.map(car => {
     let updated = { ...car }
     if (car.retired) return updated // frozen: no more laps, pits, or AI
@@ -404,7 +430,10 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       updated.tyreAge += 1
       updated.lap += 1
       updated.lapsInDirtyAir = inDirtyAir.has(car.driverId) ? car.lapsInDirtyAir + 1 : 0
-      if (!updated.isPlayer) {
+      if (redOut) {
+        // Nobody boxes under a red flag: the restart's free tyre change
+        // replaces this boundary's AI decisions and plan stops.
+      } else if (!updated.isPlayer) {
         // Build a state view for the AI decision (current positions, new lap)
         // `safetyCar` here is the post-tick value (deployed, ticked down or
         // ended this tick), the same one pitStopTime charges below. Handing the
@@ -456,11 +485,19 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     return updated
   })
 
+  let carsAfterRestart = finalCars
+  if (restartNow) {
+    const { weather, lapsLeft } = restartConditions(state)
+    carsAfterRestart = applyRedFlagRestart(config, finalCars, weather, lapsLeft)
+    safetyCar = null     // no SC laps after the restart
+    newIncidents.push({ lap: state.lap, sector, kind: 'red_flag_restart', driverId: null, timeLoss: null })
+  }
+
   // Two-compound rule: apply the penalty at the exact tick the race ends, so
   // it's baked into raceTime before the final classification sort below.
   const isRaceEnd = raceEndsThisTick
   const carsBeforeSort = isRaceEnd && config.mandatoryTwoCompound
-    ? finalCars.map(car => {
+    ? carsAfterRestart.map(car => {
         if (car.retired) return car // DNFs are exempt — they never finished
         const usedWet = car.compoundsUsed.some(c => c === 'I' || c === 'W')
         if (usedWet) return car // wet-affected races are exempt, matches real regs
@@ -470,7 +507,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         }
         return car
       })
-    : finalCars
+    : carsAfterRestart
 
   // Re-sort and assign positions: active cars by raceTime; retired cars sort
   // after every classified runner, ranked by retiredLap descending (later

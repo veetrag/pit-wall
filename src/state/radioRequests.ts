@@ -109,7 +109,8 @@ export function detectRadioRequest(
     t.closeAheadId = null
   }
 
-  if (ctx.pending || t.asked >= rr.maxPerRace) return { request: null, tracker: t }
+  // No questions under a red flag: the free tyre change is coming (ruling R6).
+  if (ctx.pending || t.asked >= rr.maxPerRace || kind === 'red') return { request: null, tracker: t }
 
   const spec = config.compounds[player.compound]
   const driver = config.drivers.find(d => d.id === player.driverId)

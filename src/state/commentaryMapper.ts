@@ -147,6 +147,16 @@ export function processCommentaryTick(
         if (line) lines.push(line)
         break
       }
+      case 'red_flag': {
+        const line = fill('red_flag', { lap: evLap })
+        if (line) lines.push(line)
+        break
+      }
+      case 'red_flag_restart': {
+        const line = fill('red_flag_restart', { lap: evLap })
+        if (line) lines.push(line)
+        break
+      }
       default: {
         const _exhaustive: never = ev.kind
         void _exhaustive

@@ -170,6 +170,17 @@ export interface TuningConstants {
       durationLapsMax: number
       maxPerRace: number
     }
+    /**
+     * Red flag (spec 2026-10-17 §4). Rolled on a crash BEFORE the SC/VSC; at
+     * crashChance 0 it draws nothing. planWindowLaps: a planned stop that
+     * close is fitted (and consumed) at the free tyre change.
+     */
+    redFlag: {
+      crashChance: number
+      maxPerRace: number
+      minLapsLeft: number
+      planWindowLaps: number
+    }
   }
   weather: {
     crossoverPenalty: Record<string, Record<string, number>>
@@ -379,9 +390,15 @@ export type IncidentKind =
   | 'vsc_deployed'
   | 'vsc_ended'
   | 'slow_stop'
+  | 'red_flag'
+  | 'red_flag_restart'
 
-/** A full safety car bunches the field; a virtual safety car slows every car and never bunches it. */
-export type NeutralisationKind = 'sc' | 'vsc'
+/**
+ * A full safety car bunches the field; a virtual safety car slows every car and
+ * never bunches it; a red flag (spec 2026-10-17 §4) suspends the race until
+ * the next lap boundary, where it restarts from a fresh grid.
+ */
+export type NeutralisationKind = 'sc' | 'vsc' | 'red'
 
 export interface IncidentEvent {
   lap: number

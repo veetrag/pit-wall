@@ -29,5 +29,7 @@
   "safety_car_ended": ["Safety car in this lap — green flag on lap {lap}."],
   "vsc_deployed": ["Virtual safety car on lap {lap} — the field slows, no bunching."],
   "vsc_ended": ["VSC ending — green flag on lap {lap}."],
-  "slow_stop": ["L{lap} slow stop for {code}: {loss}s lost, down to P{pos}"]
+  "slow_stop": ["L{lap} slow stop for {code}: {loss}s lost, down to P{pos}"],
+  "red_flag": ["Lap {lap}: RED FLAG. The race is suspended."],
+  "red_flag_restart": ["Lap {lap}: standing restart, fresh tyres for the whole field."]
 }

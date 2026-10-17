@@ -149,6 +149,12 @@
       "durationLapsMin": 1,
       "durationLapsMax": 3,
       "maxPerRace": 2
+    },
+    "redFlag": {
+      "crashChance": 0.0,
+      "maxPerRace": 1,
+      "minLapsLeft": 5,
+      "planWindowLaps": 15
     }
   },
   "weather": {

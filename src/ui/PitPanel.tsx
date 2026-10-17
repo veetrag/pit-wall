@@ -116,7 +116,7 @@ function PitLossLine() {
       <Pill>PIT LOSS {loss.toFixed(1)}s</Pill>
       {discounted && (
         <Pill tone="caution">
-          −{saving.toFixed(1)}s UNDER {neutralisationKind(safetyCar) === 'vsc' ? 'VSC' : 'SAFETY CAR'}
+          −{saving.toFixed(1)}s UNDER {({ sc: 'SAFETY CAR', vsc: 'VSC', red: 'RED FLAG' } as const)[neutralisationKind(safetyCar) ?? 'sc']}
         </Pill>
       )}
     </div>

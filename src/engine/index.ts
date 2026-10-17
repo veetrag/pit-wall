@@ -10,8 +10,9 @@ export { computeSectorTime } from './lapModel'
 export {
   driverErrorChancePerSector, rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
-  rollVscDeployment, rollVscDuration, neutralisationKind, neutralisationPaceMultiplier,
+  rollVscDeployment, rollVscDuration, neutralisationKind, neutralisationPaceMultiplier, rollRedFlag,
 } from './incidents'
+export { restartTyre, applyRedFlagRestart, restartConditions } from './redFlag'
 export * from './setup'
 export { createRng, gaussianPair } from './rng'
 export { pitStopTime, expectedPitStopTime, slowStopComponent, normalCdf } from './pitStop'

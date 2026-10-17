@@ -70,9 +70,9 @@ export function lapHistory(config: RaceConfig, seed: number, calls: readonly Pla
   const neutralisations: NeutralisationPeriod[] = []
   let open: { kind: NeutralisationKind; startLap: number } | null = null
   for (const ev of state.incidents) {
-    if (ev.kind === 'safety_car_deployed' || ev.kind === 'vsc_deployed') {
-      open = { kind: ev.kind === 'vsc_deployed' ? 'vsc' : 'sc', startLap: ev.lap + 1 }
-    } else if ((ev.kind === 'safety_car_ended' || ev.kind === 'vsc_ended') && open !== null) {
+    if (ev.kind === 'safety_car_deployed' || ev.kind === 'vsc_deployed' || ev.kind === 'red_flag') {
+      open = { kind: ev.kind === 'vsc_deployed' ? 'vsc' : ev.kind === 'red_flag' ? 'red' : 'sc', startLap: ev.lap + 1 }
+    } else if ((ev.kind === 'safety_car_ended' || ev.kind === 'vsc_ended' || ev.kind === 'red_flag_restart') && open !== null) {
       neutralisations.push({ ...open, endLap: ev.lap + 1 })
       open = null
     }

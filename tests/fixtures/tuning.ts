@@ -81,6 +81,7 @@ export function zeroIncidents(
     driverErrorPerLap: 0,
     safetyCar: { ...incidents.safetyCar, crashDeployChance: 0, mechanicalDeployChance: 0 },
     vsc: { ...incidents.vsc, crashDeployChance: 0, mechanicalDeployChance: 0 },
+    redFlag: { ...incidents.redFlag, crashChance: 0 },
   }
 }
 
@@ -105,6 +106,8 @@ export function makeDeterministicTuning(overrides: DeepPartial<TuningConstants> 
       // Same reason as the SC chances above: zero CHANCES, so the VSC roll
       // draws nothing and the golden race stays byte-identical.
       vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 },
+      // Same reason again: a zero CHANCE draws nothing.
+      redFlag: { crashChance: 0 },
     },
     mechanicalFailure: { baseChancePerLap: 0 },
     // The pre-1.6 weather rule (ruling R2). The golden race is a wet race full

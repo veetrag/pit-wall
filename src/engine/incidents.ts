@@ -111,6 +111,7 @@ export function effectivePitLaneLoss(
     case null: return circuit.pitLaneTimeLoss
     case 'sc': return tuning.incidents.safetyCar.laneTimeLossUnderSc
     case 'vsc': return circuit.pitLaneTimeLoss * tuning.incidents.vsc.laneLossFactor
+    case 'red': return tuning.incidents.safetyCar.laneTimeLossUnderSc
     default: { const never: never = kind; return never }
   }
 }
@@ -150,6 +151,18 @@ export function neutralisationPaceMultiplier(safetyCar: SafetyCarState | null, t
     case null: return 1
     case 'sc': return tuning.incidents.safetyCar.paceMultiplier
     case 'vsc': return tuning.incidents.vsc.paceMultiplier
+    case 'red': return tuning.incidents.safetyCar.paceMultiplier
     default: { const never: never = kind; return never }
   }
+}
+
+/**
+ * Red-flag roll (spec 2026-10-17 §4). Same guard idiom as every incident roll:
+ * a zero chance performs NO rng() call. race.ts checks eligibility (a crash,
+ * maxPerRace, minLapsLeft) BEFORE calling this, so an ineligible tick draws
+ * nothing either.
+ */
+export function rollRedFlag(tuning: TuningConstants, rng: Rng): boolean {
+  const c = tuning.incidents.redFlag.crashChance
+  return c > 0 && rng() < c
 }

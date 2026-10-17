@@ -244,6 +244,14 @@ const TuningSchema = z.object({
       durationLapsMax: z.number().int().min(1),
       maxPerRace: z.number().int().min(0),
     }),
+    // minLapsLeft >= 2 so a restart can never land on the race-completing
+    // boundary and regrid the result (preflight E18).
+    redFlag: z.object({
+      crashChance: z.number().min(0).max(1),
+      maxPerRace: z.number().int().min(0),
+      minLapsLeft: z.number().int().min(2),
+      planWindowLaps: z.number().int().min(0),
+    }),
   }),
   weather: z.object({
     crossoverPenalty: z.record(z.string(), z.record(z.string(), z.number())),
