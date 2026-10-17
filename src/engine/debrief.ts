@@ -235,6 +235,9 @@ export function judgeCalls(
 
   // Logged calls.
   calls.forEach((call, idx) => {
+    // The restart's moment is fixed by the red flag; there is no "earlier or
+    // later" to judge (ruling R12). It is still replayed via `others`.
+    if (call.kind === 'restart_tyre') return
     const lap = callLaps.get(call.step) ?? 0
     const others = calls.filter((_, j) => j !== idx)
     const moved = (d: number): PlayerCall => ({ ...call, step: call.step + 3 * d })

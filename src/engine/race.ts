@@ -139,6 +139,10 @@ export function initRace(config: RaceConfig): RaceState {
 }
 
 export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): RaceState {
+  // The player's restart tyre lives on the state for exactly one step: read
+  // it, and never carry it forward. Destructuring an absent key leaves the
+  // remaining keys -- and their order -- exactly as before (byteIdentity).
+  const { redFlagTyre, ...prevState } = state
   const sector = state.sector as SectorIndex
   const newSectorResults = [...state.sectorResults]
   const newOvertakeEvents: OvertakeEvent[] = [...state.overtakeEvents]
@@ -488,7 +492,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   let carsAfterRestart = finalCars
   if (restartNow) {
     const { weather, lapsLeft } = restartConditions(state)
-    carsAfterRestart = applyRedFlagRestart(config, finalCars, weather, lapsLeft)
+    carsAfterRestart = applyRedFlagRestart(config, finalCars, weather, lapsLeft, redFlagTyre)
     safetyCar = null     // no SC laps after the restart
     newIncidents.push({ lap: state.lap, sector, kind: 'red_flag_restart', driverId: null, timeLoss: null })
   }
@@ -526,7 +530,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   }
 
   return {
-    ...state,
+    ...prevState,
     lap: newLap,
     sector: nextSector,
     trackEvolutionLaps: lapCompleted ? state.trackEvolutionLaps + 1 : state.trackEvolutionLaps,

@@ -12,7 +12,7 @@ export {
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
   rollVscDeployment, rollVscDuration, neutralisationKind, neutralisationPaceMultiplier, rollRedFlag,
 } from './incidents'
-export { restartTyre, applyRedFlagRestart, restartConditions } from './redFlag'
+export { restartTyre, applyRedFlagRestart, restartConditions, redFlagPending, defaultRestartCompound } from './redFlag'
 export * from './setup'
 export { createRng, gaussianPair } from './rng'
 export { pitStopTime, expectedPitStopTime, slowStopComponent, normalCdf } from './pitStop'
@@ -31,7 +31,7 @@ export type {
 } from './types'
 export type { ProjectionResult } from './projection'
 export type { Rng } from './rng'
-export { applyPlayerPit, applyPlayerPace, applyCall } from './playerCalls'
+export { applyPlayerPit, applyPlayerPace, applyRestartTyre, applyCall } from './playerCalls'
 export type { PlayerCall } from './playerCalls'
 export { isFinished, simulate, replay, judgeCalls, pickBetter, futureSeed } from './debrief'
 export type { JudgedCall, Alternative, OptionOutcome, CallVerdict, DebriefResult } from './types'

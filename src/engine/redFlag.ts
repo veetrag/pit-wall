@@ -1,6 +1,7 @@
 import type { RaceConfig, RaceState, CarState, Compound, WeatherState } from './types'
 import { resolveAllocatedCompound, consumeTyreSet } from './tyres'
 import { bestDryCompound } from './strategy'
+import { neutralisationKind } from './incidents'
 
 /**
  * The conditions a red-flag restart is decided on, read from the state BEFORE
@@ -68,4 +69,22 @@ export function applyRedFlagRestart(
       compoundsUsed: [...car.compoundsUsed, resolved],
     }
   })
+}
+
+/** A red flag stands and the next step completes the lap: the restart. The UI stops here for the player's tyre. */
+export function redFlagPending(state: RaceState): boolean {
+  return neutralisationKind(state.safetyCar) === 'red' && state.sector === 2
+}
+
+/**
+ * What the engine would fit for the player at this restart with no call --
+ * the AI rule, resolved against the allocation exactly as applyRedFlagRestart
+ * does (preflight E20) -- under the same restartConditions (S6). The card's default.
+ */
+export function defaultRestartCompound(config: RaceConfig, state: RaceState): Compound {
+  const player = state.cars.find(c => c.isPlayer)
+  if (!player) return 'M'
+  const { weather, lapsLeft } = restartConditions(state)
+  const { compound } = restartTyre(config, player, weather, lapsLeft)
+  return resolveAllocatedCompound(compound, player.tyreAllocation) ?? player.compound
 }

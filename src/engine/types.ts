@@ -441,6 +441,13 @@ export interface RaceState {
   rngState: number
   weatherTimeline: WeatherState[]
   weatherState: WeatherState
+  /**
+   * The player's restart tyre (spec 2026-10-17 §4), set by a 'restart_tyre'
+   * call ONLY while the restart is the next step (redFlagPending), and always
+   * stripped by that step. ABSENT on every other state, so the golden race
+   * and every serialised state are unchanged.
+   */
+  redFlagTyre?: Compound
 }
 
 export interface RaceConfig {
