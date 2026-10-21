@@ -4,6 +4,7 @@ import { EASE, PRESS, ScreenFrame, ScreenHeader, KitButton, Pill } from '@ui/kit
 import { useUiTap } from '@hooks/useUiTap'
 import { useSettingsStore } from '@state/settingsStore'
 import { useCareerStore } from '@state/careerStore'
+import { boardTarget } from '@state/teamOffers'
 import { useSeasonStore, TOTAL_RACES } from '@state/seasonStore'
 import { applyUpgrades, rivalFacetValue } from '@state/upgradeOverlay'
 import { loadGameData, type UpgradeAttribute } from '@data/validators'
@@ -349,6 +350,7 @@ export function Development() {
   ]
 
   const teamTier = teamTiers[playerTeamId] ?? 0
+  const target = playerDriverId ? boardTarget(playerDriverId, useSeasonStore.getState().overlayInput()) : null
 
   return (
     <ScreenFrame label="Development">
@@ -375,13 +377,18 @@ export function Development() {
           </div>
         )}
       />
-      {teamTier !== 0 && (
-        <div style={{ padding: '8px 16px 0', flexShrink: 0 }}>
-          <Pill ariaLabel={`Team tier ${teamTier > 0 ? '+' : ''}${teamTier}`}>
+      {(teamTier !== 0 || target !== null) && (
+        <div style={{ padding: '8px 16px 0', flexShrink: 0, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {target !== null && (
+            <Pill ariaLabel={`Board target: P${target} in the constructors' championship`}>
+              BOARD TARGET · P{target} IN THE CONSTRUCTORS'
+            </Pill>
+          )}
+          {teamTier !== 0 && <Pill ariaLabel={`Team tier ${teamTier > 0 ? '+' : ''}${teamTier}`}>
             <span style={{ color: teamTier > 0 ? 'var(--gain)' : 'var(--hot)', fontVariantNumeric: 'tabular-nums' }}>
               {teamTier > 0 ? '▲' : '▼'} TIER {teamTier > 0 ? '+' : ''}{teamTier}
             </span>
-          </Pill>
+          </Pill>}
         </div>
       )}
 

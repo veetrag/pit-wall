@@ -3,7 +3,7 @@ import { useCareerStore, sprintWins } from '@state/careerStore'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
 import { BadgeCase } from './BadgeCase'
-import { ScreenFrame, ScreenHeader, StatTile, StandingRow, KitButton } from '@ui/kit'
+import { ScreenFrame, ScreenHeader, StatTile, StandingRow, KitButton, Pill } from '@ui/kit'
 
 type DriverEntry = { id: string; name: string; teamId: string }
 type TeamEntry = { id: string; name: string; colorPrimary: string }
@@ -76,17 +76,25 @@ export function CareerRecord() {
           // Natural-height list: never sliced, so an endless career's full
           // history always renders inside the scrolling parent.
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {seasonHistory.map(s => (
+            {seasonHistory.map((s, i) => {
+              const moved = i > 0 && seasonHistory[i - 1]!.teamId !== s.teamId
+              return (
               <div key={s.seasonNumber} data-testid="career-season-row">
                 <StandingRow
                   pos={`S${s.seasonNumber}`}
                   teamColor={teamColor(s.teamId)}
                   name={`${driverCode(s.driverId)} · ${teamShort(s.teamId)}`}
                   value={`P${s.championshipPosition} · ${s.points} PTS`}
-                  trailing={s.championshipPosition === 1 ? <span role="img" aria-label="Champion">🏆</span> : undefined}
+                  trailing={(s.championshipPosition === 1 || moved) ? (
+                    <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                      {moved && <Pill ariaLabel="Changed team">NEW TEAM</Pill>}
+                      {s.championshipPosition === 1 && <span role="img" aria-label="Champion">🏆</span>}
+                    </span>
+                  ) : undefined}
                 />
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

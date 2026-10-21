@@ -100,6 +100,7 @@ export default function App() {
           {phase === 'grid' && <GridStats key="grid" />}
           {phase === 'team_select' && <TeamSelect key="team_select" />}
           {phase === 'driver_select' && <DriverSelect key="driver_select" />}
+          {phase === 'new_team_driver' && <DriverSelect key="new_team_driver" mode="new_team" />}
           {phase === 'development' && <Development key="development" />}
           {phase === 'race_setup' && <RaceSetup key="race_setup" />}
           {phase === 'qualifying' && <Qualifying key="qualifying" />}

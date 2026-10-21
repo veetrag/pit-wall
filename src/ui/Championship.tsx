@@ -8,6 +8,7 @@ import { useSettingsStore } from '@state/settingsStore'
 import { BadgeToast } from './BadgeToast'
 import { ShareButton } from './share/ShareButton'
 import { buildShareData } from './share/shareCard'
+import { OfferCard } from './OfferCard'
 import { LadderReveal, ConstructorsList } from './LadderReveal'
 import { useUiTap } from '@hooks/useUiTap'
 import { useShortViewport } from '@hooks/useShortViewport'
@@ -34,8 +35,13 @@ const FOLD = 10
 const sectionLabel: CSSProperties = { fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 2 }
 
 export function Championship() {
-  const { standings, playerDriverId, purchasedTiers, lastSeasonBonus, startNextSeason, endCareer, lastLadder, selectedTeamId } = useSeasonStore()
+  const { standings, playerDriverId, purchasedTiers, lastSeasonBonus, startNextSeason, endCareer, lastLadder, selectedTeamId, toNewTeamDriver, declineOffer } = useSeasonStore()
   const seasonNumber = useCareerStore(s => s.seasonNumber)
+  const offer = useCareerStore(s => s.pendingOffer ?? null)
+  const [choice, setChoice] = useState<'stay' | 'accept'>('stay')
+  const live = offer !== null && offer.season === seasonNumber
+  const accepting = live && choice === 'accept'
+  const offerName = live ? (loadGameData().cars.teams.find(t => t.id === offer!.teamId)?.name ?? '').toUpperCase() : ''
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
   const uiTap = useUiTap()
   const [confirmingEnd, setConfirmingEnd] = useState(false)
@@ -131,6 +137,18 @@ export function Championship() {
           <LadderReveal moves={lastLadder} playerTeamId={selectedTeamId} />
         )}
 
+        {lastLadder && selectedTeamId && (() => {
+          const me = lastLadder.find(m => m.teamId === selectedTeamId)
+          return me ? (
+            <div style={{ margin: '0 16px' }}>
+              <Pill ariaLabel={`Board target P${me.deserved}, finished P${me.finished} in the constructors'`}>
+                BOARD TARGET P{me.deserved} · FINISHED P{me.finished}
+              </Pill>
+            </div>
+          ) : null
+        })()}
+        {live && <OfferCard offer={offer!} choice={choice} onChoice={setChoice} />}
+
         {/* 2. The champion, on their team's colour (ink text: every
             colorPrimary clears 4.5:1 against ink) */}
         {winner && (
@@ -213,11 +231,14 @@ export function Championship() {
             <Pill tone="volt">CHAMPIONSHIP BONUS +{lastSeasonBonus} PTS</Pill>
           </motion.div>
         )}
-        <KitButton variant="primary" size="lg" onClick={() => { startNextSeason(); pushCloudSave() }}
+        <KitButton variant="primary" size="lg" ariaLabel={accepting ? `Sign for ${offerName}` : 'Next season'}
+          onClick={() => { if (accepting) { toNewTeamDriver(); return } declineOffer(); startNextSeason(); pushCloudSave() }}
           style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: short ? '6px 22px' : '8px 22px' }}>
-          <span style={{ lineHeight: short ? 1.05 : undefined }}>NEXT SEASON →</span>
+          <span style={{ lineHeight: short ? 1.05 : undefined }}>{accepting ? `SIGN FOR ${offerName} →` : 'NEXT SEASON →'}</span>
           <span style={{ fontFamily: 'var(--font-body)', fontStyle: 'normal', fontWeight: 700, fontSize: short ? 11 : 12, textTransform: 'none', letterSpacing: 0, lineHeight: short ? 1.2 : 1.3 }}>
-            Season {seasonNumber + 1} · You keep {keptTiers} of {maxTiers} upgrade tiers · Rivals developed over the winter
+            {accepting
+              ? `Season ${seasonNumber + 1} · Upgrade tiers start from 0 · Dev points carry over`
+              : `Season ${seasonNumber + 1} · You keep ${keptTiers} of ${maxTiers} upgrade tiers · Rivals developed over the winter`}
           </span>
         </KitButton>
 

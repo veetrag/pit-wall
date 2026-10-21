@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion'
 import type { KeyboardEvent } from 'react'
+import { useState } from 'react'
 import { useSeasonStore } from '@state/seasonStore'
+import { useCareerStore } from '@state/careerStore'
+import { pushCloudSave } from '@sync/storeBridge'
 import { useUiTap } from '@hooks/useUiTap'
 import { HelmetAvatar, type HelmetPattern } from './HelmetAvatar'
 import driversData from '@data/drivers.json'
@@ -43,12 +46,24 @@ const FACET_LABELS: [keyof DriverFacets, string][] = [
   ['consistency',    'CONSISTENCY'],
 ]
 
-export function DriverSelect() {
-  const selectedTeamId = useSeasonStore(s => s.selectedTeamId)
-  const playerDriverId = useSeasonStore(s => s.playerDriverId)
-  const selectDriver   = useSeasonStore(s => s.selectDriver)
-  const confirmDriver  = useSeasonStore(s => s.confirmDriver)
+export function DriverSelect({ mode = 'career' }: { mode?: 'career' | 'new_team' }) {
+  const seasonTeamId = useSeasonStore(s => s.selectedTeamId)
+  const seasonDriverId = useSeasonStore(s => s.playerDriverId)
+  const careerSelect   = useSeasonStore(s => s.selectDriver)
+  const careerConfirm  = useSeasonStore(s => s.confirmDriver)
   const backToTeamSelect = useSeasonStore(s => s.backToTeamSelect)
+  const backToChampionship = useSeasonStore(s => s.backToChampionship)
+  const acceptOffer = useSeasonStore(s => s.acceptOffer)
+  const offerTeamId = useCareerStore(s => s.pendingOffer?.teamId ?? null)
+  const [picked, setPicked] = useState<string | null>(null)
+  // A new-team pick (spec 1.6 §12) reuses this screen with its own selection:
+  // the season's playerDriverId must not change until the driver is signed.
+  const newTeam = mode === 'new_team'
+  const selectedTeamId = newTeam ? offerTeamId : seasonTeamId
+  const playerDriverId = newTeam ? picked : seasonDriverId
+  const selectDriver = newTeam ? setPicked : careerSelect
+  const confirmDriver = newTeam ? () => { if (picked) { acceptOffer(picked); pushCloudSave() } } : careerConfirm
+  const back = newTeam ? backToChampionship : backToTeamSelect
   const uiTap = useUiTap()
   const reduced = useReducedMotion()
 
@@ -70,7 +85,7 @@ export function DriverSelect() {
 
   return (
     <ScreenFrame label="Driver select">
-      <ScreenHeader eyebrow="NEW CAREER · STEP 2 OF 2" title="Pick your driver" onBack={backToTeamSelect} />
+      <ScreenHeader eyebrow={newTeam ? 'NEW TEAM · PICK YOUR DRIVER' : 'NEW CAREER · STEP 2 OF 2'} title="Pick your driver" onBack={back} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div role="radiogroup" aria-label="Drivers" onKeyDown={onKeyDown} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
