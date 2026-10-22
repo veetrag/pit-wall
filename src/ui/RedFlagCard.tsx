@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { defaultRestartCompound, restartConditions } from '@engine/redFlag'
@@ -54,16 +55,23 @@ function Card({ config, state }: { config: RaceConfig; state: RaceState }) {
   }
 
   return (
+    // The ROOT is opaque ink over the whole viewport from its first frame and
+    // never fades (1.6 device report: the HUD showed through while the root's
+    // opacity animated). Only the content inside slides in. Portalled to the
+    // body so no transformed or fading screen frame can contain it.
+    <div
+      role="dialog" aria-modal="true" aria-labelledby="red-flag-title" data-testid="red-flag-root"
+      style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, zIndex: 150, background: 'var(--ink)', color: 'var(--white)',
+        display: 'flex', flexDirection: 'column',
+        padding: 'calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom))', overflowY: 'auto', boxSizing: 'border-box',
+      }}
+    >
     <motion.div
-      role="dialog" aria-modal="true" aria-labelledby="red-flag-title"
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24 }}
       animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
       transition={{ duration: 0.22, ease: EASE }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 150, background: 'var(--ink)', color: 'var(--white)',
-        display: 'flex', flexDirection: 'column', gap: 14,
-        padding: 'calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom))', overflowY: 'auto',
-      }}
+      style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}
     >
       <div className="slant-lg" style={{ background: 'var(--hot)', color: 'var(--ink)', padding: '14px 22px' }}>
         <h2 id="red-flag-title" style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 44, lineHeight: 1 }}>
@@ -123,6 +131,7 @@ function Card({ config, state }: { config: RaceConfig; state: RaceState }) {
         RESTART
       </KitButton>
     </motion.div>
+    </div>
   )
 }
 
@@ -131,5 +140,5 @@ export function RedFlagCard() {
   const config = useRaceStore(s => (s.phase === 'red_flag' ? s.config : null))
   const state = useRaceStore(s => (s.phase === 'red_flag' ? s.raceState : null))
   if (!config || !state) return null
-  return <Card config={config} state={state} />
+  return createPortal(<Card config={config} state={state} />, document.body)
 }

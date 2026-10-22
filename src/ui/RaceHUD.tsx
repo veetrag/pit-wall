@@ -277,6 +277,10 @@ export function RaceHUD() {
         ) : (
           <motion.div
             key="race"
+            data-testid="race-hud-body"
+            // The RED FLAG card owns the screen: nothing behind it is read or tappable.
+            aria-hidden={phase === 'red_flag' || undefined}
+            inert={phase === 'red_flag' || undefined}
             initial={{ opacity: 0, zIndex: 1 }}
             animate={{ opacity: 1, zIndex: 1 }}
             exit={HOLD_EXIT}
