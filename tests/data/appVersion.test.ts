@@ -51,7 +51,7 @@ describe('the app version is stated once', () => {
     expect(Number(m![1])).toBeGreaterThanOrEqual(7)
   })
 
-  it('this release is 1.6', () => {
-    expect(pkg.version).toBe('1.6')
+  it('this release is 1.6.1', () => {
+    expect(pkg.version).toBe('1.6.1')
   })
 })
