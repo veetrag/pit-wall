@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
-import { useScenarioStore } from '@state/scenarioStore'
+import { useScenarioStore, type ScenarioBest } from '@state/scenarioStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useUiTap } from '@hooks/useUiTap'
 import { loadGameData, type ScenarioSpecData } from '@data/validators'
@@ -12,6 +12,18 @@ import { ScreenFrame, ScreenHeader, Pill, TyreChip, KitButton, CircuitOutline, s
 // scenario data on every re-render.
 const GAME = loadGameData()
 const SCENARIOS = GAME.scenarios
+
+/** The scenario's best finish so far: volt with a tick once the goal is met. */
+function BestPill({ best }: { best: ScenarioBest }) {
+  const p = best.position === null ? 'DNF' : `P${best.position}`
+  return (
+    <div style={{ marginTop: 8 }}>
+      <Pill tone={best.met ? 'volt' : 'dusk'} ariaLabel={`Best finish ${p}, ${best.met ? 'goal met' : 'goal not met yet'}`}>
+        {best.met ? `BEST ${p} ✓` : `BEST ${p}`}
+      </Pill>
+    </div>
+  )
+}
 
 function ScenarioCard({ spec, index, expanded, onToggle }: {
   spec: ScenarioSpecData
@@ -63,16 +75,7 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
             }}>
               {circuitName.toUpperCase()}
             </div>
-            {best && (() => {
-              const p = best.position === null ? 'DNF' : `P${best.position}`
-              return (
-                <div style={{ marginTop: 8 }}>
-                  <Pill tone={best.met ? 'volt' : 'dusk'} ariaLabel={`Best finish ${p}, ${best.met ? 'goal met' : 'goal not met yet'}`}>
-                    {best.met ? `BEST ${p} ✓` : `BEST ${p}`}
-                  </Pill>
-                </div>
-              )
-            })()}
+            {best && <BestPill best={best} />}
           </div>
           <CircuitOutline circuitId={spec.circuitId} width={72} height={56} label={`${circuitName} layout`} />
         </div>

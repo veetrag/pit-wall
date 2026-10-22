@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { buildScenarioConfig, buildRaceConfig, SCENARIO_DIFFICULTY } from '@state/buildRaceConfig'
 import { startScenario, describeSituation } from '@engine/scenario'
 import { loadGameData } from '@data/validators'
+import { sprintLaps } from '@state/sprint'
 import type { RaceConfig } from '@engine/types'
 
 const DATA = loadGameData()
@@ -71,17 +72,13 @@ describe('buildScenarioConfig', () => {
   })
 })
 
-import { buildScenarioConfig as build16 } from '@state/buildRaceConfig'
-import { sprintLaps } from '@state/sprint'
-import { loadGameData as data16 } from '@data/validators'
-
 describe('sprint scenarios (spec 1.6 §8)', () => {
   it('a sprint scenario runs the sprint distance without the two-compound rule', () => {
-    const c = build16({ circuitId: 'harbour_lights', seed: 1, playerDriverId: 'd_voss', sprint: true })
-    expect(c.lapsOverride).toBe(sprintLaps(data16().circuits['harbour_lights']!.laps))
+    const c = buildScenarioConfig({ circuitId: 'harbour_lights', seed: 1, playerDriverId: 'd_voss', sprint: true })
+    expect(c.lapsOverride).toBe(sprintLaps(loadGameData().circuits['harbour_lights']!.laps))
     expect(c.mandatoryTwoCompound).toBe(false)
   })
   it('without the flag a scenario config has no lapsOverride key at all', () => {
-    expect('lapsOverride' in build16({ circuitId: 'harbour_lights', seed: 1, playerDriverId: 'd_voss' })).toBe(false)
+    expect('lapsOverride' in buildScenarioConfig({ circuitId: 'harbour_lights', seed: 1, playerDriverId: 'd_voss' })).toBe(false)
   })
 })
