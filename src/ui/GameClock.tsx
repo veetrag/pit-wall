@@ -4,7 +4,8 @@ import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { soundService } from '@audio/soundService'
 
-const INTERVALS: Record<number, number> = { 1: 2000, 2: 500, 4: 100 }
+// ms per sector: 2x and 4x are true multiples of 1x, so the labels mean what they say.
+export const INTERVALS: Record<number, number> = { 1: 2000, 2: 1000, 4: 500 }
 
 export function GameClock() {
   const speed = useClockStore(s => s.speed)
