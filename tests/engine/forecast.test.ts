@@ -69,6 +69,23 @@ describe('forecast (spec 1.6 §3)', () => {
     expect(forecast(at(30, tl(30, 29, 'DAMP')), config)).toEqual({ kind: 'steady' })
   })
 
+  it('NEAR THE FLAG: over a seed loop the clamp actually bites (toLap === lapsLeft for some seed)', () => {
+    // 30 laps, now lap 26: lapsLeft = 3, change at 29 (d = 3). Unclamped, toLap
+    // would be d + spread + shift = 5 + shift, past the flag for most seeds.
+    const lapsLeft = 30 - 26 - 1
+    let bit = 0
+    for (let seed = 1; seed <= 200; seed++) {
+      const f = forecast(at(26, tl(30, 29, 'DAMP')), { ...config, seed })
+      expect(f.kind, `seed ${seed}`).toBe('rain')
+      if (f.kind === 'steady') continue
+      expect(f.toLap, `seed ${seed}`).toBeLessThanOrEqual(lapsLeft)
+      expect(f.fromLap, `seed ${seed}`).toBeGreaterThanOrEqual(1)
+      expect(f.fromLap, `seed ${seed}`).toBeLessThanOrEqual(f.toLap)
+      if (f.toLap === lapsLeft) bit++
+    }
+    expect(bit, 'the clamp to lapsLeft must bite for some seed').toBeGreaterThan(0)
+  })
+
   it('does not jitter: the offset belongs to the change lap, not to the lap it is read on', () => {
     const signs = [12, 14, 16, 18].map(now => {
       const f = forecast(at(now, tl(50, 20, 'DAMP')), config)

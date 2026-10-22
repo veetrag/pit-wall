@@ -13,6 +13,7 @@ import { PitPanel } from '@ui/PitPanel'
 import { TimingTower, compactWindowSize } from '@ui/TimingTower'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
+import { loadGameData } from '@data/validators'
 
 const css = readFileSync(resolve(process.cwd(), 'src/styles/tokens.css'), 'utf8')
 
@@ -43,6 +44,27 @@ describe('Large text (spec 1.6 §11)', () => {
     const { container } = render(<TimingTower />)
     expect(container.firstElementChild?.classList.contains('text-zoom')).toBe(true)
     expect(container.querySelectorAll('[data-testid="tower-row"]').length).toBe(5)
+  })
+
+  it('in Large the player row is always among the five, from P1 to last', () => {
+    startTenLapRace()
+    useSettingsStore.setState({ textSize: 'large' })
+    const base = useRaceStore.getState().raceState!
+    const order = [...base.cars].sort((a, b) => a.position - b.position)
+    const me = order.find(c => c.isPlayer)!
+    const code = loadGameData().drivers.drivers.find(d => d.id === me.driverId)!.code
+    for (let p = 1; p <= order.length; p++) {
+      // Move the player to P p, everyone else keeps their relative order.
+      const others = order.filter(c => !c.isPlayer)
+      const placed = [...others.slice(0, p - 1), me, ...others.slice(p - 1)]
+      const cars = placed.map((c, i) => ({ ...c, position: i + 1 }))
+      useRaceStore.setState({ raceState: { ...base, cars } })
+      const { container, unmount } = render(<TimingTower />)
+      const rows = [...container.querySelectorAll('[data-testid="tower-row"]')]
+      expect(rows.length, `P${p}`).toBe(5)
+      expect(rows.some(r => r.textContent?.includes(code)), `P${p}: the player row is shown`).toBe(true)
+      unmount()
+    }
   })
 
   it('standard still shows six', () => {

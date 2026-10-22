@@ -1,11 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, renderHook, act, cleanup } from '@testing-library/react'
 
 vi.mock('@capacitor/preferences', () => ({
   Preferences: { set: vi.fn(async () => {}), get: vi.fn(async () => ({ value: null })), remove: vi.fn(async () => {}) },
 }))
 vi.mock('@sync/storeBridge', () => ({ pushCloudSave: vi.fn() }))
 vi.mock('@sync/platformBridge', () => ({ maybeAskForReview: vi.fn(async () => {}) }))
+const { listeners } = vi.hoisted(() => ({ listeners: [] as Array<() => void> }))
+vi.mock('@capacitor/app', () => ({
+  App: {
+    addListener: vi.fn((_e: string, fn: () => void) => { listeners.push(fn); return Promise.resolve({ remove: () => {} }) }),
+    minimizeApp: vi.fn(async () => {}),
+  },
+}))
 
 import { Championship } from '@ui/Championship'
 import { DriverSelect } from '@ui/DriverSelect'
@@ -14,6 +21,8 @@ import { CareerRecord } from '@ui/CareerRecord'
 import { useSeasonStore } from '@state/seasonStore'
 import { useCareerStore, type PendingOffer } from '@state/careerStore'
 import { loadGameData } from '@data/validators'
+import { boardTarget } from '@state/teamOffers'
+import { useAndroidBackButton } from '@hooks/useAndroidBackButton'
 
 const DATA = loadGameData()
 const OFFER: PendingOffer = { season: 2, teamId: 'apex', reason: 'constructors', boardTarget: 3, rating: 84, currentRating: 79 }
@@ -87,6 +96,55 @@ describe('the new-team driver pick', () => {
     fireEvent.click(screen.getByRole('button', { name: /race with/i }))
     expect(useSeasonStore.getState().playerDriverId).toBe(apexDrivers[1]!.id)
     expect(useSeasonStore.getState().selectedTeamId).toBe('apex')
+  })
+})
+
+describe('the accept flow end to end (item 16c)', () => {
+  it('after acceptOffer, Development shows boardTarget(newDriver, ...)', () => {
+    useSeasonStore.setState({ phase: 'new_team_driver' })
+    render(<DriverSelect mode="new_team" />)
+    fireEvent.click(screen.getAllByRole('radio')[0]!)
+    fireEvent.click(screen.getByRole('button', { name: /race with/i }))
+    cleanup()
+    expect(useSeasonStore.getState().phase).toBe('development')
+    const expected = boardTarget(apexDrivers[0]!.id, useSeasonStore.getState().overlayInput())
+    expect(expected).not.toBeNull()
+    render(<Development />)
+    expect(screen.getByLabelText(/board target/i).textContent).toBe(`BOARD TARGET · P${expected} IN THE CONSTRUCTORS'`)
+  })
+
+  it('back from the new-team pick keeps the offer, and the offer card renders again', () => {
+    useSeasonStore.setState({ phase: 'new_team_driver' })
+    render(<DriverSelect mode="new_team" />)
+    fireEvent.click(screen.getByRole('button', { name: /back/i }))
+    cleanup()
+    expect(useSeasonStore.getState().phase).toBe('championship')
+    expect(useCareerStore.getState().pendingOffer).toEqual(OFFER)
+    render(<Championship />)
+    expect(screen.getByRole('region', { name: /offer/i }).textContent).toMatch(/84/)
+  })
+
+  it('confirm clears the offer, keeps the old team in seasonHistory and resets purchasedTiers', () => {
+    useCareerStore.setState({ seasonHistory: [
+      { seasonNumber: 2, teamId: other.teamId, driverId: other.id, championshipPosition: 3, points: 150, wins: 1 },
+    ] })
+    useSeasonStore.setState({ phase: 'new_team_driver', purchasedTiers: { power: 3, pace: 2 } })
+    render(<DriverSelect mode="new_team" />)
+    fireEvent.click(screen.getAllByRole('radio')[1]!)
+    fireEvent.click(screen.getByRole('button', { name: /race with/i }))
+    expect(useCareerStore.getState().pendingOffer ?? null).toBeNull()
+    expect(useCareerStore.getState().seasonHistory.map(h => h.teamId)).toEqual([other.teamId])
+    expect(useSeasonStore.getState().purchasedTiers).toEqual({})
+    expect(useSeasonStore.getState().selectedTeamId).toBe('apex')
+  })
+
+  it('the Android back button on the new-team pick returns to the championship screen', () => {
+    listeners.length = 0
+    renderHook(() => useAndroidBackButton())
+    useSeasonStore.setState({ phase: 'new_team_driver' })
+    act(() => { for (const l of listeners) l() })
+    expect(useSeasonStore.getState().phase).toBe('championship')
+    expect(useCareerStore.getState().pendingOffer).toEqual(OFFER)
   })
 })
 

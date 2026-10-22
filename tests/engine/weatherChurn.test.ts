@@ -101,6 +101,13 @@ describe('confirmed weather stops (spec 1.6 §0.1)', () => {
     expect(decide(OLD, car('I', 10), view(car('I', 10), 10, 'DRY', ['DAMP']))).toEqual({ pit: true, compound: 'M', paceMode: 'neutral' })
   })
 
+  it('the run reaches timeline index 0: at lap 2 with confirm 2, damp laps 0 and 1 box a car on slicks', () => {
+    const s = view(car('H', 2), 2, 'DAMP', ['DAMP'])
+    expect(s.weatherTimeline[0], 'the run spans index 0').toBe('DAMP')
+    expect(decide(T, car('H', 2), s)).toEqual({ pit: true, compound: 'I', paceMode: 'neutral' })
+    expect(decide(T, car('H', 2), view(car('H', 2), 2, 'DAMP', ['DRY'])).pit, 'a dry index 0 breaks the run').toBe(false)
+  })
+
   it('counts back no further than lap 0 (the first boundary of the race)', () => {
     expect(decide(T, car('H', 1), view(car('H', 1), 1, 'DAMP', [])).pit).toBe(false)
   })

@@ -67,6 +67,27 @@ describe('the new marks are owed per mark (spec 1.6 §9)', () => {
     expect(useCoachStore.getState().active).toBe('pit_window')
   })
 
+  it('a red flag never triggers or burns the safety_car mark (item 16c)', () => {
+    const RED = { lap: 7, sector: 1, kind: 'red_flag', driverId: null } as unknown as IncidentEvent
+    render(<Probe />)
+    race(7, null, [RED])
+    race(8, null, [RED])
+    expect(useCoachStore.getState().active, 'a red flag has its own card').toBeNull()
+    expect(useCoachStore.getState().done).not.toHaveProperty('safety_car')
+    expect(useSettingsStore.getState().coachSeen).not.toHaveProperty('safety_car')
+    race(12, null, [RED, { ...SC, lap: 12 }])
+    expect(useCoachStore.getState().active, 'still owed for the first real SC').toBe('safety_car')
+  })
+
+  it('pit_window never fires with no planned stop (item 16c)', () => {
+    render(<Probe />)
+    for (let lap = 1; lap <= 50; lap++) {
+      race(lap, null)
+      expect(useCoachStore.getState().active, `lap ${lap}`).toBeNull()
+    }
+    expect(useCoachStore.getState().done).not.toHaveProperty('pit_window')
+  })
+
   it('neither fires before lights out', () => {
     render(<Probe />)
     race(7, 9, [SC], 'starting')

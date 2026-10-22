@@ -24,6 +24,17 @@ describe('scenario bests (spec 1.6 §8)', () => {
     expect(betterBest({ position: 14, met: false }, { position: null, met: false })).toEqual({ position: 14, met: false })
   })
 
+  it('the ranking holds with the arguments reversed (item 16c)', () => {
+    // The new result is now the worse one: the stored best must stand.
+    expect(betterBest({ position: 5, met: true }, { position: 2, met: false })).toEqual({ position: 5, met: true })
+    expect(betterBest({ position: 3, met: true }, { position: 5, met: true })).toEqual({ position: 3, met: true })
+    expect(betterBest({ position: 4, met: false }, { position: 9, met: false })).toEqual({ position: 4, met: false })
+    expect(betterBest({ position: 9, met: false }, { position: 4, met: false })).toEqual({ position: 4, met: false })
+    expect(betterBest({ position: null, met: false }, { position: null, met: false })).toEqual({ position: null, met: false })
+    expect(betterBest({ position: 20, met: false }, { position: null, met: false })).toEqual({ position: 20, met: false })
+    expect(betterBest({ position: null, met: false }, { position: 20, met: false })).toEqual({ position: 20, met: false })
+  })
+
   it('recordOutcome remembers the best across a reload', async () => {
     useScenarioStore.getState().select(SPEC)
     useScenarioStore.getState().recordOutcome({ met: true, position: 3, retired: false })
