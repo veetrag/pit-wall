@@ -418,6 +418,7 @@ export const useSeasonStore = create<SeasonStore>((set, get) => {
     // Passing it makes the career half idempotent: the career and the season
     // are separate saves, and a kill between them must not roll the career
     // twice on the next NEXT SEASON (item 15).
+    // Precondition: the season is already banked in seasonHistory (nextRace guarantees it).
     const fromSeason = career.seasonHistory[career.seasonHistory.length - 1]?.seasonNumber
     const { erodedTiers } = career.rollOverSeason(s.purchasedTiers, fromSeason)
     set({

@@ -29,7 +29,7 @@ function stopWhatIf() {
  * the engine's RangeError string, or 'timeout'. Only the copy is ever shown.
  */
 export function whatIfFailureCopy(reason: string | undefined): string {
-  if (reason?.startsWith('RangeError')) {
+  if (reason !== undefined && /RangeError/.test(reason)) {
     return /sets left/.test(reason) ? 'No sets of that tyre were left.' : "That change isn't possible in this race."
   }
   return "Couldn't run that plan."

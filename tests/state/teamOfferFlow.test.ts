@@ -151,8 +151,17 @@ describe('season-end offers (spec 1.6 §12)', () => {
       return { season, tiers }
     }
 
-    it('NEXT SEASON advances the career exactly once and erodes the tiers once', () => {
+    it('NEXT SEASON advances the career exactly once and erodes the tiers once', async () => {
       const { season, tiers } = killMidRoll()
+      // Round-trip both stores through their saves, as a real resume does.
+      const seasonRaw = JSON.stringify(snapshotFrom(s()))
+      const careerRaw = JSON.stringify(careerSnapshotFrom(c()))
+      s().endCareer()
+      mem.set(CAREER_SAVE_KEY, careerRaw)
+      c().resumeCareer((await loadCareer())!)
+      s().resumeSeason(SeasonSnapshotSchema.parse(JSON.parse(seasonRaw)))
+      expect(s().phase).toBe('championship')
+      expect(c().seasonNumber, 'the resumed career is already rolled').toBe(season + 1)
       const { tierDecayPerSeason, tierDecayFloor } = DATA.tuning.career
       s().startNextSeason()
       expect(s().phase).toBe('development')
