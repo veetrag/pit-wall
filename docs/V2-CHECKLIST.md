@@ -497,3 +497,31 @@ weekends, lap chart in the debrief. The In-App Review prompt is already built
 **Suggested order:** driver radio requests and pit stop variance (small, make
 the race feel alive) → "what if" replay and share card (cheap, visible) →
 guided first race → red flag → career stats → team offers.
+
+### 1.6 Plan B: around the race (spec 2026-10-17, plan 2026-10-17-pit-wall-1.6-around)
+
+Ships as 1.6 / versionCode 7 with Plan A. None of it has been on a device.
+
+**Build note, before the first release build:** the two new plugins
+(`@capacitor/share`, `@capacitor/filesystem`) were installed in the worktree
+only. After merging, run `npm install` then `npx cap sync android` **from the repo root**, never
+from a worktree (a worktree sync writes `../../../node_modules` into
+`android/capacitor.settings.gradle`; `tests/data/androidManifest.test.ts`
+fails it). Then build release and confirm the merged-manifest permission test
+still sees exactly ACCESS_NETWORK_STATE, INTERNET, VIBRATE and the dynamic
+receiver permission.
+
+**Phone pass:** high-contrast tyres on the tower, pit panel, setup and weather
+strip; Large text on a 360x640 phone (tower five rows, pit panel fits, banner
+not clipped); first SC, pit window and radio request tips each once, the
+request not expiring under its tip; STATS after an old career; TRY ANOTHER
+PLAN after a GP and a sprint, and after NEXT RACE mid-run; SHARE from a GP,
+a sprint, a DNF and the championship into a real app; the four new scenarios
+and their BEST pills; a season-end offer accepted (driver pick, kill the app
+mid-pick, resume) and declined.
+
+**Calls for Veet after the pass:** high-contrast values; Large = 1.15 and five
+compact rows; new tips shown once to returning players; the what-if median and
+range read-out and +-10 laps; stats counting Grand Prix only (except sprint
+record and stint); offers beatBy 2 / stepUp 2 on authored + ladder rating,
+STAY the default.
