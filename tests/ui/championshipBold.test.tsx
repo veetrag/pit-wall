@@ -39,6 +39,11 @@ describe('Championship in Race Day Bold', () => {
     expect(screen.getByRole('button', { name: /next season/i })).toBeTruthy()
   })
 
+  it('board-target pill uses the Development phrasing (final review 1.6)', () => {
+    render(<Championship />)
+    expect(screen.getByText(/^BOARD TARGET · P5 IN THE CONSTRUCTORS' · FINISHED P2$/)).toBeTruthy()
+  })
+
   it('explains the verdict in one sentence', () => {
     render(<Championship />)
     expect(screen.getByText(/You finished P2 in the constructors' — 3 places above where the car deserved\./)).toBeTruthy()

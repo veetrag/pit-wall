@@ -87,6 +87,20 @@ describe('season-end offers (spec 1.6 §12)', () => {
     expect(c().seasonHistory[c().seasonHistory.length - 1]!.teamId, 'the season just raced stays with the old team').not.toBe(offer.teamId)
   })
 
+  it('NEXT SEASON clears the offer only after the season write (a kill in between keeps it)', () => {
+    finalRoundAsUnderdog()
+    s().nextRace()
+    expect(c().pendingOffer).not.toBeNull()
+    let offerAtSeasonWrite: PendingOffer | null | undefined
+    const unsub = useSeasonStore.subscribe((now, prev) => {
+      if (now.phase === 'development' && prev.phase !== 'development') offerAtSeasonWrite = c().pendingOffer ?? null
+    })
+    s().startNextSeason()
+    unsub()
+    expect(offerAtSeasonWrite, 'the offer is still there when the season roll is written').not.toBeNull()
+    expect(c().pendingOffer ?? null).toBeNull()
+  })
+
   it('APP KILLED ON THE NEW-TEAM DRIVER PICK (Review Focus 2)', async () => {
     finalRoundAsUnderdog()
     s().nextRace()

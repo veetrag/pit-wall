@@ -30,6 +30,20 @@ beforeEach(() => {
 })
 
 describe('the offer on the championship screen (spec 1.6 §12)', () => {
+  it('ACCEPT/STAY rove with the arrow keys; only the checked radio is tabbable', () => {
+    render(<Championship />)
+    const stay = screen.getByRole('radio', { name: /stay/i })
+    const accept = screen.getByRole('radio', { name: /accept/i })
+    expect(stay.tabIndex).toBe(0); expect(accept.tabIndex).toBe(-1)
+    fireEvent.keyDown(stay, { key: 'ArrowRight' })
+    expect(accept.getAttribute('aria-checked')).toBe('true')
+    expect(document.activeElement).toBe(accept)
+    expect(accept.tabIndex).toBe(0)
+    fireEvent.keyDown(accept, { key: 'ArrowLeft' })
+    expect(stay.getAttribute('aria-checked')).toBe('true')
+    expect(document.activeElement).toBe(stay)
+  })
+
   it('shows the team, its rating against yours and its board target; STAY is the default', () => {
     render(<Championship />)
     const card = screen.getByRole('region', { name: /offer/i })
@@ -81,6 +95,7 @@ describe('board target and team history', () => {
     useSeasonStore.setState({ phase: 'development', raceIndex: 2, devPoints: 0 })
     render(<Development />)
     expect(screen.getByLabelText(/board target: p\d+ in the constructors/i)).toBeTruthy()
+    expect(screen.getByLabelText(/board target: p\d+ in the constructors/i).textContent).toMatch(/^BOARD TARGET · P\d+ IN THE CONSTRUCTORS'$/)
   })
 
   it('the trophy room marks a season raced for a new team', () => {

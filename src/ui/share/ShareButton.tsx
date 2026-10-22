@@ -22,7 +22,7 @@ export function ShareButton({ build, fileName, style }: { build: () => ShareCard
       <KitButton variant="secondary" size="sm" ariaLabel="Share result card" disabled={busy} onClick={() => { void go() }} style={{ width: '100%' }}>
         {busy ? 'SHARING…' : 'SHARE'}
       </KitButton>
-      <span aria-live="polite" style={{ fontSize: 12, color: 'var(--lilac-dim)', textAlign: 'center', minHeight: failed ? undefined : 0 }}>
+      <span aria-live="polite" style={{ fontSize: 12, color: 'var(--lilac-dim)', textAlign: 'center', minHeight: 16, lineHeight: '16px' }}>
         {failed ? "Couldn't share" : ''}
       </span>
     </div>

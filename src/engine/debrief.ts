@@ -349,10 +349,13 @@ export function playerStops(config: RaceConfig, seed: number, calls: readonly Pl
       i++
     }
     const pitsBefore = me(state).pitsDone
+    const incidentsBefore = state.incidents.length
     if (isFinished(state)) break
     state = stepSector(config, state, rng)
     step++
-    if (me(state).pitsDone > pitsBefore) {
+    // A red-flag restart with consumesPlan raises pitsDone without a real stop: not editable.
+    const restarted = state.incidents.slice(incidentsBefore).some(e => e.kind === 'red_flag_restart')
+    if (me(state).pitsDone > pitsBefore && !restarted) {
       const planned = config.playerStrategyOverride?.plannedStops[pitsBefore]
       if (planned) stops.push({ lap: planned.lap, compound: me(state).compound, source: { kind: 'plan', index: pitsBefore }, step })
     }

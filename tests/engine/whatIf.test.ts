@@ -142,3 +142,46 @@ describe('whatIfLapRange edges (fix round 1)', () => {
     expect(whatIfLapRange([at(5, 0), at(5, 1), at(6, 2)], 1, 20, 10)).toEqual([5, 5])
   })
 })
+
+describe('red-flag and sprint races (final review 1.6)', () => {
+  it('a red-flag restart that consumes the plan is not listed as an editable stop', async () => {
+    const { makeConfig } = await import('../fixtures/raceHarness')
+    const CRASH = {
+      incidents: {
+        driverErrorPerLap: 3, consistencyReliefMax: 1, terminalFraction: 1,
+        safetyCar: { crashDeployChance: 0, mechanicalDeployChance: 0 },
+        vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 },
+        redFlag: { crashChance: 1, maxPerRace: 1, minLapsLeft: 5, planWindowLaps: 15 },
+      },
+      mechanicalFailure: { baseChancePerLap: 0 },
+      tyreFailure: { chancePerLapOverThreshold: 0, maxChancePerLap: 0 },
+    }
+    const base = makeConfig(CRASH as Parameters<typeof makeConfig>[0], 9)
+    const player = base.drivers[0]!
+    const cfg: RaceConfig = {
+      ...base, lapsOverride: 20, allDry: true,
+      drivers: base.drivers.map((d, i) => ({ ...d, facets: { ...d.facets, consistency: i === 5 ? 0 : 100 } })),
+      playerDriverId: player.id,
+      playerStrategyOverride: { teamId: player.teamId, startCompound: 'M', plannedStops: [{ lap: 8, compound: 'H' }] },
+    }
+    const { replay } = await import('@engine/debrief')
+    const final = replay(cfg, cfg.seed, []).state
+    expect(final.incidents.some(e => e.kind === 'red_flag_restart'), 'premise: a restart').toBe(true)
+    expect(final.cars.find(c => c.isPlayer)!.pitsDone, 'premise: the restart consumed the plan').toBe(1)
+    const stops = playerStops(cfg, cfg.seed, [])
+    expect(stops).toEqual([])
+    // With no real stop, the what-if offers "add", and it runs.
+    expect(whatIf(cfg, cfg.seed, [], { kind: 'add', lap: 15, compound: 'S' }).theirs).toHaveLength(FUTURES)
+  })
+
+  it('a sprint: a pit call is the only stop, and what-if moves it', () => {
+    const base = buildRaceConfig(4243, 'd_voss', 'bengaluru', 'rookie', { startCompound: 'M', plannedStops: [] }, null, undefined, true, true)
+    const cfg = { ...base, tuning: makeDeterministicTuning() }
+    expect(cfg.lapsOverride).toBeDefined()
+    const calls = [{ step: 9, kind: 'pit' as const, compound: 'S' as const }]
+    expect(playerStops(cfg, cfg.seed, calls)).toEqual([{ lap: 4, compound: 'S', source: { kind: 'call', index: 0 }, step: 9 }])
+    const same = whatIf(cfg, cfg.seed, calls, { kind: 'stop', stop: 0, lap: 4, compound: 'S' })
+    expect(same.theirs).toEqual(same.mine)
+    expect(whatIf(cfg, cfg.seed, calls, { kind: 'stop', stop: 0, lap: 6, compound: 'H' }).theirs).toHaveLength(FUTURES)
+  })
+})

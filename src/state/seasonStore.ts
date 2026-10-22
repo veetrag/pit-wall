@@ -409,8 +409,6 @@ export const useSeasonStore = create<SeasonStore>((set, get) => {
    * new seat (spec 1.6 §12), merged into the one season write (preflight F6).
    */
   function rollSeason(seat?: { playerDriverId: string; selectedTeamId: string; purchasedTiers: Record<string, number> }): void {
-    // An offer never outlives its season-end screen.
-    useCareerStore.getState().setPendingOffer(null)
     const s = get()
     const career = useCareerStore.getState()
     const standing = s.standings.findIndex(x => x.driverId === s.playerDriverId)
@@ -458,6 +456,9 @@ export const useSeasonStore = create<SeasonStore>((set, get) => {
       // (spec 1.6 §12) moves the seat -- both together, in THIS set.
       ...(seat ?? {}),
     })
+    // An offer never outlives its season-end screen. Cleared only AFTER the
+    // season write: a kill in between must still find the offer on resume.
+    useCareerStore.getState().setPendingOffer(null)
   }
 
   return {

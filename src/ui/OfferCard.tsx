@@ -1,3 +1,4 @@
+import { useRef, type KeyboardEvent } from 'react'
 import { motion } from 'framer-motion'
 import type { PendingOffer } from '@state/careerStore'
 import { loadGameData } from '@data/validators'
@@ -13,8 +14,20 @@ export function OfferCard({ offer, choice, onChoice }: { offer: PendingOffer; ch
   const uiTap = useUiTap()
   const team = TEAMS.get(offer.teamId)
   const name = (team?.name ?? offer.teamId).toUpperCase()
+  const radios = useRef(new Map<'stay' | 'accept', HTMLButtonElement>())
+  // Arrow-key roving across the two radios (the RedFlagCard pattern).
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const dir = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (dir === 0) return
+    e.preventDefault()
+    const order = ['accept', 'stay'] as const
+    const next = order[(order.indexOf(choice) + dir + order.length) % order.length]!
+    uiTap(); onChoice(next)
+    radios.current.get(next)?.focus()
+  }
   const opt = (c: 'stay' | 'accept', text: string) => (
     <motion.button type="button" role="radio" aria-checked={choice === c} className="slant-sm kit-focus"
+      tabIndex={choice === c ? 0 : -1} ref={(el: HTMLButtonElement | null) => { if (el) radios.current.set(c, el); else radios.current.delete(c) }}
       whileTap={reduced ? undefined : { scale: 0.96 }} transition={PRESS} onClick={() => { uiTap(); onChoice(c) }}
       style={{ flex: 1, minHeight: 48, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-display)', fontWeight: 900,
         fontStyle: 'italic', fontSize: 22, background: choice === c ? 'var(--white)' : 'var(--dusk)', color: choice === c ? 'var(--ink)' : 'var(--white)' }}>
@@ -33,7 +46,7 @@ export function OfferCard({ offer, choice, onChoice }: { offer: PendingOffer; ch
       <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 13, color: 'var(--white)' }}>
         BOARD TARGET · P{offer.boardTarget} IN THE CONSTRUCTORS'
       </span>
-      <div role="radiogroup" aria-label="Your answer" style={{ display: 'flex', gap: 8 }}>
+      <div role="radiogroup" aria-label="Your answer" onKeyDown={onKeyDown} style={{ display: 'flex', gap: 8 }}>
         {opt('accept', 'ACCEPT')}
         {opt('stay', 'STAY')}
       </div>

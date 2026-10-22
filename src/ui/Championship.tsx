@@ -141,8 +141,8 @@ export function Championship() {
           const me = lastLadder.find(m => m.teamId === selectedTeamId)
           return me ? (
             <div style={{ margin: '0 16px' }}>
-              <Pill ariaLabel={`Board target P${me.deserved}, finished P${me.finished} in the constructors'`}>
-                BOARD TARGET P{me.deserved} · FINISHED P{me.finished}
+              <Pill ariaLabel={`Board target: P${me.deserved} in the constructors' championship, finished P${me.finished}`}>
+                BOARD TARGET · P{me.deserved} IN THE CONSTRUCTORS' · FINISHED P{me.finished}
               </Pill>
             </div>
           ) : null

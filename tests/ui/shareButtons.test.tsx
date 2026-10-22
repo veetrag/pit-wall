@@ -14,6 +14,15 @@ vi.mock('@ui/share/shareCard', async (orig) => ({
 import { ShareButton } from '@ui/share/ShareButton'
 
 describe('ShareButton', () => {
+  it('the live region holds a stable height before and after a failure', async () => {
+    render(<ShareButton fileName="x.png" build={() => ({ kind: 'gp', position: 3, label: 'X', points: 15, podium: [], teamColor: '#00E5D0' })} />)
+    const live = document.querySelector('[aria-live="polite"]') as HTMLElement
+    expect(live.style.minHeight).toBe('16px')
+    fireEvent.click(screen.getByRole('button', { name: /share result card/i }))
+    await screen.findByText(/couldn.t share/i)
+    expect(live.style.minHeight).toBe('16px')
+  })
+
   it('is labelled, at least 44px, and reports a failure politely', async () => {
     render(<ShareButton fileName="pitwall-p3.png" build={() => ({ kind: 'gp', position: 3, label: 'X', points: 15, podium: [], teamColor: '#00E5D0' })} />)
     const b = screen.getByRole('button', { name: /share result card/i })

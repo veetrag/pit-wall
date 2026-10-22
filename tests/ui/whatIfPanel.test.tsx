@@ -61,6 +61,18 @@ describe('read-out (spec 1.6 §5)', () => {
 })
 
 describe('the panel', () => {
+  it('the selected stop chip is white with ink text; volt stays on RUN FUTURES', () => {
+    const j = job()
+    const two = { ...j, config: { ...j.config, playerStrategyOverride: { ...j.config.playerStrategyOverride!, plannedStops: [{ lap: 6, compound: 'H' as const }, { lap: 14, compound: 'M' as const }] } } }
+    useDebriefStore.getState().start(two, 'r1')
+    render(<WhatIfPanel />)
+    const on = screen.getAllByRole('button', { pressed: true })[0]!
+    expect(on.textContent).toMatch(/STOP 1/)
+    expect(on.style.background).toContain('--white')
+    expect(on.style.color).toContain('--ink')
+    expect(on.style.background).not.toContain('--volt')
+  })
+
   it('is not offered without a kept job (scenario, resumed race)', () => {
     render(<DebriefCard />)
     expect(screen.queryByRole('button', { name: /try another plan/i })).toBeNull()

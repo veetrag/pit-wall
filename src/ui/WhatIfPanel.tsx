@@ -93,7 +93,7 @@ export function WhatIfPanel() {
             <motion.button key={i} type="button" className="slant-sm kit-focus" aria-pressed={i === stopIdx}
               whileTap={tap} transition={PRESS} onClick={() => pick(i)}
               style={{ ...STEP, flex: 1, fontSize: 14, fontFamily: 'var(--font-body)', fontWeight: 800,
-                background: i === stopIdx ? 'var(--volt)' : 'var(--dusk)', color: i === stopIdx ? 'var(--ink)' : 'var(--white)' }}>
+                background: i === stopIdx ? 'var(--white)' : 'var(--dusk)', color: i === stopIdx ? 'var(--ink)' : 'var(--white)' }}>
               STOP {i + 1} · L{s.lap}
             </motion.button>
           ))}
