@@ -49,6 +49,21 @@ function weatherRun(state: RaceState, pred: (w: WeatherState) => boolean): numbe
 }
 
 /**
+ * The tyre family a wet track calls for: WET gives W, DAMP gives I, DRY none.
+ * Shared by weatherPit and the neutralisation reaction so the two can never
+ * disagree (item 16b: an AI on inters must not box onto slicks under a VSC in
+ * the damp, only for weatherPit to send it straight back).
+ */
+function weatherFamily(w: WeatherState): Compound | null {
+  switch (w) {
+    case 'WET': return 'W'
+    case 'DAMP': return 'I'
+    case 'DRY': return null
+    default: { const never: never = w; return never }
+  }
+}
+
+/**
  * Tyre-family changes for the weather, all brains. Before 1.6 this boxed every
  * AI car the lap the track turned DAMP and again the lap it turned DRY, ~100
  * stops a race on a showery circuit. Now a change must hold for
@@ -69,7 +84,7 @@ function weatherPit(car: CarState, state: RaceState, config: RaceConfig): AIDeci
   const now = state.weatherState
   if (compSpec.type === 'dry' && now !== 'DRY' &&
       (now === 'WET' || weatherRun(state, w => w !== 'DRY') >= ai.weatherConfirmLaps)) {
-    return { pit: true, compound: now === 'WET' ? 'W' : 'I', paceMode: 'neutral' }
+    return { pit: true, compound: weatherFamily(now) ?? 'I', paceMode: 'neutral' }
   }
   if (compSpec.type === 'wet' && now === 'DRY' && weatherRun(state, w => w === 'DRY') >= ai.weatherConfirmLaps) {
     return { pit: true, compound: 'M', paceMode: 'neutral' }
@@ -134,7 +149,11 @@ export function aiDecision(
   const ai = config.tuning.ai
   if (state.safetyCar !== null && nextStop &&
       (nextStop.lap - car.lap <= ai.neutralisationWindowLaps || cliffFrac >= ai.neutralisationCliffFrac)) {
-    return pitWith(car, nextStop.compound, 'neutral')
+    // A car already on wet-family tyres off the dry keeps the weather's family:
+    // the plan's slick would only be undone by weatherPit. A car on slicks
+    // keeps its plan compound (weatherPit owns its switch, after confirmation).
+    const onWets = spec?.type === 'wet'
+    return pitWith(car, (onWets ? weatherFamily(state.weatherState) : null) ?? nextStop.compound, 'neutral')
   }
 
   // Pit when tyre is near the real cliff (not buffered by tyreManagement)

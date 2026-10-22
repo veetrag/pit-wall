@@ -127,3 +127,38 @@ describe('the race loop hands the AI the neutralisation as it stands AFTER the t
     expect(next.cars[0]!.pitsDone).toBe(0)
   })
 })
+
+describe('a neutralisation in the wet keeps the weather family (item 16b)', () => {
+  const INTER: CompoundSpec = { name: 'Intermediate', type: 'wet', offset: 1.0, lin: 0.04, cliff: 18, pen: 0.07, colorToken: '--tyre-inter' }
+  const WETS: CompoundSpec = { name: 'Wet', type: 'wet', offset: 2.0, lin: 0.03, cliff: 22, pen: 0.05, colorToken: '--tyre-wet' }
+  const wetConfig = (): RaceConfig => ({ ...makeConfig('smart'), compounds: { ...COMPOUNDS, I: INTER, W: WETS } })
+  const wetState = (car: CarState, sc: SafetyCarState, w: WeatherState): RaceState =>
+    ({ ...makeState(car, sc), weatherTimeline: Array(30).fill(w) as WeatherState[], weatherState: w })
+
+  it('a smart AI on I under a VSC in DAMP fits I, not M', () => {
+    const car = makeCar('smart', { lap: 14, compound: 'I', compoundsUsed: ['H', 'I'] })
+    const d = aiDecision(wetConfig(), car, wetState(car, VSC, 'DAMP'), rng())
+    expect(d).toEqual({ pit: true, compound: 'I', paceMode: 'neutral' })
+  })
+
+  it('under an SC on a WET track it fits W', () => {
+    const car = makeCar('smart', { lap: 14, compound: 'W', compoundsUsed: ['H', 'W'] })
+    const d = aiDecision(wetConfig(), car, wetState(car, SC, 'WET'), rng())
+    expect(d).toEqual({ pit: true, compound: 'W', paceMode: 'neutral' })
+  })
+
+  it('a car on slicks in the DAMP keeps its plan compound', () => {
+    // One damp lap only, so weatherPit's confirmation has not boxed it yet.
+    const car = makeCar('smart', { lap: 14 })
+    const s: RaceState = { ...makeState(car, VSC), weatherState: 'DAMP' }
+    const tuning = makeDeterministicTuning({ ai: { neutralisationWindowLaps: 6, neutralisationCliffFrac: 0.55, weatherConfirmLaps: 2 } })
+    const d = aiDecision({ ...wetConfig(), tuning }, car, s, rng())
+    expect(d).toEqual({ pit: true, compound: 'M', paceMode: 'neutral' })
+  })
+
+  it('in the DRY it still fits the plan compound', () => {
+    const car = makeCar('smart', { lap: 14 })
+    const d = aiDecision(wetConfig(), car, wetState(car, VSC, 'DRY'), rng())
+    expect(d).toEqual({ pit: true, compound: 'M', paceMode: 'neutral' })
+  })
+})
