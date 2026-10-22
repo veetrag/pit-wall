@@ -14,6 +14,25 @@ describe('every shipped scenario', () => {
     expect(new Set(scenarios.map(s => s.id)).size).toBe(scenarios.length)
   })
 
+  it('GOALS ARE PAR - 1, EXCEPT A HAND-SET FEW THAT ARE STILL BETTER THAN PAR', () => {
+    /*
+     * The authoring rule is goal = par - 1. A hand-set goal is a ruling by
+     * Veet, listed here by id, and must still be strictly better than par.
+     * red_flag_restart: inters + no other call won from P4 on device, so the
+     * 1.6.2 ruling is P1 (the restart tyre is the whole call).
+     */
+    const HAND_SET: Record<string, number> = { red_flag_restart: 1 }
+    for (const s of scenarios) {
+      const hand = HAND_SET[s.id]
+      if (hand !== undefined) {
+        expect(s.goal.position, `${s.id}: the hand-set goal`).toBe(hand)
+        expect(s.goal.position, `${s.id}: a hand-set goal must beat par`).toBeLessThan(s.expect.par)
+      } else {
+        expect(s.goal.position, `${s.id}: goal is par - 1`).toBe(s.expect.par - 1)
+      }
+    }
+  })
+
   for (const s of scenarios) {
     it(`${s.id}: STILL PRODUCES THE SITUATION ITS BRIEF PROMISES`, () => {
       /*
