@@ -63,7 +63,13 @@ describe('byte-identity with incidents disabled', () => {
     const config: RaceConfig = {
       circuit,
       // Explicitly zeroed, not DATA.tuning: the shipped rates are live now.
-      tuning: makeDeterministicTuning({ mechanicalFailure: { baseChancePerLap: 0.008 } }),
+      tuning: makeDeterministicTuning({
+        mechanicalFailure: { baseChancePerLap: 0.008 },
+        // The fixture's own tyre-failure and wet-deg values, pinned: 1.6.3
+        // softened the shipped ones (DNF tuning), and this wet race reads both.
+        tyreFailure: { chancePerLapOverThreshold: 0.30, maxChancePerLap: 0.50 },
+        weather: { wetDegMultiplier: { dry: { DRY: 1.0, DAMP: 1.4, WET: 1.9 } } },
+      }),
       compounds: DATA.compounds,
       drivers: DATA.drivers.drivers,
       teams: DATA.cars.teams,

@@ -67,8 +67,8 @@
   },
   "tyreFailure": {
     "cliffFractionThreshold": 1.45,
-    "chancePerLapOverThreshold": 0.30,
-    "maxChancePerLap": 0.50
+    "chancePerLapOverThreshold": 0.10,
+    "maxChancePerLap": 0.15
   },
   "mechanicalFailure": {
     "baseChancePerLap": 0.012
@@ -166,7 +166,7 @@
       "wet":   { "DRY": 9.0, "DAMP": 4.0, "WET": 0.0 }
     },
     "wetDegMultiplier": {
-      "dry":   { "DRY": 1.0, "DAMP": 1.4, "WET": 1.9 },
+      "dry":   { "DRY": 1.0, "DAMP": 1.15, "WET": 1.4 },
       "inter": { "DRY": 1.5, "DAMP": 0.8, "WET": 0.6 },
       "wet":   { "DRY": 2.0, "DAMP": 1.0, "WET": 0.5 }
     },
@@ -204,7 +204,7 @@
       "attackScrappyRate": [0.11, 0.19],
       "topCarMeanGridPosition": [1, 8]
     },
-    "topTeamWinRate": [0.35, 0.55],
+    "topTeamWinRate": [0.33, 0.55],
     "minDistinctWinners": 4,
     "meanAbsPosChange": [2.5, 4.0],
     "gridFinishSpearman": [0.60, 0.80],
