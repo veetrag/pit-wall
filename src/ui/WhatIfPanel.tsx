@@ -119,7 +119,8 @@ export function WhatIfPanel() {
         ))}
         {legal.length === 0 && <span style={{ fontSize: 12, color: 'var(--lilac-dim)' }}>No tyre sets left at that point.</span>}
       </div>
-      <KitButton variant="primary" size="sm" disabled={!changed || running || legal.length === 0} onClick={() => runWhatIf(edit)}
+      {/* Secondary: NEXT RACE is the result screen's one volt CTA (1.6.2). */}
+      <KitButton variant="secondary" size="sm" disabled={!changed || running || legal.length === 0} onClick={() => runWhatIf(edit)}
         ariaLabel={`Run ${futures} futures`}>
         {running ? 'RUNNING…' : `RUN ${futures} FUTURES`}
       </KitButton>

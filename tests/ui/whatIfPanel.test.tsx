@@ -74,6 +74,16 @@ describe('the panel', () => {
     expect(on.style.background).not.toContain('--volt')
   })
 
+  it('RUN FUTURES is the secondary kit button (grape), 48px+; NEXT RACE keeps the one volt (1.6.2 item 5)', () => {
+    useDebriefStore.getState().start(job(), 'r1')
+    render(<WhatIfPanel />)
+    const run = screen.getByRole('button', { name: /run \d+ futures/i })
+    expect(run.style.background).toContain('--grape')
+    expect(run.style.background).not.toContain('--volt')
+    expect(run.style.color).toMatch(/--white|--lilac/)
+    expect(parseInt(run.style.minHeight || run.style.height || '0', 10)).toBeGreaterThanOrEqual(48)
+  })
+
   it('is not offered without a kept job (scenario, resumed race)', () => {
     render(<DebriefCard />)
     expect(screen.queryByRole('button', { name: /try another plan/i })).toBeNull()
