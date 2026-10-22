@@ -63,7 +63,9 @@ describe('tyre failure: puncture/crash risk from extreme tyre degradation', () =
   it('a car deliberately run far past the cliff retires in most seeds within a few laps', () => {
     const config = makeSingleCarConfig()
     const SEEDS = 200
-    const LAPS = 5
+    // 8, not 5: 1.6.3 DNF tuning cut maxChancePerLap 0.50 -> 0.15, so 5 laps
+    // gives ~1-0.85^5 = 56%. 8 laps (~73%) still reads as "a few laps".
+    const LAPS = 8
     let retiredCount = 0
 
     for (let seed = 1; seed <= SEEDS; seed++) {
