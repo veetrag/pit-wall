@@ -68,3 +68,18 @@ describe('careerStats (spec 1.6 §7)', () => {
     expect(s.gpRaces).toBe(3)
   })
 })
+
+describe('DNF rate counts Grand Prix retirements only (1.6.2 item 4 pin)', () => {
+  it('a mixed log: sprint DNFs, wet races and a low finish do not inflate it', () => {
+    const s = careerStats([
+      f({ finish: 18 }),                               // last but classified: not a DNF
+      f({ finish: 20, wet: true }),                    // wet, classified
+      f({ finish: 12, retired: true, wet: true }),     // wet DNF: counts once
+      f({ finish: 4 }),
+      f({ finish: 9, retired: true, kind: 'sprint' }), // sprint DNF: not a GP
+      f({ finish: 7, kind: 'sprint' }),
+    ], ORDER)
+    expect(s.gpRaces).toBe(4)
+    expect(s.dnfRate).toBeCloseTo(1 / 4)
+  })
+})
