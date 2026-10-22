@@ -414,7 +414,12 @@ export const useSeasonStore = create<SeasonStore>((set, get) => {
     const standing = s.standings.findIndex(x => x.driverId === s.playerDriverId)
     // The title and the history entry were already banked by recordSeasonEnd
     // when the season ended; this only starts the new one.
-    const { erodedTiers } = career.rollOverSeason(s.purchasedTiers)
+    // The season being rolled from is the one recordSeasonEnd banked last.
+    // Passing it makes the career half idempotent: the career and the season
+    // are separate saves, and a kill between them must not roll the career
+    // twice on the next NEXT SEASON (item 15).
+    const fromSeason = career.seasonHistory[career.seasonHistory.length - 1]?.seasonNumber
+    const { erodedTiers } = career.rollOverSeason(s.purchasedTiers, fromSeason)
     set({
       phase: 'development',
       raceIndex: 0,

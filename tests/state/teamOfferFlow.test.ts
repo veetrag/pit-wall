@@ -11,7 +11,7 @@ vi.mock('@capacitor/preferences', () => ({
 }))
 
 import { useSeasonStore } from '@state/seasonStore'
-import { useCareerStore, type PendingOffer } from '@state/careerStore'
+import { useCareerStore, erodeTiers, type PendingOffer } from '@state/careerStore'
 import { snapshotFrom, SeasonSnapshotSchema } from '@state/seasonPersistence'
 import { careerSnapshotFrom, CareerSnapshotSchema, CAREER_SAVE_KEY, loadCareer } from '@state/careerPersistence'
 import { offerOrder } from '@state/teamOffers'
@@ -135,5 +135,51 @@ describe('season-end offers (spec 1.6 §12)', () => {
     mem.set(CAREER_SAVE_KEY, raw)
     c().resumeCareer((await loadCareer())!)
     expect(JSON.stringify(careerSnapshotFrom(c()))).toBe(raw)
+  })
+
+  describe('killed between the career write and the season write (item 15)', () => {
+    /** The career rolled (and was saved), the season write never happened. */
+    function killMidRoll(): { season: number; tiers: Record<string, number> } {
+      finalRoundAsUnderdog()
+      useSeasonStore.setState({ purchasedTiers: { power: 3, aero: 2 } })
+      s().nextRace()
+      const season = c().seasonNumber
+      const tiers = { ...s().purchasedTiers }
+      c().rollOverSeason(tiers)
+      expect(c().seasonNumber).toBe(season + 1)
+      expect(s().phase, 'the season write never happened').toBe('championship')
+      return { season, tiers }
+    }
+
+    it('NEXT SEASON advances the career exactly once and erodes the tiers once', () => {
+      const { season, tiers } = killMidRoll()
+      const { tierDecayPerSeason, tierDecayFloor } = DATA.tuning.career
+      s().startNextSeason()
+      expect(s().phase).toBe('development')
+      expect(c().seasonNumber, 'rolled over exactly once').toBe(season + 1)
+      expect(s().purchasedTiers).toEqual(erodeTiers(tiers, tierDecayPerSeason, tierDecayFloor))
+      expect(c().pendingOffer ?? null).toBeNull()
+    })
+
+    it('accept-offer advances the career exactly once and keeps the offer until the season write', () => {
+      const { season } = killMidRoll()
+      expect(c().pendingOffer, 'the offer survives the half-done roll').not.toBeNull()
+      s().toNewTeamDriver()
+      const offer = c().pendingOffer!
+      s().acceptOffer(driversOf(offer.teamId)[0]!)
+      expect(s().phase).toBe('development')
+      expect(s().selectedTeamId).toBe(offer.teamId)
+      expect(c().seasonNumber, 'rolled over exactly once').toBe(season + 1)
+      expect(s().purchasedTiers).toEqual({})
+      expect(c().pendingOffer ?? null).toBeNull()
+    })
+
+    it('a normal roll still advances by one', () => {
+      finalRoundAsUnderdog()
+      s().nextRace()
+      const season = c().seasonNumber
+      s().startNextSeason()
+      expect(c().seasonNumber).toBe(season + 1)
+    })
   })
 })

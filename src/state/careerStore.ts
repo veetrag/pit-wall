@@ -176,6 +176,14 @@ interface CareerStore extends CareerRecord {
    */
   rollOverSeason: (
     tiers: Record<string, number>,
+    /**
+     * The season being rolled FROM. When the career is already past it, the
+     * career half of the roll was written by an earlier, interrupted roll (the
+     * app was killed before seasonStore's write), so the counter is left
+     * alone. The tiers are still eroded: they come from seasonStore, which
+     * never got the eroded set. Omitted: always roll.
+     */
+    fromSeason?: number,
   ) => { erodedTiers: Record<string, number> }
   /**
    * Replaces the ladder offsets. seasonStore settles the ladder at season end
@@ -335,11 +343,12 @@ export const useCareerStore = create<CareerStore>((set, get) => ({
     return true
   },
 
-  rollOverSeason(tiers) {
+  rollOverSeason(tiers, fromSeason) {
     const { tierDecayPerSeason, tierDecayFloor } = loadGameData().tuning.career
     // Only the season counter and the tier erosion remain here. The title and
     // the history entry were banked by recordSeasonEnd when the season ended.
-    set({ seasonNumber: get().seasonNumber + 1 })
+    const alreadyRolled = fromSeason !== undefined && get().seasonNumber > fromSeason
+    if (!alreadyRolled) set({ seasonNumber: get().seasonNumber + 1 })
     return { erodedTiers: erodeTiers(tiers, tierDecayPerSeason, tierDecayFloor) }
   },
 
