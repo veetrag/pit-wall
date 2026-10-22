@@ -107,7 +107,7 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
                   {spec.expect.safetyCarOut && <Pill tone="caution">{'⚠ SAFETY CAR'}</Pill>}
                   {spec.sprint && <Pill tone="dusk">SPRINT</Pill>}
                   {spec.expect.vscOut && <Pill tone="caution">{'⚠ VSC'}</Pill>}
-                  {spec.expect.redFlag && <Pill tone="caution">{'⚠ RED FLAG'}</Pill>}
+                  {spec.expect.redFlag && <Pill tone="hot">{'⚠ RED FLAG'}</Pill>}
                   {spec.expect.dampAhead && <Pill tone="rain">{`RAIN WITHIN ${spec.expect.dampAhead} LAPS`}</Pill>}
                 </div>
 

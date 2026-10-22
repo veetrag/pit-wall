@@ -21,6 +21,14 @@ beforeEach(() => {
 })
 
 describe('ScenarioSelect', () => {
+  it('the RED FLAG pill is hot with ink text, like the in-race red flag (1.6.2 item 6)', () => {
+    render(<ScenarioSelect />)
+    fireEvent.click(screen.getByText('Red Flag Restart'))
+    const pill = screen.getByText(/⚠ RED FLAG/)
+    expect(pill.style.background).toBe('var(--hot)')
+    expect(pill.style.color).toBe('var(--ink)')
+  })
+
   it('renders every scenario name', () => {
     render(<ScenarioSelect />)
     for (const spec of SCENARIOS) {
