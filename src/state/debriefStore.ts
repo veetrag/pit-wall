@@ -24,6 +24,17 @@ function stopWhatIf() {
   if (whatIfTimer) { clearTimeout(whatIfTimer); whatIfTimer = null }
   whatIfToken++
 }
+/**
+ * Friendly copy for a failed what-if (item 16a). `reason` is the runner's text:
+ * the engine's RangeError string, or 'timeout'. Only the copy is ever shown.
+ */
+export function whatIfFailureCopy(reason: string | undefined): string {
+  if (reason?.startsWith('RangeError')) {
+    return /sets left/.test(reason) ? 'No sets of that tyre were left.' : "That change isn't possible in this race."
+  }
+  return "Couldn't run that plan."
+}
+
 const WHATIF_IDLE = { status: 'idle' as const, edit: null, result: null }
 
 interface DebriefStore {
@@ -37,7 +48,11 @@ interface DebriefStore {
   raceKey: string | null
   /** The race the debrief judged, kept until cancel so a what-if can run after raceStore resets (spec 1.6 §5). */
   job: DebriefJob | null
-  whatIf: { status: 'idle' | 'running' | 'done' | 'failed'; edit: WhatIfEdit | null; result: WhatIfResult | null }
+  whatIf: {
+    status: 'idle' | 'running' | 'done' | 'failed'; edit: WhatIfEdit | null; result: WhatIfResult | null
+    /** Only on 'failed': the runner's short reason; show it through whatIfFailureCopy. */
+    reason?: string
+  }
   runWhatIf: (edit: WhatIfEdit) => void
   clearWhatIf: () => void
   start: (job: DebriefJob, raceKey: string) => void
@@ -71,18 +86,18 @@ export const useDebriefStore = create<DebriefStore>((set, get) => ({
     stopWhatIf()
     const token = whatIfToken
     const live = () => token === whatIfToken
-    const fail = () => set(s => ({ whatIf: { ...s.whatIf, status: 'failed' } }))
+    const fail = (reason: string) => set(s => ({ whatIf: { ...s.whatIf, status: 'failed', reason } }))
     set({ whatIf: { status: 'running', edit, result: null } })
-    whatIfTimer = setTimeout(() => { if (live()) { stopWhatIf(); fail() } }, job.config.tuning.debrief.timeoutMs)
+    whatIfTimer = setTimeout(() => { if (live()) { stopWhatIf(); fail('timeout') } }, job.config.tuning.debrief.timeoutMs)
     // A runner without whatIf (older literals) can never answer: report failed, never hang.
-    if (!runner.whatIf) { stopWhatIf(); fail(); return }
+    if (!runner.whatIf) { stopWhatIf(); fail('no runner'); return }
     try {
       whatIfHandle = runner.whatIf(job, edit, {
         done: (result) => { if (live()) { stopWhatIf(); set({ whatIf: { status: 'done', edit, result } }) } },
-        failed: () => { if (live()) { stopWhatIf(); fail() } },
+        failed: (reason) => { if (live()) { stopWhatIf(); fail(reason) } },
       })
-    } catch {
-      stopWhatIf(); set({ whatIf: { status: 'failed', edit, result: null } })
+    } catch (e) {
+      stopWhatIf(); set({ whatIf: { status: 'failed', edit, result: null, reason: String(e) } })
     }
   },
 

@@ -20,18 +20,19 @@ const job = () => {
 }
 const edits: unknown[] = []
 let mode: 'done' | 'hang' | 'fail' = 'done'
+let failReason = 'x'
 const runner: DebriefRunner = {
   start(_j, on) { on.done({ futures: 8, verdicts: [], finish: 5, retired: null }); return { cancel() {} } },
   whatIf(_j, e, on) {
     edits.push(e)
     if (mode === 'done') on.done({ mine: [5, 5, 4, 6, 5, 5, 4, 6], theirs: [3, 4, 3, 5, 2, 3, 4, 21] })
-    if (mode === 'fail') on.failed('x')
+    if (mode === 'fail') on.failed(failReason)
     return { cancel() {} }
   },
 }
 
 beforeEach(() => {
-  edits.length = 0; mode = 'done'
+  edits.length = 0; mode = 'done'; failReason = 'x'
   useSettingsStore.setState({ reducedMotion: true })
   useDebriefStore.getState().cancel(); setDebriefRunner(runner)
 })
@@ -134,6 +135,16 @@ describe('the panel', () => {
     mode = 'fail'
     fireEvent.click(screen.getByRole('button', { name: /run 8 futures/i }))
     expect(screen.getByText(/couldn't run that plan/i)).toBeTruthy()
+  })
+
+  it('says why a what-if failed in friendly words (item 16a)', () => {
+    mode = 'fail'; failReason = 'RangeError: whatIf: no H sets left at the branch'
+    useDebriefStore.getState().start(job(), 'r1')
+    render(<WhatIfPanel />)
+    fireEvent.click(screen.getByRole('button', { name: /one lap earlier/i }))
+    fireEvent.click(screen.getByRole('button', { name: /run 8 futures/i }))
+    expect(screen.getByText(/No sets of that tyre were left\./)).toBeTruthy()
+    expect(screen.queryByText(/RangeError/)).toBeNull()
   })
 
   it('every control is labelled and at least 44px', () => {

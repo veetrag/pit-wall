@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { useDebriefStore } from '@state/debriefStore'
+import { useDebriefStore, whatIfFailureCopy } from '@state/debriefStore'
 import { playerStops, whatIfLapRange, addStopLapRange, whatIfInputs, replay, type WhatIfEdit, type WhatIfResult } from '@engine/debrief'
 import { initRace } from '@engine/race'
 import type { Compound } from '@engine/types'
@@ -129,7 +129,7 @@ export function WhatIfPanel() {
             animation: reduced ? undefined : 'whatif-sweep 1s cubic-bezier(0.2,0,0,1) infinite' }} />
         </div>
       )}
-      {wi.status === 'failed' && <span role="status" style={{ fontSize: 12, color: 'var(--lilac-dim)' }}>Couldn't run that plan. Try a different lap or tyre.</span>}
+      {wi.status === 'failed' && <span role="status" style={{ fontSize: 12, color: 'var(--lilac-dim)' }}>{whatIfFailureCopy(wi.reason)} Try a different lap or tyre.</span>}
       {lines && (
         <div role="status" style={{ display: 'grid', gap: 4, fontVariantNumeric: 'tabular-nums' }}>
           <span style={{ fontSize: 13, color: 'var(--lilac)' }}>{lines.mine}</span>
