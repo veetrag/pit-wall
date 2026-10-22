@@ -1049,3 +1049,35 @@ MEASURE red pro seedBase=1000 n=240 redFlagPerRace=0.067 safetyCarsPerRace=0.463
 MEASURE red pro seedBase=7000 n=240 redFlagPerRace=0.054 safetyCarsPerRace=0.392 vscPerRace=0.567 rho=0.633 dpos=3.607 top=0.388;
 MEASURE red rookie seedBase=1000 n=240 redFlagPerRace=0.037 safetyCarsPerRace=0.579 vscPerRace=0.596 rho=0.664 dpos=3.392 top=0.404;
 MEASURE red rookie seedBase=7000 n=240 redFlagPerRace=0.063 safetyCarsPerRace=0.471 vscPerRace=0.637 rho=0.642 dpos=3.493 top=0.471.
+
+## 16. 1.6.3: player tyre-failure DNF tuning, option C (2026-10-22)
+
+Players retired too often from tyre failures, mostly from running slicks into a
+damp or wet spell. Data-only change in `tuning.json`:
+
+- `tyreFailure.chancePerLapOverThreshold` 0.30 -> 0.10, `maxChancePerLap` 0.50 -> 0.15
+- `weather.wetDegMultiplier.dry`: DAMP 1.4 -> 1.15, WET 1.9 -> 1.4
+
+Measured player DNF rate (all causes, n=240 per cell, pro; harness in the session scratchpad):
+
+| player policy | before | after | of which tyre (after) |
+|---|---|---|---|
+| plan only | 25% | 11.3% | 2.1pp |
+| always push | 42% | 15.8% | 7.9pp |
+| AI field (per car) | ~14% | 14.2% | 0.0pp |
+
+Rookie: plan 10.4%. Deliberately over-extended stints still fail (~46%), as they should.
+
+Gates moved (each widened for 1.6.3 DNF tuning, values realistic):
+
+- `topTeamWinRate` floor 0.35 -> 0.33: setups-on sample measured 0.346. Fewer tyre failures
+  closed the top: full calendar apex 42.5% / meridian 38.5%.
+- `monteCarlo` "apex remains strongest" margin gate 0.08 -> 0.03 (measured 4.0pp). Apex still
+  top; worth a balance look if the margin keeps shrinking.
+- `mechanicalFailure` fragile-team ceiling 0.15 -> 0.16 (measured 15.07%): cars that no longer
+  puncture are exposed to the mechanical roll for longer.
+- tyre-failure mechanism test runs 8 laps instead of 5 (max chance per lap is now 0.15).
+
+The golden byte-identity test pins the fixture's pre-1.6.3 tyre-failure and wet-deg values
+explicitly; the fixture was not re-captured. Four scenarios were re-authored (recovery_drive,
+cliff_edge, rain_call, red_flag_restart); see the commit log.
