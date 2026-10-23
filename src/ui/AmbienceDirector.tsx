@@ -39,7 +39,8 @@ export function AmbienceDirector() {
       soundService.startAmbience()
       return
     }
-    if (phase === 'finished' && soundService.isAmbienceActive()) {
+    if (phase === 'finished') {
+      // Swell for CHEQUER_HOLD_MS, then fade and stop even if results stay open.
       const t = setTimeout(() => soundService.stopAmbience(), CHEQUER_HOLD_MS)
       return () => clearTimeout(t)
     }
