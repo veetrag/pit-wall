@@ -459,7 +459,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
           }
           logSlow(stop, car.driverId)
         }
-      } else if (config.playerStrategyOverride) {
+      } else if (config.playerStrategyOverride && !state.planHold) {
         // The player's own plan, executed exactly as the race setup screen
         // promises. Indexed
         // by pitsDone like the AI's plannedStops, so a manual stop taken

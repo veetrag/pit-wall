@@ -449,6 +449,13 @@ export interface RaceState {
    * and every serialised state are unchanged.
    */
   redFlagTyre?: Compound
+  /**
+   * 1.6.2: the player's planned stop is HELD while the pit panel is open
+   * ('hold_plan' calls). The plan check skips the player while set; released,
+   * a due stop fires at the next lap boundary (`lap >= stop.lap`). A player
+   * PIT clears it. ABSENT when not held, so the golden race is unchanged.
+   */
+  planHold?: true
 }
 
 export interface RaceConfig {

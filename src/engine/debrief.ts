@@ -238,6 +238,8 @@ export function judgeCalls(
     // The restart's moment is fixed by the red flag; there is no "earlier or
     // later" to judge (ruling R12). It is still replayed via `others`.
     if (call.kind === 'restart_tyre') return
+    // A hold is the panel being open, not a decision (1.6.2); replayed via `others`.
+    if (call.kind === 'hold_plan') return
     const lap = callLaps.get(call.step) ?? 0
     const others = calls.filter((_, j) => j !== idx)
     const moved = (d: number): PlayerCall => ({ ...call, step: call.step + 3 * d })

@@ -14,6 +14,8 @@ export type PlayerCall =
   | { step: number; kind: 'pit'; compound: Compound }
   | { step: number; kind: 'pace'; mode: PaceMode }
   | { step: number; kind: 'restart_tyre'; compound: Compound }
+  /** 1.6.2: the pit panel opened (hold) / closed (release) over a pending planned stop. */
+  | { step: number; kind: 'hold_plan'; hold: boolean }
 
 /** The log stores the REQUESTED compound; replay re-resolves it identically via resolveAllocatedCompound. */
 /** The PIT button. Null when no tyres of any type remain; draws nothing then. */
@@ -28,8 +30,10 @@ export function applyPlayerPit(
   const resolved = resolveAllocatedCompound(compound, player.tyreAllocation)
   if (!resolved) return null
   const stop = pitStopTime(config, player.teamId, state.safetyCar, rng)
+  // A stop from the panel consumes a held plan stop (pitsDone + 1) and ends the hold.
+  const { planHold: _held, ...unheld } = state
   const next: RaceState = {
-    ...state,
+    ...unheld,
     cars: state.cars.map(car => car.isPlayer
       ? {
           ...car,
@@ -65,11 +69,24 @@ export function applyRestartTyre(state: RaceState, compound: Compound): RaceStat
   return redFlagPending(state) ? { ...state, redFlagTyre: compound } : state
 }
 
+/**
+ * Hold or release the player's planned stop (1.6.2). Draws nothing. A release
+ * when nothing is held returns the SAME state; a release strips the key, so a
+ * state that was never held and one that was are identical.
+ */
+export function applyPlanHold(state: RaceState, hold: boolean): RaceState {
+  if (hold) return state.planHold ? state : { ...state, planHold: true }
+  if (!state.planHold) return state
+  const { planHold: _held, ...rest } = state
+  return rest
+}
+
 export function applyCall(config: RaceConfig, state: RaceState, call: PlayerCall, rng: Rng): RaceState {
   switch (call.kind) {
     case 'pit': return applyPlayerPit(config, state, call.compound, rng) ?? state
     case 'pace': return applyPlayerPace(state, call.mode)
     case 'restart_tyre': return applyRestartTyre(state, call.compound)
+    case 'hold_plan': return applyPlanHold(state, call.hold)
     default: { const never: never = call; return never }
   }
 }

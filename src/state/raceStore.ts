@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import {
   initRace, stepSector, projectPitNow, effectivePitLaneLoss,
-  applyPlayerPit, applyPlayerPace, applyCall, expectedPitStopTime, type PlayerCall,
+  applyPlayerPit, applyPlayerPace, applyPlanHold, applyCall, expectedPitStopTime, type PlayerCall,
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
@@ -258,8 +258,12 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const flagDeployed = nextState.incidents.slice(raceState.incidents.length).some(i => i.kind === 'red_flag')
     if (finished || flagDeployed) radioRequest = null
 
+    // The red-flag card closes the panel: release a hold with it, logged at
+    // the step count this step reaches, so replay applies it at the same point.
+    const releaseHold = redPending && !!nextState.planHold
     set(s => ({
-      raceState: nextState,
+      raceState: releaseHold ? applyPlanHold(nextState, false) : nextState,
+      ...(releaseHold ? { playerCalls: [...s.playerCalls, { step: s.stepCount + 1, kind: 'hold_plan' as const, hold: false }] } : {}),
       stepCount: s.stepCount + 1,
       phase: finished ? 'finished' : redPending ? 'red_flag' : 'racing',
       playerInPit: stillInPit,
@@ -293,6 +297,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
         pitPanelOpen: false,
         hudAlerts: [...s.hudAlerts, { id, severity: 'caution' as const, category: 'RADIO', message: 'Red flag — choose your restart tyre.', icon: '📻' }],
       }))
+      get().closePitPanel()   // releases a held plan stop with it
       return
     }
     if (!next) {
@@ -301,6 +306,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
         pitPanelOpen: false,
         hudAlerts: [...s.hudAlerts, { id, severity: 'urgent' as const, category: 'RADIO', message: 'No tyres left of any type. Staying out.', icon: '⚠️' }],
       }))
+      get().closePitPanel()   // releases a held plan stop with it
       return
     }
 
@@ -338,8 +344,34 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
   // Opening the panel dismisses a pending box request (spec 1.6 §2): the
   // player is now answering it themselves.
-  openPitPanel() { set(s => ({ pitPanelOpen: true, radioRequest: s.radioRequest && s.radioRequest.kind !== 'push' ? null : s.radioRequest })) },
-  closePitPanel() { set({ pitPanelOpen: false, projectionResult: null }) },
+  // 1.6.2: while the panel is open the planned stop is HELD -- it must not
+  // fire behind the player. A logged call, so replay and the debrief see it.
+  // Logged on every open over a pending plan stop (not only when one is due):
+  // the hold is then a pure function of the panel, nothing to predict.
+  openPitPanel() {
+    const { config, raceState, stepCount } = get()
+    const player = raceState?.cars.find(c => c.isPlayer)
+    const pending = !!config?.playerStrategyOverride && !!player && !player.retired &&
+      player.strategy.plannedStops[player.pitsDone] !== undefined
+    if (raceState && pending && !raceState.planHold) {
+      set(s => ({
+        raceState: applyPlanHold(raceState, true),
+        playerCalls: [...s.playerCalls, { step: stepCount, kind: 'hold_plan' as const, hold: true }],
+      }))
+    }
+    set(s => ({ pitPanelOpen: true, radioRequest: s.radioRequest && s.radioRequest.kind !== 'push' ? null : s.radioRequest }))
+  },
+  // Released on close: a due stop fires at the next lap boundary.
+  closePitPanel() {
+    const { raceState, stepCount } = get()
+    if (raceState?.planHold) {
+      set(s => ({
+        raceState: applyPlanHold(raceState, false),
+        playerCalls: [...s.playerCalls, { step: stepCount, kind: 'hold_plan' as const, hold: false }],
+      }))
+    }
+    set({ pitPanelOpen: false, projectionResult: null })
+  },
 
   pushAlert(alert) {
     const id = `alert-${++alertCounter}`

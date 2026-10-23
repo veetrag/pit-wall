@@ -31,7 +31,7 @@ export type {
 } from './types'
 export type { ProjectionResult } from './projection'
 export type { Rng } from './rng'
-export { applyPlayerPit, applyPlayerPace, applyRestartTyre, applyCall } from './playerCalls'
+export { applyPlayerPit, applyPlayerPace, applyRestartTyre, applyPlanHold, applyCall } from './playerCalls'
 export type { PlayerCall } from './playerCalls'
 export { isFinished, simulate, replay, judgeCalls, pickBetter, futureSeed, playerStops, whatIfLapRange, addStopLapRange, whatIf, whatIfInputs } from './debrief'
 export type { PlayerStop, WhatIfEdit, WhatIfResult } from './debrief'
