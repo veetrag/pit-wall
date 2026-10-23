@@ -71,6 +71,18 @@ android {
             // which the shrinker follows.
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Ask AGP to put native symbol tables in the AAB (BUNDLE-METADATA/
+            // com.android.tools.build.debugsymbols) for Play's native-code warning.
+            // NOTE 2026-10-23: today this produces NOTHING. Our only .so is
+            // androidx.datastore's libdatastore_shared_counter.so, which ships
+            // pre-stripped, so AGP logs "native debug metadata has already been
+            // stripped" and there is no symbol table to extract. The Play warning
+            // is advisory and cannot be cleared from our side; this setting starts
+            // working automatically if a dependency ever ships an unstripped .so
+            // (needs NDK 27.0.12077973 installed in the SDK at that point).
+            ndk {
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
         }
     }
 }
