@@ -1,4 +1,5 @@
 import { useSettingsStore } from '@state/settingsStore'
+import { makeAmbienceMix, type AmbienceMix } from './ambienceMix'
 
 export type SoundName = 'tick' | 'lightsOut' | 'pitConfirm' | 'positionGain' | 'positionLoss' | 'finish' | 'navTap'
 
@@ -64,121 +65,126 @@ const SOUNDS: Record<SoundName, () => void> = {
 }
 
 // ─── Ambience ────────────────────────────────────────────────────────────────
-// Procedurally synthesized (no external audio assets available in this
-// environment) — an engine drone, a crowd murmur, and a rain layer whose
-// volume tracks the live weather state. All built from oscillators/filtered
-// noise so there's zero asset dependency.
+// Procedurally synthesized at runtime (zero audio assets): an engine drone,
+// a crowd bed, a rain layer and a red-flag pit-lane murmur, all summed into
+// one master gain. What each layer does is decided by the pure
+// ambienceMix.ts; this file only turns a mix into smooth parameter moves.
 
-interface AmbientLayer {
-  gain: GainNode
-  stop: () => void
+/** Time constant (s) for every ambience move: ~95% there in 3*TAU. */
+export const AMBIENCE_TAU = 0.5
+const EPS = 1e-4
+
+interface AmbienceGraph {
+  master: GainNode
+  engine: GainNode
+  engineOscs: OscillatorNode[]
+  engineFilter: BiquadFilterNode
+  crowd: GainNode
+  rain: GainNode
+  murmur: GainNode
+  sources: AudioScheduledSourceNode[]
+  nodes: AudioNode[]
+  last: AmbienceMix
 }
 
-function createNoiseBuffer(c: AudioContext, seconds: number): AudioBuffer {
-  const buffer = c.createBuffer(1, Math.floor(c.sampleRate * seconds), c.sampleRate)
+const ENGINE_BASE_HZ = [60, 90.5] as const
+
+let noiseBuffer: AudioBuffer | null = null
+function getNoise(c: AudioContext): AudioBuffer {
+  if (noiseBuffer && noiseBuffer.sampleRate === c.sampleRate) return noiseBuffer
+  const len = Math.floor(c.sampleRate * 3)
+  const buffer = c.createBuffer(1, len, c.sampleRate)
   const data = buffer.getChannelData(0)
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
+  // Crossfade the tail into the head so the loop point has no click.
+  const fade = Math.floor(c.sampleRate * 0.05)
+  for (let i = 0; i < fade; i++) {
+    const t = i / fade
+    const head = data[i] ?? 0
+    const tail = data[len - fade + i] ?? 0
+    data[len - fade + i] = tail * (1 - t) + head * t
+  }
+  noiseBuffer = buffer
   return buffer
 }
 
-function fadeAndTeardown(c: AudioContext, gain: GainNode, nodes: AudioNode[]) {
+function buildGraph(c: AudioContext): AmbienceGraph {
   const now = c.currentTime
-  gain.gain.cancelScheduledValues(now)
-  gain.gain.linearRampToValueAtTime(0, now + 0.4)
-  setTimeout(() => {
-    for (const n of nodes) {
-      try {
-        // AudioScheduledSourceNode has stop(); plain nodes (gain/filter) don't.
-        if ('stop' in n) (n as unknown as { stop: () => void }).stop()
-      } catch { /* already stopped */ }
-      n.disconnect()
+  const nodes: AudioNode[] = []
+  const sources: AudioScheduledSourceNode[] = []
+  const gain = (v: number) => { const g = c.createGain(); g.gain.setValueAtTime(v, now); nodes.push(g); return g }
+  const filter = (type: BiquadFilterType, hz: number, q = 1) => {
+    const f = c.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(hz, now); f.Q.setValueAtTime(q, now); nodes.push(f); return f
+  }
+  const noise = () => {
+    const s = c.createBufferSource(); s.buffer = getNoise(c); s.loop = true
+    // Random offsets so the three noise layers aren't phase-locked copies.
+    s.start(now, Math.random() * 2.5); sources.push(s); nodes.push(s); return s
+  }
+  const osc = (type: OscillatorType, hz: number) => {
+    const o = c.createOscillator(); o.type = type; o.frequency.setValueAtTime(hz, now)
+    o.start(now); sources.push(o); nodes.push(o); return o
+  }
+
+  const master = gain(0)
+  master.connect(c.destination)
+
+  // Engine: two detuned saws through a lowpass, a slow wobble on one.
+  const engine = gain(0)
+  const engineFilter = filter('lowpass', 240)
+  engineFilter.connect(engine); engine.connect(master)
+  const engineOscs = ENGINE_BASE_HZ.map(hz => { const o = osc('sawtooth', hz); o.connect(engineFilter); return o })
+  const lfoDepth = gain(8)
+  osc('sine', 0.15).connect(lfoDepth)
+  const firstOsc = engineOscs[0]
+  if (firstOsc) lfoDepth.connect(firstOsc.frequency)
+
+  // Crowd: bandpassed noise.
+  const crowd = gain(0)
+  const crowdF = filter('bandpass', 500, 0.6)
+  noise().connect(crowdF); crowdF.connect(crowd); crowd.connect(master)
+
+  // Rain: highpassed noise.
+  const rain = gain(0)
+  const rainF = filter('highpass', 2500)
+  noise().connect(rainF); rainF.connect(rain); rain.connect(master)
+
+  // Murmur: low, slowly breathing noise (voices + idle pit lane).
+  const murmur = gain(0)
+  const murmurF = filter('lowpass', 420, 0.7)
+  const murmurAm = gain(1)
+  const amDepth = gain(0.35)
+  osc('sine', 0.3).connect(amDepth); amDepth.connect(murmurAm.gain)
+  noise().connect(murmurF); murmurF.connect(murmurAm); murmurAm.connect(murmur); murmur.connect(master)
+
+  return { master, engine, engineOscs, engineFilter, crowd, rain, murmur, sources, nodes, last: makeAmbienceMix() }
+}
+
+function glide(p: AudioParam, from: number, to: number, now: number, tau = AMBIENCE_TAU) {
+  if (Math.abs(from - to) < EPS) return
+  p.setTargetAtTime(to, now, tau)
+}
+
+function applyToGraph(c: AudioContext, g: AmbienceGraph, m: AmbienceMix) {
+  const now = c.currentTime
+  const l = g.last
+  glide(g.master.gain, l.master, m.master, now)
+  glide(g.engine.gain, l.engineGain, m.engineGain, now)
+  glide(g.engineFilter.frequency, l.engineCutoff, m.engineCutoff, now)
+  if (Math.abs(l.enginePitch - m.enginePitch) >= EPS) {
+    // Pitch moves slower than level: an engine winds down, it doesn't step.
+    for (let i = 0; i < g.engineOscs.length; i++) {
+      g.engineOscs[i]?.frequency.setTargetAtTime((ENGINE_BASE_HZ[i] ?? 60) * m.enginePitch, now, AMBIENCE_TAU * 2)
     }
-  }, 450)
+  }
+  glide(g.crowd.gain, l.crowdGain, m.crowdGain, now)
+  glide(g.rain.gain, l.rainGain, m.rainGain, now)
+  glide(g.murmur.gain, l.murmurGain, m.murmurGain, now)
+  Object.assign(l, m)
 }
 
-function startEngineLayer(c: AudioContext): AmbientLayer {
-  const gain = c.createGain()
-  gain.gain.setValueAtTime(0, c.currentTime)
-  gain.gain.linearRampToValueAtTime(0.05, c.currentTime + 1.5)
-
-  const osc1 = c.createOscillator()
-  osc1.type = 'sawtooth'
-  osc1.frequency.setValueAtTime(60, c.currentTime)
-  const osc2 = c.createOscillator()
-  osc2.type = 'sawtooth'
-  osc2.frequency.setValueAtTime(90.5, c.currentTime)
-
-  const filter = c.createBiquadFilter()
-  filter.type = 'lowpass'
-  filter.frequency.setValueAtTime(220, c.currentTime)
-
-  // Gentle wobble so the drone reads as a running engine, not a dead static tone
-  const lfo = c.createOscillator()
-  lfo.frequency.setValueAtTime(0.15, c.currentTime)
-  const lfoGain = c.createGain()
-  lfoGain.gain.setValueAtTime(8, c.currentTime)
-  lfo.connect(lfoGain)
-  lfoGain.connect(osc1.frequency)
-
-  osc1.connect(filter)
-  osc2.connect(filter)
-  filter.connect(gain)
-  gain.connect(c.destination)
-  osc1.start()
-  osc2.start()
-  lfo.start()
-
-  return { gain, stop: () => fadeAndTeardown(c, gain, [osc1, osc2, lfo, lfoGain, filter, gain]) }
-}
-
-function startCrowdLayer(c: AudioContext): AmbientLayer {
-  const gain = c.createGain()
-  gain.gain.setValueAtTime(0, c.currentTime)
-  gain.gain.linearRampToValueAtTime(0.035, c.currentTime + 2)
-
-  const src = c.createBufferSource()
-  src.buffer = createNoiseBuffer(c, 3)
-  src.loop = true
-
-  const filter = c.createBiquadFilter()
-  filter.type = 'bandpass'
-  filter.frequency.setValueAtTime(500, c.currentTime)
-  filter.Q.setValueAtTime(0.6, c.currentTime)
-
-  src.connect(filter)
-  filter.connect(gain)
-  gain.connect(c.destination)
-  src.start()
-
-  return { gain, stop: () => fadeAndTeardown(c, gain, [src, filter, gain]) }
-}
-
-function startRainLayer(c: AudioContext): AmbientLayer {
-  const gain = c.createGain()
-  gain.gain.setValueAtTime(0, c.currentTime) // silent until setWeather ramps it in
-
-  const src = c.createBufferSource()
-  src.buffer = createNoiseBuffer(c, 3)
-  src.loop = true
-
-  const filter = c.createBiquadFilter()
-  filter.type = 'highpass'
-  filter.frequency.setValueAtTime(2500, c.currentTime)
-
-  src.connect(filter)
-  filter.connect(gain)
-  gain.connect(c.destination)
-  src.start()
-
-  return { gain, stop: () => fadeAndTeardown(c, gain, [src, filter, gain]) }
-}
-
-let engineLayer: AmbientLayer | null = null
-let crowdLayer: AmbientLayer | null = null
-let rainLayer: AmbientLayer | null = null
-let ambienceActive = false
-
-const RAIN_TARGET_GAIN: Record<string, number> = { DRY: 0, DAMP: 0.03, WET: 0.07 }
+let graph: AmbienceGraph | null = null
+const pendingMix: AmbienceMix = makeAmbienceMix()
 
 export const soundService = {
   play(name: SoundName) {
@@ -191,38 +197,52 @@ export const soundService = {
     }
   },
 
-  // Starts the engine/crowd/rain ambience loop. Idempotent — safe to call every
-  // render of an effect. No-ops if sound is disabled in settings.
+  /** Builds the ambience graph, fading in to the latest mix. Idempotent. */
   startAmbience() {
-    if (ambienceActive) return
+    if (graph) return
     if (!useSettingsStore.getState().soundEnabled) return
     const c = getCtx()
     if (!c) return
     try {
-      ambienceActive = true
-      engineLayer = startEngineLayer(c)
-      crowdLayer = startCrowdLayer(c)
-      rainLayer = startRainLayer(c)
+      graph = buildGraph(c)
+      applyToGraph(c, graph, pendingMix)
     } catch {
-      ambienceActive = false
+      graph = null
     }
   },
 
+  /** Fades the whole bed out on the master, then frees every node. */
   stopAmbience() {
-    if (!ambienceActive) return
-    ambienceActive = false
-    engineLayer?.stop(); engineLayer = null
-    crowdLayer?.stop(); crowdLayer = null
-    rainLayer?.stop(); rainLayer = null
-  },
-
-  // Ramps the rain layer's volume to match the live weather state.
-  setWeather(weatherState: string) {
-    if (!rainLayer) return
+    const g = graph
+    if (!g) return
+    graph = null
     const c = getCtx()
     if (!c) return
-    const target = RAIN_TARGET_GAIN[weatherState] ?? 0
-    rainLayer.gain.gain.cancelScheduledValues(c.currentTime)
-    rainLayer.gain.gain.linearRampToValueAtTime(target, c.currentTime + 1.2)
+    const now = c.currentTime
+    g.master.gain.cancelScheduledValues(now)
+    g.master.gain.setValueAtTime(g.last.master, now)
+    g.master.gain.setTargetAtTime(0, now, 0.12)
+    setTimeout(() => {
+      for (const s of g.sources) { try { s.stop() } catch { /* already stopped */ } }
+      for (const n of g.nodes) n.disconnect()
+    }, 800)
   },
+
+  /** Push a new target mix (copied); the graph glides to it. Cheap if nothing moved. */
+  setAmbienceMix(mix: AmbienceMix) {
+    Object.assign(pendingMix, mix)
+    if (!graph) return
+    const c = getCtx()
+    if (!c) return
+    applyToGraph(c, graph, pendingMix)
+  },
+
+  /** Whether an ambience graph is live. */
+  isAmbienceActive(): boolean { return graph !== null },
+}
+
+/** Test hook: forget the cached context/graph/buffer between tests. */
+export function __resetAudioForTests() {
+  ctx = null; graph = null; noiseBuffer = null
+  Object.assign(pendingMix, makeAmbienceMix())
 }

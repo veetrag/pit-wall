@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { act } from 'react'
 import { GameClock } from '@ui/GameClock'
+import { AmbienceDirector } from '@ui/AmbienceDirector'
 import { useRaceStore } from '@state/raceStore'
 import { useClockStore } from '@state/clockStore'
 import { useSettingsStore } from '@state/settingsStore'
@@ -11,7 +12,7 @@ vi.mock('@capacitor/preferences', () => ({
   Preferences: { set: vi.fn(async () => {}), get: vi.fn(async () => ({ value: null })), remove: vi.fn(async () => {}) },
 }))
 vi.mock('@audio/soundService', () => ({
-  soundService: { play: vi.fn(), startAmbience: vi.fn(), stopAmbience: vi.fn(), setWeather: vi.fn() },
+  soundService: { play: vi.fn(), startAmbience: vi.fn(), stopAmbience: vi.fn(), setAmbienceMix: vi.fn(), isAmbienceActive: vi.fn(() => true) },
 }))
 
 /*
@@ -86,7 +87,7 @@ describe('backgrounding the app mid-race', () => {
   })
 
   it('silences the ambience while hidden', () => {
-    render(<GameClock />)
+    render(<AmbienceDirector />)
     vi.mocked(soundService.stopAmbience).mockClear()
     act(() => { useClockStore.getState().setAppVisible(false) })
     expect(soundService.stopAmbience).toHaveBeenCalled()
