@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useClockStore } from '@state/clockStore'
 import { useRaceStore } from '@state/raceStore'
-import { useSettingsStore } from '@state/settingsStore'
 import { soundService } from '@audio/soundService'
 
 // ms per sector: 2x and 4x are true multiples of 1x, so the labels mean what they say.
@@ -12,8 +11,6 @@ export function GameClock() {
   const appVisible = useClockStore(s => s.appVisible)
   const step = useRaceStore(s => s.step)
   const phase = useRaceStore(s => s.phase)
-  const weatherState = useRaceStore(s => s.raceState?.weatherState)
-  const soundEnabled = useSettingsStore(s => s.soundEnabled)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevPhaseRef = useRef(phase)
 
@@ -23,18 +20,6 @@ export function GameClock() {
     }
     prevPhaseRef.current = phase
   }, [phase])
-
-  // Engine/crowd/rain ambience — live for the whole race (incl. the start
-  // sequence), torn down once it ends or if the player mutes sound mid-race.
-  useEffect(() => {
-    const active = (phase === 'starting' || phase === 'racing' || phase === 'red_flag') && soundEnabled && appVisible
-    if (active) soundService.startAmbience()
-    else soundService.stopAmbience()
-  }, [phase, soundEnabled, appVisible])
-
-  useEffect(() => {
-    if (weatherState) soundService.setWeather(weatherState)
-  }, [weatherState])
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current)

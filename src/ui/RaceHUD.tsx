@@ -8,6 +8,7 @@ import { useSafetyCarOnlyDeployCount } from '@hooks/useSafetyCar'
 import { LEGACY_COACH_MARKS } from '@state/coachMarks'
 import { useSettingsStore } from '@state/settingsStore'
 import { CoachMark } from './CoachMark'
+import { AmbienceDirector } from './AmbienceDirector'
 import { GameClock } from './GameClock'
 import { SafetyCarBanner } from './SafetyCarBanner'
 import { StartScreen } from './StartScreen'
@@ -270,6 +271,7 @@ export function RaceHUD() {
   return (
     <ScreenFrame label="Race">
       <GameClock />
+      <AmbienceDirector />
 
       <AnimatePresence initial={false}>
         {phase === 'idle' ? (
