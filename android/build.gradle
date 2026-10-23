@@ -7,8 +7,15 @@ buildscript {
         mavenCentral()
     }
     dependencies {
+        // R8 bundled with AGP 8.13 cannot parse Kotlin 2.4 metadata (play-games
+        // needs KGP 2.4). Pin the R8 from AGP 9.4; must sit BEFORE the AGP line.
+        // Drop this when AGP is bumped to 9.4+.
+        classpath 'com.android.tools:r8:9.4.34'
         classpath 'com.android.tools.build:gradle:8.13.0'
         classpath 'com.google.gms:google-services:4.4.4'
+        // Load the Kotlin Gradle plugin once, at the root, so the Kotlin plugin
+        // modules (play-games, filesystem) share one KGP. Version: variables.gradle.
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.10"
         // Crashlytics needs BOTH the SDK and this Gradle plugin. Without the
         // plugin the SDK throws on startup -- "The Crashlytics build ID is
         // missing" -- and takes the whole app with it, because it initialises
