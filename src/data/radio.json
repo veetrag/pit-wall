@@ -19,6 +19,16 @@
     "I've got nothing left on these. Box this lap?",
     "Rears are finished. Can I come in?"
   ],
+  "request_rain": [
+    "Track's wet. Box for {tyre}?",
+    "It's raining out here. Can we box for {tyre}?",
+    "No grip on these slicks. {tyre} this lap?"
+  ],
+  "request_dry": [
+    "Track's drying. Box for slicks?",
+    "Dry line's here. Can we box for {tyre}?",
+    "These are cooking on the dry. Slicks this lap?"
+  ],
   "request_push": [
     "I'm faster than {ahead}. Let me push.",
     "I can take {ahead}. Can I push?",

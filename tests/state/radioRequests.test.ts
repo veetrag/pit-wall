@@ -42,7 +42,7 @@ function car(id: string, o: Partial<CarState>): CarState {
   }
 }
 /** Lap `lap` just ended. The player is P2, `gap` behind the rival; lap times are the sums of three sectors. */
-function lapEnd(lap: number, o: { gap?: number; myLap?: number; theirLap?: number; me?: Partial<CarState>; plan?: { lap: number; compound: Compound }[]; weather?: WeatherState; safetyCar?: SafetyCarState | null } = {}): RaceState {
+function lapEnd(lap: number, o: { gap?: number; myLap?: number; theirLap?: number; me?: Partial<CarState>; plan?: { lap: number; compound: Compound }[]; weather?: WeatherState; safetyCar?: SafetyCarState | null; timeline?: WeatherState[] } = {}): RaceState {
   const gap = o.gap ?? 0.8
   const sr = (id: string, t: number): SectorResult[] => [0, 1, 2].map(() => ({ driverId: id, sectorTime: t / 3, tyreContribution: 0, trafficPenalty: 0, noiseSample: 0, spinLoss: 0 }))
   const me = car('me', { position: 2, raceTime: 1000 + gap, lap, strategy: { teamId: 't1', startCompound: 'M', plannedStops: o.plan ?? [] }, ...o.me })
@@ -51,7 +51,7 @@ function lapEnd(lap: number, o: { gap?: number; myLap?: number; theirLap?: numbe
     lap, sector: 0, totalLaps: 30, cars: [rv, me],
     sectorResults: [...sr('rv', o.theirLap ?? 90), ...sr('me', o.myLap ?? 89.8)],
     overtakeEvents: [], safetyCar: o.safetyCar ?? null, incidents: [], trackEvolutionLaps: lap, rngState: 1,
-    weatherTimeline: Array(30).fill(o.weather ?? 'DRY') as WeatherState[], weatherState: o.weather ?? 'DRY',
+    weatherTimeline: o.timeline ?? Array(30).fill(o.weather ?? 'DRY') as WeatherState[], weatherState: o.weather ?? 'DRY',
   }
 }
 const CTX = { inPit: false, pitPanelOpen: false, pending: false }
@@ -183,5 +183,89 @@ describe('fix round 1', () => {
   it('a real safety car suppresses push', () => {
     const sc: SafetyCarState = { deployedLap: 9, lapsRemaining: 3, cause: 'crash' }
     expect(run([lapEnd(10, { safetyCar: sc }), lapEnd(11, { safetyCar: sc })], config(null))[1]).toBeNull()
+  })
+})
+
+/** Laps 0..wetFrom-1 dry, then `w` to the flag. */
+function rainFrom(wetFrom: number, w: WeatherState = 'DAMP'): WeatherState[] {
+  return Array.from({ length: 30 }, (_, i) => (i < wetFrom ? 'DRY' : w))
+}
+/** Lap `lap` just ended under the timeline: weatherState is timeline[lap-1], as at a lap boundary. */
+function wetEnd(lap: number, timeline: WeatherState[], me: Partial<CarState> = {}): RaceState {
+  return lapEnd(lap, { timeline, weather: timeline[lap - 1]!, gap: 5, me })
+}
+
+/** The shipped AI weather rule (tuning.json): confirm 2 laps, none with 3 or fewer left. */
+function rcfg(plan: { lap: number; compound: Compound }[] | null): RaceConfig {
+  const c = config(plan)
+  return { ...c, tuning: { ...c.tuning, ai: { ...c.tuning.ai, weatherConfirmLaps: 2, weatherMinLapsLeft: 3 } } }
+}
+
+describe('rain request (1.6.2)', () => {
+  it('asks for inters once DAMP has held for ai.weatherConfirmLaps completed laps on slicks', () => {
+    const tl = rainFrom(9)                                         // laps 10, 11 ... are damp (index 9+)
+    const reqs = run([10, 11].map(l => wetEnd(l, tl)), rcfg(null))
+    expect(reqs[0]).toBeNull()                                     // one damp lap: not confirmed (confirm = 2)
+    expect(reqs[1]).toEqual({ kind: 'rain', lap: 11, aheadId: null, compound: 'I' })
+  })
+
+  it('a WET track asks for full wets at once, like the AI', () => {
+    const [req] = run([wetEnd(10, rainFrom(9, 'WET'))], rcfg(null))
+    expect(req).toEqual({ kind: 'rain', lap: 10, aheadId: null, compound: 'W' })
+  })
+
+  it('wet tyres on a confirmed drying track ask for slicks: the next planned compound, else bestDryCompound', () => {
+    const tl = Array.from({ length: 30 }, (_, i) => (i < 9 ? 'DAMP' : 'DRY')) as WeatherState[]
+    const onInters = { compound: 'I' as Compound }
+    expect(run([10, 11].map(l => wetEnd(l, tl, onInters)), rcfg(null))[1]).toEqual({ kind: 'rain', lap: 11, aheadId: null, compound: 'M' })
+    const plan = [{ lap: 20, compound: 'H' as Compound }]
+    const withPlan = run([10, 11].map(l => wetEnd(l, tl, { ...onInters, strategy: { teamId: 't1', startCompound: 'M', plannedStops: plan } })), rcfg(plan))
+    expect(withPlan[1]?.compound).toBe('H')
+  })
+
+  it('matched tyres never ask; inters in the WET never ask', () => {
+    expect(run([wetEnd(10, rainFrom(5))], rcfg(null), CTX, makeRequestTracker())[0]?.kind).toBe('rain')
+    expect(run([wetEnd(10, rainFrom(5), { compound: 'I' })], rcfg(null))[0]).toBeNull()
+    expect(run([wetEnd(10, rainFrom(5, 'WET'), { compound: 'I' })], rcfg(null))[0]).toBeNull()
+  })
+
+  it('not with ai.weatherMinLapsLeft laps or fewer to go, under red, in the pit, with the panel open, or over a pending request', () => {
+    const tl = rainFrom(5, 'WET')
+    expect(run([wetEnd(27, tl)], rcfg(null))[0]).toBeNull()      // 3 left = weatherMinLapsLeft
+    expect(run([wetEnd(26, tl)], rcfg(null))[0]?.kind).toBe('rain')
+    const red: SafetyCarState = { deployedLap: 9, lapsRemaining: 0, cause: 'crash', kind: 'red' }
+    expect(run([{ ...wetEnd(10, tl), safetyCar: red }], rcfg(null))[0]).toBeNull()
+    expect(run([wetEnd(10, tl)], rcfg(null), { ...CTX, inPit: true })[0]).toBeNull()
+    expect(run([wetEnd(10, tl)], rcfg(null), { ...CTX, pitPanelOpen: true })[0]).toBeNull()
+    expect(run([wetEnd(10, tl)], rcfg(null), { ...CTX, pending: true })[0]).toBeNull()
+  })
+
+  it('takes priority over a box request on worn slicks', () => {
+    expect(run([wetEnd(10, rainFrom(5, 'WET'), WORN)], rcfg(null))[0]?.kind).toBe('rain')
+  })
+
+  it('DECLINED (or expired): never re-asked while the same tyre is called for; asked again when the call changes', () => {
+    const tl = Array.from({ length: 30 }, (_, i) => (i < 5 ? 'DRY' : i < 14 ? 'DAMP' : 'WET')) as WeatherState[]
+    const reqs = run([10, 11, 12, 13, 14, 15].map(l => wetEnd(l, tl)), rcfg(null))
+    // Asked for inters at 10; still damp through lap 14's end -> quiet; WET (lap 15) calls for wets -> asked.
+    expect(reqs.map(r => r?.compound ?? null)).toEqual(['I', null, null, null, null, 'W'])
+  })
+
+  it('a dry spell in between re-arms it', () => {
+    const tl = Array.from({ length: 30 }, (_, i) => (i < 5 ? 'DRY' : i < 10 ? 'WET' : i < 12 ? 'DRY' : 'WET')) as WeatherState[]
+    const reqs = run([10, 11, 12, 13].map(l => wetEnd(l, tl)), rcfg(null))
+    expect(reqs.map(r => r?.compound ?? null)).toEqual(['W', null, null, 'W'])
+  })
+
+  it('exempt from maxPerRace and the per-kind cooldown, but counts toward asked', () => {
+    const t = { ...makeRequestTracker(), asked: 3 }
+    const out = detectRadioRequest(wetEnd(10, rainFrom(5, 'WET')), rcfg(null), t, CTX)
+    expect(out.request?.kind).toBe('rain')
+    expect(out.tracker.asked).toBe(4)
+  })
+  it('a stop since the ask (a plan stop onto the wrong tyre) re-arms it', () => {
+    const tl = rainFrom(5, 'WET')
+    const reqs = run([wetEnd(10, tl), wetEnd(11, tl, { pitsDone: 1, compound: 'H' })], rcfg(null))
+    expect(reqs.map(r => r?.kind ?? null)).toEqual(['rain', 'rain'])
   })
 })

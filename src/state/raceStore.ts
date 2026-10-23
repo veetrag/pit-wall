@@ -248,7 +248,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     // Driver radio requests (spec 1.6 §2). A plan stop answers a pending box
     // request (ruling R8); the flag ends every question.
     let radioRequest = get().radioRequest
-    if (radioRequest?.kind === 'box' && autoStopped) radioRequest = null
+    if (radioRequest && radioRequest.kind !== 'push' && autoStopped) radioRequest = null
     const detected = finished
       ? { request: null, tracker: get().requestTracker }
       : detectRadioRequest(nextState, config, get().requestTracker,
@@ -315,7 +315,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       // A mid-lap stop counts at the completed-lap mark (raceState.lap), like every other change.
       playerTyreChanges: [...s.playerTyreChanges, raceState.lap],
       pitPanelOpen: false,
-      radioRequest: s.radioRequest?.kind === 'box' ? null : s.radioRequest,
+      radioRequest: s.radioRequest && s.radioRequest.kind !== 'push' ? null : s.radioRequest,
       playerInPit: true,
       pitEndTime: playerTime,
       pitLaneLoss: effectivePitLaneLoss(config.circuit, raceState.safetyCar, config.tuning),
@@ -338,7 +338,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
 
   // Opening the panel dismisses a pending box request (spec 1.6 §2): the
   // player is now answering it themselves.
-  openPitPanel() { set(s => ({ pitPanelOpen: true, radioRequest: s.radioRequest?.kind === 'box' ? null : s.radioRequest })) },
+  openPitPanel() { set(s => ({ pitPanelOpen: true, radioRequest: s.radioRequest && s.radioRequest.kind !== 'push' ? null : s.radioRequest })) },
   closePitPanel() { set({ pitPanelOpen: false, projectionResult: null }) },
 
   pushAlert(alert) {
@@ -355,8 +355,12 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     if (!req) return
     set({ radioRequest: null })
     if (!yes || get().phase !== 'racing') return
-    if (req.kind === 'box') get().pitNow(req.compound ?? 'M')
-    else get().setPaceMode('push')
+    switch (req.kind) {
+      case 'box': get().pitNow(req.compound ?? 'M'); break
+      case 'rain': get().pitNow(req.compound ?? 'I'); break
+      case 'push': get().setPaceMode('push'); break
+      default: { const never: never = req.kind; return never }
+    }
   },
 
   dismissRadioRequest() { set({ radioRequest: null }) },

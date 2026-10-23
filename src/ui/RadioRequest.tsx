@@ -38,7 +38,7 @@ function RequestCard({ req }: { req: ActiveRadioRequest }) {
   }, [running])
   useEffect(() => { if (left <= 0) dismiss() }, [left, dismiss])
 
-  const yesLabel = req.kind === 'box' ? `Yes, box for ${TYRE_NAME[req.compound ?? 'M']}` : 'Yes, push'
+  const yesLabel = req.kind === 'push' ? 'Yes, push' : `Yes, box for ${TYRE_NAME[req.compound ?? 'M']}`
   const frac = Math.max(0, Math.min(1, left / expiryMs))
 
   return (

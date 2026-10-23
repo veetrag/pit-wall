@@ -37,7 +37,7 @@ function pitWith(car: CarState, compound: Compound, paceMode: PaceMode): AIDecis
  * and the walk continues through timeline[lap-2], [lap-3], ... It never reads
  * index >= state.lap: the AI does not see the future (spec 1.6 §0.1, ruling R2).
  */
-function weatherRun(state: RaceState, pred: (w: WeatherState) => boolean): number {
+export function weatherRun(state: RaceState, pred: (w: WeatherState) => boolean): number {
   if (!pred(state.weatherState)) return 0
   let n = 1
   for (let i = state.lap - 2; i >= 0; i--) {
@@ -54,7 +54,7 @@ function weatherRun(state: RaceState, pred: (w: WeatherState) => boolean): numbe
  * disagree (item 16b: an AI on inters must not box onto slicks under a VSC in
  * the damp, only for weatherPit to send it straight back).
  */
-function weatherFamily(w: WeatherState): Compound | null {
+export function weatherFamily(w: WeatherState): Compound | null {
   switch (w) {
     case 'WET': return 'W'
     case 'DAMP': return 'I'

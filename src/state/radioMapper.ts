@@ -1,7 +1,7 @@
 import radioData from '@data/radio.json'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
 import { neutralisationKind } from '@engine/incidents'
-import type { RaceState, RaceConfig } from '@engine/types'
+import type { RaceState, RaceConfig, Compound } from '@engine/types'
 import { wingOf } from '@engine/setup'
 import { soundService } from '@audio/soundService'
 import type { RadioRequest } from './radioRequests'
@@ -22,10 +22,22 @@ function pick(trigger: string, vars: Record<string, string | number> = {}): stri
   return line.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? `{${k}}`))
 }
 
+const REQUEST_TYRE: Record<Compound, string> = { S: 'softs', M: 'mediums', H: 'hards', I: 'inters', W: 'wets' }
+
 /** The words for a driver radio request (spec 1.6 §2). Chosen here, outside the engine. */
 export function requestLine(request: RadioRequest, config: RaceConfig): string {
   const ahead = request.aheadId ? (config.drivers.find(d => d.id === request.aheadId)?.code ?? request.aheadId) : ''
-  return pick(request.kind === 'box' ? 'request_box' : 'request_push', { ahead }) ?? ''
+  switch (request.kind) {
+    case 'box': return pick('request_box', { ahead }) ?? ''
+    case 'push': return pick('request_push', { ahead }) ?? ''
+    case 'rain': {
+      // Inters/wets are 'rain'; any slick is 'dry' (1.6.2).
+      const c = request.compound ?? 'I'
+      const wet = c === 'I' || c === 'W'
+      return pick(wet ? 'request_rain' : 'request_dry', { tyre: REQUEST_TYRE[c] }) ?? ''
+    }
+    default: { const never: never = request.kind; return never }
+  }
 }
 
 let lastRadioMs = 0
