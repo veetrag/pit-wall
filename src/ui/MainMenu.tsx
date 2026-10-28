@@ -8,7 +8,7 @@ import { loadCareer } from '@state/careerPersistence'
 import { useCareerStore } from '@state/careerStore'
 import { BADGES, earnedBadges } from '@state/badges'
 import { loadGameData } from '@data/validators'
-import { KitButton, Pill, ProgressStrip, HeroBand, CarArt, liveryOf, snapIn, useReducedMotion, ScreenFrame } from '@ui/kit'
+import { KitButton, Pill, TraitPills, ProgressStrip, HeroBand, CarArt, liveryOf, snapIn, useReducedMotion, ScreenFrame } from '@ui/kit'
 
 const SETTINGS_BTN: CSSProperties = {
   width: 48, height: 48, borderRadius: '50%', border: 'none', cursor: 'pointer',
@@ -132,6 +132,7 @@ export function MainMenu() {
             {isSprintRound(saved.raceIndex) && (
               <span style={{ alignSelf: 'flex-start' }}><Pill tone="dusk">SPRINT WEEKEND</Pill></span>
             )}
+            <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><TraitPills circuitId={saved.selectedCircuitId ?? calendarId ?? ''} /></span>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 44, lineHeight: 1, textTransform: 'uppercase', color: 'var(--white)' }}>
               {circuitName}
             </span>

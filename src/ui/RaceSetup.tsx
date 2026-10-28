@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { motion } from 'framer-motion'
 import { useUiTap } from '@hooks/useUiTap'
 import { isFirstCareerRace } from '@state/buildRaceConfig'
@@ -6,14 +6,14 @@ import { useSettingsStore } from '@state/settingsStore'
 import { isSprintRound } from '@state/sprint'
 import { useSeasonStore } from '@state/seasonStore'
 import type { PlayerStrategyChoice } from '@state/seasonStore'
-import { CIRCUIT_ORDER } from '@state/raceStore'
+import { CIRCUIT_ORDER, PICKABLE_CIRCUITS } from '@state/raceStore'
 import { loadGameData } from '@data/validators'
 import { openingTimeline, type WeatherState } from '@engine/index'
 import { expectedBestWing, type Wing } from '@engine/setup'
 import { useCareerStore } from '@state/careerStore'
 import { WingSelector } from '@ui/WingSelector'
 import circuitsJson from '@data/circuits.json'
-import { ScreenFrame, ScreenHeader, CircuitOutline, Pill, TyreChip, TYRE_NAME, Segmented, KitButton, PRESS } from '@ui/kit'
+import { ScreenFrame, ScreenHeader, CircuitOutline, Pill, TraitPills, circuitTraitIds, HIGH_WEAR_THRESHOLD, TyreChip, TYRE_NAME, Segmented, KitButton, PRESS } from '@ui/kit'
 import { StintBar, stopBounds, MIN_STINT_GAP } from '@ui/StintBar'
 
 type Compound = 'S' | 'M' | 'H' | 'I' | 'W'
@@ -21,6 +21,7 @@ type CircuitEntry = {
   name: string; laps: number; flag?: string; location?: string;
   rainProbability?: number; weatherBias?: string; characterNote?: string;
   funFacts?: string[]; pitLaneTimeLoss?: number;
+  timeOfDay?: string; layout?: string; tyreWear?: number;
 }
 const allCircuits = (circuitsJson as unknown as { circuits: Record<string, CircuitEntry> }).circuits
 const GAME_DATA = loadGameData()
@@ -32,6 +33,14 @@ function defaultWing(circuitId: string): Wing {
   const spec = GAME_DATA.circuits[circuitId]
   return spec ? expectedBestWing(spec, GAME_DATA.tuning, spec.rainProbability ?? 0) : 3
 }
+
+/** Default plan laps: two stops at 30% / 62% on a high-wear circuit, else today's 45% / 70%. */
+export function defaultPlanLaps(laps: number, wear: number): { stops: 1 | 2; lap1: number; lap2: number } {
+  return wear >= HIGH_WEAR_THRESHOLD
+    ? { stops: 2, lap1: Math.round(laps * 0.30), lap2: Math.round(laps * 0.62) }
+    : { stops: 1, lap1: Math.round(laps * 0.45), lap2: Math.round(laps * 0.7) }
+}
+const isHighWear = (c: CircuitEntry) => (c.tyreWear ?? 1) >= HIGH_WEAR_THRESHOLD
 
 const DRY_COMPOUNDS: Compound[] = ['S', 'M', 'H']
 const START_COMPOUNDS: Compound[] = ['S', 'M', 'H', 'I', 'W']
@@ -167,7 +176,7 @@ export function RaceSetup() {
   // the calendar. On every other path it IS the calendar slot.
   const [selectedIdx, setSelectedIdx] = useState(() => {
     const chosen = useSeasonStore.getState().selectedCircuitId
-    const i = chosen ? (CIRCUIT_ORDER as readonly string[]).indexOf(chosen) : -1
+    const i = chosen ? PICKABLE_CIRCUITS.indexOf(chosen) : -1
     return i >= 0 ? i : defaultIdx
   })
   const reducedMotion = useSettingsStore(s => s.reducedMotion)
@@ -183,7 +192,7 @@ export function RaceSetup() {
       block: 'nearest',
     })
   }, [selectedIdx, reducedMotion])
-  const circuitId = CIRCUIT_ORDER[selectedIdx] ?? CIRCUIT_ORDER[0]!
+  const circuitId = PICKABLE_CIRCUITS[selectedIdx] ?? PICKABLE_CIRCUITS[0]!
   const circuit = allCircuits[circuitId]!
   const roundNum = raceIndex + 1
   const [factsOpen, setFactsOpen] = useState(false)
@@ -217,10 +226,12 @@ export function RaceSetup() {
   // selectedCircuitId are set together by confirmRaceSetup), so its laps are
   // already within this circuit's bounds.
   const planStops = plan?.plannedStops ?? []
-  const [stopCount, setStopCount] = useState<1 | 2>(planStops.length === 2 ? 2 : 1)
-  const [pitLap1, setPitLap1] = useState(planStops[0]?.lap ?? Math.round(circuit.laps * 0.45))
+  // Only a high-wear circuit opens on its own plan; every other circuit keeps today's defaults.
+  const hwDefault = !plan && isHighWear(circuit) ? defaultPlanLaps(circuit.laps, circuit.tyreWear ?? 1) : null
+  const [stopCount, setStopCount] = useState<1 | 2>(planStops.length === 2 ? 2 : hwDefault?.stops ?? 1)
+  const [pitLap1, setPitLap1] = useState(planStops[0]?.lap ?? hwDefault?.lap1 ?? Math.round(circuit.laps * 0.45))
   const [pitCompound1, setPitCompound1] = useState<Compound>(planStops[0]?.compound ?? 'H')
-  const [pitLap2, setPitLap2] = useState(planStops[1]?.lap ?? Math.round(circuit.laps * 0.7))
+  const [pitLap2, setPitLap2] = useState(planStops[1]?.lap ?? hwDefault?.lap2 ?? Math.round(circuit.laps * 0.7))
   const [pitCompound2, setPitCompound2] = useState<Compound>(planStops[1]?.compound ?? 'M')
 
   function selectStopCount(n: 1 | 2) {
@@ -259,15 +270,20 @@ export function RaceSetup() {
         {/* Circuit chips */}
         <div ref={chipStripRef} role="group" aria-label="Circuit"
           style={{ display: 'flex', gap: 8, overflowX: 'auto', flexShrink: 0, margin: '0 -16px', padding: '0 16px 2px' }}>
-          {CIRCUIT_ORDER.map((cId, i) => {
+          {PICKABLE_CIRCUITS.map((cId, i) => {
             const c = allCircuits[cId]
             if (!c) return null
             const active = i === selectedIdx
+            const extra = i >= CIRCUIT_ORDER.length
             return (
+              <Fragment key={cId}>
+              {i === CIRCUIT_ORDER.length && (
+                <span aria-hidden="true" style={{ alignSelf: 'center', flexShrink: 0, fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 11, letterSpacing: 2, color: 'var(--lilac-dim)' }}>EXTRA</span>
+              )}
               <motion.button
-                key={cId}
                 type="button"
                 data-circuit-idx={i}
+                aria-label={extra ? `${c.name}, extra circuit` : undefined}
                 aria-pressed={active}
                 aria-disabled={weekendLocked && !active ? true : undefined}
                 className="kit-focus"
@@ -276,8 +292,13 @@ export function RaceSetup() {
                   if (weekendLocked) return
                   uiTap()
                   setSelectedIdx(i)
-                  setPitLap1(Math.round(c.laps * (stopCount === 2 ? 0.33 : 0.45)))
-                  setPitLap2(Math.round(c.laps * 0.7))
+                  if (isHighWear(c)) {
+                    const d = defaultPlanLaps(c.laps, c.tyreWear ?? 1)
+                    setStopCount(d.stops); setPitLap1(d.lap1); setPitLap2(d.lap2)
+                  } else {
+                    setPitLap1(Math.round(c.laps * (stopCount === 2 ? 0.33 : 0.45)))
+                    setPitLap2(Math.round(c.laps * 0.7))
+                  }
                   const newWeather = computeStartWeather(cId, c.laps, seed, dryStart, allDry)[0] ?? 'DRY'
                   setStartCompound(recommendedStartCompound(newWeather))
                 }}
@@ -292,6 +313,7 @@ export function RaceSetup() {
                 {c.flag && <span aria-hidden="true" style={{ fontSize: 16 }}>{c.flag}</span>}
                 <span>{c.name}</span>
               </motion.button>
+              </Fragment>
             )
           })}
         </div>
@@ -332,6 +354,7 @@ export function RaceSetup() {
         {/* Actual seeded starting conditions — not just a probability */}
         <div aria-label="Conditions at lights out" role="group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flexShrink: 0 }}>
           {sprintRound && <Pill tone="dusk">SPRINT WEEKEND</Pill>}
+          <TraitPills circuitId={circuitId} />
           <Pill tone={startingWeather === 'DRY' ? 'default' : 'rain'}>{WEATHER_START[startingWeather]}</Pill>
           {weatherTimeline.slice(1, 4).map((w, i) => (
             <span key={i} data-forecast={w}><Pill tone={w === 'DRY' ? 'default' : 'rain'}>{`+${i + 1} ${WEATHER_SHORT[w]}`}</Pill></span>
@@ -408,6 +431,7 @@ export function RaceSetup() {
         </div>
         <div style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: 'var(--lilac-dim)', lineHeight: 1.4 }}>
           Drag a split to move a stop. Stops run automatically; you can pit earlier live, not later.
+          {circuitTraitIds(circuitId).includes('high_wear') && ' High wear: a third stop may be needed — pit live.'}
         </div>
       </div>
 

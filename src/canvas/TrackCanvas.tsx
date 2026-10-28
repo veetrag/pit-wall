@@ -5,6 +5,7 @@ import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { CIRCUIT_PATHS } from '@data/circuitPaths'
 import { TEAM_HEX } from './teamHex'
+import { floodlightPoints } from './floodlights'
 import type { RaceState, RaceConfig, WeatherState } from '@engine/types'
 
 type Point = [number, number]
@@ -267,6 +268,8 @@ function drawTrack(
   }
 }
 
+const FLOODLIGHT = 0xFFFBE6 // mirrors --floodlight
+
 // R2: full-canvas two-stop gradient wash behind the track, cooling/darkening
 // as weather worsens. Redrawn only when atmosphere/weather actually change,
 // not per frame.
@@ -403,6 +406,13 @@ export function TrackCanvas() {
         const redrawAtmosphere = (weatherState: WeatherState) => {
           const palette = ATMOSPHERE_PALETTES[atmosphere] ?? ATMOSPHERE_PALETTES['day']!
           drawAtmosphere(atmosphereGfx, cw, ch, atmosphere, weatherState)
+          if (initConfig?.circuit?.timeOfDay === 'night') {
+            for (const f of floodlightPoints(arcTable!.totalLen, 8)) {
+              const [fx, fy] = transform!(sampleAt(arcTable!, f))
+              atmosphereGfx.circle(fx, fy, 46).fill({ color: FLOODLIGHT, alpha: 0.07 })
+              atmosphereGfx.circle(fx, fy, 22).fill({ color: FLOODLIGHT, alpha: 0.06 })
+            }
+          }
           drawTrack(trackGfx, arcTable!, transform!, palette.trackTint, weatherState === 'WET' ? 0.35 : weatherState === 'DAMP' ? 0.15 : 0)
           // Reduced motion: static wet tint instead of animated rain (R4)
           wetOverlayGfx.clear()

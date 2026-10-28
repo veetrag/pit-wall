@@ -53,6 +53,15 @@ describe('the STATS screen (spec 1.6 §7)', () => {
     expect(screen.getByText('30L')).toBeTruthy()
   })
 
+  it('BEST BY CIRCUIT lists the twelve calendar circuits plus the two extras', () => {
+    useCareerStore.setState({ raceLog: [
+      { season: 1, round: 0, grid: 4, finish: 2, retired: false, pole: false, stops: 1, overtakes: 0, wet: false, circuitId: 'mesa_roja', startCompound: 'M', longestStint: 20 },
+    ] })
+    render(<CareerStats />)
+    expect(screen.getAllByText(/LANTERN QUAY/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/MESA ROJA/).length).toBeGreaterThan(0)
+  })
+
   it('is a detour: the season save is not overwritten while on it', () => {
     useSeasonStore.setState({ phase: 'career_stats', playerDriverId: 'd_voss' })
     expect(snapshotFrom(useSeasonStore.getState())).toBeNull()

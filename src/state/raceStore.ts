@@ -5,6 +5,7 @@ import {
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
+import { V2_CIRCUITS } from '@data/circuitPaths'
 import type { AlertMessage } from '../ui/HudAlert'
 import { processRadioTick, makeRadioState, requestLine, type RadioState } from './radioMapper'
 import { detectRadioRequest, makeRequestTracker, type RadioRequest, type RequestTracker } from './radioRequests'
@@ -100,6 +101,9 @@ export const CIRCUIT_ORDER = [
   'highland', 'costa_verde', 'kaido', 'grand_savane',
   'monsoon_bay', 'altiplano', 'aurora', 'harbour_lights',
 ] as const
+
+/** The round strip: the calendar, then circuits authored since 2.0 (spec 2026-10-24 R2). */
+export const PICKABLE_CIRCUITS: readonly string[] = [...CIRCUIT_ORDER, ...V2_CIRCUITS]
 
 let alertCounter = 0
 let requestCounter = 0
