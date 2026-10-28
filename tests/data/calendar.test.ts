@@ -223,4 +223,18 @@ describe('new circuits', () => {
       expect(bothWet, `${CIRCUIT_ORDER[i]} -> ${CIRCUIT_ORDER[i + 1]}`).toBe(false)
     }
   })
+
+  it('gives every circuit a timeOfDay that agrees with its atmosphere', () => {
+    const { circuits } = loadGameData()
+    const NIGHT_ATMOS = ['night', 'desert_night']
+    for (const [id, c] of Object.entries(circuits)) {
+      expect(c.timeOfDay, `${id} timeOfDay`).toBeDefined()
+      expect(c.timeOfDay === 'night', `${id}: night atmosphere <=> night race`).toBe(NIGHT_ATMOS.includes(c.atmosphere ?? 'day'))
+    }
+  })
+  it('keeps bengaluru (the golden race) free of engine-active traits', () => {
+    const c = loadGameData().circuits['bengaluru']!
+    expect(c.timeOfDay).not.toBe('night')
+    expect(c.tyreWear ?? 1).toBe(1); expect(c.crashRisk ?? 1).toBe(1); expect(c.neutralisationRisk ?? 1).toBe(1)
+  })
 })
