@@ -62,6 +62,10 @@ The single most important data file. Every magic number in the model lives here.
     "horizonLaps": 4,              // how far the "pit now?" what-if fast-forwards. Shows rejoin; UI may also show longer net estimate.
     "useOvertakeRolls": false      // projection uses pure pace-based gaps (fast, ~deterministic) — no overtake dice
   },
+  "timeOfDay": {
+    "_note": "Spec 2026-10-24 §1.2. Validated 0.8–1.0 (src/data/validators.ts); reads via circuitTraits.ts.",
+    "nightWearFactor": 1.0         // multiplies tyre wear on circuits with timeOfDay 'night'. Bounds 0.8–1.0: below 1.0 means less wear at night. Ships at 1.0 in 1.7 (night wear deferred, MODEL_SPEC §17), so it has no effect yet.
+  },
   "incidents": {
     "dnfPerLap": 0.0,              // reliability DNF prob/lap/car. 0 in v1 (add later as a layer).
     "driverErrorPerLap": 0.0       // lock-up/crash prob. 0 in v1.
@@ -115,6 +119,18 @@ A circuit owns its sector base times, sensitivities, pit loss, and (optionally) 
   // ... more circuits added later
 }
 ```
+
+**Circuit traits (1.7, spec 2026-10-24 §1.2).** All optional; absent means the neutral value (1), so old circuits behave exactly as before. Read through `src/engine/circuitTraits.ts`. Bounds are enforced by `CircuitSchema` in `src/data/validators.ts`; an out-of-range value fails the load.
+
+| Field | Type / bounds | Meaning |
+|---|---|---|
+| `timeOfDay` | `'day' \| 'dusk' \| 'night'` | Lighting. Night multiplies tyre wear by `tuning.timeOfDay.nightWearFactor`. Tied to `atmosphere` by a test. |
+| `layout` | `'permanent' \| 'street'` | Track type, for presentation. |
+| `tyreWear` | number, 0.7–1.6 | Multiplier on effective tyre age (higher = harder on tyres). |
+| `crashRisk` | number, 0.5–2.0 | Multiplier on the driver-error chance. |
+| `neutralisationRisk` | number, 0.5–2.0 | Multiplier on SC and VSC deploy chances (capped at 1). |
+
+1.7 circuit values (Lantern Quay, Mesa Roja) are the ones still open for Veet's call; see `docs/V2-CHECKLIST.md`.
 
 `trackPath` references a separate file describing the circuit geometry for the Pixi renderer: an ordered list of points (or an SVG path) for the racing line, plus the three sector-boundary positions and the pit-lane entry/exit points so cars can be interpolated along it and the pit animation has a real path.
 
