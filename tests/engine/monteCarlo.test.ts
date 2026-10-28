@@ -82,7 +82,7 @@ describe('Monte-Carlo regression', () => {
     expect(m.topTeamId, `n=${m.races} races over all 12 circuits`).toBe('apex')
     // 1.6.1 DNF tuning: gate lowered 0.08 -> 0.03; measured apex 42.5% over
     // meridian 38.5% (4.0pp) once fewer tyre failures stopped costing meridian.
-    // FAILS IF the margin collapses to under a third of the measured 25.1pp --
+    // FAILS IF the margin falls to under 3pp of the measured 4.0pp --
     // i.e. a change that genuinely reorders the top of the grid, rather than one
     // that reshuffles which circuits favour whom.
     expect(share['apex']! - second![1], `apex over ${second![0]}`).toBeGreaterThan(0.03)
