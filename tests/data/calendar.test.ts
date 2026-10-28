@@ -158,22 +158,19 @@ describe('new circuits', () => {
   // every circuit, so Kaido was not in fact harder to pass on than Veloce in
   // play), and the layer-2 traffic cap divides by the same field. The ordering
   // asserted here is therefore the ordering the sim now races to.
-  it('makes Kaido the hardest non-street circuit to overtake on', () => {
+  // Spec 2026-10-24 ruling R8: the old test's own message asked for this update
+  // when a deliberately harder circuit arrived. Street circuits are the hardest
+  // places to pass; Kaido is the hardest PERMANENT circuit.
+  it('makes every street circuit harder to pass on than every permanent one, and Kaido the hardest permanent', () => {
     const { circuits } = loadGameData()
     const total = (id: string) => circuits[id]!.overtakingFactor.reduce((a, b) => a + b, 0)
-    expect(total('kaido')).toBeGreaterThan(total('harbour_lights'))
-    for (const id of Object.keys(circuits)) {
-      if (id === 'kaido' || id === 'harbour_lights') continue
-      expect(
-        total(id),
-        `${id} overtakingFactor total (${total(id)}) must exceed kaido's (${total('kaido')}). ` +
-        'Invariant: harbour_lights is the hardest circuit to overtake on, kaido the second ' +
-        'hardest, and every other circuit is easier than both. If a new circuit is ' +
-        'deliberately harder to pass on than kaido, update this test (and kaido\'s ' +
-        'characterNote, which claims the runner-up spot) rather than raising the new ' +
-        "circuit's numbers to satisfy it.",
-      ).toBeGreaterThan(total('kaido'))
+    const street = Object.keys(circuits).filter(id => circuits[id]!.layout === 'street')
+    const permanent = Object.keys(circuits).filter(id => circuits[id]!.layout !== 'street')
+    expect(street.sort()).toEqual(['harbour_lights', 'lantern_quay'])
+    for (const s of street) for (const p of permanent) {
+      expect(total(s), `${s} (${total(s)}) must be harder than ${p} (${total(p)})`).toBeLessThan(total(p))
     }
+    for (const p of permanent) if (p !== 'kaido') expect(total(p), p).toBeGreaterThan(total('kaido'))
   })
 
   it('registers a canvas track path for every circuit in the order', () => {

@@ -10,6 +10,7 @@ import pathSilverpark from '@data/paths/silverpark.json'
 import pathCostaVerde from '@data/paths/costa_verde.json'
 import pathKaido from '@data/paths/kaido.json'
 import pathAltiplano from '@data/paths/altiplano.json'
+import pathLanternQuay from '@data/paths/lantern_quay.json'
 
 export type CircuitPath = { points: number[][]; sectorBoundaries: number[]; pitEntry: number[]; pitExit: number[] }
 
@@ -26,6 +27,7 @@ export const CIRCUIT_PATHS: Record<string, CircuitPath> = {
   costa_verde:    pathCostaVerde,
   kaido:          pathKaido,
   altiplano:      pathAltiplano,
+  lantern_quay:   pathLanternQuay,
 }
 
 /**
@@ -33,7 +35,7 @@ export const CIRCUIT_PATHS: Record<string, CircuitPath> = {
  * and sensitivity rules in tests/data/circuitGeometry.test.ts bind these only;
  * the twelve legacy circuits predate them.
  */
-export const V2_CIRCUITS: readonly string[] = []
+export const V2_CIRCUITS: readonly string[] = ['lantern_quay']
 
 /** Each sector's share of the loop's polyline length (boundaries are point indices). */
 export function sectorArcShares(path: CircuitPath): [number, number, number] {
