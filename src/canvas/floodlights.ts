@@ -1,6 +1,6 @@
 /**
  * Where a night circuit's floodlight pools sit, as fractions of the lap
- * (spec 2026-10-24 §2.3). One pool per ~110 px of track, 6-10 pools, evenly
+ * (spec 2026-10-24 §2.3). One pool per ~110 path-length units, 6-10 pools, evenly
  * spaced from a fixed offset so the layout is stable across resizes. Pure.
  */
 export function floodlightPoints(arcLength: number, count: number): number[] {

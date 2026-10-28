@@ -278,7 +278,10 @@ export function RaceSetup() {
             return (
               <Fragment key={cId}>
               {i === CIRCUIT_ORDER.length && (
-                <span aria-hidden="true" style={{ alignSelf: 'center', flexShrink: 0, fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 11, letterSpacing: 2, color: 'var(--lilac-dim)' }}>EXTRA</span>
+                <span aria-hidden="true" style={{ alignSelf: 'stretch', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--dusk)' }} />
+                  <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 11, letterSpacing: 2, color: 'var(--lilac-dim)' }}>EXTRA</span>
+                </span>
               )}
               <motion.button
                 type="button"

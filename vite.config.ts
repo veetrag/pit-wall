@@ -20,6 +20,8 @@ const SIMULATION_SUITES = [
   'tests/engine/*Bands.test.ts',
   'tests/engine/mechanicalFailure.test.ts',
   'tests/engine/circuitDifferentiation.test.ts',
+  'tests/engine/circuitTraits.test.ts',
+  'tests/engine/harnessMetrics.test.ts',
   'tests/engine/setupBalance.test.ts',
   'tests/engine/safetyCar.test.ts',
   'tests/engine/overtakeRaceTime.test.ts',

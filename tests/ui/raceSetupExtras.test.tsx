@@ -39,7 +39,12 @@ describe('Race Setup extras', () => {
   it('never claims night changes tyre wear', () => {
     const { container } = render(<RaceSetup />)
     fireEvent.click(screen.getByRole('button', { name: /Lantern Quay/ }))
-    expect(container.textContent).not.toMatch(/cool track|tyres last longer/i)
+    const more = screen.getByRole('button', { name: /MORE ABOUT LANTERN QUAY/ })
+    fireEvent.click(more)
+    // The facts panel only: whole-page text would pair the NIGHT RACE pill with the unrelated "Start tyre" label.
+    const facts = more.parentElement!.textContent ?? ''
+    expect(facts).toMatch(/Most safety cars/)
+    expect(facts).not.toMatch(/cool(er)?\b.*track|last (a little )?longer|night.*tyre/i)
     expect(container.textContent).toMatch(/NIGHT RACE/)
   })
 })

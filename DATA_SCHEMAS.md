@@ -63,7 +63,7 @@ The single most important data file. Every magic number in the model lives here.
     "useOvertakeRolls": false      // projection uses pure pace-based gaps (fast, ~deterministic) — no overtake dice
   },
   "timeOfDay": {
-    "_note": "Spec 2026-10-24 §1.2. Validated 0.8–1.0 (src/data/validators.ts); reads via circuitTraits.ts.",
+    "_note": "Spec 2026-10-24 §2.2. Validated 0.8–1.0 (src/data/validators.ts); reads via circuitTraits.ts.",
     "nightWearFactor": 1.0         // multiplies tyre wear on circuits with timeOfDay 'night'. Bounds 0.8–1.0: below 1.0 means less wear at night. Ships at 1.0 in 1.7 (night wear deferred, MODEL_SPEC §17), so it has no effect yet.
   },
   "incidents": {

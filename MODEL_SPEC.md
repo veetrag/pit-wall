@@ -1119,7 +1119,7 @@ Measured, n=120:
 
 3.39 stops per classified car at pro (SAMPLE 2.67), so **three stops is the norm** there and the
 circuit copy says so. Tyre-failure DNFs 0. Passing is never blocked for a car 0.4 s/lap faster
-(clearing failure 0.000), which makes it the easiest circuit to pass on; not gated.
+(clearing failure 0.000, in line with the easiest circuits); not gated.
 
 **Night wear: measured and deferred.** 1.7 ships `nightWearFactor 1.0`, so night is presentation
 only. The ladder 0.94 → 0.96 → 0.98 was measured with `tests/engine/monteCarlo.test.ts`, and

@@ -237,4 +237,15 @@ describe('new circuits', () => {
     expect(c.timeOfDay).not.toBe('night')
     expect(c.tyreWear ?? 1).toBe(1); expect(c.crashRisk ?? 1).toBe(1); expect(c.neutralisationRisk ?? 1).toBe(1)
   })
+
+  it('makes no cool-track tyre-wear claim while nightWearFactor is 1', () => {
+    const { circuits, tuning } = loadGameData()
+    expect(tuning.timeOfDay.nightWearFactor).toBe(1)
+    const re = /cool(er)?\b.*(track|tyre)|tyres? last (a little )?longer/i
+    for (const [id, c] of Object.entries(circuits)) {
+      for (const text of [c.characterNote ?? '', ...(c.funFacts ?? [])]) {
+        expect(text, id).not.toMatch(re)
+      }
+    }
+  })
 })

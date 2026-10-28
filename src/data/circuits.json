@@ -109,7 +109,7 @@
       "pitLaneTimeLoss": 22.0,
       "rainProbability": 0.45, "weatherBias": "showery", "timeOfDay": "dusk",
       "trackPath": "paths/aurora.json",
-      "characterNote": "Cool northern circuit, flowing and fast. Lower temps are gentle on tyres but cold tyres are tricky to switch on.",
+      "characterNote": "Chilly northern circuit, flowing and fast. Getting heat into cold tyres is the challenge.",
       "funFacts": ["Coolest track temperatures of the season", "Tyre warm-up is a real challenge here", "Long northern dusk makes for a stunning backdrop"],
       "atmosphere": "northern_dusk"
     },
@@ -209,7 +209,7 @@
       "timeOfDay": "night", "layout": "street", "crashRisk": 1.3, "neutralisationRisk": 1.5,
       "trackPath": "paths/lantern_quay.json",
       "characterNote": "Floodlit street circuit between the warehouses. Walls bite, safety cars are common, and passing is the second-hardest on the calendar.",
-      "funFacts": ["Most safety cars of any circuit", "Joint-longest pit lane on the calendar", "Cooler night track — tyres last a little longer"],
+      "funFacts": ["Most safety cars of any circuit", "Joint-longest pit lane on the calendar", "Raced entirely under floodlights"],
       "atmosphere": "night"
     },
     "mesa_roja": {
