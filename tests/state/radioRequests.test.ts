@@ -172,7 +172,7 @@ describe('fix round 1', () => {
     const s = lapEnd(10, { me: { tyreAge: 12 } })
     const me = s.cars.find(c => c.isPlayer)!
     const drv = cfg.drivers.find(d => d.id === 'me')!
-    const frac = tyreCliffFraction(COMPOUNDS['M']!, effectiveTyreAge(me, drv, 'DRY', cfg.tuning))
+    const frac = tyreCliffFraction(COMPOUNDS['M']!, effectiveTyreAge(me, drv, 'DRY', cfg))
     const exact = { ...cfg, tuning: { ...cfg.tuning, radioRequests: { ...cfg.tuning.radioRequests, boxCliffFrac: frac } } }
     expect(run([s], exact)[0]?.kind).toBe('box')
     expect(run([lapEnd(10, { gap: 1.0 }), lapEnd(11, { gap: 1.0 })], config(null))[1]?.kind).toBe('push')

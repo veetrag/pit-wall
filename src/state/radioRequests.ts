@@ -174,7 +174,7 @@ export function detectRadioRequest(
 
   const spec = config.compounds[player.compound]
   const driver = config.drivers.find(d => d.id === player.driverId)
-  const cliff = spec && driver ? tyreCliffFraction(spec, effectiveTyreAge(player, driver, state.weatherState, config.tuning)) : 0
+  const cliff = spec && driver ? tyreCliffFraction(spec, effectiveTyreAge(player, driver, state.weatherState, config)) : 0
   const lapsLeft = state.totalLaps - state.lap
 
   // Box: "Tyres are gone, can we box?"

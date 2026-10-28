@@ -55,6 +55,7 @@ describe('tyreCliffFraction', () => {
 describe('effectiveTyreAge', () => {
   const data = loadGameData()
   const tuning = data.tuning
+  const ctx = { tuning, circuit: data.circuits['bengaluru']! }
   const driver: DriverSpec = {
     id: 'd1', name: 'D1', code: 'D1X', teamId: 't1',
     facets: { pace: 80, racecraft: 80, tyreManagement: 80, consistency: 80, wetWeather: 80, experience: 80 },
@@ -74,20 +75,20 @@ describe('effectiveTyreAge', () => {
 
   it('equals raw age on a dry compound in dry weather at neutral pace with no management', () => {
     const car = makeCar({ compound: 'M', tyreAge: 10, paceMode: 'neutral' })
-    expect(effectiveTyreAge(car, noManagementDriver, 'DRY', tuning)).toBeCloseTo(10, 5)
+    expect(effectiveTyreAge(car, noManagementDriver, 'DRY', ctx)).toBeCloseTo(10, 5)
   })
 
   it('good tyre management defers the cliff (lower effective age)', () => {
     const car = makeCar({ compound: 'M', tyreAge: 10, paceMode: 'neutral' })
-    const managed = effectiveTyreAge(car, driver, 'DRY', tuning)
-    const unmanaged = effectiveTyreAge(car, noManagementDriver, 'DRY', tuning)
+    const managed = effectiveTyreAge(car, driver, 'DRY', ctx)
+    const unmanaged = effectiveTyreAge(car, noManagementDriver, 'DRY', ctx)
     expect(managed).toBeLessThan(unmanaged)
   })
 
   it('PUSH accelerates wear, CONSERVE defers it, relative to NEUTRAL', () => {
-    const neutral = effectiveTyreAge(makeCar({ paceMode: 'neutral' }), noManagementDriver, 'DRY', tuning)
-    const push = effectiveTyreAge(makeCar({ paceMode: 'push' }), noManagementDriver, 'DRY', tuning)
-    const conserve = effectiveTyreAge(makeCar({ paceMode: 'conserve' }), noManagementDriver, 'DRY', tuning)
+    const neutral = effectiveTyreAge(makeCar({ paceMode: 'neutral' }), noManagementDriver, 'DRY', ctx)
+    const push = effectiveTyreAge(makeCar({ paceMode: 'push' }), noManagementDriver, 'DRY', ctx)
+    const conserve = effectiveTyreAge(makeCar({ paceMode: 'conserve' }), noManagementDriver, 'DRY', ctx)
     expect(push).toBeGreaterThan(neutral)
     expect(conserve).toBeLessThan(neutral)
   })
@@ -98,7 +99,7 @@ describe('effectiveTyreAge', () => {
   it('a full wet tyre in DRY conditions reaches the cliff far sooner than its raw spec implies', () => {
     const wetSpec = data.compounds['W']!
     const car = makeCar({ compound: 'W', tyreAge: 20, paceMode: 'neutral' })
-    const effAge = effectiveTyreAge(car, noManagementDriver, 'DRY', tuning)
+    const effAge = effectiveTyreAge(car, noManagementDriver, 'DRY', ctx)
     const rawFraction = tyreCliffFraction(wetSpec, car.tyreAge)
     const effFraction = tyreCliffFraction(wetSpec, effAge)
     expect(effAge).toBeGreaterThan(car.tyreAge)
@@ -112,7 +113,7 @@ describe('effectiveTyreAge', () => {
   it('an inter in DRY conditions also wears meaningfully faster than raw age suggests', () => {
     const interSpec = data.compounds['I']!
     const car = makeCar({ compound: 'I', tyreAge: 20, paceMode: 'neutral' })
-    const effAge = effectiveTyreAge(car, noManagementDriver, 'DRY', tuning)
+    const effAge = effectiveTyreAge(car, noManagementDriver, 'DRY', ctx)
     expect(tyreCliffFraction(interSpec, effAge)).toBeGreaterThan(tyreCliffFraction(interSpec, car.tyreAge))
   })
 
@@ -121,8 +122,8 @@ describe('effectiveTyreAge', () => {
     // penalty — they age faster too, reaching the cliff (and tyreFailure
     // risk) sooner if not swapped off promptly.
     const car = makeCar({ compound: 'M', tyreAge: 10, paceMode: 'neutral' })
-    const dry = effectiveTyreAge(car, noManagementDriver, 'DRY', tuning)
-    const wet = effectiveTyreAge(car, noManagementDriver, 'WET', tuning)
+    const dry = effectiveTyreAge(car, noManagementDriver, 'DRY', ctx)
+    const wet = effectiveTyreAge(car, noManagementDriver, 'WET', ctx)
     expect(wet).toBeGreaterThan(dry)
   })
 })

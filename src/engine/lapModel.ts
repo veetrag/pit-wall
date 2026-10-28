@@ -51,7 +51,7 @@ export function computeSectorTime(
   // --- Tyre delta: effAge defers the cliff for good tyre managers on CONSERVE,
   // and accelerates it for the wrong compound in the wrong weather ---
   const cpSpec = compounds[car.compound]!
-  const effAge = effectiveTyreAge(car, driver, weatherState, tuning)
+  const effAge = effectiveTyreAge(car, driver, weatherState, config)
   const tyreSectorDelta = tyreDelta(cpSpec, effAge) / 3
 
   // --- Weather crossover penalty (wrong compound type) ---

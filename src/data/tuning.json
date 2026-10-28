@@ -195,6 +195,10 @@
       }
     }
   },
+  "timeOfDay": {
+    "_note": "Spec 2026-10-24 §2.2. Multiplies effective tyre age at circuits with timeOfDay 'night'. Ships at 1.0 in Task 1 (no effect); Task 5 switches it on and re-measures.",
+    "nightWearFactor": 1.0
+  },
   "_regressionBands": {
     "career": {
       "erosionBitesWithinSeasons": 10,

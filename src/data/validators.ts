@@ -168,6 +168,7 @@ const TuningSchema = z.object({
     aiNoise: z.number().min(0).max(1),
     seedOffset: z.number().int(),
   }),
+  timeOfDay: z.object({ _note: z.string().optional(), nightWearFactor: z.number().min(0.8).max(1.0) }),
   difficultyProfiles: z.object({
     rookie: DifficultyProfileSchema,
     pro: DifficultyProfileSchema,
@@ -329,7 +330,13 @@ const CircuitSchema = z.object({
   flag: z.string().optional(),
   funFacts: z.array(z.string()).optional(),
   // Same failure mode: TrackCanvas silently fell back to the 'day' palette.
-  atmosphere: z.enum(['day', 'dusk', 'night', 'desert_night', 'storm', 'northern_dusk']).optional(),
+  atmosphere: z.enum(['day', 'dusk', 'night', 'desert_night', 'desert_day', 'storm', 'northern_dusk']).optional(),
+  // Spec 2026-10-24 §1.2. Bounds turn a fat-fingered 13.5 into a load failure.
+  timeOfDay: z.enum(['day', 'dusk', 'night']).optional(),
+  layout: z.enum(['permanent', 'street']).optional(),
+  tyreWear: z.number().min(0.7).max(1.6).optional(),
+  crashRisk: z.number().min(0.5).max(2.0).optional(),
+  neutralisationRisk: z.number().min(0.5).max(2.0).optional(),
 })
 const CircuitsWrapperSchema = z.object({ circuits: z.record(z.string(), CircuitSchema) })
 

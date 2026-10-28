@@ -6,6 +6,7 @@ export {
   tyreDelta, tyreCliffFraction, effectiveTyreAge,
   resolveAllocatedCompound, consumeTyreSet, UNLIMITED_TYRE_ALLOCATION,
 } from './tyres'
+export { circuitTraits, type CircuitTraits, type TyreContext } from './circuitTraits'
 export { computeSectorTime } from './lapModel'
 export {
   driverErrorChancePerSector, rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,

@@ -41,8 +41,8 @@ function projectedCliffLap(config: RaceConfig, state: RaceState, car: CarState, 
   if (!spec || !driver || spec.cliff <= 0) return null
   // effectiveTyreAge is linear in tyreAge, so its value at age 1 is the
   // per-lap wear rate at the car's current pace mode and conditions.
-  const effNow = effectiveTyreAge(car, driver, state.weatherState, config.tuning)
-  const perLap = effectiveTyreAge({ ...car, tyreAge: 1 }, driver, state.weatherState, config.tuning)
+  const effNow = effectiveTyreAge(car, driver, state.weatherState, config)
+  const perLap = effectiveTyreAge({ ...car, tyreAge: 1 }, driver, state.weatherState, config)
   if (perLap <= 0) return null
   const lapsToThreshold = (threshold * spec.cliff - effNow) / perLap
   return car.lap + Math.max(0, Math.ceil(lapsToThreshold))
