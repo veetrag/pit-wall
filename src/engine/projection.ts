@@ -2,6 +2,8 @@ import type { RaceConfig, RaceState, Compound } from './types'
 import { createRng } from './rng'
 import { stepSector } from './race'
 import { pitStopTime } from './pitStop'
+import { resolveAllocatedCompound, consumeTyreSet } from './tyres'
+import { isFinished } from './debrief'
 
 export interface ProjectionResult {
   rejoinPosition: number
@@ -40,7 +42,19 @@ export function projectPitNow(
     ...projState,
     cars: projState.cars.map(car => {
       if (car.driverId !== playerDriverId) return car
-      return { ...car, raceTime: car.raceTime + stopTime, compound: newCompound, tyreAge: 0, pitsDone: car.pitsDone + 1 }
+      // Fit what the live stop would fit (applyPlayerPit): the set the
+      // allocation actually has, consumed and recorded, so the two-compound
+      // rule at the flag sees the stop.
+      const fitted = resolveAllocatedCompound(newCompound, car.tyreAllocation) ?? newCompound
+      return {
+        ...car,
+        raceTime: car.raceTime + stopTime,
+        compound: fitted,
+        tyreAge: 0,
+        pitsDone: car.pitsDone + 1,
+        tyreAllocation: consumeTyreSet(car.tyreAllocation, fitted),
+        compoundsUsed: [...car.compoundsUsed, fitted],
+      }
     }),
   }
 
@@ -50,7 +64,8 @@ export function projectPitNow(
     tuning: { ...config.tuning, overtaking: { ...config.tuning.overtaking, base: 0 } },
   }
   const rng = createRng(seed + 1)
-  for (let i = 0; i < horizonLaps * 3; i++) {
+  // Never past the flag: a step after it only adds time to every car.
+  for (let i = 0; i < horizonLaps * 3 && !isFinished(projState); i++) {
     projState = stepSector(projectionConfig, projState, rng)
   }
 
@@ -69,7 +84,7 @@ export function projectPitNow(
   let netState = projState
   if (extraLaps > 0) {
     const rng2 = createRng(seed + 2)
-    for (let i = 0; i < extraLaps * 3; i++) {
+    for (let i = 0; i < extraLaps * 3 && !isFinished(netState); i++) {
       netState = stepSector(projectionConfig, netState, rng2)
     }
   }

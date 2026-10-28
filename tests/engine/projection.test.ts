@@ -69,3 +69,45 @@ describe('projectPitNow', () => {
     expect(result.lapsProjected).toBe(config.tuning.projection.horizonLaps)
   })
 })
+
+// Two latent defects the 2.0 planning pass found (spec 2.0 ruling A4): the
+// projected stop never recorded its compound, and the fast-forward ran on past
+// the chequered flag. Together they priced a phantom two-compound penalty.
+describe('projectPitNow near the flag', () => {
+  /** Player on a no-stop plan, so the live car has only ever used M. */
+  function nearFlag(laps: number, mandatoryTwoCompound: boolean) {
+    const base = makeConfig()
+    const config: RaceConfig = {
+      ...base,
+      mandatoryTwoCompound,
+      strategies: [
+        { teamId: 'apex', startCompound: 'M', plannedStops: [] },
+        { teamId: 'mid',  startCompound: 'M', plannedStops: [{ lap: 10, compound: 'H' }] },
+      ],
+    }
+    let state = initRace(config)
+    const rng = createRng(1)
+    while (state.lap < laps) state = stepSector(config, state, rng)
+    return { config, state }
+  }
+
+  it('records the projected compound, so a stop at the end owes no two-compound penalty', () => {
+    const off = nearFlag(18, false)
+    const on = nearFlag(18, true)
+    expect(on.state.cars.find(c => c.isPlayer)!.compoundsUsed).toEqual(['M'])
+    const withRule = projectPitNow(on.config, on.state, 'H', 4242)
+    const withoutRule = projectPitNow(off.config, off.state, 'H', 4242)
+    expect(withRule).toEqual(withoutRule)
+  })
+
+  it('stops at the flag instead of simulating laps after it', () => {
+    const { config, state } = nearFlag(19, false)
+    const longer: RaceConfig = {
+      ...config,
+      tuning: { ...config.tuning, projection: { ...config.tuning.projection, horizonLaps: 10, netEstimateHorizonLaps: 30 } },
+    }
+    const a = projectPitNow(config, state, 'H', 99)
+    const b = projectPitNow(longer, state, 'H', 99)
+    expect({ ...b, lapsProjected: a.lapsProjected }).toEqual(a)
+  })
+})
