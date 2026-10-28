@@ -17,10 +17,9 @@ describe('sectorArcShares', () => {
 })
 
 describe('pipeline-authored circuits', () => {
-  // Guards the loops below against silently iterating nothing. Task 4 extends
-  // this list with mesa_roja.
+  // Guards the loops below against silently iterating nothing.
   it('registers the pipeline-authored circuits', () => {
-    expect([...V2_CIRCUITS]).toEqual(['lantern_quay'])
+    expect([...V2_CIRCUITS]).toEqual(['lantern_quay', 'mesa_roja'])
   })
   // Legacy circuits predate the rule (monsoon_bay is 0.11 off); it binds circuits
   // authored by docs/CIRCUIT-AUTHORING.md only. The canvas tweens a dot through a

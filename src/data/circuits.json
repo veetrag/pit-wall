@@ -211,6 +211,21 @@
       "characterNote": "Floodlit street circuit between the warehouses. Walls bite, safety cars are common, and passing is the second-hardest on the calendar.",
       "funFacts": ["Most safety cars of any circuit", "Joint-longest pit lane on the calendar", "Cooler night track — tyres last a little longer"],
       "atmosphere": "night"
+    },
+    "mesa_roja": {
+      "name": "Mesa Roja GP", "location": "Atacama Desert, Chile", "flag": "🇨🇱",
+      "laps": 52,
+      "sectorBase": [34.0, 25.0, 29.0],
+      "carSensitivity": [0.40, 0.32, 0.28],
+      "driverSensitivity": [0.30, 0.34, 0.36],
+      "overtakingFactor": [1.15, 0.5, 0.65],
+      "pitLaneTimeLoss": 21.0,
+      "rainProbability": 0.03, "weatherBias": "stable",
+      "timeOfDay": "day", "layout": "permanent", "tyreWear": 1.40,
+      "trackPath": "paths/mesa_roja.json",
+      "characterNote": "Sun-baked, abrasive desert circuit. Tyres fall apart fast: two stops is the baseline and three is never off the table.",
+      "funFacts": ["Highest tyre wear on the calendar", "It almost never rains", "Long straights reward a low wing"],
+      "atmosphere": "desert_day"
     }
   }
 }

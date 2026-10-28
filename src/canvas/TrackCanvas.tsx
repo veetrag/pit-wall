@@ -24,11 +24,12 @@ function hexToNum(hex: string): number {
 // R2: per-circuit atmosphere wash — a subtle two-stop gradient behind the
 // track plus a matching stroke tint, all within the dark-theme family so the
 // HUD stays readable on top (CLAUDE.md §6.1). Weather cools/darkens it live.
-const ATMOSPHERE_PALETTES: Record<string, { top: number; bottom: number; trackTint: number }> = {
+export const ATMOSPHERE_PALETTES: Record<string, { top: number; bottom: number; trackTint: number }> = {
   day:           { top: 0x141E38, bottom: 0x0A0E1A, trackTint: 0x3A4A70 },
   dusk:          { top: 0x241A38, bottom: 0x0A0E1A, trackTint: 0x4A3A66 },
   night:         { top: 0x060911, bottom: 0x020305, trackTint: 0x2A3350 },
   desert_night:  { top: 0x1E1420, bottom: 0x0A0E1A, trackTint: 0x5A3A2E },
+  desert_day:    { top: 0x2A1C14, bottom: 0x0A0E1A, trackTint: 0x6A4A30 },
   storm:         { top: 0x121A22, bottom: 0x05070A, trackTint: 0x2A3A3E },
   northern_dusk: { top: 0x0E2436, bottom: 0x0A0E1A, trackTint: 0x2A5A62 },
 }

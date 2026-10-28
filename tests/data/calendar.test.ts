@@ -197,10 +197,18 @@ describe('new circuits', () => {
 
   it('gives every circuit an atmosphere the canvas knows', () => {
     const { circuits } = loadGameData()
-    const LEGAL_ATMOSPHERES = ['day', 'dusk', 'night', 'desert_night', 'storm', 'northern_dusk']
+    const LEGAL_ATMOSPHERES = ['day', 'dusk', 'night', 'desert_night', 'desert_day', 'storm', 'northern_dusk']
     for (const [id, c] of Object.entries(circuits)) {
       if (c.atmosphere === undefined) continue
       expect(LEGAL_ATMOSPHERES, `${id} atmosphere`).toContain(c.atmosphere)
+    }
+  })
+
+  it('gives every atmosphere a canvas palette', async () => {
+    const { ATMOSPHERE_PALETTES } = await import('@canvas/TrackCanvas')
+    const { circuits } = loadGameData()
+    for (const [id, c] of Object.entries(circuits)) {
+      if (c.atmosphere) expect(ATMOSPHERE_PALETTES[c.atmosphere], `${id} ${c.atmosphere}`).toBeTruthy()
     }
   })
 

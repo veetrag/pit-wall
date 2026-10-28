@@ -66,3 +66,26 @@ describe('lantern_quay (night street circuit)', () => {
     expect(measureClearing({ circuitId: ID, seeds, advantage: 0.4 }).failureRate).toBeGreaterThanOrEqual(0.20)
   })
 })
+
+describe('mesa_roja (high-wear desert circuit)', () => {
+  const ID = 'mesa_roja'
+  beforeAll(() => {
+    const pro = measure([ID], 'pro')
+    // eslint-disable-next-line no-console
+    console.log(`MEASURE mesa_roja pro stops=${pro.meanStopsPerClassifiedCar} tyreDnf=${pro.tyreDnfPerCarRace} dpos=${pro.meanAbsPosChange} rho=${pro.gridFinishSpearman} pace=${pro.paceRankCorrelation} | SAMPLE stops=${sample().meanStopsPerClassifiedCar}`)
+  })
+
+  it('stays inside the per-circuit envelope at both difficulties', () => {
+    envelope(ID, measure([ID], 'pro'), 'pro')
+    envelope(ID, measure([ID], 'rookie'), 'rookie')
+  })
+  it('IS A HIGH-WEAR CIRCUIT: >= 2.0 stops per classified car and >= SAMPLE + 0.6', () => {
+    const pro = measure([ID], 'pro')
+    expect(pro.meanStopsPerClassifiedCar).toBeGreaterThanOrEqual(2.0)
+    expect(pro.meanStopsPerClassifiedCar).toBeGreaterThanOrEqual(sample().meanStopsPerClassifiedCar + 0.6)
+  })
+  it('wear creates decisions, not a puncture lottery: tyre DNFs <= 3% of car-races', () => {
+    expect(measure([ID], 'pro').tyreDnfPerCarRace).toBeLessThanOrEqual(0.03)
+    expect(measure([ID], 'rookie').tyreDnfPerCarRace).toBeLessThanOrEqual(0.03)
+  })
+})
