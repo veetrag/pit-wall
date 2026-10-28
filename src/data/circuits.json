@@ -223,7 +223,7 @@
       "rainProbability": 0.03, "weatherBias": "stable",
       "timeOfDay": "day", "layout": "permanent", "tyreWear": 1.40,
       "trackPath": "paths/mesa_roja.json",
-      "characterNote": "Sun-baked, abrasive desert circuit. Tyres fall apart fast: two stops is the baseline and three is never off the table.",
+      "characterNote": "Sun-baked, abrasive desert circuit. Tyres fall apart fast: three stops is the norm, and a two-stop is a gamble on the cliff.",
       "funFacts": ["Highest tyre wear on the calendar", "It almost never rains", "Long straights reward a low wing"],
       "atmosphere": "desert_day"
     }
