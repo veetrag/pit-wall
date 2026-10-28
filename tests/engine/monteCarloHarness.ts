@@ -62,6 +62,10 @@ export type Metrics = {
   slowStopsPerRace: number
   // 1.6 §4: 'red_flag' incidents per race.
   redFlagPerRace: number
+  // Spec 2026-10-24 §1.6 (circuit authoring). Stops made by cars still running
+  // at the flag, per such car; and tyre-failure retirements per car-race.
+  meanStopsPerClassifiedCar: number
+  tyreDnfPerCarRace: number
 }
 
 // Duplicated from src/state/raceStore.ts:53 and :57-62 (BRAIN_ORDER and
@@ -216,6 +220,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
   let weatherStops = 0
   let driverErrors = 0
   let carRaces = 0
+  let classifiedStops = 0, classifiedCars = 0, tyreDnfs = 0
   const finishSumByTeam = new Map<string, number>()
   const finishCountByTeam = new Map<string, number>()
 
@@ -249,6 +254,8 @@ export function runRaces(opts: HarnessOptions): Metrics {
     for (const car of state.cars) {
       carRaces++
       if (car.retired && car.retiredCause === 'mechanical') mechanicalDnfs++
+      if (car.retired && car.retiredCause === 'tyre') tyreDnfs++
+      if (!car.retired) { classifiedStops += car.pitsDone; classifiedCars++ }
       const g = grid.get(car.driverId)!
       absPosChanges.push(Math.abs(g - car.position))
       gs.push(g); fs.push(car.position)
@@ -298,6 +305,8 @@ export function runRaces(opts: HarnessOptions): Metrics {
     minOvertakeEvents: overtakeMin,
     mechanicalDnfPerCarRace: mechanicalDnfs / carRaces,
     crashesPerCarRace: crashes / carRaces,
+    meanStopsPerClassifiedCar: classifiedCars > 0 ? classifiedStops / classifiedCars : 0,
+    tyreDnfPerCarRace: tyreDnfs / carRaces,
     safetyCarsPerRace: safetyCars / races,
     driverErrorsPerRace: driverErrors / races,
     vscPerRace: vscs / races,

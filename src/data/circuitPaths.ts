@@ -27,3 +27,24 @@ export const CIRCUIT_PATHS: Record<string, CircuitPath> = {
   kaido:          pathKaido,
   altiplano:      pathAltiplano,
 }
+
+/**
+ * Circuits authored through docs/CIRCUIT-AUTHORING.md. The stricter geometry
+ * and sensitivity rules in tests/data/circuitGeometry.test.ts bind these only;
+ * the twelve legacy circuits predate them.
+ */
+export const V2_CIRCUITS: readonly string[] = []
+
+/** Each sector's share of the loop's polyline length (boundaries are point indices). */
+export function sectorArcShares(path: CircuitPath): [number, number, number] {
+  const pts = path.points
+  const seg: number[] = []
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!, b = pts[i]!
+    seg.push(Math.hypot((b[0] ?? 0) - (a[0] ?? 0), (b[1] ?? 0) - (a[1] ?? 0)))
+  }
+  const [b1, b2] = [path.sectorBoundaries[0] ?? 0, path.sectorBoundaries[1] ?? 0]
+  const sum = (from: number, to: number) => seg.slice(from, to).reduce((x, y) => x + y, 0)
+  const total = sum(0, seg.length)
+  return [sum(0, b1) / total, sum(b1, b2) / total, sum(b2, seg.length) / total]
+}
