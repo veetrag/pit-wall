@@ -1081,3 +1081,66 @@ Gates moved (each widened for 1.6.1 DNF tuning, values realistic):
 The golden byte-identity test pins the fixture's pre-1.6.1 tyre-failure and wet-deg values
 explicitly; the fixture was not re-captured. Four scenarios were re-authored (recovery_drive,
 cliff_edge, rain_call, red_flag_restart); see the commit log.
+
+## 17. 1.7 content: circuit traits, two new circuits, night wear deferred (2026-10-24)
+
+Spec: `docs/superpowers/specs/2026-10-24-v2-content-design.md` §1–§2. Traits are optional
+per-circuit multipliers read through `circuitTraits` (`src/engine/circuitTraits.ts`): `tyreWear`
+(effective tyre age), `crashRisk` (driver-error chance), `neutralisationRisk` (SC and VSC deploy
+chances, capped at 1), and `timeOfDay` (night multiplies wear by `timeOfDay.nightWearFactor`).
+Absent = 1 = the old arithmetic; no rng draw was added; the golden race is unchanged. Every
+circuit now carries `timeOfDay` (night: harbour_lights, kaido, sol_desert, lantern_quay; dusk:
+bengaluru, grand_savane, costa_verde, aurora; day: the rest), tied to `atmosphere` by a test.
+No `_regressionBands` band moved in 1.7.
+
+The full-calendar Monte-Carlo gate samples the career calendar (the twelve original circuits,
+`V2_CIRCUITS` excluded), not every circuit in the data (ruling R7).
+
+**Lantern Quay** (night street circuit). Final calibration: `crashRisk 1.3`,
+`neutralisationRisk 1.5`, overtakingFactor [0.45, 0.15, 0.25]. The spec proposed crashRisk 1.6;
+at 1.6 pro grid-finish rho measured 0.466, under the 0.50 per-circuit floor. The brief's lever
+ladder had no rung for that case, so a controller ruling extended it (crashRisk down to 1.2,
+neutralisationRisk up to 2.0, 0.1 steps, pick the passing pair with the most rho headroom).
+1.3 / 1.5 and 1.2 / 1.6 were the only passing pairs; 1.3 / 1.5 won on headroom. Measured, n=120:
+
+    MEASURE lantern_quay pro sc=0.925 crash=0.0942 dpos=4.4525 rho=0.5026 pace=0.9636 | SAMPLE sc=0.408
+    rookie rho 0.518
+
+**Known-fragile gate:** pro rho 0.5026 sits 0.003 above its 0.50 floor, well inside the ~±0.03
+seed noise at n=120. The gate is deterministic, so it does not flake, but any change to crashes,
+safety cars or wear at night circuits can tip it. It was not re-measured under night wear,
+because night wear was not shipped (below).
+
+**Mesa Roja** (desert day circuit). `tyreWear 1.40` (spec 1.35, raised one lever step), `laps 52`.
+Measured, n=120:
+
+    mesa_roja pro    dpos 3.563 rho 0.648 pace 0.988 winners 5 crash 0.075 tyreDnf 0.000 stops 3.386
+    mesa_roja rookie dpos 3.368 rho 0.673 pace 0.952 winners 4 crash 0.074 tyreDnf 0.000 stops 2.770
+
+3.39 stops per classified car at pro (SAMPLE 2.67), so **three stops is the norm** there and the
+circuit copy says so. Tyre-failure DNFs 0. Passing is never blocked for a car 0.4 s/lap faster
+(clearing failure 0.000, in line with the easiest circuits); not gated.
+
+**Night wear: measured and deferred.** 1.7 ships `nightWearFactor 1.0`, so night is presentation
+only. The ladder 0.94 → 0.96 → 0.98 was measured with `tests/engine/monteCarlo.test.ts`, and
+every value failed one gate: "apex remains the strongest team over the full calendar", which
+needs apex's win share to beat the next team's by more than 0.03 (n=720).
+
+| factor | full calendar n=720 | apex margin | gate |
+|---|---|---|---|
+| 1.00 | apex 42.5%, meridian 38.5% | 4.0pp | pass |
+| 0.94 | apex 41.8%, meridian 39.3% | 2.5pp | fail |
+| 0.96 | apex 41.9%, meridian 39.4% | 2.5pp | fail |
+| 0.98 | apex 41.5%, meridian 39.7% | 1.8pp | fail |
+
+Apex stayed top team at every factor. The other 13 monteCarlo tests passed at every factor.
+The margin does not shrink as the factor moves away from 1 (0.98 is the worst result), and the
+swing is 1.5–2.2pp, while one win share at n=720 has a standard error of ~1.8pp. Our read: the
+gate's 1pp of headroom is used up by any re-roll of the night-circuit races; this does not look
+like night wear systematically favouring meridian. Veet's options:
+(a) re-baseline the gate (a band edit), (b) first measure the margin over several seed bases, or
+(c) no night wear.
+
+Thin margins seen during that run, all passing: SAMPLE safety cars 0.408/race at 1.0 against the
+0.40 floor (0.558 at 0.94); pace-rank correlation 0.915 at 0.94 against its 0.90 gate (0.952 at
+1.0, 0.96 and 0.98). No scenario was re-authored, because the factor did not change.

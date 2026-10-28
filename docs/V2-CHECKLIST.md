@@ -525,3 +525,14 @@ compact rows; new tips shown once to returning players; the what-if median and
 range read-out and +-10 laps; stats counting Grand Prix only (except sprint
 record and stint); offers beatBy 2 / stepUp 2 on authored + ladder rating,
 STAY the default.
+
+### 1.7 Circuits & Night (spec 2026-10-24 slice A)
+
+Phone pass: Lantern Quay at 1x (SCs frequent, not every lap; S1 the only real
+passing place; floodlights legible; 60fps); Mesa Roja (three stops the norm,
+two a gamble; is passing too easy?); pills on setup, menu, qualifying; extra
+circuits on the setup strip; career BEST BY CIRCUIT shows the two new rows.
+Calls for Veet: Lantern Quay crashRisk 1.3 / neutralisationRisk 1.5 (alt
+1.2 / 1.6); Mesa Roja tyreWear 1.40, 52 laps; night wear deferred at 1.0 —
+re-baseline the apex gate, measure over several seed bases, or drop it
+(MODEL_SPEC §17).

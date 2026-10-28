@@ -114,7 +114,7 @@ export function aiDecision(
 
   const spec = config.compounds[car.compound]
   const driver = config.drivers.find(d => d.id === car.driverId)!
-  const cliffFrac = spec ? tyreCliffFraction(spec, effectiveTyreAge(car, driver, weatherState, config.tuning)) : 0
+  const cliffFrac = spec ? tyreCliffFraction(spec, effectiveTyreAge(car, driver, weatherState, config)) : 0
   const remainingLaps = state.totalLaps - state.lap
   // Use pitsDone as index so dynamic early pits don't cause a second planned stop later
   const nextStop = car.strategy.plannedStops[car.pitsDone]

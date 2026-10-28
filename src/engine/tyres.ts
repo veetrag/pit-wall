@@ -1,3 +1,4 @@
+import { circuitTraits, type TyreContext } from './circuitTraits'
 import type { CarState, Compound, CompoundSpec, DriverSpec, TuningConstants, TyreAllocation, WeatherState } from './types'
 
 // Formula: offset + lin*age + pen * max(0, age - cliff)^2
@@ -21,8 +22,9 @@ export function effectiveTyreAge(
   car: Pick<CarState, 'tyreAge' | 'paceMode' | 'compound' | 'lapsInDirtyAir'>,
   driver: Pick<DriverSpec, 'facets'>,
   weatherState: WeatherState,
-  tuning: TuningConstants,
+  ctx: TyreContext,
 ): number {
+  const tuning = ctx.tuning
   const paceDegMultiplier = tuning.paceModes[car.paceMode].degMultiplier
   // Every compound family has a wetDegMultiplier entry now (dry.DRY = 1.0, a
   // no-op for the common case) so dry-compound tyres left on in the wet also
@@ -37,6 +39,7 @@ export function effectiveTyreAge(
   const cappedDirtyAirLaps = Math.min(car.lapsInDirtyAir, tuning.traffic.dirtyAirDegCapLaps)
   const dirtyAirMult = 1 + cappedDirtyAirLaps * tuning.traffic.dirtyAirDegBonus
   return car.tyreAge * tyreManagementFactor * paceDegMultiplier * wetDegMult * dirtyAirMult
+    * circuitTraits(ctx.circuit, tuning).wear
 }
 
 // Effectively-infinite sets — used when a RaceConfig doesn't specify

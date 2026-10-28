@@ -24,14 +24,14 @@ import { gaussianPair } from './rng'
  * deliberately does not touch `terminalFraction` -- a mistake, once made, is no
  * less likely to end the race for a consistent driver.
  */
-export function driverErrorChancePerSector(consistency: number, tuning: TuningConstants): number {
+export function driverErrorChancePerSector(consistency: number, tuning: TuningConstants, crashRisk = 1): number {
   const inc = tuning.incidents
   const relief = (consistency / 100) * inc.consistencyReliefMax
-  return (inc.driverErrorPerLap / 3) * (1 - relief)
+  return (inc.driverErrorPerLap / 3) * (1 - relief) * crashRisk
 }
 
-export function rollDriverError(consistency: number, tuning: TuningConstants, rng: Rng): boolean {
-  const chance = driverErrorChancePerSector(consistency, tuning)
+export function rollDriverError(consistency: number, tuning: TuningConstants, rng: Rng, crashRisk = 1): boolean {
+  const chance = driverErrorChancePerSector(consistency, tuning, crashRisk)
   return chance > 0 && rng() < chance
 }
 
@@ -60,9 +60,10 @@ export function rollSafetyCarDeployment(
   cause: 'crash' | 'mechanical',
   tuning: TuningConstants,
   rng: Rng,
+  risk = 1,
 ): boolean {
   const sc = tuning.incidents.safetyCar
-  const chance = cause === 'crash' ? sc.crashDeployChance : sc.mechanicalDeployChance
+  const chance = Math.min(1, (cause === 'crash' ? sc.crashDeployChance : sc.mechanicalDeployChance) * risk)
   return chance > 0 && rng() < chance
 }
 
@@ -131,9 +132,10 @@ export function rollVscDeployment(
   cause: 'crash' | 'mechanical',
   tuning: TuningConstants,
   rng: Rng,
+  risk = 1,
 ): boolean {
   const v = tuning.incidents.vsc
-  const chance = cause === 'crash' ? v.crashDeployChance : v.mechanicalDeployChance
+  const chance = Math.min(1, (cause === 'crash' ? v.crashDeployChance : v.mechanicalDeployChance) * risk)
   return chance > 0 && rng() < chance
 }
 

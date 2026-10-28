@@ -260,6 +260,8 @@ export interface TuningConstants {
     aiNoise: number
     seedOffset: number
   }
+  /** Spec 2026-10-24 §2.2: a cooler night track wears tyres less. 1 = no effect. */
+  timeOfDay: { _note?: string; nightWearFactor: number }
   _regressionBands?: Record<string, unknown>
 }
 
@@ -287,6 +289,16 @@ export interface CircuitSpec {
   flag?: string
   funFacts?: string[]
   atmosphere?: string
+  /** Spec 2026-10-24 §2.1. Absent = 'day'. Only 'night' has an engine effect (tuning.timeOfDay). */
+  timeOfDay?: 'day' | 'dusk' | 'night'
+  /** Presentation and the calendar test only. Absent = 'permanent'. */
+  layout?: 'permanent' | 'street'
+  /** Multiplies effective tyre age (spec §1.3). Absent = 1, exactly the old arithmetic. */
+  tyreWear?: number
+  /** Multiplies the driver-error chance. Absent = 1. */
+  crashRisk?: number
+  /** Multiplies the SC and VSC deploy chances (capped at 1). Absent = 1. */
+  neutralisationRisk?: number
 }
 
 export interface DriverFacets {

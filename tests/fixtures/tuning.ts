@@ -115,5 +115,7 @@ export function makeDeterministicTuning(overrides: DeepPartial<TuningConstants> 
     ai: { weatherConfirmLaps: 1, weatherMinLapsLeft: 0 },
     // No slow stops in the golden race: at 0 pitStopTime is the pre-1.6 formula.
     pit: { slowStopChance: 0 },
+    // The golden race predates night wear (spec 2026-10-24 §2.2).
+    timeOfDay: { nightWearFactor: 1 },
   }, overrides) as DeepPartial<TuningConstants>)
 }

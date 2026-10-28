@@ -12,6 +12,7 @@ vi.mock('@capacitor/preferences', () => ({
 
 import { CIRCUIT_ORDER } from '@state/raceStore'
 import { loadGameData } from '@data/validators'
+import { circuitTraitIds } from '@ui/kit'
 import { MainMenu } from '@ui/MainMenu'
 import { useSeasonStore } from '@state/seasonStore'
 import { SAVE_KEY, SAVE_VERSION, type SeasonSnapshot } from '@state/seasonPersistence'
@@ -40,6 +41,16 @@ describe('MainMenu — Race Day Bold', () => {
     expect(screen.getByText(/P2 · 43 pts/)).toBeTruthy()
     expect(screen.getByRole('img', { name: /Apex Racing car/ })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
+  })
+
+  it('renders no empty trait wrapper for a circuit without traits', async () => {
+    expect(circuitTraitIds('veloce')).toEqual([])
+    mem.set(SAVE_KEY, JSON.stringify(SAVED))
+    const { container } = render(<MainMenu />)
+    await screen.findByText(/ROUND 4 OF 12/)
+    const empties = [...container.querySelectorAll('span')].filter(
+      el => el.childElementCount === 0 && el.textContent === '' && (el as HTMLElement).style.flexWrap === 'wrap')
+    expect(empties).toHaveLength(0)
   })
 
   it('draws the car with an ink body on the team band when a save exists', async () => {

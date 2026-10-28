@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
 import { useCareerStore } from '@state/careerStore'
-import { CIRCUIT_ORDER } from '@state/raceStore'
+import { PICKABLE_CIRCUITS } from '@state/raceStore'
 import { careerStats, type RecordLine } from '@state/careerStats'
 import { loadGameData } from '@data/validators'
 import { ScreenFrame, ScreenHeader, StatTile, StandingRow, TyreChip, Pill, snapIn, useReducedMotion } from '@ui/kit'
@@ -29,7 +29,7 @@ export function CareerStats() {
   const exit = useSeasonStore(s => s.exitCareerStats)
   const raceLog = useCareerStore(s => s.raceLog)
   const reduced = useReducedMotion()
-  const s = useMemo(() => careerStats(raceLog, CIRCUIT_ORDER), [raceLog])
+  const s = useMemo(() => careerStats(raceLog, PICKABLE_CIRCUITS), [raceLog])
   let i = 0
   const next = () => snapIn(reduced, i++)
 

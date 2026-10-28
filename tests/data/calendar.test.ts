@@ -158,22 +158,19 @@ describe('new circuits', () => {
   // every circuit, so Kaido was not in fact harder to pass on than Veloce in
   // play), and the layer-2 traffic cap divides by the same field. The ordering
   // asserted here is therefore the ordering the sim now races to.
-  it('makes Kaido the hardest non-street circuit to overtake on', () => {
+  // Spec 2026-10-24 ruling R8: the old test's own message asked for this update
+  // when a deliberately harder circuit arrived. Street circuits are the hardest
+  // places to pass; Kaido is the hardest PERMANENT circuit.
+  it('makes every street circuit harder to pass on than every permanent one, and Kaido the hardest permanent', () => {
     const { circuits } = loadGameData()
     const total = (id: string) => circuits[id]!.overtakingFactor.reduce((a, b) => a + b, 0)
-    expect(total('kaido')).toBeGreaterThan(total('harbour_lights'))
-    for (const id of Object.keys(circuits)) {
-      if (id === 'kaido' || id === 'harbour_lights') continue
-      expect(
-        total(id),
-        `${id} overtakingFactor total (${total(id)}) must exceed kaido's (${total('kaido')}). ` +
-        'Invariant: harbour_lights is the hardest circuit to overtake on, kaido the second ' +
-        'hardest, and every other circuit is easier than both. If a new circuit is ' +
-        'deliberately harder to pass on than kaido, update this test (and kaido\'s ' +
-        'characterNote, which claims the runner-up spot) rather than raising the new ' +
-        "circuit's numbers to satisfy it.",
-      ).toBeGreaterThan(total('kaido'))
+    const street = Object.keys(circuits).filter(id => circuits[id]!.layout === 'street')
+    const permanent = Object.keys(circuits).filter(id => circuits[id]!.layout !== 'street')
+    expect(street.sort()).toEqual(['harbour_lights', 'lantern_quay'])
+    for (const s of street) for (const p of permanent) {
+      expect(total(s), `${s} (${total(s)}) must be harder than ${p} (${total(p)})`).toBeLessThan(total(p))
     }
+    for (const p of permanent) if (p !== 'kaido') expect(total(p), p).toBeGreaterThan(total('kaido'))
   })
 
   it('registers a canvas track path for every circuit in the order', () => {
@@ -200,10 +197,18 @@ describe('new circuits', () => {
 
   it('gives every circuit an atmosphere the canvas knows', () => {
     const { circuits } = loadGameData()
-    const LEGAL_ATMOSPHERES = ['day', 'dusk', 'night', 'desert_night', 'storm', 'northern_dusk']
+    const LEGAL_ATMOSPHERES = ['day', 'dusk', 'night', 'desert_night', 'desert_day', 'storm', 'northern_dusk']
     for (const [id, c] of Object.entries(circuits)) {
       if (c.atmosphere === undefined) continue
       expect(LEGAL_ATMOSPHERES, `${id} atmosphere`).toContain(c.atmosphere)
+    }
+  })
+
+  it('gives every atmosphere a canvas palette', async () => {
+    const { ATMOSPHERE_PALETTES } = await import('@canvas/TrackCanvas')
+    const { circuits } = loadGameData()
+    for (const [id, c] of Object.entries(circuits)) {
+      if (c.atmosphere) expect(ATMOSPHERE_PALETTES[c.atmosphere], `${id} ${c.atmosphere}`).toBeTruthy()
     }
   })
 
@@ -216,6 +221,31 @@ describe('new circuits', () => {
       const b = circuits[CIRCUIT_ORDER[i + 1]!]!
       const bothWet = (a.rainProbability ?? 0) >= RAIN_THRESHOLD && (b.rainProbability ?? 0) >= RAIN_THRESHOLD
       expect(bothWet, `${CIRCUIT_ORDER[i]} -> ${CIRCUIT_ORDER[i + 1]}`).toBe(false)
+    }
+  })
+
+  it('gives every circuit a timeOfDay that agrees with its atmosphere', () => {
+    const { circuits } = loadGameData()
+    const NIGHT_ATMOS = ['night', 'desert_night']
+    for (const [id, c] of Object.entries(circuits)) {
+      expect(c.timeOfDay, `${id} timeOfDay`).toBeDefined()
+      expect(c.timeOfDay === 'night', `${id}: night atmosphere <=> night race`).toBe(NIGHT_ATMOS.includes(c.atmosphere ?? 'day'))
+    }
+  })
+  it('keeps bengaluru (the golden race) free of engine-active traits', () => {
+    const c = loadGameData().circuits['bengaluru']!
+    expect(c.timeOfDay).not.toBe('night')
+    expect(c.tyreWear ?? 1).toBe(1); expect(c.crashRisk ?? 1).toBe(1); expect(c.neutralisationRisk ?? 1).toBe(1)
+  })
+
+  it('makes no cool-track tyre-wear claim while nightWearFactor is 1', () => {
+    const { circuits, tuning } = loadGameData()
+    expect(tuning.timeOfDay.nightWearFactor).toBe(1)
+    const re = /cool(er)?\b.*(track|tyre)|tyres? last (a little )?longer/i
+    for (const [id, c] of Object.entries(circuits)) {
+      for (const text of [c.characterNote ?? '', ...(c.funFacts ?? [])]) {
+        expect(text, id).not.toMatch(re)
+      }
     }
   })
 })

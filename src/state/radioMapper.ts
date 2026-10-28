@@ -160,7 +160,7 @@ export function processRadioTick(
   // 1. Tyre cliff (high priority, fire once per stint)
   if (compound) {
     const driver = config.drivers.find(d => d.id === player.driverId)
-    const effAge = driver ? effectiveTyreAge(player, driver, state.weatherState, config.tuning) : player.tyreAge
+    const effAge = driver ? effectiveTyreAge(player, driver, state.weatherState, config) : player.tyreAge
     const cliffFrac = tyreCliffFraction(compound, effAge)
     if (cliffFrac >= 0.75 && !radio.cliffWarned && player.tyreAge > 5) {
       tryPush('tyre_cliff', 2, {}, pushAlert)

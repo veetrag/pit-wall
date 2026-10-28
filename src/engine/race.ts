@@ -6,6 +6,7 @@ import { computeSectorTime } from './lapModel'
 import { wingOvertakeFactor } from './setup'
 import { openingTimeline } from './weather'
 import { aiDecision } from './strategy'
+import { circuitTraits } from './circuitTraits'
 import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, resolveAllocatedCompound, effectiveTyreAge, tyreCliffFraction } from './tyres'
 import {
   rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
@@ -143,6 +144,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   // it, and never carry it forward. Destructuring an absent key leaves the
   // remaining keys -- and their order -- exactly as before (byteIdentity).
   const { redFlagTyre, ...prevState } = state
+  const traits = circuitTraits(config.circuit, config.tuning)
   const sector = state.sector as SectorIndex
   const newSectorResults = [...state.sectorResults]
   const newOvertakeEvents: OvertakeEvent[] = [...state.overtakeEvents]
@@ -168,7 +170,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     const driver = config.drivers.find(d => d.id === car.driverId)!
     const spec = config.compounds[car.compound]
     if (spec) {
-      const effAge = effectiveTyreAge(car, driver, state.weatherState, config.tuning)
+      const effAge = effectiveTyreAge(car, driver, state.weatherState, config)
       const cliffFrac = tyreCliffFraction(spec, effAge)
       const tf = config.tuning.tyreFailure
       const over = cliffFrac - tf.cliffFractionThreshold
@@ -216,7 +218,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     // has returned, so it does NOT appear in SectorResult.sectorTime. A UI that
     // needs to show it reads the IncidentEvent log instead.
     if (!updated.retired) {
-      if (rollDriverError(driver.facets.consistency, config.tuning, rng)) {
+      if (rollDriverError(driver.facets.consistency, config.tuning, rng, traits.crashRisk)) {
         if (rollErrorIsTerminal(config.tuning, rng)) {
           updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'crash' }
           newIncidents.push({
@@ -279,7 +281,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       safetyCar = { deployedLap: state.lap, lapsRemaining: 0, cause, kind: 'red' }
       newIncidents.push({ lap: state.lap, sector, kind: 'red_flag', driverId: null, timeLoss: null })
     } else if (activeKind !== 'sc') {
-      if (scDeployedCount < scCfg.maxPerRace && rollSafetyCarDeployment(cause, config.tuning, rng)) {
+      if (scDeployedCount < scCfg.maxPerRace && rollSafetyCarDeployment(cause, config.tuning, rng, traits.neutralisationRisk)) {
         if (activeKind === 'vsc') {
           // Logged so every period in the incident log is closed: the lap chart
           // reads VSC and SC bands straight from these events.
@@ -289,7 +291,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         newIncidents.push({
           lap: state.lap, sector, kind: 'safety_car_deployed', driverId: null, timeLoss: null,
         })
-      } else if (activeKind === null && vscDeployedCount < vscCfg.maxPerRace && rollVscDeployment(cause, config.tuning, rng)) {
+      } else if (activeKind === null && vscDeployedCount < vscCfg.maxPerRace && rollVscDeployment(cause, config.tuning, rng, traits.neutralisationRisk)) {
         safetyCar = { deployedLap: state.lap, lapsRemaining: rollVscDuration(config.tuning, rng), cause, kind: 'vsc' }
         newIncidents.push({
           lap: state.lap, sector, kind: 'vsc_deployed', driverId: null, timeLoss: null,

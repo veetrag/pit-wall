@@ -340,7 +340,7 @@ export function PitButton() {
   const player = raceState?.cars.find(c => c.isPlayer)
   const spec = player && config ? config.compounds[player.compound] : undefined
   const driver = player && config ? config.drivers.find(d => d.id === player.driverId) : undefined
-  const effAge = spec && player && driver && raceState ? effectiveTyreAge(player, driver, raceState.weatherState, config!.tuning) : player?.tyreAge ?? 0
+  const effAge = spec && player && driver && raceState ? effectiveTyreAge(player, driver, raceState.weatherState, config!) : player?.tyreAge ?? 0
   const fraction = spec && player ? tyreCliffFraction(spec, effAge) : 0
   // The pit lane is closed under a red flag; the free change comes on the card.
   const red = neutralisationKind(raceState?.safetyCar ?? null) === 'red'

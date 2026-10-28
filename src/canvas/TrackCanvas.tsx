@@ -5,6 +5,7 @@ import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { CIRCUIT_PATHS } from '@data/circuitPaths'
 import { TEAM_HEX } from './teamHex'
+import { floodlightPoints } from './floodlights'
 import type { RaceState, RaceConfig, WeatherState } from '@engine/types'
 
 type Point = [number, number]
@@ -24,11 +25,12 @@ function hexToNum(hex: string): number {
 // R2: per-circuit atmosphere wash — a subtle two-stop gradient behind the
 // track plus a matching stroke tint, all within the dark-theme family so the
 // HUD stays readable on top (CLAUDE.md §6.1). Weather cools/darkens it live.
-const ATMOSPHERE_PALETTES: Record<string, { top: number; bottom: number; trackTint: number }> = {
+export const ATMOSPHERE_PALETTES: Record<string, { top: number; bottom: number; trackTint: number }> = {
   day:           { top: 0x141E38, bottom: 0x0A0E1A, trackTint: 0x3A4A70 },
   dusk:          { top: 0x241A38, bottom: 0x0A0E1A, trackTint: 0x4A3A66 },
   night:         { top: 0x060911, bottom: 0x020305, trackTint: 0x2A3350 },
   desert_night:  { top: 0x1E1420, bottom: 0x0A0E1A, trackTint: 0x5A3A2E },
+  desert_day:    { top: 0x2A1C14, bottom: 0x0A0E1A, trackTint: 0x6A4A30 },
   storm:         { top: 0x121A22, bottom: 0x05070A, trackTint: 0x2A3A3E },
   northern_dusk: { top: 0x0E2436, bottom: 0x0A0E1A, trackTint: 0x2A5A62 },
 }
@@ -266,6 +268,8 @@ function drawTrack(
   }
 }
 
+const FLOODLIGHT = 0xFFFBE6 // mirrors --floodlight
+
 // R2: full-canvas two-stop gradient wash behind the track, cooling/darkening
 // as weather worsens. Redrawn only when atmosphere/weather actually change,
 // not per frame.
@@ -402,6 +406,13 @@ export function TrackCanvas() {
         const redrawAtmosphere = (weatherState: WeatherState) => {
           const palette = ATMOSPHERE_PALETTES[atmosphere] ?? ATMOSPHERE_PALETTES['day']!
           drawAtmosphere(atmosphereGfx, cw, ch, atmosphere, weatherState)
+          if (initConfig?.circuit?.timeOfDay === 'night') {
+            for (const f of floodlightPoints(arcTable!.totalLen, 8)) {
+              const [fx, fy] = transform!(sampleAt(arcTable!, f))
+              atmosphereGfx.circle(fx, fy, 46).fill({ color: FLOODLIGHT, alpha: 0.07 })
+              atmosphereGfx.circle(fx, fy, 22).fill({ color: FLOODLIGHT, alpha: 0.06 })
+            }
+          }
           drawTrack(trackGfx, arcTable!, transform!, palette.trackTint, weatherState === 'WET' ? 0.35 : weatherState === 'DAMP' ? 0.15 : 0)
           // Reduced motion: static wet tint instead of animated rain (R4)
           wetOverlayGfx.clear()

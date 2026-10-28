@@ -9,7 +9,7 @@ import { loadGameData } from '@data/validators'
 import { openingTimeline, type WeatherState } from '@engine/index'
 import type { Compound, AttackLevel, QualifyingLap } from '@engine/index'
 import { useUiTap } from '@hooks/useUiTap'
-import { ScreenFrame, ScreenHeader, Pill, TyreChip, KitButton, StandingRow, TYRE_COLOR, TYRE_NAME, PRESS } from '@ui/kit'
+import { ScreenFrame, ScreenHeader, Pill, TraitPills, TyreChip, KitButton, StandingRow, TYRE_COLOR, TYRE_NAME, PRESS } from '@ui/kit'
 
 const GAME_DATA = loadGameData()
 
@@ -131,6 +131,7 @@ export function Qualifying() {
           </Pill>
           {/* One session sets the grid for the sprint AND the Grand Prix. */}
           {isSprintRound(raceIndex) && <Pill tone="dusk">SPRINT WEEKEND</Pill>}
+          <TraitPills circuitId={circuitId} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { runRaces } from './monteCarloHarness'
 import { loadGameData } from '@data/validators'
+import { V2_CIRCUITS } from '@data/circuitPaths'
 import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
 
@@ -63,7 +64,13 @@ describe('Monte-Carlo regression', () => {
   // closest, apex 42.5% to vortex 31.5%) -- which is the sensitivity feature
   // working, not eroding.
   it('apex remains the strongest team over the full calendar', () => {
-    const circuitIds = Object.keys(loadGameData().circuits)
+    // Ruling R7 (spec 2026-10-24): the career calendar, not every circuit in the
+    // data. Adding content must not change this balance gate's sample. The
+    // calendar (CIRCUIT_ORDER) lives in a Zustand store an engine test must not
+    // import, so the pipeline-authored circuits are filtered out instead: this
+    // keeps the original circuits.json key order, so each circuit keeps its
+    // seed pairing and the race sample is byte-for-byte the same as before.
+    const circuitIds = Object.keys(loadGameData().circuits).filter(id => !V2_CIRCUITS.includes(id))
     expect(circuitIds.length).toBe(12)
     const m = runRaces({ races: 720, circuitIds })
     const share = m.winShareByTeam
@@ -75,7 +82,7 @@ describe('Monte-Carlo regression', () => {
     expect(m.topTeamId, `n=${m.races} races over all 12 circuits`).toBe('apex')
     // 1.6.1 DNF tuning: gate lowered 0.08 -> 0.03; measured apex 42.5% over
     // meridian 38.5% (4.0pp) once fewer tyre failures stopped costing meridian.
-    // FAILS IF the margin collapses to under a third of the measured 25.1pp --
+    // FAILS IF the margin falls to under 3pp of the measured 4.0pp --
     // i.e. a change that genuinely reorders the top of the grid, rather than one
     // that reshuffles which circuits favour whom.
     expect(share['apex']! - second![1], `apex over ${second![0]}`).toBeGreaterThan(0.03)
