@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore, TOTAL_RACES, raceHeadline, addResultsToStandings } from '@state/seasonStore'
@@ -13,6 +13,7 @@ import { HeroBand, KitButton, Pill, liveryOf, snapIn, useCountUp, useReducedMoti
 import { useDebriefStore } from '@state/debriefStore'
 import { useCareerStore } from '@state/careerStore'
 import { ShareButton } from './share/ShareButton'
+import { MakeStartSheet } from './MakeStartSheet'
 import { buildShareData } from './share/shareCard'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
@@ -105,6 +106,11 @@ export function RaceResult() {
   const reduced = useReducedMotion()
   const data = useMemo(() => loadGameData(), [])
   const [showFull, setShowFull] = useState(false)
+  const job = useDebriefStore(s => s.job)
+  const [sheet, setSheet] = useState(false)
+  const makeRef = useRef<HTMLDivElement>(null)
+  // Focus returns to MAKE A START when the sheet closes.
+  const closeSheet = () => { setSheet(false); requestAnimationFrame(() => makeRef.current?.querySelector('button')?.focus()) }
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
   const seasonNumber = useCareerStore(s => s.seasonNumber)
@@ -388,7 +394,13 @@ export function RaceResult() {
             MENU
           </KitButton>
         </div>
+        {job?.recipe && (
+          <div ref={makeRef}>
+            <KitButton variant="secondary" size="sm" style={{ width: '100%' }} onClick={() => setSheet(true)}>MAKE A START</KitButton>
+          </div>
+        )}
       </div>
+      {sheet && job?.recipe && <MakeStartSheet recipe={job.recipe} calls={job.calls} onClose={closeSheet} />}
     </ScreenFrame>
   )
 }

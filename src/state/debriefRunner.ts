@@ -1,12 +1,13 @@
 import type { RaceConfig } from '@engine/types'
 import type { DebriefResult } from '@engine/types'
 import type { PlayerCall } from '@engine/playerCalls'
+import type { RaceRecipe } from './raceRecipe'
 import { judgeCalls, whatIf, type WhatIfEdit, type WhatIfResult } from '@engine/debrief'
 import { lapHistory, type LapHistory } from '@engine/raceHistory'
 
 export type DebriefMessage = { type: 'debrief'; job: DebriefJob } | { type: 'whatIf'; job: DebriefJob; edit: WhatIfEdit }
 
-export interface DebriefJob { config: RaceConfig; seed: number; calls: PlayerCall[] }
+export interface DebriefJob { config: RaceConfig; seed: number; calls: PlayerCall[]; recipe?: RaceRecipe }
 export interface DebriefHandle { cancel(): void }
 export interface DebriefRunner {
   start(job: DebriefJob, on: {

@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react'
 import { useUiTap } from '@hooks/useUiTap'
-export function Tabs<T extends string>({ tabs, value, onChange, ariaLabel }: {
+export function Tabs<T extends string>({ tabs, value, onChange, ariaLabel, idPrefix }: {
+  idPrefix?: string
   tabs: { value: T; label: string }[]; value: T; onChange: (v: T) => void; ariaLabel: string
 }) {
   const uiTap = useUiTap()
@@ -20,7 +21,8 @@ export function Tabs<T extends string>({ tabs, value, onChange, ariaLabel }: {
       {tabs.map(t => {
         const on = t.value === value
         return (
-          <button key={t.value} type="button" role="tab" aria-selected={on} tabIndex={on ? 0 : -1}
+          <button key={t.value} type="button" role="tab" aria-selected={on}
+            {...(idPrefix ? { id: `${idPrefix}-tab-${t.value}`, 'aria-controls': `${idPrefix}-panel` } : {})} tabIndex={on ? 0 : -1}
             className={`${on ? 'slant-sm ' : ''}kit-focus`} onClick={() => { uiTap(); onChange(t.value) }}
             style={{ flex: 1, minHeight: 48, padding: '0 14px', border: 'none', cursor: 'pointer',
               background: on ? 'var(--white)' : 'transparent', color: on ? 'var(--ink)' : 'var(--lilac)',

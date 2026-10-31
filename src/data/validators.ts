@@ -17,7 +17,7 @@ const DifficultyProfileSchema = z.object({
   pitCrewConsistency: z.number(),
 })
 
-const TuningSchema = z.object({
+export const TuningSchema = z.object({
   carPerformance: z.object({ deltaPerRating: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
   driverPerformance: z.object({ deltaPerSkill: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
   fuel: z.object({ effectPerLap: z.number() }),
@@ -299,6 +299,23 @@ const TuningSchema = z.object({
     redFlagPerRace: z.tuple([z.number(), z.number()]),
     _note: z.string(),
   }).optional(),
+  daily: z.object({
+    _note: z.string().optional(),
+    rulesVersion: z.number().int().min(1),
+    lapWindow: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]).refine(w => w[0] <= w[1], 'lapWindow must be [lo, hi]'),
+    positionRange: z.tuple([z.number().int().min(1), z.number().int().min(1)]).refine(r => r[0] <= r[1], 'positionRange must be [lo, hi]'),
+    maxSearchRaces: z.number().int().min(1).max(100),
+    keepDays: z.number().int().min(1).max(366),
+  }),
+  custom: z.object({
+    _note: z.string().optional(),
+    minLaps: z.number().int().min(1),
+    weather: z.object({
+      changeable: z.object({ rainScale: z.number().min(1), rainMin: z.number().min(0).max(1), rainMax: z.number().min(0).max(1), bias: z.enum(['stable', 'variable', 'wet', 'mixed', 'showery', 'stormy']) }),
+      wet: z.object({ rainProbability: z.number().min(0).max(1), bias: z.enum(['stable', 'variable', 'wet', 'mixed', 'showery', 'stormy']) }),
+    }),
+    sprintEvery: z.object({ few: z.number().int().min(2), many: z.number().int().min(2) }),
+  }),
 }).passthrough()
 
 const CompoundEntrySchema = z.object({
@@ -466,6 +483,10 @@ const ScenarioSchema = z.object({
   startLap: z.number().int().positive(),
   // Spec 1.6 §8: a sprint scenario runs the sprint distance (buildScenarioConfig).
   sprint: z.boolean().optional(),
+  // Spec 2026-10-24 §3: the historic pack. Absent pack = 'core'.
+  pack: z.enum(['core', 'historic']).optional(),
+  inspiredBy: z.string().min(1).max(140).optional(),
+  era: z.string().min(1).max(24).optional(),
   goal: z.object({ position: z.number().int().positive() }),
   // The situation the engine produced when this scenario was authored. A test
   // re-derives it on every run, so a tuning or balance change that moves the
@@ -493,6 +514,8 @@ const ScenarioSchema = z.object({
     /** Dry now, and a non-DRY lap within this many laps of the handover. */
     dampAhead: z.number().int().positive().optional(),
     redFlag: z.literal(true).optional(),
+    /** Wet now, and a DRY lap within this many laps of the handover. */
+    dryingAhead: z.number().int().positive().optional(),
   }),
 })
 const ScenariosWrapperSchema = z.object({ scenarios: z.array(ScenarioSchema).nonempty() })

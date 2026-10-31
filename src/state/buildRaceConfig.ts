@@ -5,6 +5,7 @@ import { applyUpgrades, type UpgradeOverlayInput } from './upgradeOverlay'
 import { sprintLaps } from './sprint'
 import type { Difficulty } from './settingsStore'
 import type { PlayerStrategyChoice } from './seasonStore'
+import { weatherCircuit, type LapsPercent, type WeatherMix } from './raceRecipe'
 
 const BRAIN_ORDER: StrategyBrain[] = ['naive', 'smart', 'optimal']
 
@@ -91,10 +92,16 @@ export function buildRaceConfig(
   // The first career race is dry on every lap (spec 1.6 §0.2). Callers pass
   // isFirstCareerRace(...); absent on every other race.
   allDry = false,
+  // A custom race's distance (spec 2026-10-24 §6.2); 100 is the full race.
+  lapsPercent: LapsPercent = 100,
+  // A custom race's weather mix; 'circuit' races the circuit's own weather.
+  weather: WeatherMix = 'circuit',
 ): RaceConfig {
   const data = loadGameData()
-  const circuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
-  const laps = circuit.laps
+  const baseCircuit = data.circuits[circuitId] ?? data.circuits['bengaluru']!
+  const circuit = weatherCircuit(baseCircuit, weather, data.tuning)
+  // Spec 2026-10-24 R28: AI stops are scaled to the laps actually raced.
+  const laps = lapsPercent < 100 ? Math.max(data.tuning.custom.minLaps, Math.round(circuit.laps * lapsPercent / 100)) : circuit.laps
   const profile = data.tuning.difficultyProfiles[difficulty]
   // Scale planned pit laps proportionally to this circuit (reference: 30 laps)
   const strategies = data.strategies.defaults.map(s => ({
@@ -146,8 +153,9 @@ export function buildRaceConfig(
     dryStart,
   }
   // Set only for a sprint, so a Grand Prix config has no lapsOverride key at all.
-  if (sprint) config.lapsOverride = sprintLaps(circuit.laps)
-  if (allDry) config.allDry = true
+  if (sprint) config.lapsOverride = sprintLaps(laps)
+  else if (lapsPercent < 100) config.lapsOverride = laps
+  if (allDry || weather === 'dry') config.allDry = true
   // Absent wing leaves `setups` absent (not undefined) so old-path configs stay identical.
   const wing = playerStrategy?.wing
   if (wing !== undefined) config.setups = { ...aiSetups(config), [playerDriverId]: wing }

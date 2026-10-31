@@ -100,3 +100,10 @@ Nothing is uploaded by the app; the player chooses where the image goes.
 permission list (`tests/data/androidManifest.test.ts`) on the first release
 build with these plugins; if either adds a permission, stop and review it
 before submitting.
+
+---
+
+## 1.9: start codes
+
+Start codes are text you choose to share; Pit Wall does not send them anywhere.
+Saved starts live in the app's private storage. **No change to the Data Safety form.**

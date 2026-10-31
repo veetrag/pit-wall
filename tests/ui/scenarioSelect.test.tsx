@@ -10,10 +10,11 @@ vi.mock('@capacitor/preferences', () => ({
 
 import { ScenarioSelect } from '@ui/ScenarioSelect'
 import { useSeasonStore } from '@state/seasonStore'
-import { useScenarioStore } from '@state/scenarioStore'
+import { useScenarioStore, packOf } from '@state/scenarioStore'
 import { loadGameData } from '@data/validators'
 
-const SCENARIOS = loadGameData().scenarios
+// The hub opens on the SCENARIOS tab, which lists the core pack only.
+const SCENARIOS = loadGameData().scenarios.filter(s => packOf(s) === 'core')
 
 beforeEach(() => {
   useSeasonStore.setState({ phase: 'scenario_select' })

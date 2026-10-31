@@ -8,6 +8,8 @@ import { useClockStore } from '@state/clockStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useDebriefStore } from '@state/debriefStore'
 import { useScenarioStore } from '@state/scenarioStore'
+import { useDailyStore } from '@state/dailyStore'
+import { useStartsStore } from '@state/startsStore'
 import { goalMet } from '@engine/scenario'
 import type { RaceEventSummary, FinishPosition } from '@state/seasonStore'
 import type { RaceState } from '@engine/types'
@@ -50,6 +52,7 @@ export function RaceWatcher() {
   const setSpeed = useClockStore(s => s.setSpeed)
   const difficulty = useSettingsStore(s => s.difficulty)
   const startScenarioRace = useRaceStore(s => s.startScenarioRace)
+  const startCustomStartRace = useRaceStore(s => s.startCustomStartRace)
   const activeScenario = useScenarioStore(s => s.active)
   const recordScenarioOutcome = useScenarioStore(s => s.recordOutcome)
   const toScenarioResult = useSeasonStore(s => s.toScenarioResult)
@@ -90,12 +93,12 @@ export function RaceWatcher() {
       hasFiredRef.current = true
       setSpeed(0)
       const { positions, events, stints } = summarise(raceState, useRaceStore.getState().playerTyreChanges)
-      const { config: raceConfig, playerCalls } = useRaceStore.getState()
+      const { config: raceConfig, playerCalls, recipe } = useRaceStore.getState()
       if (raceConfig) {
         try {
           // Scenario races are deliberately excluded: their mid-race takeover rng is not reproducible from (config, seed, calls).
           useDebriefStore.getState().start(
-            { config: raceConfig, seed: raceConfig.seed, calls: playerCalls },
+            { config: raceConfig, seed: raceConfig.seed, calls: playerCalls, ...(recipe ? { recipe } : {}) },
             `${raceConfig.seed}`,
           )
         } catch { /* the debrief must never block recording the result */ }
@@ -127,11 +130,11 @@ export function RaceWatcher() {
     sprintFiredRef.current = true
     setSpeed(0)
     const { positions, events, stints } = summarise(raceState, useRaceStore.getState().playerTyreChanges)
-    const { config: raceConfig, playerCalls } = useRaceStore.getState()
+    const { config: raceConfig, playerCalls, recipe } = useRaceStore.getState()
     if (raceConfig) {
       try {
         useDebriefStore.getState().start(
-          { config: raceConfig, seed: raceConfig.seed, calls: playerCalls },
+          { config: raceConfig, seed: raceConfig.seed, calls: playerCalls, ...(recipe ? { recipe } : {}) },
           `sprint-${raceConfig.seed}`,
         )
       } catch { /* the debrief must never block recording the result */ }
@@ -150,7 +153,8 @@ export function RaceWatcher() {
   useEffect(() => {
     if (seasonPhase === 'scenario_racing' && racePhase === 'idle' && activeScenario) {
       scenarioFiredRef.current = false
-      startScenarioRace(activeScenario)
+      if (activeScenario.recipe) startCustomStartRace(activeScenario)
+      else startScenarioRace(activeScenario)
       /*
        * Scenarios have to start their own clock.
        *
@@ -173,11 +177,14 @@ export function RaceWatcher() {
     const spec = activeScenario
     if (!spec) return
     const car = raceState.cars.find(c => c.driverId === spec.playerDriverId)
-    recordScenarioOutcome({
+    const outcome = {
       met: goalMet(raceState, spec.playerDriverId, spec.goal),
       position: car?.position ?? 0,
       retired: car?.retired ?? false,
-    })
+    }
+    recordScenarioOutcome(outcome)
+    if (spec.kind === 'daily') useDailyStore.getState().record(outcome)
+    if (spec.kind === 'start') useStartsStore.getState().recordBest(spec.id.replace(/^start-/, ''), outcome)
     toScenarioResult()
     /*
      * Tracked and cleared on unmount: TRY AGAIN is live the instant the result

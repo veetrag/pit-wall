@@ -104,7 +104,7 @@ function Line({ car, g, tier, colour, reduced }: { car: CarHistory; g: Geometry;
   )
 }
 
-export function LapChart({ history, playerDriverId }: { history: LapHistory; playerDriverId: string }) {
+export function LapChart({ history, playerDriverId, markLap }: { history: LapHistory; playerDriverId: string; markLap?: number }) {
   const reduced = useReducedMotion()
   const uiTap = useUiTap()
   const crossId = `red-cross-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
@@ -166,6 +166,9 @@ export function LapChart({ history, playerDriverId }: { history: LapHistory; pla
           <Line key={car.driverId} car={car} g={g} tier={tierOf(car.driverId)}
             colour={TEAM_COLOR.get(car.teamId) ?? 'var(--lilac)'} reduced={reduced} />
         ))}
+        {markLap !== undefined && (
+          <line data-mark-lap={markLap} x1={g.x(markLap)} x2={g.x(markLap)} y1={PAD.t} y2={H - PAD.b} style={{ stroke: 'var(--volt)', strokeWidth: 2 }} />
+        )}
       </svg>
 
       <div role="group" aria-label="Highlight a driver" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>

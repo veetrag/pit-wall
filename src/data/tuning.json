@@ -159,6 +159,19 @@
       "planWindowLaps": 15
     }
   },
+  "custom": {
+    "_note": "Custom championship (spec 2026-10-24 §6). weather.* reshape a cloned circuit; minLaps floors a shortened race.",
+    "minLaps": 5,
+    "weather": {
+      "changeable": { "rainScale": 1.6, "rainMin": 0.25, "rainMax": 0.7, "bias": "variable" },
+      "wet": { "rainProbability": 0.85, "bias": "wet" }
+    },
+    "sprintEvery": { "few": 4, "many": 3 }
+  },
+  "daily": {
+    "_note": "Daily challenge (spec 2026-10-24 §4). rulesVersion salts the date hash: bumping it changes every day's challenge. lapWindow is the fraction of the race in which the handover may fall.",
+    "rulesVersion": 1, "lapWindow": [0.35, 0.8], "positionRange": [3, 14], "maxSearchRaces": 24, "keepDays": 30
+  },
   "weather": {
     "crossoverPenalty": {
       "dry":   { "DRY": 0.0, "DAMP": 3.5, "WET": 9.0 },

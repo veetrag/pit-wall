@@ -66,6 +66,14 @@ The single most important data file. Every magic number in the model lives here.
     "_note": "Spec 2026-10-24 §2.2. Validated 0.8–1.0 (src/data/validators.ts); reads via circuitTraits.ts.",
     "nightWearFactor": 1.0         // multiplies tyre wear on circuits with timeOfDay 'night'. Bounds 0.8–1.0: below 1.0 means less wear at night. Ships at 1.0 in 1.7 (night wear deferred, MODEL_SPEC §17), so it has no effect yet.
   },
+  "daily": {
+    "_note": "Spec 2026-10-24 §4. Daily challenge generator; read by src/state (daily).",
+    "rulesVersion": 1,             // salts the date hash: bumping it changes every day's challenge.
+    "lapWindow": [0.35, 0.8],      // fraction of the race in which the handover may fall.
+    "positionRange": [3, 14],      // grid positions the player may be handed.
+    "maxSearchRaces": 24,          // cap on candidate races the generator simulates looking for a valid one.
+    "keepDays": 30                 // how many days of daily bests are kept.
+  },
   "incidents": {
     "dnfPerLap": 0.0,              // reliability DNF prob/lap/car. 0 in v1 (add later as a layer).
     "driverErrorPerLap": 0.0       // lock-up/crash prob. 0 in v1.
@@ -131,6 +139,49 @@ A circuit owns its sector base times, sensitivities, pit loss, and (optionally) 
 | `neutralisationRisk` | number, 0.5–2.0 | Multiplier on SC and VSC deploy chances (capped at 1). |
 
 1.7 circuit values (Lantern Quay, Mesa Roja) are the ones still open for Veet's call; see `docs/V2-CHECKLIST.md`.
+
+**Scenario fields (1.8, spec 2026-10-24 §3).** Added to `ScenarioSchema` in `src/data/validators.ts`; all optional, so existing scenarios are unchanged.
+
+| Field | Type / bounds | Meaning |
+|---|---|---|
+| `pack` | `'core' \| 'historic'` | Which hub section lists it. Absent means `'core'`. |
+| `inspiredBy` | string, 1-140 chars | The real moment a classic is inspired by (display only). |
+| `era` | string, 1-24 chars | Era label shown on the card. |
+| `expect.dryingAhead` | positive integer | Laps until the track dries, for the scenario's expectation check. |
+
+`tuning.daily` (above) configures the daily challenge: `rulesVersion`, `lapWindow`, `positionRange`, `maxSearchRaces`, `keepDays`.
+
+**Start share codes (1.9, spec 2026-10-24 §5.4).** Implemented in `src/state/startCode.ts` with the append-only index tables in `src/state/startCodes.ts` (an index, once shipped, means that id forever; new circuits, drivers and teams are appended, never reordered). Text is `PW1-` + base64url (no padding) of the payload bytes followed by a 4-byte FNV-1a checksum of those bytes. Whitespace is ignored on decode; hard cap 2048 characters (`MAX_CODE_CHARS`) before any decoding. Payload is big-endian:
+
+| Field | Bytes | Notes |
+|---|---|---|
+| format version | u8 | `CODE_FORMAT` = 1 |
+| data fingerprint | u32 | FNV-1a of the engine-relevant game data; a mismatch warns, it does not reject |
+| seed | u32 | |
+| circuit | u8 | index into `CIRCUIT_CODES` |
+| player driver | u8 | index into `DRIVER_CODES` |
+| startLap | u8 | |
+| flags | u8 | b0 sprint, b1 dryStart, b2 allDry, b3 pro, b4 strategy, b5 grid, b6 overlay; b7 must be 0 |
+| lapsPercent | u8 | 25 / 50 / 75 / 100 |
+| weather | u8 | index into `WEATHER_CODES`: 0 circuit, 1 dry, 2 changeable, 3 wet |
+| strategy (b4) | 3 + 2n | start compound, wing (0 = none, max 5), n stops (max 2), each lap + compound |
+| grid (b5) | 1 + n | n driver indices |
+| overlay (b6) | var | u16 packed tiers (5 x 2 bits, `ATTRIBUTE_CODES` order); u8 n + n x (u8 team, f64 pool) rival development; u8 m + m x (u8 team, i8 offset) team tiers |
+| calls | 1 + 4n | n max 255; u16 step, u8 kind (`CALL_KINDS`: 0 pit, 1 pace, 2 restart_tyre, 3 hold_plan), u8 arg (compound, pace mode or hold flag) |
+| expect | 5 | position, lapsRemaining, compound, tyreAge, par |
+| name | 1 + len | ASCII 0x20-0x7E, length 1-24 |
+
+`decodeStart` never throws and returns `{ ok: true, payload, id }` or `{ ok: false, reason: 'format' | 'checksum' | 'newer' | 'invalid' }`. `decodeStart(text, { validate: false })` checks format and checksum only; MY STARTS loads with it so a stored start that new game data rejects is kept and shown as unplayable, never deleted.
+
+Differences from spec §5.4/§5.5:
+
+- The decode result is `{ ok, payload, id }`, where `id` is the checksum as 8 lowercase hex digits (the saved-start id).
+- Failure `reason` values are `format`, `checksum`, `newer` and `invalid`; the store's import adds `unplayable` (decodes, but this build prices par at P1 or as retired). `makeCustomStart` refuses with `lap_range`, `par_one`, `par_retired` or `too_many_calls` (more than 255 calls before the lap).
+- Saved starts are capped at 30; saving the 31st drops the oldest and reports `full: true`. `save` refuses a payload that fails `validatePayload`.
+- The grid is stored as n driver indices and validated as a full permutation of the current driver list.
+- Purchased tiers pack in `ATTRIBUTE_CODES` order.
+
+**Storage and tuning (1.9).** Saved starts live under the Preferences key `starts.mine` (`src/state/startsStore.ts`) as `{ v: 1, starts: [{ id, code, savedAt, best }] }`, at most 30; `best` is `{ position: number | null, met: boolean } | null` (`position` null = DNF). `tuning.custom` (`minLaps`, `weather.changeable`, `weather.wet`, `sprintEvery`) configures custom races: `minLaps` floors a shortened race, `weather.*` reshapes a cloned circuit.
 
 `trackPath` references a separate file describing the circuit geometry for the Pixi renderer: an ordered list of points (or an SVG path) for the racing line, plus the three sector-boundary positions and the pit-lane entry/exit points so cars can be interpolated along it and the pit animation has a real path.
 

@@ -47,11 +47,11 @@ describe('the app version is stated once', () => {
      */
     const m = gradle.match(/versionCode\s+(\d+)/)
     expect(m).not.toBeNull()
-    // 1.6.2 is 9; 1.7 must be 10+.
-    expect(Number(m![1])).toBeGreaterThanOrEqual(10)
+    // 1.8 is 11; 1.9 must be 12+.
+    expect(Number(m![1])).toBeGreaterThanOrEqual(12)
   })
 
-  it('this release is 1.7', () => {
-    expect(pkg.version).toBe('1.7')
+  it('this release is 1.9', () => {
+    expect(pkg.version).toBe('1.9')
   })
 })

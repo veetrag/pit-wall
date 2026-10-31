@@ -53,7 +53,7 @@ describe('every shipped scenario', () => {
       const { state } = startScenario(config, s.startLap)
       const sit = describeSituation(state, s.playerDriverId)
       expect(sit, 'the player must be in this race').not.toBeNull()
-      const { par: _par, vscOut, dampAhead, redFlag, ...situation } = s.expect   // par is asserted separately, below
+      const { par: _par, vscOut, dampAhead, redFlag, dryingAhead, ...situation } = s.expect   // par is asserted separately, below
       expect({
         position: sit!.position, lapsRemaining: sit!.lapsRemaining,
         compound: sit!.compound, tyreAge: sit!.tyreAge,
@@ -65,6 +65,11 @@ describe('every shipped scenario', () => {
         expect(state.weatherTimeline[state.lap], 'dry at the handover').toBe('DRY')
         expect(state.weatherTimeline.slice(state.lap + 1, state.lap + 1 + dampAhead).some(w => w !== 'DRY'),
           `rain within ${dampAhead} laps`).toBe(true)
+      }
+      if (dryingAhead) {
+        expect(state.weatherTimeline[state.lap], 'wet at the handover').not.toBe('DRY')
+        expect(state.weatherTimeline.slice(state.lap + 1, state.lap + 1 + dryingAhead).includes('DRY'),
+          `dry within ${dryingAhead} laps`).toBe(true)
       }
     }, 60_000)
 
