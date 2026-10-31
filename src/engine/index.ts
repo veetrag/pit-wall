@@ -42,3 +42,4 @@ export type { LapHistory, CarHistory, NeutralisationPeriod } from './raceHistory
 export { rivalIntel, intelOffset } from './rivalIntel'
 export type { RivalIntel } from './rivalIntel'
 export { PIT_CLIFF_THRESHOLD } from './strategy'
+export { handoverFromCalls, parFromHandover, prefixCalls } from './customStart'
