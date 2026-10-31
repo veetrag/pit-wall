@@ -9,6 +9,7 @@ import { DebriefCard } from './DebriefCard'
 import { LapChartCard } from './LapChart'
 import { useCareerStore } from '@state/careerStore'
 import { ShareButton } from './share/ShareButton'
+import { MakeStartSheet } from './MakeStartSheet'
 import { buildShareData } from './share/shareCard'
 
 const label = { fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: '0.14em' } as const
@@ -31,6 +32,8 @@ export function SprintResult() {
   const uiTap = useUiTap()
   const data = useMemo(() => loadGameData(), [])
   const [showAll, setShowAll] = useState(false)
+  const job = useDebriefStore(s => s.job)
+  const [sheet, setSheet] = useState(false)
 
   const sorted = [...(lastSprintResults ?? [])].sort((a, b) => a.position - b.position)
   const mine = sorted.find(r => r.driverId === playerDriverId)
@@ -117,8 +120,10 @@ export function SprintResult() {
             season: useCareerStore.getState().seasonNumber, points: earned,
             podiumIds: sorted.filter(r => !r.retired).slice(0, 3).map(r => r.driverId), playerDriverId,
           })} />
+          {job?.recipe && <KitButton variant="secondary" size="sm" style={{ flex: 1 }} onClick={() => setSheet(true)}>MAKE A START</KitButton>}
         </div>
       </div>
+      {sheet && job?.recipe && <MakeStartSheet recipe={job.recipe} calls={job.calls} onClose={() => setSheet(false)} />}
     </ScreenFrame>
   )
 }

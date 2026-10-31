@@ -13,6 +13,7 @@ import { HeroBand, KitButton, Pill, liveryOf, snapIn, useCountUp, useReducedMoti
 import { useDebriefStore } from '@state/debriefStore'
 import { useCareerStore } from '@state/careerStore'
 import { ShareButton } from './share/ShareButton'
+import { MakeStartSheet } from './MakeStartSheet'
 import { buildShareData } from './share/shareCard'
 import driversData from '@data/drivers.json'
 import carsData from '@data/cars.json'
@@ -105,6 +106,8 @@ export function RaceResult() {
   const reduced = useReducedMotion()
   const data = useMemo(() => loadGameData(), [])
   const [showFull, setShowFull] = useState(false)
+  const job = useDebriefStore(s => s.job)
+  const [sheet, setSheet] = useState(false)
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
   const seasonNumber = useCareerStore(s => s.seasonNumber)
@@ -383,12 +386,14 @@ export function RaceResult() {
             circuitName, round: raceIndex + 1, season: seasonNumber, points: playerResult?.points ?? 0,
             podiumIds: podium.map(r => r.driverId), playerDriverId,
           })} />
+          {job?.recipe && <KitButton variant="secondary" size="sm" style={{ flex: 1 }} onClick={() => setSheet(true)}>MAKE A START</KitButton>}
           <KitButton variant="secondary" size="sm" style={{ flex: 1 }}
             onClick={() => { useDebriefStore.getState().cancel(); backToMenu() }}>
             MENU
           </KitButton>
         </div>
       </div>
+      {sheet && job?.recipe && <MakeStartSheet recipe={job.recipe} calls={job.calls} onClose={() => setSheet(false)} />}
     </ScreenFrame>
   )
 }
