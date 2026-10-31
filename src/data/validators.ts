@@ -299,6 +299,14 @@ const TuningSchema = z.object({
     redFlagPerRace: z.tuple([z.number(), z.number()]),
     _note: z.string(),
   }).optional(),
+  daily: z.object({
+    _note: z.string().optional(),
+    rulesVersion: z.number().int().min(1),
+    lapWindow: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),
+    positionRange: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    maxSearchRaces: z.number().int().min(1).max(100),
+    keepDays: z.number().int().min(1).max(366),
+  }),
 }).passthrough()
 
 const CompoundEntrySchema = z.object({

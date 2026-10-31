@@ -27,6 +27,7 @@ const SIMULATION_SUITES = [
   'tests/engine/overtakeRaceTime.test.ts',
   'tests/engine/gridOrder.test.ts',
   'tests/engine/tyreAllocation.test.ts',
+  'tests/state/dailyYear.test.ts',
 ]
 
 export default defineConfig({
