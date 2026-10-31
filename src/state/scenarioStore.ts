@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { z } from 'zod'
 import { Preferences } from '@capacitor/preferences'
 import type { ScenarioSpecData } from '@data/validators'
+import type { RaceRecipe } from './raceRecipe'
+import type { PlayerCall } from '@engine/playerCalls'
 
 export interface ScenarioOutcome { met: boolean; position: number; retired: boolean }
 /** position null = DNF. */
@@ -38,7 +40,7 @@ let writeChain: Promise<void> = Promise.resolve()
 
 export type ChallengeKind = 'scenario' | 'daily' | 'start'
 /** A challenge in play. Daily challenges and custom starts reuse the scenario shape (spec 2026-10-24 §4-§5). */
-export type ActiveChallenge = ScenarioSpecData & { kind?: ChallengeKind }
+export type ActiveChallenge = ScenarioSpecData & { kind?: ChallengeKind; recipe?: RaceRecipe; calls?: PlayerCall[] }
 export function packOf(s: ScenarioSpecData): 'core' | 'historic' { return s.pack ?? 'core' }
 
 interface ScenarioStore {
