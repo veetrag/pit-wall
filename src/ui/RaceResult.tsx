@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore, TOTAL_RACES, raceHeadline, addResultsToStandings } from '@state/seasonStore'
@@ -108,6 +108,9 @@ export function RaceResult() {
   const [showFull, setShowFull] = useState(false)
   const job = useDebriefStore(s => s.job)
   const [sheet, setSheet] = useState(false)
+  const makeRef = useRef<HTMLDivElement>(null)
+  // Focus returns to MAKE A START when the sheet closes.
+  const closeSheet = () => { setSheet(false); requestAnimationFrame(() => makeRef.current?.querySelector('button')?.focus()) }
 
   const playerResult = lastRaceResults?.find(r => r.driverId === playerDriverId)
   const seasonNumber = useCareerStore(s => s.seasonNumber)
@@ -386,14 +389,18 @@ export function RaceResult() {
             circuitName, round: raceIndex + 1, season: seasonNumber, points: playerResult?.points ?? 0,
             podiumIds: podium.map(r => r.driverId), playerDriverId,
           })} />
-          {job?.recipe && <KitButton variant="secondary" size="sm" style={{ flex: 1 }} onClick={() => setSheet(true)}>MAKE A START</KitButton>}
           <KitButton variant="secondary" size="sm" style={{ flex: 1 }}
             onClick={() => { useDebriefStore.getState().cancel(); backToMenu() }}>
             MENU
           </KitButton>
         </div>
+        {job?.recipe && (
+          <div ref={makeRef}>
+            <KitButton variant="secondary" size="sm" style={{ width: '100%' }} onClick={() => setSheet(true)}>MAKE A START</KitButton>
+          </div>
+        )}
       </div>
-      {sheet && job?.recipe && <MakeStartSheet recipe={job.recipe} calls={job.calls} onClose={() => setSheet(false)} />}
+      {sheet && job?.recipe && <MakeStartSheet recipe={job.recipe} calls={job.calls} onClose={closeSheet} />}
     </ScreenFrame>
   )
 }

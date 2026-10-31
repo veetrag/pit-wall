@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 vi.mock('@capacitor/preferences', () => ({ Preferences: { get: async () => ({ value: null }), set: async () => {}, remove: async () => {} } }))
 const shareMock = vi.fn(async (..._a: unknown[]) => ({}))
@@ -13,10 +13,15 @@ const RECIPE: RaceRecipe = {
   strategy: { startCompound: 'M', plannedStops: [{ lap: 21, compound: 'H' }], wing: 3 },
   overlay: null, gridOrder: null, dryStart: false, sprint: false, allDry: false, lapsPercent: 100, weather: 'circuit',
 }
+// Dry, Voss from pole: the AI holds P1 from lap 20, so the lap is refused as par_one.
+const ALL = ['d_voss','d_chen','d_rossi','d_haas','d_silva','d_park','d_berg','d_almeida','d_novak','d_ito','d_dubois','d_mwangi','d_olsen','d_reyes','d_fischer','d_kovac','d_santos','d_tan','d_petrov','d_kane']
+const POLE: RaceRecipe = { ...RECIPE, playerDriverId: 'd_voss', gridOrder: ALL, dryStart: true, allDry: true, weather: 'dry' }
+const PAR_ONE_LAP = 20
 const GOOD = [10, 15, 20, 25, 30].find(l => makeCustomStart(RECIPE, [], l).ok)!
 
 describe('MakeStartSheet', () => {
   beforeEach(() => { useStartsStore.setState({ starts: [] }); vi.useFakeTimers() })
+  afterEach(() => { vi.useRealTimers() })
 
   it('is a labelled dialog with a 1..laps-3 lap slider', () => {
     render(<MakeStartSheet recipe={RECIPE} calls={[]} onClose={() => {}} />)
@@ -35,12 +40,19 @@ describe('MakeStartSheet', () => {
     expect(useStartsStore.getState().starts).toHaveLength(1)
   })
   it('explains a lap the AI already wins from, and keeps SAVE disabled', () => {
-    const one = [3, 5, 8, 40, 42].find(l => { const r = makeCustomStart(RECIPE, [], l); return !r.ok && r.reason === 'par_one' })
-    if (one === undefined) return   // premise not present on this seed; the state test covers the rule
-    render(<MakeStartSheet recipe={RECIPE} calls={[]} onClose={() => {}} />)
-    fireEvent.change(screen.getByRole('slider', { name: 'Start lap' }), { target: { value: String(one) } })
+    const r = makeCustomStart(POLE, [], PAR_ONE_LAP)
+    expect(r.ok).toBe(false)
+    expect(!r.ok && r.reason).toBe('par_one')
+    render(<MakeStartSheet recipe={POLE} calls={[]} onClose={() => {}} />)
+    fireEvent.change(screen.getByRole('slider', { name: 'Start lap' }), { target: { value: String(PAR_ONE_LAP) } })
     fireEvent.click(screen.getByRole('button', { name: 'SET START' }))
     expect(screen.getByText('THE AI ALREADY WINS FROM HERE')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'SAVE' })).toBeNull()
+  })
+  it('closes when the scrim behind the sheet is tapped', () => {
+    const onClose = vi.fn()
+    render(<MakeStartSheet recipe={RECIPE} calls={[]} onClose={onClose} />)
+    fireEvent.click(screen.getByTestId('make-start-scrim'))
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

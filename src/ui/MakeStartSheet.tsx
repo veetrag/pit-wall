@@ -39,6 +39,10 @@ export function MakeStartSheet({ recipe, calls, onClose }: { recipe: RaceRecipe;
   }
 
   return (
+    <>
+    <motion.div data-testid="make-start-scrim" aria-hidden="true" onClick={onClose}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18, ease: EASE }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(18, 14, 43, 0.72)', zIndex: 39 }} />
     <motion.div role="dialog" aria-modal="true" aria-label="Make a start"
       initial={reduced ? { opacity: 0 } : { y: '100%' }} animate={reduced ? { opacity: 1 } : { y: 0 }} transition={{ duration: 0.18, ease: EASE }}
       onKeyDown={e => { if (e.key === 'Escape') onClose() }}
@@ -63,7 +67,7 @@ export function MakeStartSheet({ recipe, calls, onClose }: { recipe: RaceRecipe;
         onChange={e => setName(e.target.value.replace(/[^\x20-\x7E]/g, ''))}
         style={{ minHeight: 44, padding: '0 12px', border: 'none', background: 'var(--dusk)', color: 'var(--white)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15 }} />
       {result && !result.ok && <div role="alert" style={{ color: 'var(--hot)', fontFamily: 'var(--font-body)', fontWeight: 800 }}>{REFUSAL[result.reason]}</div>}
-      {result?.ok && <div style={{ color: 'var(--volt)', fontFamily: 'var(--font-body)', fontWeight: 800, letterSpacing: 1 }}>{`FINISH P${result.payload.expect.par - 1} OR BETTER`}</div>}
+      {result?.ok && <div style={{ color: 'var(--white)', fontFamily: 'var(--font-body)', fontWeight: 800, letterSpacing: 1 }}>{`FINISH P${result.payload.expect.par - 1} OR BETTER`}</div>}
       <div style={{ display: 'flex', gap: 8 }}>
         {!result?.ok
           ? <KitButton variant="primary" size="md" onClick={setStart}>SET START</KitButton>
@@ -75,5 +79,6 @@ export function MakeStartSheet({ recipe, calls, onClose }: { recipe: RaceRecipe;
       </div>
       <span aria-live="polite" style={{ minHeight: 16, color: 'var(--lilac-dim)', fontSize: 12 }}>{saved ?? ''}</span>
     </motion.div>
+    </>
   )
 }
