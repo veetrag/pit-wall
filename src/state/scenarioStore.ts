@@ -36,11 +36,16 @@ function mergeBest(
 // Writes are serialised: two quick results must not read the same stale snapshot.
 let writeChain: Promise<void> = Promise.resolve()
 
+export type ChallengeKind = 'scenario' | 'daily' | 'start'
+/** A challenge in play. Daily challenges and custom starts reuse the scenario shape (spec 2026-10-24 §4-§5). */
+export type ActiveChallenge = ScenarioSpecData & { kind?: ChallengeKind }
+export function packOf(s: ScenarioSpecData): 'core' | 'historic' { return s.pack ?? 'core' }
+
 interface ScenarioStore {
-  active: ScenarioSpecData | null
+  active: ActiveChallenge | null
   outcome: ScenarioOutcome | null
   best: Record<string, ScenarioBest>
-  select: (spec: ScenarioSpecData) => void
+  select: (spec: ActiveChallenge) => void
   recordOutcome: (outcome: ScenarioOutcome) => void
   loadBest: () => Promise<void>
   exit: () => void
@@ -58,6 +63,10 @@ export const useScenarioStore = create<ScenarioStore>((set, get) => ({
   select: (spec) => set({ active: spec, outcome: null }),
   recordOutcome: (outcome) => {
     const id = get().active?.id
+    const kind = get().active?.kind ?? 'scenario'
+    // Daily and start bests live in their own stores (dailyStore, startsStore);
+    // scenarios.best is for authored scenarios only.
+    if (kind !== 'scenario') { set({ outcome }); return }
     if (!id) { set({ outcome }); return }
     const entry: ScenarioBest = { position: outcome.retired ? null : outcome.position, met: outcome.met }
     set(s => ({ outcome, best: { ...s.best, [id]: betterBest(s.best[id], entry) } }))

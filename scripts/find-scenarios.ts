@@ -23,6 +23,7 @@
 import { describeSituation } from '../src/engine/scenario'
 import { initRace, stepSector } from '../src/engine/race'
 import { createRng } from '../src/engine/rng'
+import { circuitTraits } from '../src/engine/circuitTraits'
 import { neutralisationKind } from '../src/engine/incidents'
 import { loadGameData } from '../src/data/validators'
 import { buildScenarioConfig } from '../src/state/buildRaceConfig'
@@ -39,13 +40,20 @@ const PLAYER = 'd_voss'
  */
 const AUTOPILOT = '__none__'
 
+/** Cliff fraction as the gauge shows it: tyre age x circuit wear / cliff. */
+function wornFrac(circuitId: string, c: RaceState['cars'][number]): number {
+  const wear = circuitTraits(DATA.circuits[circuitId]!, DATA.tuning).wear
+  return (c.tyreAge * wear) / (DATA.compounds[c.compound]?.cliff ?? 1)
+}
+
 interface Brief {
   name: string
   sprint?: boolean
+  pack?: 'historic'
   circuitId: string
   /** Inspect each lap in this window for a match. */
   lapWindow: (totalLaps: number) => [number, number]
-  match: (sit: NonNullable<ReturnType<typeof describeSituation>>, state: RaceState) => boolean
+  match: (sit: NonNullable<ReturnType<typeof describeSituation>>, state: RaceState, circuitId: string) => boolean
 }
 
 const BRIEFS: Brief[] = [
@@ -110,6 +118,59 @@ const BRIEFS: Brief[] = [
     match: (s, st) => neutralisationKind(st.safetyCar) === 'red' && s.position >= 3 && s.position <= 12 && s.lapsRemaining >= 8,
     // widen if no hit: circuitId 'kaido', then 'highland' (SEEDS=2000)
   },
+  {
+    name: 'Lantern gamble — safety car at the night street race', pack: 'historic', circuitId: 'lantern_quay',
+    lapWindow: t => [Math.floor(t * 0.25), Math.floor(t * 0.7)],
+    match: s => s.safetyCarOut && s.position >= 4 && s.position <= 9 && s.lapsRemaining >= 15,
+    // widen if no hit: position 3-10
+  },
+  {
+    name: 'Desert two-stop — one more stop than everyone else', pack: 'historic', circuitId: 'mesa_roja',
+    lapWindow: t => [Math.floor(t * 0.4), Math.floor(t * 0.7)],
+    match: (s, st, cid) => {
+      const car = st.cars.find(c => c.driverId === PLAYER)
+      return !!car && car.pitsDone === 1 && wornFrac(cid, car) >= 0.6 && s.position >= 3 && s.position <= 6
+        && s.lapsRemaining >= 18 && s.lapsRemaining <= 26
+    },
+    // widen if no hit: position 2-7
+  },
+  {
+    name: 'Slicks or stay — the track is drying', pack: 'historic', circuitId: 'silverpark',
+    lapWindow: t => [Math.floor(t * 0.2), Math.floor(t * 0.8)],
+    match: (s, st) => ['I', 'W'].includes(s.compound) && st.weatherTimeline[st.lap] !== 'DRY'
+      && st.weatherTimeline.slice(st.lap + 1, st.lap + 4).includes('DRY')
+      && s.position >= 5 && s.position <= 10 && s.lapsRemaining >= 10,
+    // widen if no hit: circuitId 'aurora', then 'monsoon_bay'
+  },
+  {
+    name: 'Hold the train — a faster car behind, tyres going', pack: 'historic', circuitId: 'harbour_lights',
+    lapWindow: t => [Math.floor(t * 0.7), t - 10],
+    match: (s, st, cid) => {
+      const car = st.cars.find(c => c.driverId === PLAYER)
+      if (!car || s.position > 3 || s.lapsRemaining < 10 || s.lapsRemaining > 16 || wornFrac(cid, car) < 0.75) return false
+      const behind = st.cars.find(c => !c.retired && c.position === car.position + 1)
+      return !!behind && behind.raceTime - car.raceTime <= 1.5 && wornFrac(cid, behind) <= wornFrac(cid, car) - 0.3
+    },
+    // widen if no hit: circuitId 'lantern_quay', then gap 2.0
+  },
+  {
+    name: 'Undercut duel — P2, both on the first set', pack: 'historic', circuitId: 'costa_verde',
+    lapWindow: t => [Math.floor(t * 0.2), Math.floor(t * 0.5)],
+    match: (s, st, cid) => {
+      const car = st.cars.find(c => c.driverId === PLAYER)
+      const leader = st.cars.find(c => !c.retired && c.position === 1)
+      if (!car || !leader || s.position !== 2 || s.gapAhead === null || s.gapAhead > 2.0 || s.lapsRemaining < 20) return false
+      const inBand = (c: typeof car) => c.pitsDone === 0 && wornFrac(cid, c) >= 0.6 && wornFrac(cid, c) <= 0.85
+      return inBand(car) && inBand(leader)
+    },
+    // widen if no hit: circuitId 'altiplano', then gap 3.0
+  },
+  {
+    name: 'From the back — a recovery from the rear of the field', pack: 'historic', circuitId: 'kaido',
+    lapWindow: t => [Math.floor(t * 0.15), Math.floor(t * 0.5)],
+    match: s => s.position >= 14 && s.position <= 18 && s.tyreAge <= 3 && s.lapsRemaining >= 25,
+    // widen if no hit: position 12-19
+  },
 ]
 
 interface Candidate {
@@ -140,7 +201,7 @@ function scanSeed(brief: Brief, seed: number, from: number, to: number) {
     if (lap < from || lap > to) continue
     const sit = describeSituation(state, PLAYER)
     if (!sit) break
-    if (brief.match(sit, state)) {
+    if (brief.match(sit, state, brief.circuitId)) {
       const kind = neutralisationKind(state.safetyCar)
       candidates.push({ lap, sit, vsc: kind === 'vsc', red: kind === 'red' })
     }
@@ -155,6 +216,7 @@ const ONLY = process.env.BRIEF
 
 for (const brief of BRIEFS) {
   if (ONLY && !brief.name.includes(ONLY)) continue
+  if (process.env.PACK && brief.pack !== process.env.PACK) continue
   const circuit = DATA.circuits[brief.circuitId]!
   const laps = buildScenarioConfig({ circuitId: brief.circuitId, seed: 1, playerDriverId: AUTOPILOT, sprint: brief.sprint }).lapsOverride ?? circuit.laps
   const [from, to] = brief.lapWindow(laps)
@@ -177,7 +239,7 @@ for (const brief of BRIEFS) {
     hits.push(
       `    seed ${String(seed).padStart(4)} startLap ${String(c.lap).padStart(2)}  ` +
       `P${c.sit.position} · ${c.sit.lapsRemaining} to go · ${c.sit.compound}${c.sit.tyreAge} · ${gap}` +
-      (c.sit.safetyCarOut ? ' · SC' : '') + (c.vsc ? ' · VSC' : '') + (c.red ? ' · RED' : '') +
+      (c.sit.safetyCarOut ? ' · SC' : '') + (c.vsc ? ' · VSC' : '') + (c.red ? ' · RED' : '') + (['I', 'W'].includes(c.sit.compound) ? ' · DRYING' : '') +
       `   PAR P${par} -> goal P${par - 1}`,
     )
   }

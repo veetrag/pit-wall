@@ -466,6 +466,10 @@ const ScenarioSchema = z.object({
   startLap: z.number().int().positive(),
   // Spec 1.6 §8: a sprint scenario runs the sprint distance (buildScenarioConfig).
   sprint: z.boolean().optional(),
+  // Spec 2026-10-24 §3: the historic pack. Absent pack = 'core'.
+  pack: z.enum(['core', 'historic']).optional(),
+  inspiredBy: z.string().min(1).max(140).optional(),
+  era: z.string().min(1).max(24).optional(),
   goal: z.object({ position: z.number().int().positive() }),
   // The situation the engine produced when this scenario was authored. A test
   // re-derives it on every run, so a tuning or balance change that moves the
@@ -493,6 +497,8 @@ const ScenarioSchema = z.object({
     /** Dry now, and a non-DRY lap within this many laps of the handover. */
     dampAhead: z.number().int().positive().optional(),
     redFlag: z.literal(true).optional(),
+    /** Wet now, and a DRY lap within this many laps of the handover. */
+    dryingAhead: z.number().int().positive().optional(),
   }),
 })
 const ScenariosWrapperSchema = z.object({ scenarios: z.array(ScenarioSchema).nonempty() })
