@@ -532,7 +532,9 @@ Phone pass: Lantern Quay at 1x (SCs frequent, not every lap; S1 the only real
 passing place; floodlights legible; 60fps); Mesa Roja (three stops the norm,
 two a gamble; is passing too easy?); pills on setup, menu, qualifying; extra
 circuits on the setup strip; career BEST BY CIRCUIT shows the two new rows.
-Calls for Veet: Lantern Quay crashRisk 1.3 / neutralisationRisk 1.5 (alt
-1.2 / 1.6); Mesa Roja tyreWear 1.40, 52 laps; night wear deferred at 1.0 —
-re-baseline the apex gate, measure over several seed bases, or drop it
-(MODEL_SPEC §17).
+Decided 2026-10-31: night wear stays at 1.0 (night is presentation only;
+MODEL_SPEC §17). Lantern Quay keeps crashRisk 1.3 / neutralisationRisk 1.5
+(passes every gate; 1.2 / 1.6 is the fallback if a later retune drops rho
+under 0.50). Mesa Roja keeps tyreWear 1.40, 52 laps and open passing: it is
+the tyre-management circuit, and the Mediums-heavy default plan is a sane
+three-stop starting point the player can reshape.
