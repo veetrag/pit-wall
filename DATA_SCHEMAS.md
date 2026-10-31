@@ -151,6 +151,29 @@ A circuit owns its sector base times, sensitivities, pit loss, and (optionally) 
 
 `tuning.daily` (above) configures the daily challenge: `rulesVersion`, `lapWindow`, `positionRange`, `maxSearchRaces`, `keepDays`.
 
+**Start share codes (1.9, spec 2026-10-24 §5.4).** Implemented in `src/state/startCode.ts` with the append-only index tables in `src/state/startCodes.ts` (an index, once shipped, means that id forever; new circuits, drivers and teams are appended, never reordered). Text is `PW1-` + base64url (no padding) of the payload bytes followed by a 4-byte FNV-1a checksum of those bytes. Whitespace is ignored on decode; hard cap 2048 characters (`MAX_CODE_CHARS`) before any decoding. Payload is big-endian:
+
+| Field | Bytes | Notes |
+|---|---|---|
+| format version | u8 | `CODE_FORMAT` = 1 |
+| data fingerprint | u32 | FNV-1a of the engine-relevant game data; a mismatch warns, it does not reject |
+| seed | u32 | |
+| circuit | u8 | index into `CIRCUIT_CODES` |
+| player driver | u8 | index into `DRIVER_CODES` |
+| startLap | u8 | |
+| flags | u8 | b0 sprint, b1 dryStart, b2 allDry, b3 pro, b4 strategy, b5 grid, b6 overlay; b7 must be 0 |
+| lapsPercent | u8 | 25 / 50 / 75 / 100 |
+| weather | u8 | index into `WEATHER_CODES`: 0 circuit, 1 dry, 2 changeable, 3 wet |
+| strategy (b4) | 3 + 2n | start compound, wing (0 = none, max 5), n stops (max 2), each lap + compound |
+| grid (b5) | 1 + n | n driver indices |
+| overlay (b6) | var | u16 packed tiers (5 x 2 bits, `ATTRIBUTE_CODES` order); u8 n + n x (u8 team, f64 pool) rival development; u8 m + m x (u8 team, i8 offset) team tiers |
+| calls | 1 + 4n | n max 255; u16 step, u8 kind (`CALL_KINDS`: 0 pit, 1 pace, 2 restart_tyre, 3 hold_plan), u8 arg (compound, pace mode or hold flag) |
+| expect | 5 | position, lapsRemaining, compound, tyreAge, par |
+| name | 1 + len | ASCII 0x20-0x7E, length 1-24 |
+`decodeStart` never throws and returns `{ ok: true, payload, id }` or `{ ok: false, reason: 'format' | 'checksum' | 'newer' | 'invalid' }`.
+
+**Storage and tuning (1.9).** Saved starts live under the Preferences key `starts.mine` (`src/state/startsStore.ts`) as `{ v: 1, starts: [{ id, code, savedAt, best }] }`, at most 30. `tuning.custom` (`minLaps`, `weather.changeable`, `weather.wet`, `sprintEvery`) configures custom races: `minLaps` floors a shortened race, `weather.*` reshapes a cloned circuit.
+
 `trackPath` references a separate file describing the circuit geometry for the Pixi renderer: an ordered list of points (or an SVG path) for the racing line, plus the three sector-boundary positions and the pit-lane entry/exit points so cars can be interpolated along it and the pit animation has a real path.
 
 ---

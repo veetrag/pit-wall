@@ -546,3 +546,11 @@ moment it is inspired by?); DAILY loads in under a second on the test phone;
 play it twice, best kept; change the phone's date and back -- a different
 challenge, nothing lost; nothing nags.
 Calls for Veet: archetype mix, positionRange 3-14, lapWindow 0.35-0.80.
+
+### 1.9 Start editor (spec 2026-10-24 slice C)
+
+Phone pass: MAKE A START after a GP and after a sprint; slider is easy with
+a thumb; refusal copy appears on a lap the AI wins from; SHARE CODE into a
+chat app, copy it back from the chat, IMPORT, PLAY: the situation matches;
+paste a damaged code: friendly error; reinstall: codes survive only as
+shared text (expected).

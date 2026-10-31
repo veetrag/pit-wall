@@ -36,7 +36,7 @@ exists, so it can offer an update. Nothing about you is sent.
 
 Everything else. Your settings, your current season and your career record
 are stored in the app's own private storage. Other apps cannot read it, and
-uninstalling removes it.
+uninstalling removes it. Start codes are text you choose to share; Pit Wall does not send them anywhere.
 
 ## What we never do
 
