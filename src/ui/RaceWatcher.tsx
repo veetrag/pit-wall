@@ -91,12 +91,12 @@ export function RaceWatcher() {
       hasFiredRef.current = true
       setSpeed(0)
       const { positions, events, stints } = summarise(raceState, useRaceStore.getState().playerTyreChanges)
-      const { config: raceConfig, playerCalls } = useRaceStore.getState()
+      const { config: raceConfig, playerCalls, recipe } = useRaceStore.getState()
       if (raceConfig) {
         try {
           // Scenario races are deliberately excluded: their mid-race takeover rng is not reproducible from (config, seed, calls).
           useDebriefStore.getState().start(
-            { config: raceConfig, seed: raceConfig.seed, calls: playerCalls },
+            { config: raceConfig, seed: raceConfig.seed, calls: playerCalls, ...(recipe ? { recipe } : {}) },
             `${raceConfig.seed}`,
           )
         } catch { /* the debrief must never block recording the result */ }
@@ -128,11 +128,11 @@ export function RaceWatcher() {
     sprintFiredRef.current = true
     setSpeed(0)
     const { positions, events, stints } = summarise(raceState, useRaceStore.getState().playerTyreChanges)
-    const { config: raceConfig, playerCalls } = useRaceStore.getState()
+    const { config: raceConfig, playerCalls, recipe } = useRaceStore.getState()
     if (raceConfig) {
       try {
         useDebriefStore.getState().start(
-          { config: raceConfig, seed: raceConfig.seed, calls: playerCalls },
+          { config: raceConfig, seed: raceConfig.seed, calls: playerCalls, ...(recipe ? { recipe } : {}) },
           `sprint-${raceConfig.seed}`,
         )
       } catch { /* the debrief must never block recording the result */ }

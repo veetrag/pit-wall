@@ -307,6 +307,15 @@ export const TuningSchema = z.object({
     maxSearchRaces: z.number().int().min(1).max(100),
     keepDays: z.number().int().min(1).max(366),
   }),
+  custom: z.object({
+    _note: z.string().optional(),
+    minLaps: z.number().int().min(1),
+    weather: z.object({
+      changeable: z.object({ rainScale: z.number().min(1), rainMin: z.number().min(0).max(1), rainMax: z.number().min(0).max(1), bias: z.enum(['stable', 'variable', 'wet', 'mixed', 'showery', 'stormy']) }),
+      wet: z.object({ rainProbability: z.number().min(0).max(1), bias: z.enum(['stable', 'variable', 'wet', 'mixed', 'showery', 'stormy']) }),
+    }),
+    sprintEvery: z.object({ few: z.number().int().min(2), many: z.number().int().min(2) }),
+  }),
 }).passthrough()
 
 const CompoundEntrySchema = z.object({

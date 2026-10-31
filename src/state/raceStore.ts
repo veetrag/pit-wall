@@ -13,6 +13,7 @@ import type { Difficulty } from './settingsStore'
 import type { PlayerStrategyChoice } from './seasonStore'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
 import { buildRaceConfig, buildScenarioConfig } from './buildRaceConfig'
+import { buildConfigFromRecipe, type RaceRecipe, type LapsPercent, type WeatherMix } from './raceRecipe'
 import { startScenario } from '@engine/scenario'
 import { redFlagPending } from '@engine/redFlag'
 import { neutralisationKind } from '@engine/incidents'
@@ -32,6 +33,10 @@ export interface SeasonRaceOptions {
   allDry?: boolean
   /** The pace off the line. Logged as a step-0 call so replay and the debrief see it. */
   initialPace?: PaceMode
+  /** A custom race's distance (spec 2026-10-24 §6.2). */
+  lapsPercent?: LapsPercent
+  /** A custom race's weather mix. */
+  weather?: WeatherMix
 }
 
 /** A driver radio request on screen (spec 1.6 §2). */
@@ -75,6 +80,8 @@ interface RaceStore {
   /** Expiry = NO. */
   dismissRadioRequest: () => void
 
+  /** The recipe of the current season race (null for any other race), spec 2026-10-24 §5.2. */
+  recipe: RaceRecipe | null
   startRace: () => void
   startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null, gridOrder?: string[], dryStart?: boolean, opts?: SeasonRaceOptions) => void
   startScenarioRace: (spec: { circuitId: string; seed: number; playerDriverId: string; startLap: number; sprint?: boolean }) => void
@@ -128,6 +135,7 @@ export function projectionSeed(raceSeed: number, lap: number, sector: number): n
 export const useRaceStore = create<RaceStore>((set, get) => ({
   phase: 'idle',
   playerTyreChanges: [],
+  recipe: null,
   config: null,
   raceState: null,
   projectionResult: null,
@@ -150,11 +158,16 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
+    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
   },
 
   startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts) {
-    const config = buildRaceConfig(seed, playerDriverId, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts?.sprint ?? false, opts?.allDry ?? false)
+    const recipe: RaceRecipe = {
+      seed, playerDriverId, circuitId: circuitId ?? 'bengaluru', difficulty: difficulty ?? 'rookie', strategy: playerStrategy ?? null, overlay: upgrades ?? null,
+      gridOrder: gridOrder ?? null, dryStart: dryStart ?? false, sprint: opts?.sprint ?? false, allDry: opts?.allDry ?? false,
+      lapsPercent: opts?.lapsPercent ?? 100, weather: opts?.weather ?? 'circuit',
+    }
+    const config = buildConfigFromRecipe(recipe)
     let raceState = initRace(config)
     const playerCalls: PlayerCall[] = []
     const pace = opts?.initialPace
@@ -165,7 +178,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       playerCalls.push({ step: 0, kind: 'pace', mode: pace })
     }
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe })
   },
 
   /**
@@ -180,7 +193,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   startScenarioRace(spec) {
     const config = buildScenarioConfig(spec)
     const { state, rng } = startScenario(config, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
+    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
   },
 
   initForStartSequence() {
@@ -188,7 +201,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
   },
 
   confirmRaceStart() {
@@ -207,7 +220,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   resetRace() {
-    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
   },
 
   step() {
