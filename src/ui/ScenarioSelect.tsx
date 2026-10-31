@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSeasonStore } from '@state/seasonStore'
-import { useScenarioStore, type ScenarioBest } from '@state/scenarioStore'
+import { useScenarioStore, packOf, type ScenarioBest } from '@state/scenarioStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useUiTap } from '@hooks/useUiTap'
 import { loadGameData, type ScenarioSpecData } from '@data/validators'
 import type { Compound } from '@engine/types'
-import { ScreenFrame, ScreenHeader, Pill, TyreChip, KitButton, CircuitOutline, snapIn, EASE } from '@ui/kit'
+import { ScreenFrame, ScreenHeader, Pill, TyreChip, KitButton, CircuitOutline, Tabs, TraitPills, snapIn, EASE } from '@ui/kit'
+import { DailyCard } from '@ui/DailyCard'
 
 // Module scope, not per render -- this screen never needs to re-parse the
 // scenario data on every re-render.
 const GAME = loadGameData()
 const SCENARIOS = GAME.scenarios
+const CORE = SCENARIOS.filter(s => packOf(s) === 'core')
+const CLASSICS = SCENARIOS.filter(s => packOf(s) === 'historic')
+
+/** The hub's tabs. 'starts' is rendered from Task 19 (MY STARTS). */
+export type HubTab = 'scenarios' | 'classics' | 'daily' | 'starts'
 
 /** The scenario's best finish so far: volt with a tick once the goal is met. */
 function BestPill({ best }: { best: ScenarioBest }) {
@@ -75,6 +81,10 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
             }}>
               {circuitName.toUpperCase()}
             </div>
+            {spec.inspiredBy && (
+              <div style={{ marginTop: 4, fontFamily: 'var(--font-body)', fontStyle: 'italic', fontSize: 13, color: 'var(--lilac)' }}>{spec.inspiredBy}</div>
+            )}
+            {spec.era && <div style={{ marginTop: 8 }}><Pill tone="dusk">{spec.era}</Pill></div>}
             {best && <BestPill best={best} />}
           </div>
           <CircuitOutline circuitId={spec.circuitId} width={72} height={56} label={`${circuitName} layout`} />
@@ -109,6 +119,8 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
                   {spec.expect.vscOut && <Pill tone="caution">{'⚠ VSC'}</Pill>}
                   {spec.expect.redFlag && <Pill tone="hot">{'⚠ RED FLAG'}</Pill>}
                   {spec.expect.dampAhead && <Pill tone="rain">{`RAIN WITHIN ${spec.expect.dampAhead} LAPS`}</Pill>}
+                  {spec.expect.dryingAhead && <Pill tone="rain">{`DRY WITHIN ${spec.expect.dryingAhead} LAPS`}</Pill>}
+                  <TraitPills circuitId={spec.circuitId} />
                 </div>
 
                 <div style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 15, letterSpacing: 1, color: 'var(--volt)' }}>
@@ -130,25 +142,35 @@ function ScenarioCard({ spec, index, expanded, onToggle }: {
 
 export function ScenarioSelect() {
   const exitScenarios = useSeasonStore(s => s.exitScenarios)
+  const [tab, setTab] = useState<HubTab>('scenarios')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   useEffect(() => { void useScenarioStore.getState().loadBest() }, [])
 
+  const list = tab === 'scenarios' ? CORE : tab === 'classics' ? CLASSICS : []
+
   return (
-    <ScreenFrame label="Scenarios">
-      <ScreenHeader eyebrow="SCENARIOS" title="Jump in" onBack={exitScenarios} />
-      <div style={{ padding: '6px 16px 0', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--lilac)', flexShrink: 0 }}>
-        Drop into a race already in progress.
+    <ScreenFrame label="Challenges">
+      <ScreenHeader eyebrow="CHALLENGES" title="Jump in" onBack={exitScenarios} />
+      <div style={{ padding: '6px 16px 0', flexShrink: 0 }}>
+        <Tabs
+          ariaLabel="Challenges"
+          value={tab}
+          onChange={setTab}
+          tabs={[{ value: 'scenarios', label: 'SCENARIOS' }, { value: 'classics', label: 'CLASSICS' }, { value: 'daily', label: 'DAILY' }]}
+        />
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {SCENARIOS.map((spec, i) => (
-          <ScenarioCard
-            key={spec.id}
-            spec={spec}
-            index={i}
-            expanded={expandedId === spec.id}
-            onToggle={() => setExpandedId(prev => (prev === spec.id ? null : spec.id))}
-          />
-        ))}
+        {tab === 'daily'
+          ? <DailyCard />
+          : list.map((spec, i) => (
+            <ScenarioCard
+              key={spec.id}
+              spec={spec}
+              index={i}
+              expanded={expandedId === spec.id}
+              onToggle={() => setExpandedId(prev => (prev === spec.id ? null : spec.id))}
+            />
+          ))}
       </div>
     </ScreenFrame>
   )

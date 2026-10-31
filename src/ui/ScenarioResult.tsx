@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useScenarioStore } from '@state/scenarioStore'
+import { useScenarioStore, packOf } from '@state/scenarioStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useRaceStore } from '@state/raceStore'
@@ -51,7 +51,7 @@ export function ScenarioResult() {
 
   return (
     <ScreenFrame label="Scenario result">
-      <ScreenHeader eyebrow="SCENARIO" title={active.name} />
+      <ScreenHeader eyebrow={active.kind === 'daily' ? 'DAILY' : packOf(active) === 'historic' ? 'CLASSIC' : 'SCENARIO'} title={active.name} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 0', display: 'flex', flexDirection: 'column' }}>
         <div style={{ position: 'relative', minHeight: 170 }}>

@@ -34,8 +34,8 @@ interface DailyStore {
 }
 
 /**
- * Today's challenge and a personal best per day. Nothing else: no streak, no
- * history view, no countdown, no reward (spec 2026-10-24 §4, R16).
+ * Today's challenge and a personal best per day. Nothing else: no run tally, no
+ * history view, no timer to the next one, no reward (spec 2026-10-24 §4, R16).
  */
 export const useDailyStore = create<DailyStore>((set, get) => ({
   today: null,

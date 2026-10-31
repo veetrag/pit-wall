@@ -8,6 +8,7 @@ import { useClockStore } from '@state/clockStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useDebriefStore } from '@state/debriefStore'
 import { useScenarioStore } from '@state/scenarioStore'
+import { useDailyStore } from '@state/dailyStore'
 import { goalMet } from '@engine/scenario'
 import type { RaceEventSummary, FinishPosition } from '@state/seasonStore'
 import type { RaceState } from '@engine/types'
@@ -177,6 +178,9 @@ export function RaceWatcher() {
       met: goalMet(raceState, spec.playerDriverId, spec.goal),
       position: car?.position ?? 0,
       retired: car?.retired ?? false,
+    })
+    if (spec.kind === 'daily') useDailyStore.getState().record({
+      met: goalMet(raceState, spec.playerDriverId, spec.goal), position: car?.position ?? 0, retired: car?.retired ?? false,
     })
     toScenarioResult()
     /*
