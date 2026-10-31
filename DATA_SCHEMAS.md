@@ -66,6 +66,14 @@ The single most important data file. Every magic number in the model lives here.
     "_note": "Spec 2026-10-24 §2.2. Validated 0.8–1.0 (src/data/validators.ts); reads via circuitTraits.ts.",
     "nightWearFactor": 1.0         // multiplies tyre wear on circuits with timeOfDay 'night'. Bounds 0.8–1.0: below 1.0 means less wear at night. Ships at 1.0 in 1.7 (night wear deferred, MODEL_SPEC §17), so it has no effect yet.
   },
+  "daily": {
+    "_note": "Spec 2026-10-24 §4. Daily challenge generator; read by src/state (daily).",
+    "rulesVersion": 1,             // salts the date hash: bumping it changes every day's challenge.
+    "lapWindow": [0.35, 0.8],      // fraction of the race in which the handover may fall.
+    "positionRange": [3, 14],      // grid positions the player may be handed.
+    "maxSearchRaces": 24,          // cap on candidate races the generator simulates looking for a valid one.
+    "keepDays": 30                 // how many days of daily bests are kept.
+  },
   "incidents": {
     "dnfPerLap": 0.0,              // reliability DNF prob/lap/car. 0 in v1 (add later as a layer).
     "driverErrorPerLap": 0.0       // lock-up/crash prob. 0 in v1.
@@ -131,6 +139,17 @@ A circuit owns its sector base times, sensitivities, pit loss, and (optionally) 
 | `neutralisationRisk` | number, 0.5–2.0 | Multiplier on SC and VSC deploy chances (capped at 1). |
 
 1.7 circuit values (Lantern Quay, Mesa Roja) are the ones still open for Veet's call; see `docs/V2-CHECKLIST.md`.
+
+**Scenario fields (1.8, spec 2026-10-24 §3).** Added to `ScenarioSchema` in `src/data/validators.ts`; all optional, so existing scenarios are unchanged.
+
+| Field | Type / bounds | Meaning |
+|---|---|---|
+| `pack` | `'core' \| 'historic'` | Which hub section lists it. Absent means `'core'`. |
+| `inspiredBy` | string, 1-140 chars | The real moment a classic is inspired by (display only). |
+| `era` | string, 1-24 chars | Era label shown on the card. |
+| `expect.dryingAhead` | positive integer | Laps until the track dries, for the scenario's expectation check. |
+
+`tuning.daily` (above) configures the daily challenge: `rulesVersion`, `lapWindow`, `positionRange`, `maxSearchRaces`, `keepDays`.
 
 `trackPath` references a separate file describing the circuit geometry for the Pixi renderer: an ordered list of points (or an SVG path) for the racing line, plus the three sector-boundary positions and the pit-lane entry/exit points so cars can be interpolated along it and the pit animation has a real path.
 

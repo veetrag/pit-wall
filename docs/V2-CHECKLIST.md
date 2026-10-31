@@ -538,3 +538,11 @@ MODEL_SPEC §17). Lantern Quay keeps crashRisk 1.3 / neutralisationRisk 1.5
 under 0.50). Mesa Roja keeps tyreWear 1.40, 52 laps and open passing: it is
 the tyre-management circuit, and the Mediums-heavy default plan is a sane
 three-stop starting point the player can reshape.
+
+### 1.8 Challenges (spec 2026-10-24 slice B)
+
+Phone pass: each classic once (blurb true at the handover? feels like the
+moment it is inspired by?); DAILY loads in under a second on the test phone;
+play it twice, best kept; change the phone's date and back -- a different
+challenge, nothing lost; nothing nags.
+Calls for Veet: archetype mix, positionRange 3-14, lapWindow 0.35-0.80.
