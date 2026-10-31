@@ -47,9 +47,10 @@ export function DailyCard() {
   useEffect(() => {
     const store = useDailyStore.getState()
     void store.loadBest()
-    // Build once: never re-trigger while a build is in flight or already done
-    // (StrictMode double-mounts and tab switches remount this card).
-    if (store.status === 'idle' || store.status === 'failed') store.build()
+    // Never re-trigger while a build is in flight (StrictMode double-mounts,
+    // tab switches). build() itself no-ops on a same-day ready daily, and
+    // rebuilds a ready daily left over from a past date.
+    if (store.status !== 'building') store.build()
   }, [])
 
   if (status !== 'ready' || !today) return <DailyLoader failed={status === 'failed'} reducedMotion={reducedMotion} />

@@ -174,14 +174,13 @@ export function RaceWatcher() {
     const spec = activeScenario
     if (!spec) return
     const car = raceState.cars.find(c => c.driverId === spec.playerDriverId)
-    recordScenarioOutcome({
+    const outcome = {
       met: goalMet(raceState, spec.playerDriverId, spec.goal),
       position: car?.position ?? 0,
       retired: car?.retired ?? false,
-    })
-    if (spec.kind === 'daily') useDailyStore.getState().record({
-      met: goalMet(raceState, spec.playerDriverId, spec.goal), position: car?.position ?? 0, retired: car?.retired ?? false,
-    })
+    }
+    recordScenarioOutcome(outcome)
+    if (spec.kind === 'daily') useDailyStore.getState().record(outcome)
     toScenarioResult()
     /*
      * Tracked and cleared on unmount: TRY AGAIN is live the instant the result
