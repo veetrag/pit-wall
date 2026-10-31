@@ -27,6 +27,23 @@ describe('MY STARTS', () => {
     fireEvent.click(screen.getByRole('button', { name: 'IMPORT' }))
     expect(screen.getByText(made.payload.name)).toBeTruthy()
   }, 60_000)
+  it('lists a stored start this build cannot play, explains it, and PLAY refuses (I1)', () => {
+    if (!made.ok) throw new Error('premise')
+    const stale = encodeStart({ ...made.payload, name: 'OLD ONE', recipe: { ...made.payload.recipe, gridOrder: ['d_voss'] } })
+    useStartsStore.setState({ starts: [{ id: 'stale', code: stale, savedAt: 1, best: null }] })
+    render(<MyStarts />)
+    expect(screen.getByText('OLD ONE')).toBeTruthy()
+    expect(screen.getByTestId('start-unplayable').textContent).toContain('no longer works on this version')
+    fireEvent.click(screen.getByRole('button', { name: 'PLAY' }))
+    expect(screen.getByRole('alert').textContent).toContain('no longer works on this version')
+  })
+  it('shows the re-derived situation and goal on a row (M2)', () => {
+    if (!made.ok) throw new Error('premise')
+    useStartsStore.setState({ starts: [{ id: 'good', code: encodeStart(made.payload), savedAt: 1, best: null }] })
+    render(<MyStarts />)
+    expect(screen.getByText(/LAPS LEFT/)).toBeTruthy()
+    expect(screen.getByText(`FINISH P${made.payload.expect.par - 1} OR BETTER`)).toBeTruthy()
+  }, 60_000)
   it('explains a bad paste in words', () => {
     render(<MyStarts />)
     fireEvent.change(screen.getByRole('textbox', { name: 'Start code' }), { target: { value: 'PW2-AAAA' } })

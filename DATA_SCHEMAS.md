@@ -170,9 +170,18 @@ A circuit owns its sector base times, sensitivities, pit loss, and (optionally) 
 | calls | 1 + 4n | n max 255; u16 step, u8 kind (`CALL_KINDS`: 0 pit, 1 pace, 2 restart_tyre, 3 hold_plan), u8 arg (compound, pace mode or hold flag) |
 | expect | 5 | position, lapsRemaining, compound, tyreAge, par |
 | name | 1 + len | ASCII 0x20-0x7E, length 1-24 |
-`decodeStart` never throws and returns `{ ok: true, payload, id }` or `{ ok: false, reason: 'format' | 'checksum' | 'newer' | 'invalid' }`.
 
-**Storage and tuning (1.9).** Saved starts live under the Preferences key `starts.mine` (`src/state/startsStore.ts`) as `{ v: 1, starts: [{ id, code, savedAt, best }] }`, at most 30. `tuning.custom` (`minLaps`, `weather.changeable`, `weather.wet`, `sprintEvery`) configures custom races: `minLaps` floors a shortened race, `weather.*` reshapes a cloned circuit.
+`decodeStart` never throws and returns `{ ok: true, payload, id }` or `{ ok: false, reason: 'format' | 'checksum' | 'newer' | 'invalid' }`. `decodeStart(text, { validate: false })` checks format and checksum only; MY STARTS loads with it so a stored start that new game data rejects is kept and shown as unplayable, never deleted.
+
+Differences from spec §5.4/§5.5:
+
+- The decode result is `{ ok, payload, id }`, where `id` is the checksum as 8 lowercase hex digits (the saved-start id).
+- Failure `reason` values are `format`, `checksum`, `newer` and `invalid`; the store's import adds `unplayable` (decodes, but this build prices par at P1 or as retired). `makeCustomStart` refuses with `lap_range`, `par_one`, `par_retired` or `too_many_calls` (more than 255 calls before the lap).
+- Saved starts are capped at 30; saving the 31st drops the oldest and reports `full: true`. `save` refuses a payload that fails `validatePayload`.
+- The grid is stored as n driver indices and validated as a full permutation of the current driver list.
+- Purchased tiers pack in `ATTRIBUTE_CODES` order.
+
+**Storage and tuning (1.9).** Saved starts live under the Preferences key `starts.mine` (`src/state/startsStore.ts`) as `{ v: 1, starts: [{ id, code, savedAt, best }] }`, at most 30; `best` is `{ position: number | null, met: boolean } | null` (`position` null = DNF). `tuning.custom` (`minLaps`, `weather.changeable`, `weather.wet`, `sprintEvery`) configures custom races: `minLaps` floors a shortened race, `weather.*` reshapes a cloned circuit.
 
 `trackPath` references a separate file describing the circuit geometry for the Pixi renderer: an ordered list of points (or an SVG path) for the racing line, plus the three sector-boundary positions and the pit-lane entry/exit points so cars can be interpolated along it and the pit animation has a real path.
 

@@ -203,8 +203,12 @@ export function validatePayload(p: StartPayload): boolean {
   return p.expect.par <= data.drivers.drivers.length && p.expect.position <= data.drivers.drivers.length
 }
 
-/** Never throws (spec §5.4). Whitespace anywhere is ignored. */
-export function decodeStart(text: string): DecodeResult {
+/**
+ * Never throws (spec §5.4). Whitespace anywhere is ignored. `validate: false`
+ * checks format and checksum only, so a stored start survives a game-data
+ * update that makes it unplayable (it is then shown, not deleted).
+ */
+export function decodeStart(text: string, opts: { validate?: boolean } = {}): DecodeResult {
   try {
     if (typeof text !== 'string' || text.length > MAX_CODE_CHARS) return { ok: false, reason: 'format' }
     const t = text.replace(/\s+/g, '')
@@ -222,7 +226,7 @@ export function decodeStart(text: string): DecodeResult {
     if (body[0]! !== CODE_FORMAT) return { ok: false, reason: 'format' }
     let payload: StartPayload
     try { payload = read(body) } catch { return { ok: false, reason: 'format' } }
-    if (!validatePayload(payload)) return { ok: false, reason: 'invalid' }
+    if (opts.validate !== false && !validatePayload(payload)) return { ok: false, reason: 'invalid' }
     return { ok: true, payload, id: sum.toString(16).padStart(8, '0') }
   } catch {
     return { ok: false, reason: 'format' }

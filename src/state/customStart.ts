@@ -8,7 +8,9 @@ import { gameDataFingerprint } from './fingerprint'
 import type { StartPayload } from './startCode'
 import type { ActiveChallenge } from './scenarioStore'
 
-export type MakeStartResult = { ok: true; payload: StartPayload } | { ok: false; reason: 'lap_range' | 'par_one' | 'par_retired' }
+export const MAX_CODE_CALLS = 255
+
+export type MakeStartResult = { ok: true; payload: StartPayload } | { ok: false; reason: 'lap_range' | 'par_one' | 'par_retired' | 'too_many_calls' }
 
 export function lapRange(recipe: RaceRecipe): { min: number; max: number } {
   const c = buildConfigFromRecipe(recipe)
@@ -30,6 +32,9 @@ export function defaultStartName(circuitId: string, lap: number): string {
 export function makeCustomStart(recipe: RaceRecipe, calls: readonly PlayerCall[], lap: number, name?: string): MakeStartResult {
   const range = lapRange(recipe)
   if (!Number.isInteger(lap) || lap < range.min || lap > range.max) return { ok: false, reason: 'lap_range' }
+  const prefix = prefixCalls(calls, lap)
+  // The share code stores the call count in one byte (spec §5.5).
+  if (prefix.length > MAX_CODE_CALLS) return { ok: false, reason: 'too_many_calls' }
   const config = buildConfigFromRecipe(recipe)
   const par = parFromHandover(config, calls, lap)
   if (par.retired) return { ok: false, reason: 'par_retired' }
@@ -38,7 +43,7 @@ export function makeCustomStart(recipe: RaceRecipe, calls: readonly PlayerCall[]
   return {
     ok: true,
     payload: {
-      fingerprint: gameDataFingerprint(), recipe, calls: prefixCalls(calls, lap), startLap: lap,
+      fingerprint: gameDataFingerprint(), recipe, calls: prefix, startLap: lap,
       expect: { position: sit.position, lapsRemaining: sit.lapsRemaining, compound: sit.compound as Compound, tyreAge: sit.tyreAge, par: par.position },
       name: name ?? defaultStartName(recipe.circuitId, lap),
     },

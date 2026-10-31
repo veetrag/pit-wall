@@ -5,12 +5,14 @@ import type { PlayerCall } from '@engine/playerCalls'
 import type { Compound } from '@engine/types'
 import type { RaceRecipe } from '@state/raceRecipe'
 import { lapRange, makeCustomStart, situationAt, defaultStartName, type MakeStartResult } from '@state/customStart'
-import { encodeStart } from '@state/startCode'
+import { encodeStart, type StartPayload } from '@state/startCode'
+import { useDebriefStore } from '@state/debriefStore'
+import { LapChart } from './LapChart'
 import { useStartsStore } from '@state/startsStore'
 import { useUiTap } from '@hooks/useUiTap'
 import { Pill, TyreChip, KitButton, EASE, useReducedMotion } from '@ui/kit'
 
-const REFUSAL = { par_one: 'THE AI ALREADY WINS FROM HERE', par_retired: 'TOO MUCH OF A LOTTERY FROM HERE — PICK ANOTHER LAP', lap_range: 'PICK A LAP INSIDE THE RACE' } as const
+const REFUSAL = { par_one: 'THE AI ALREADY WINS FROM HERE', par_retired: 'TOO MUCH OF A LOTTERY FROM HERE — PICK ANOTHER LAP', lap_range: 'PICK A LAP INSIDE THE RACE', too_many_calls: 'TOO MANY CALLS BEFORE THIS LAP — PICK AN EARLIER LAP' } as const
 
 export function MakeStartSheet({ recipe, calls, onClose }: { recipe: RaceRecipe; calls: PlayerCall[]; onClose: () => void }) {
   const range = useMemo(() => lapRange(recipe), [recipe])
@@ -19,6 +21,10 @@ export function MakeStartSheet({ recipe, calls, onClose }: { recipe: RaceRecipe;
   const [result, setResult] = useState<MakeStartResult | null>(null)
   const [name, setName] = useState('')
   const [saved, setSaved] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [codeText, setCodeText] = useState<string | null>(null)
+  // The result screen's own race: chart it under the slider with the chosen lap marked (spec §5.1).
+  const history = useDebriefStore(s => s.history)
   const reduced = useReducedMotion()
   const uiTap = useUiTap()
   const sliderRef = useRef<HTMLInputElement>(null)
@@ -27,15 +33,28 @@ export function MakeStartSheet({ recipe, calls, onClose }: { recipe: RaceRecipe;
   useEffect(() => { sliderRef.current?.focus() }, [])
   const sit = useMemo(() => situationAt(recipe, calls, shownLap), [recipe, calls, shownLap])
 
-  function setStart() { uiTap(); setResult(makeCustomStart(recipe, calls, lap, name.trim() || undefined)); setSaved(null) }
+  function setStart() { uiTap(); setResult(makeCustomStart(recipe, calls, lap, name.trim() || undefined)); setSaved(null); setError(null); setCodeText(null) }
+  /** The name as typed NOW, so an edit after SET START still lands in SAVE and SHARE. */
+  function current(): StartPayload | null {
+    if (!result?.ok) return null
+    return { ...result.payload, name: name.trim() || defaultStartName(recipe.circuitId, result.payload.startLap) }
+  }
   function save() {
-    if (!result?.ok || saved !== null) return
-    uiTap(); useStartsStore.getState().save(result.payload); setSaved('SAVED TO MY STARTS')
+    const p = current()
+    if (!p || saved !== null) return
+    uiTap()
+    const r = useStartsStore.getState().save(p)
+    if (!r.ok) { setError('THIS START CANNOT BE SAVED'); return }
+    setError(null)
+    setSaved(r.full ? 'MY STARTS IS FULL — OLDEST REMOVED' : 'SAVED TO MY STARTS')
   }
   async function share() {
-    if (!result?.ok) return
+    const p = current()
+    if (!p) return
     uiTap()
-    try { await Share.share({ title: 'Pit Wall start', text: `Try my Pit Wall start "${result.payload.name}": ${encodeStart(result.payload)}` }) } catch { /* cancelled */ }
+    let code: string
+    try { code = encodeStart(p) } catch { setError('THIS START CANNOT BE SHARED'); return }
+    try { await Share.share({ title: 'Pit Wall start', text: `Try my Pit Wall start "${p.name}": ${code}` }) } catch { setCodeText(code) }
   }
 
   return (
@@ -54,6 +73,11 @@ export function MakeStartSheet({ recipe, calls, onClose }: { recipe: RaceRecipe;
           onChange={e => { setLap(Number(e.target.value)); setResult(null) }}
           style={{ display: 'block', width: '100%', minHeight: 44, accentColor: 'var(--volt)' }} />
       </label>
+      {history && (
+        <div style={{ width: '100%', maxWidth: 260, alignSelf: 'center' }}>
+          <LapChart history={history} playerDriverId={recipe.playerDriverId} markLap={lap} />
+        </div>
+      )}
       {sit && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} aria-live="polite">
           <Pill tone="dusk">{`P${sit.position}`}</Pill>
@@ -67,6 +91,13 @@ export function MakeStartSheet({ recipe, calls, onClose }: { recipe: RaceRecipe;
         onChange={e => setName(e.target.value.replace(/[^\x20-\x7E]/g, ''))}
         style={{ minHeight: 44, padding: '0 12px', border: 'none', background: 'var(--dusk)', color: 'var(--white)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 15 }} />
       {result && !result.ok && <div role="alert" style={{ color: 'var(--hot)', fontFamily: 'var(--font-body)', fontWeight: 800 }}>{REFUSAL[result.reason]}</div>}
+      {error && <div role="alert" style={{ color: 'var(--hot)', fontFamily: 'var(--font-body)', fontWeight: 800 }}>{error}</div>}
+      {codeText && (
+        <div role="status" style={{ color: 'var(--lilac)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13 }}>
+          {"COULDN'T OPEN SHARING. YOUR CODE: "}
+          <span data-testid="share-code-text" style={{ userSelect: 'all', overflowWrap: 'anywhere', color: 'var(--white)' }}>{codeText}</span>
+        </div>
+      )}
       {result?.ok && <div style={{ color: 'var(--white)', fontFamily: 'var(--font-body)', fontWeight: 800, letterSpacing: 1 }}>{`FINISH P${result.payload.expect.par - 1} OR BETTER`}</div>}
       <div style={{ display: 'flex', gap: 8 }}>
         {!result?.ok

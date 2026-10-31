@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { z } from 'zod'
 import { Preferences } from '@capacitor/preferences'
-import { decodeStart, encodeStart, type StartPayload } from './startCode'
+import { decodeStart, encodeStart, validatePayload, type StartPayload } from './startCode'
 import { rederive } from './customStart'
 import { betterBest, type ScenarioBest, type ScenarioOutcome } from './scenarioStore'
 
@@ -17,7 +17,9 @@ const FileSchema = z.object({
 function sameStart(a: StartPayload, b: StartPayload): boolean {
   return JSON.stringify([a.recipe, a.calls, a.startLap]) === JSON.stringify([b.recipe, b.calls, b.startLap])
 }
-function payloadOf(s: SavedStart): StartPayload | null { const d = decodeStart(s.code); return d.ok ? d.payload : null }
+/** Format + checksum only: a start this build cannot play is still the player's (spec R23). */
+function payloadOf(s: SavedStart): StartPayload | null { const d = decodeStart(s.code, { validate: false }); return d.ok ? d.payload : null }
+function safeEncode(p: StartPayload): string | null { try { return encodeStart(p) } catch { return null } }
 
 let writeChain: Promise<void> = Promise.resolve()
 function persist(starts: SavedStart[]) {
@@ -26,11 +28,12 @@ function persist(starts: SavedStart[]) {
   })
 }
 
+export type SaveResult = { ok: true; id: string; full: boolean } | { ok: false; reason: 'invalid' }
 type ImportResult = { ok: true; id: string; drift: boolean } | { ok: false; reason: 'format' | 'checksum' | 'newer' | 'invalid' | 'unplayable' }
 interface StartsStore {
   starts: SavedStart[]
   load: () => Promise<void>
-  save: (p: StartPayload, now?: number) => { id: string; full: boolean }
+  save: (p: StartPayload, now?: number) => SaveResult
   importCode: (text: string, now?: number) => ImportResult
   rename: (id: string, name: string) => void
   remove: (id: string) => void
@@ -43,31 +46,37 @@ export const useStartsStore = create<StartsStore>((set, get) => ({
     try {
       const { value } = await Preferences.get({ key: STARTS_KEY })
       const parsed = FileSchema.safeParse(value ? JSON.parse(value) : { v: 1, starts: [] })
-      set({ starts: parsed.success ? parsed.data.starts.filter(s => decodeStart(s.code).ok) : [] })
+      set({ starts: parsed.success ? parsed.data.starts.filter(s => payloadOf(s) !== null) : [] })
     } catch { set({ starts: [] }) }
   },
   save(p, now = Date.now()) {
     const existing = get().starts.find(s => { const q = payloadOf(s); return q !== null && sameStart(q, p) })
-    if (existing) return { id: existing.id, full: false }
-    const code = encodeStart(p)
+    if (existing) return { ok: true, id: existing.id, full: false }
+    if (!validatePayload(p)) return { ok: false, reason: 'invalid' }
+    const code = safeEncode(p)
+    if (code === null) return { ok: false, reason: 'invalid' }
     const d = decodeStart(code)
-    const id = d.ok ? d.id : code.slice(-8)
+    if (!d.ok) return { ok: false, reason: 'invalid' }
+    const id = d.id
     const full = get().starts.length >= MAX_STARTS
     const starts = [{ id, code, savedAt: now, best: null }, ...get().starts].slice(0, MAX_STARTS)
     set({ starts }); persist(starts)
-    return { id, full }
+    return { ok: true, id, full }
   },
   importCode(text, now = Date.now()) {
     const d = decodeStart(text)
     if (!d.ok) return { ok: false, reason: d.reason }
     const r = rederive(d.payload)
     if (!r || r.parRetired || r.par <= 1) return { ok: false, reason: 'unplayable' }
-    return { ok: true, id: get().save(d.payload, now).id, drift: r.drift }
+    const saved = get().save(d.payload, now)
+    if (!saved.ok) return { ok: false, reason: 'invalid' }
+    return { ok: true, id: saved.id, drift: r.drift }
   },
   rename(id, name) {
     const starts = get().starts.map(s => {
       const p = s.id === id ? payloadOf(s) : null
-      return p ? { ...s, code: encodeStart({ ...p, name }) } : s
+      const code = p ? safeEncode({ ...p, name }) : null
+      return code ? { ...s, code } : s
     })
     set({ starts }); persist(starts)
   },

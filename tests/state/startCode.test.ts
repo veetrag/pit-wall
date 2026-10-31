@@ -34,9 +34,6 @@ describe('share code round trip', () => {
   // format instead.
   const GOLDEN = 'PW1-AQAAAAEAAAAAAAABB2QAAAERAAECAXinMNDn'
   it('PINNED GOLDEN CODE', () => {
-    // eslint-disable-next-line no-console
-    console.log('GOLDEN', encodeStart(MINIMAL))
-    expect(GOLDEN, 'pin GOLDEN from the printed line').not.toBe('')
     expect(encodeStart(MINIMAL)).toBe(GOLDEN)
   })
 })

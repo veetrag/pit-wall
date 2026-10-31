@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Share } from '@capacitor/share'
 import { useStartsStore, type SavedStart } from '@state/startsStore'
-import { decodeStart } from '@state/startCode'
+import { decodeStart, validatePayload } from '@state/startCode'
 import { rederive, startChallenge } from '@state/customStart'
 import { useScenarioStore } from '@state/scenarioStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { loadGameData } from '@data/validators'
-import { KitButton, Pill, CircuitOutline, snapIn } from '@ui/kit'
+import { KitButton, Pill, CircuitOutline, TyreChip, snapIn } from '@ui/kit'
+import type { Compound } from '@engine/types'
 
 const GAME = loadGameData()
 const IMPORT_ERROR = {
@@ -37,13 +38,18 @@ function StartRow({ s, index, reduced }: { s: SavedStart; index: number; reduced
   const [confirm, setConfirm] = useState(false)
   const [driftAsk, setDriftAsk] = useState(false)
   const [msg, setMsg] = useState<Msg | null>(null)
-  const d = useMemo(() => decodeStart(s.code), [s.code])
+  // Format + checksum only: a start this build cannot play stays listed, explained (spec R23).
+  const d = useMemo(() => decodeStart(s.code, { validate: false }), [s.code])
+  // The start as THIS build plays it, once per code; null = no longer playable here.
+  const r = useMemo(() => {
+    if (!d.ok || !validatePayload(d.payload)) return null
+    try { const x = rederive(d.payload); return x && !x.parRetired && x.par > 1 ? x : null } catch { return null }
+  }, [d])
   if (!d.ok) return null
   const p = d.payload
   const circuit = GAME.circuits[p.recipe.circuitId]
   function begin(force: boolean) {
-    const r = rederive(p)
-    if (!r || r.parRetired || r.par <= 1) { setMsg({ kind: 'error', text: IMPORT_ERROR.unplayable }); return }
+    if (!r) { setMsg({ kind: 'error', text: IMPORT_ERROR.unplayable }); return }
     if (r.drift && !force) { setDriftAsk(true); return }
     setDriftAsk(false)
     useScenarioStore.getState().select(startChallenge(s.id, p, r))
@@ -59,8 +65,16 @@ function StartRow({ s, index, reduced }: { s: SavedStart; index: number; reduced
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 24, color: 'var(--white)', overflowWrap: 'anywhere' }}>{p.name}</div>
           <div style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 12, letterSpacing: 1, color: 'var(--lilac-dim)' }}>
-            {`${(circuit?.name ?? '').toUpperCase()} · LAP ${p.startLap} · P${p.expect.position}`}
+            {`${(circuit?.name ?? p.recipe.circuitId).toUpperCase()} · LAP ${p.startLap}`}
           </div>
+          {r
+            ? <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Pill tone="dusk">{`P${r.situation.position}`}</Pill>
+                <Pill tone="dusk">{`${r.situation.lapsRemaining} LAPS LEFT`}</Pill>
+                <Pill tone="dusk"><TyreChip compound={r.situation.compound as Compound} size={18} /><span>{r.situation.compound}</span></Pill>
+                <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 1, color: 'var(--white)' }}>{`FINISH P${Math.max(1, r.par - 1)} OR BETTER`}</span>
+              </div>
+            : <div data-testid="start-unplayable" style={{ color: 'var(--hot)', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13 }}>{`⚠ ${IMPORT_ERROR.unplayable}`}</div>}
           {s.best && <Pill tone={s.best.met ? 'volt' : 'dusk'}>{`BEST ${s.best.position === null ? 'DNF' : `P${s.best.position}`}${s.best.met ? ' ✓' : ''}`}</Pill>}
         </div>
         <CircuitOutline circuitId={p.recipe.circuitId} width={64} height={48} label={`${circuit?.name ?? ''} layout`} />

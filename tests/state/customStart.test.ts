@@ -13,6 +13,12 @@ const RECIPE: RaceRecipe = {
 const CALLS: PlayerCall[] = [{ step: 0, kind: 'pace', mode: 'push' }, { step: 40, kind: 'pace', mode: 'neutral' }]
 
 describe('making a start', () => {
+  it('refuses a lap with more calls before it than a code can carry (u8), and never throws', () => {
+    const many: PlayerCall[] = Array.from({ length: 256 }, (_, i) => ({ step: Math.floor(i / 10), kind: 'pace', mode: i % 2 ? 'push' : 'neutral' }))
+    expect(makeCustomStart(RECIPE, many, 30)).toEqual({ ok: false, reason: 'too_many_calls' })
+    const at255 = makeCustomStart(RECIPE, many.slice(0, 255), 30)
+    expect(at255.ok || at255.reason !== 'too_many_calls').toBe(true)
+  })
   it('offers laps 1 .. laps - 3', () => { expect(lapRange(RECIPE)).toEqual({ min: 1, max: 43 }) })
   it('names a start after the circuit and lap, in ASCII, at most 24 characters', () => {
     expect(defaultStartName('costa_verde', 30)).toBe('COSTA VERDE L30')
