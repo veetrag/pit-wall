@@ -12,9 +12,11 @@ import { detectRadioRequest, makeRequestTracker, type RadioRequest, type Request
 import type { Difficulty } from './settingsStore'
 import type { PlayerStrategyChoice } from './seasonStore'
 import type { UpgradeOverlayInput } from './upgradeOverlay'
+import type { ActiveChallenge } from './scenarioStore'
 import { buildRaceConfig, buildScenarioConfig } from './buildRaceConfig'
 import { buildConfigFromRecipe, type RaceRecipe, type LapsPercent, type WeatherMix } from './raceRecipe'
 import { startScenario } from '@engine/scenario'
+import { handoverFromCalls } from '@engine/customStart'
 import { redFlagPending } from '@engine/redFlag'
 import { neutralisationKind } from '@engine/incidents'
 
@@ -85,6 +87,8 @@ interface RaceStore {
   startRace: () => void
   startSeasonRace: (playerDriverId: string, seed: number, circuitId?: string, difficulty?: Difficulty, playerStrategy?: PlayerStrategyChoice | null, upgrades?: UpgradeOverlayInput | null, gridOrder?: string[], dryStart?: boolean, opts?: SeasonRaceOptions) => void
   startScenarioRace: (spec: { circuitId: string; seed: number; playerDriverId: string; startLap: number; sprint?: boolean }) => void
+  /** Enters a custom start at its handover: rebuilds the race from spec.recipe + spec.calls, keeping the live rng. No-op without both. */
+  startCustomStartRace: (spec: ActiveChallenge) => void
   initForStartSequence: () => void
   confirmRaceStart: () => void
   /** The RED FLAG card's RESTART: logs the restart_tyre call and starts the lights. */
@@ -194,6 +198,13 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildScenarioConfig(spec)
     const { state, rng } = startScenario(config, spec.startLap)
     set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
+  },
+
+  startCustomStartRace(spec) {
+    if (!spec.recipe || !spec.calls) return
+    const config = buildConfigFromRecipe(spec.recipe)
+    const { state, rng } = handoverFromCalls(config, spec.calls, spec.startLap)
+    set({ phase: 'racing', config, raceState: state, rng, recipe: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
   },
 
   initForStartSequence() {

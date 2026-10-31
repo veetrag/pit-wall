@@ -9,6 +9,7 @@ import { useSettingsStore } from '@state/settingsStore'
 import { useDebriefStore } from '@state/debriefStore'
 import { useScenarioStore } from '@state/scenarioStore'
 import { useDailyStore } from '@state/dailyStore'
+import { useStartsStore } from '@state/startsStore'
 import { goalMet } from '@engine/scenario'
 import type { RaceEventSummary, FinishPosition } from '@state/seasonStore'
 import type { RaceState } from '@engine/types'
@@ -51,6 +52,7 @@ export function RaceWatcher() {
   const setSpeed = useClockStore(s => s.setSpeed)
   const difficulty = useSettingsStore(s => s.difficulty)
   const startScenarioRace = useRaceStore(s => s.startScenarioRace)
+  const startCustomStartRace = useRaceStore(s => s.startCustomStartRace)
   const activeScenario = useScenarioStore(s => s.active)
   const recordScenarioOutcome = useScenarioStore(s => s.recordOutcome)
   const toScenarioResult = useSeasonStore(s => s.toScenarioResult)
@@ -151,7 +153,8 @@ export function RaceWatcher() {
   useEffect(() => {
     if (seasonPhase === 'scenario_racing' && racePhase === 'idle' && activeScenario) {
       scenarioFiredRef.current = false
-      startScenarioRace(activeScenario)
+      if (activeScenario.recipe) startCustomStartRace(activeScenario)
+      else startScenarioRace(activeScenario)
       /*
        * Scenarios have to start their own clock.
        *
@@ -181,6 +184,7 @@ export function RaceWatcher() {
     }
     recordScenarioOutcome(outcome)
     if (spec.kind === 'daily') useDailyStore.getState().record(outcome)
+    if (spec.kind === 'start') useStartsStore.getState().recordBest(spec.id.replace(/^start-/, ''), outcome)
     toScenarioResult()
     /*
      * Tracked and cleared on unmount: TRY AGAIN is live the instant the result

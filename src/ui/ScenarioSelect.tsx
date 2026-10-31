@@ -8,6 +8,7 @@ import { loadGameData, type ScenarioSpecData } from '@data/validators'
 import type { Compound } from '@engine/types'
 import { ScreenFrame, ScreenHeader, Pill, TyreChip, KitButton, CircuitOutline, Tabs, TraitPills, snapIn, EASE } from '@ui/kit'
 import { DailyCard } from '@ui/DailyCard'
+import { MyStarts } from '@ui/MyStarts'
 
 // Module scope, not per render -- this screen never needs to re-parse the
 // scenario data on every re-render.
@@ -157,13 +158,15 @@ export function ScenarioSelect() {
           idPrefix="challenges"
           value={tab}
           onChange={setTab}
-          tabs={[{ value: 'scenarios', label: 'SCENARIOS' }, { value: 'classics', label: 'CLASSICS' }, { value: 'daily', label: 'DAILY' }]}
+          tabs={[{ value: 'scenarios', label: 'SCENARIOS' }, { value: 'classics', label: 'CLASSICS' }, { value: 'daily', label: 'DAILY' }, { value: 'starts', label: 'MY STARTS' }]}
         />
       </div>
       <div role="tabpanel" id="challenges-panel" aria-labelledby={`challenges-tab-${tab}`}
         style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {tab === 'daily'
           ? <DailyCard />
+          : tab === 'starts'
+          ? <MyStarts />
           : list.map((spec, i) => (
             <ScenarioCard
               key={spec.id}
