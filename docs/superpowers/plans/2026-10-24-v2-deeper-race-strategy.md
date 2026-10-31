@@ -8,6 +8,26 @@
 
 **Tech Stack:** TypeScript (strict, `noUncheckedIndexedAccess`), React 19 + framer-motion, Zustand 5, zod 4, Vitest 4 (jsdom), PixiJS 8, Capacitor 8.
 
+> **Status note (2026-10-31) — read before executing.** This plan was written when 1.6.2 was the
+> latest release. Since then 1.7 (versionCode 10), 1.8 (11) and 1.9 (12) shipped from the content
+> plan, so:
+> - **Version numbers are stale.** Every "2.0 / versionCode 10" here (Goal, Task 27) must be
+>   renumbered to the next free versionCode (13 or later) and the release name agreed in the 2.0
+>   roadmap; the content plan's slice D also claims "2.0 / versionCode 13". Decide the order before
+>   either runs.
+> - **Task 2 is partly done.** Both projection defects it describes (the projected stop missing
+>   `compoundsUsed`/`tyreAllocation`, and the fast-forward loops running past the flag) were fixed in
+>   97e1ff0 with tests in `tests/engine/projection.test.ts` ("projectPitNow near the flag"). Task 2
+>   still owns the `fitTyres`/`executeStop` refactor; its projection test will already pass, so its
+>   RED step must target `fitTyres`/`executeStop` only.
+> - **`RaceState.planHold` and `applyPlanHold` already exist** (1.6.2). Task 1's type additions append
+>   after `planHold?` as written; nothing to add for the hold itself.
+> - **`buildRaceConfig` grew** `lapsPercent` and `weather` parameters and a `RaceRecipe` (1.9,
+>   `src/state/raceRecipe.ts`). Task 15 (FUEL LOAD at race setup) must thread `playerFuelLoad`
+>   through the recipe too, or share codes and replays of fuel-managed races will not reproduce.
+> - **New `PlayerCall` kinds must be appended to `CALL_KINDS`** in `src/state/startCodes.ts`
+>   (append-only) or a start made from a 2.0 race cannot be encoded.
+
 **Spec:** `docs/superpowers/specs/2026-10-24-v2-deeper-race-strategy-design.md` — binding. Section and ruling ids (A1…O3) below refer to it. Also read `CLAUDE.md` and `MODEL_SPEC.md` §3, §10, §14–§16.
 
 ## Global Constraints
