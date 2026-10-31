@@ -18,7 +18,8 @@ let cached: number | null = null
  * A fingerprint of everything that decides a race: tuning (minus the test-only
  * bands), compounds, circuits, cars, drivers, strategies, upgrades. Two builds
  * with the same fingerprint race identically. Used to warn on drifted share
- * codes and to key daily bests (spec 2026-10-24 R18, R23).
+ * codes (spec 2026-10-24 R23). Daily bests are keyed by the daily's own
+ * signature (circuit:seed:lap:driver), not by this.
  */
 export function gameDataFingerprint(): number {
   if (cached !== null) return cached

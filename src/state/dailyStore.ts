@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { Preferences } from '@capacitor/preferences'
 import { loadGameData } from '@data/validators'
 import { generateDaily, dateKey, type DailyChallenge } from './daily'
-import { betterBest, type ScenarioOutcome } from './scenarioStore'
+import { betterBest, useScenarioStore, type ScenarioOutcome } from './scenarioStore'
 
 export const DAILY_BEST_KEY = 'daily.best'
 export interface DailyBest { signature: string; position: number | null; met: boolean }
@@ -54,6 +54,10 @@ export const useDailyStore = create<DailyStore>((set, get) => ({
   record(outcome) {
     const d = get().today
     if (!d) return
+    // Only the daily actually raced counts: a stale or replaced `today` must not
+    // take a result that belongs to another day's spec.
+    const active = useScenarioStore.getState().active
+    if (active?.kind !== 'daily' || active.id !== d.spec.id) return
     const prev = get().bestFor(d) ?? undefined
     const merged = betterBest(prev, { position: outcome.retired ? null : outcome.position, met: outcome.met })
     const entry: DailyBest = { signature: d.signature, ...merged }

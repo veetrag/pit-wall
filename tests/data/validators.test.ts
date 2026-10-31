@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { loadGameData } from '@data/validators'
+import { loadGameData, TuningSchema } from '@data/validators'
 
 describe('loadGameData', () => {
   it('loads and validates all data files without throwing', () => {
@@ -83,5 +83,20 @@ describe('loadGameData', () => {
     // was chosen instead because it satisfies the reliability spec's per-team
     // DNF targets at the same time -- see tests/engine/mechanicalFailure.ts.
     expect(data.tuning.mechanicalFailure.baseChancePerLap).toBeCloseTo(0.012, 5)
+  })
+})
+
+describe('tuning.daily ranges', () => {
+  const base = () => structuredClone(loadGameData().tuning)
+  it('rejects an inverted lapWindow', () => {
+    const t = base(); t.daily.lapWindow = [0.8, 0.2]
+    expect(TuningSchema.safeParse(t).success).toBe(false)
+  })
+  it('rejects an inverted positionRange', () => {
+    const t = base(); t.daily.positionRange = [9, 3]
+    expect(TuningSchema.safeParse(t).success).toBe(false)
+  })
+  it('accepts the shipped ranges', () => {
+    expect(TuningSchema.safeParse(base()).success).toBe(true)
   })
 })

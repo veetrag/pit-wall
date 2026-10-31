@@ -154,12 +154,14 @@ export function ScenarioSelect() {
       <div style={{ padding: '6px 16px 0', flexShrink: 0 }}>
         <Tabs
           ariaLabel="Challenges"
+          idPrefix="challenges"
           value={tab}
           onChange={setTab}
           tabs={[{ value: 'scenarios', label: 'SCENARIOS' }, { value: 'classics', label: 'CLASSICS' }, { value: 'daily', label: 'DAILY' }]}
         />
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div role="tabpanel" id="challenges-panel" aria-labelledby={`challenges-tab-${tab}`}
+        style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {tab === 'daily'
           ? <DailyCard />
           : list.map((spec, i) => (

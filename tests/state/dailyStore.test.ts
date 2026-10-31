@@ -10,16 +10,19 @@ vi.mock('@capacitor/preferences', () => ({
 }))
 
 import { useDailyStore, DAILY_BEST_KEY, pruneBests } from '@state/dailyStore'
+import { useScenarioStore } from '@state/scenarioStore'
+import { loadGameData } from '@data/validators'
 
 const DAY = new Date(2026, 9, 28, 9, 0)
 
 describe('daily bests', () => {
-  beforeEach(() => { mem.clear(); useDailyStore.setState({ today: null, status: 'idle', best: {} }) })
+  beforeEach(() => { mem.clear(); useDailyStore.setState({ today: null, status: 'idle', best: {} }); useScenarioStore.setState({ active: null, outcome: null }) })
 
   it('builds today and keeps the better result', async () => {
     useDailyStore.getState().build(DAY)
     await vi.waitFor(() => expect(useDailyStore.getState().status).toBe('ready'))
     const today = useDailyStore.getState().today!
+    useScenarioStore.getState().select({ ...today.spec, kind: 'daily' })
     useDailyStore.getState().record({ met: false, position: 9, retired: false })
     useDailyStore.getState().record({ met: true, position: 4, retired: false })
     useDailyStore.getState().record({ met: false, position: 12, retired: false })
@@ -50,4 +53,32 @@ describe('daily bests', () => {
     await useDailyStore.getState().loadBest()
     expect(useDailyStore.getState().best).toEqual({})
   })
+
+  it('ignores an outcome whose active spec is not today\'s daily', async () => {
+    useDailyStore.getState().build(DAY)
+    await vi.waitFor(() => expect(useDailyStore.getState().status).toBe('ready'))
+    const today = useDailyStore.getState().today!
+    useScenarioStore.getState().select({ ...today.spec, id: 'daily-2026-10-27', kind: 'daily' })
+    useDailyStore.getState().record({ met: true, position: 1, retired: false })
+    useScenarioStore.getState().select({ ...today.spec, kind: 'scenario' })
+    useDailyStore.getState().record({ met: true, position: 1, retired: false })
+    expect(useDailyStore.getState().best).toEqual({})
+  }, 60_000)
+
+  it('prunes the persisted best on write', async () => {
+    const keep = loadGameData().tuning.daily.keepDays
+    // Distinct sortable keys across months to avoid invalid dates.
+    const keys = Array.from({ length: keep + 5 }, (_, i) => `2025-${String(Math.floor(i / 28) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`)
+    mem.set(DAILY_BEST_KEY, JSON.stringify(Object.fromEntries(keys.map(k => [k, { signature: 's', position: 1, met: true }]))))
+    useDailyStore.getState().build(DAY)
+    await vi.waitFor(() => expect(useDailyStore.getState().status).toBe('ready'))
+    const today = useDailyStore.getState().today!
+    useScenarioStore.getState().select({ ...today.spec, kind: 'daily' })
+    useDailyStore.getState().record({ met: true, position: 2, retired: false })
+    await vi.waitFor(() => expect(Object.keys(JSON.parse(mem.get(DAILY_BEST_KEY)!))).toContain('2026-10-28'))
+    const persisted = Object.keys(JSON.parse(mem.get(DAILY_BEST_KEY)!)).sort()
+    expect(persisted).toHaveLength(keep)
+    expect(persisted[persisted.length - 1]).toBe('2026-10-28')
+    expect(persisted).not.toContain(keys[0])
+  }, 60_000)
 })

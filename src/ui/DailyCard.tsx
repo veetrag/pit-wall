@@ -14,23 +14,21 @@ const LONG = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long' })
 const SHORT = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' })
 
 /** The designed loading moment: a chevron sweeping a slanted strip, like a car on its formation lap. */
-function DailyLoader({ failed, reducedMotion }: { failed: boolean; reducedMotion: boolean }) {
+function DailyLoader({ failed, reducedMotion, label }: { failed: boolean; reducedMotion: boolean; label: string }) {
   return (
-    <section className="slant-lg" aria-label={`Daily challenge for ${LONG.format(new Date())}`} aria-busy={!failed}
+    <section className="slant-lg" aria-label={label} aria-busy={!failed}
       style={{ background: 'var(--grape)', padding: '24px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12, letterSpacing: 1.5, color: 'var(--lilac-dim)' }}>DAILY</div>
       <div role="status" style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 24, lineHeight: 1, textTransform: 'uppercase', color: failed ? 'var(--hot)' : 'var(--white)' }}>
         {failed ? "Today's challenge could not be built." : "Building today's challenge…"}
       </div>
-      {!failed && (
+      {!failed && !reducedMotion && (
         <div aria-hidden="true" className="slant-sm" style={{ position: 'relative', height: 6, background: 'var(--dusk)', overflow: 'hidden' }}>
           <motion.div
             style={{ position: 'absolute', top: 0, bottom: 0, width: '30%', background: 'var(--volt)' }}
-            initial={reducedMotion ? { left: '35%', opacity: 0.5 } : { left: '-30%' }}
-            animate={reducedMotion ? { opacity: 1 } : { left: '100%' }}
-            transition={reducedMotion
-              ? { duration: 0.6, repeat: Infinity, repeatType: 'reverse' }
-              : { duration: 0.9, ease: EASE, repeat: Infinity }}
+            initial={{ left: '-30%' }}
+            animate={{ left: '100%' }}
+            transition={{ duration: 0.9, ease: EASE, repeat: Infinity }}
           />
         </div>
       )}
@@ -53,7 +51,7 @@ export function DailyCard() {
     if (store.status !== 'building') store.build()
   }, [])
 
-  if (status !== 'ready' || !today) return <DailyLoader failed={status === 'failed'} reducedMotion={reducedMotion} />
+  if (status !== 'ready' || !today) return <DailyLoader failed={status === 'failed'} reducedMotion={reducedMotion} label={`Daily challenge for ${LONG.format(today ? new Date(`${today.dateKey}T12:00:00`) : new Date())}`} />
 
   const d = today.spec
   const day = new Date(`${today.dateKey}T12:00:00`)

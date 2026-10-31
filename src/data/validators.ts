@@ -17,7 +17,7 @@ const DifficultyProfileSchema = z.object({
   pitCrewConsistency: z.number(),
 })
 
-const TuningSchema = z.object({
+export const TuningSchema = z.object({
   carPerformance: z.object({ deltaPerRating: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
   driverPerformance: z.object({ deltaPerSkill: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
   fuel: z.object({ effectPerLap: z.number() }),
@@ -302,8 +302,8 @@ const TuningSchema = z.object({
   daily: z.object({
     _note: z.string().optional(),
     rulesVersion: z.number().int().min(1),
-    lapWindow: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),
-    positionRange: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    lapWindow: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]).refine(w => w[0] <= w[1], 'lapWindow must be [lo, hi]'),
+    positionRange: z.tuple([z.number().int().min(1), z.number().int().min(1)]).refine(r => r[0] <= r[1], 'positionRange must be [lo, hi]'),
     maxSearchRaces: z.number().int().min(1).max(100),
     keepDays: z.number().int().min(1).max(366),
   }),
