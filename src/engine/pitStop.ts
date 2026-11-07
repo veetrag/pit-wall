@@ -2,6 +2,7 @@ import type { RaceConfig, RaceState, CarState, Compound, IncidentEvent, SectorIn
 import { gaussianPair, type Rng } from './rng'
 import { effectivePitLaneLoss } from './incidents'
 import { consumeTyreSet } from './tyres'
+import { unsafeReleaseChance } from './penalties'
 
 /**
  * What one stop cost. `slow` is the part of `total` that was a slow stop (0 if
@@ -85,9 +86,9 @@ export interface StopOutcome {
   cost: PitStopCost
   /** Seconds queued behind the team-mate (spec §7). 0 when double-stacking is off or the box is free. */
   queue: number
-  /** Penalty seconds served at this stop (spec §8). Stub: 0 until penalties land. */
+  /** Pending penalty seconds served (stationary) at this stop (spec §8.2). */
   served: number
-  /** Stub: false until unsafe release lands. */
+  /** An unsafe release was called at this stop: a new pending penalty (spec §8.2). */
   unsafe: boolean
   boxFree?: Record<string, number>
   events: IncidentEvent[]
@@ -121,15 +122,29 @@ export function executeStop(
 ): StopOutcome {
   const cost = pitStopTime(config, car.teamId, ctx.safetyCar, rng, opts)
   const queue = boxQueueEstimate(config, ctx.boxFree, car, ctx.safetyCar)
-  const served = 0
+  const pen = config.tuning.penalties
+  const served = pen.enabled ? car.penalty?.pendingSec ?? 0 : 0
   // Exactly cost.total when nothing is added: no `+ 0` on the golden path.
   const add = queue === 0 && served === 0 ? cost.total : cost.total + queue + served
   const events: IncidentEvent[] = []
   // Every slow stop is logged, whoever made it (spec 1.6 §1, ruling R4).
   if (cost.slow > 0) events.push({ lap: ctx.lap, sector: ctx.sector, kind: 'slow_stop', driverId: car.driverId, timeLoss: cost.slow })
   if (queue > 0) events.push({ lap: ctx.lap, sector: ctx.sector, kind: 'double_stack', driverId: car.driverId, timeLoss: queue })
+  if (served > 0) events.push({ lap: ctx.lap, sector: ctx.sector, kind: 'penalty_served', driverId: car.driverId, timeLoss: served })
+  // Unsafe release reads the LOWER tail of g2; a slow stop the upper, so the
+  // two never coincide and no draw is added. Never rolled in the projection.
+  const unsafe = pen.enabled && opts.allowSlow !== false &&
+    normalCdf(cost.releaseDraw) < unsafeReleaseChance(config, car.teamId, queue > 0)
+  if (unsafe) {
+    events.push({ lap: ctx.lap, sector: ctx.sector, kind: 'unsafe_release', driverId: car.driverId, timeLoss: null })
+    events.push({ lap: ctx.lap, sector: ctx.sector, kind: 'penalty_issued', driverId: car.driverId, timeLoss: pen.timePenaltySec })
+  }
   const boxFree = claimBox(config, ctx, car, queue, cost)
-  return { car: fitTyres(config, car, compound, add), cost, queue, served, unsafe: false, boxFree, events }
+  const fitted = fitTyres(config, car, compound, add)
+  const stopped = pen.enabled && car.penalty
+    ? { ...fitted, penalty: { ...car.penalty, pendingSec: unsafe ? pen.timePenaltySec : 0, servedSec: car.penalty.servedSec + served } }
+    : fitted
+  return { car: stopped, cost, queue, served, unsafe, boxFree, events }
 }
 
 /** Seconds a stop now would queue behind the team-mate (spec §7.2). 0 when off or the box is free. */

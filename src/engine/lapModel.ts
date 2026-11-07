@@ -5,6 +5,8 @@ import { tyreDelta, effectiveTyreAge } from './tyres'
 import { crossoverPenalty } from './weather'
 import { wingSectorDelta } from './setup'
 import { neutralisationPaceMultiplier } from './incidents'
+import { normalCdf } from './pitStop'
+import { trackLimitsChance } from './penalties'
 
 // Convert a 0-100 facet to the 0-9 engine rating (0=best, 9=worst)
 function facetToRating9(facet: number): number {
@@ -113,6 +115,14 @@ export function computeSectorTime(
     }
   }
 
+  // Track limits (spec §8.2, ruling N2): the lower tail of noise2, which a
+  // non-spinning sector does not otherwise use. No draw; none under yellow (N3).
+  let trackLimits = false
+  if (car.penalty && safetyCar === null && spinLoss === 0) {
+    const p = trackLimitsChance(config, car, weatherState)
+    if (p > 0 && normalCdf(noise2) < p) trackLimits = true
+  }
+
   const raw0 = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + wingDelta + noiseSample + spinLoss
   // 2.0 deltas (spec §3.2). Added only when non-zero: no `+ 0` on the off path (byte identity).
   let v2Delta = 0
@@ -139,5 +149,6 @@ export function computeSectorTime(
     trafficPenalty: 0,
     noiseSample,
     spinLoss,
+    ...(trackLimits ? { trackLimits: true as const } : {}),
   }
 }

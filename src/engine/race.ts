@@ -1,6 +1,7 @@
 import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound, IncidentEvent } from './types'
 import type { Rng } from './rng'
 import { createRng } from './rng'
+import { initPenalty, recordTrackLimits, addPendingAtFlag, aiPenaltyCoverPace } from './penalties'
 import { executeStop, boxQueueEstimate, deferForBusyBox } from './pitStop'
 import { computeSectorTime, NO_CTX, type SectorContext } from './lapModel'
 import { rubberLapsFor } from './track'
@@ -122,6 +123,7 @@ export function initRace(config: RaceConfig): RaceState {
       retired: false,
       retiredLap: null,
       retiredCause: null,
+      ...(config.tuning.penalties.enabled ? { penalty: initPenalty() } : {}),
     }
   })
 
@@ -167,6 +169,11 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     const result = computeSectorTime(config, car, sector, rng, state.weatherState, state.safetyCar, drsOpen.has(car.driverId) ? { ...ctxBase, drsOpen: true } : ctxBase)
     newSectorResults.push(result)
     let updated = { ...car, raceTime: car.raceTime + result.sectorTime }
+    if (result.trackLimits && updated.penalty) {
+      const r = recordTrackLimits(config, updated, car.lap, sector)
+      updated = { ...updated, penalty: r.penalty }
+      newIncidents.push(...r.events)
+    }
 
     // Tyre failure risk: once cliffFraction runs meaningfully past the
     // threshold, roll a per-sector chance of a puncture/mechanical failure
@@ -457,6 +464,12 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes, safetyCar }
         const decision = aiDecision(config, updated, stateForAI, rng)
         updated.paceMode = decision.paceMode
+        if (updated.penalty) {
+          const drv = config.drivers.find(d => d.id === updated.driverId)
+          const spec = config.compounds[updated.compound]
+          const cliffFracNow = spec && drv ? tyreCliffFraction(spec, effectiveTyreAge(updated, drv, state.weatherState, config)) : 0
+          updated.paceMode = aiPenaltyCoverPace(config, updated, stateForAI, cliffFracNow, updated.paceMode)
+        }
         if (decision.pit && !raceEndsThisTick && !deferAiStop(config, updated, decision.compound, boxFree, safetyCar, state.weatherState)) {
           const out = executeStop(config, { safetyCar, lap: state.lap, sector, boxFree }, updated, decision.compound, rng)
           updated = out.car
@@ -510,10 +523,14 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       })
     : carsAfterRestart
 
+  // Unserved penalties go on at the flag, before the classification (spec §8.2).
+  const flag = isRaceEnd && config.tuning.penalties.enabled ? addPendingAtFlag(carsBeforeSort, state.lap, sector) : null
+  if (flag) newIncidents.push(...flag.events)
+
   // Re-sort and assign positions: active cars by raceTime; retired cars sort
   // after every classified runner, ranked by retiredLap descending (later
   // retirement = closer to being classified — real motorsport convention).
-  const resorted = [...carsBeforeSort].sort((a, b) => {
+  const resorted = [...(flag?.cars ?? carsBeforeSort)].sort((a, b) => {
     if (a.retired !== b.retired) return a.retired ? 1 : -1
     if (a.retired && b.retired) return (b.retiredLap ?? 0) - (a.retiredLap ?? 0)
     return a.raceTime - b.raceTime
