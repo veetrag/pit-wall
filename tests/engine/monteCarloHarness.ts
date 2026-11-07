@@ -1,6 +1,7 @@
 import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { aiSetups } from '@engine/setup'
+import { drsOpenSet, drsTrains } from '@engine/drs'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig, StrategyBrain, DifficultyProfile } from '@engine/types'
 
@@ -12,6 +13,8 @@ export type HarnessOptions = {
   forceDry?: boolean
   /** Give every car an AI wing (config.setups = aiSetups). Off by default. */
   withSetups?: boolean
+  /** Tuning to race under; defaults to the shipped tuning.json. */
+  tuning?: RaceConfig['tuning']
 }
 
 export type Metrics = {
@@ -62,6 +65,18 @@ export type Metrics = {
   slowStopsPerRace: number
   // 1.6 §4: 'red_flag' incidents per race.
   redFlagPerRace: number
+  // 2.0 (spec 2026-10-24 §12.2, scope 2026-11-07 Task 12'). drsTrainLapEnds:
+  // lap ends (sector 0 after a step) with at least one DRS train. doubleStacks,
+  // penalties, unsafeReleases: 'double_stack' / 'penalty_issued' /
+  // 'unsafe_release' incidents per race. Diagnostics (not banded):
+  // drsPassShare -- share of overtake events made on a sector where the
+  // overtaker had DRS open; trackLimitWarnings -- 'track_limits' per race.
+  drsTrainLapEndsPerRace: number
+  doubleStacksPerRace: number
+  penaltiesPerRace: number
+  unsafeReleasesPerRace: number
+  drsPassShare: number
+  trackLimitWarningsPerRace: number
   // Spec 2026-10-24 §1.6 (circuit authoring). Stops made by cars still running
   // at the flag, per such car; and tyre-failure retirements per car-race.
   meanStopsPerClassifiedCar: number
@@ -222,6 +237,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
   let neutralisationStops = 0
   let weatherStops = 0
   let driverErrors = 0
+  let trainLapEnds = 0, drsPasses = 0, doubleStacks = 0, penalties = 0, unsafeReleases = 0, trackLimits = 0
   let carRaces = 0
   let classifiedStops = 0, classifiedCars = 0, tyreDnfs = 0
   const finishSumByTeam = new Map<string, number>()
@@ -230,14 +246,19 @@ export function runRaces(opts: HarnessOptions): Metrics {
   for (let r = 0; r < races; r++) {
     const circuitId = circuitIds[r % circuitIds.length]!
     const seed = seedBase + r * 7919
-    const built = buildHarnessConfig(seed, circuitId, difficulty, forceDry)
+    const built = buildHarnessConfig(seed, circuitId, difficulty, forceDry, opts.tuning)
     // playerDriverId is '__none__' here, so every car gets an AI wing.
     const config = opts.withSetups ? { ...built, setups: aiSetups(built) } : built
     let state = initRace(config)
     const grid = new Map(state.cars.map(c => [c.driverId, c.position]))
     const rng = createRng(seed)
     for (let i = 0; i < config.circuit.laps * 3; i++) {
+      const open = config.tuning.drs.enabled ? drsOpenSet(config, state, state.sector) : null
       const next = stepSector(config, state, rng)
+      if (open) {
+        for (const ev of next.overtakeEvents.slice(state.overtakeEvents.length)) if (open.has(ev.overtakerId)) drsPasses++
+        if (next.sector === 0 && drsTrains(config, next).length > 0) trainLapEnds++
+      }
       if (state.sector === 2) {
         for (const c of next.cars) {
           const before = state.cars.find(b => b.driverId === c.driverId)
@@ -274,6 +295,10 @@ export function runRaces(opts: HarnessOptions): Metrics {
     redFlags += state.incidents.filter(i => i.kind === 'red_flag').length
     slowStops += state.incidents.filter(i => i.kind === 'slow_stop').length
     driverErrors += state.incidents.filter(i => i.kind === 'driver_error').length
+    doubleStacks += state.incidents.filter(i => i.kind === 'double_stack').length
+    penalties += state.incidents.filter(i => i.kind === 'penalty_issued').length
+    unsafeReleases += state.incidents.filter(i => i.kind === 'unsafe_release').length
+    trackLimits += state.incidents.filter(i => i.kind === 'track_limits').length
 
     const ot = state.overtakeEvents.length
     overtakeTotal += ot
@@ -317,5 +342,11 @@ export function runRaces(opts: HarnessOptions): Metrics {
     aiWeatherStopsPerRace: weatherStops / races,
     slowStopsPerRace: slowStops / races,
     redFlagPerRace: redFlags / races,
+    drsTrainLapEndsPerRace: trainLapEnds / races,
+    doubleStacksPerRace: doubleStacks / races,
+    penaltiesPerRace: penalties / races,
+    unsafeReleasesPerRace: unsafeReleases / races,
+    drsPassShare: overtakeTotal ? drsPasses / overtakeTotal : 0,
+    trackLimitWarningsPerRace: trackLimits / races,
   }
 }

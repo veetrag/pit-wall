@@ -140,3 +140,8 @@ export function makeDeterministicTuning(overrides: DeepPartial<TuningConstants> 
     timeOfDay: { nightWearFactor: 1 },
   }), overrides) as DeepPartial<TuningConstants>)
 }
+
+/** `overrides` with every 2.0 switch off underneath (spec A3), for tests whose subject is not 2.0. */
+export function withV2Off(overrides: DeepPartial<TuningConstants> = {}): DeepPartial<TuningConstants> {
+  return deepMerge(v2Off(), overrides) as DeepPartial<TuningConstants>
+}

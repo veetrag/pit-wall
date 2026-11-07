@@ -13,13 +13,16 @@ const DATA = loadGameData()
 describe('2.0 foundations', () => {
   it('every 2.0 tuning block is declared and survives zod', () => {
     const t = DATA.tuning
+    // The 2.0 switch-on (scope 2026-11-07 Task 12', MODEL_SPEC §17.1): rubber
+    // wash and the SC gamble ship ON; DRS (lantern_quay passing gate), incident
+    // risk, the double stack and penalties (gridFinishSpearman floor) ship OFF.
     expect(t.drs.enabled).toBe(false)
     expect(t.doubleStack.enabled).toBe(false)
     expect(t.penalties.enabled).toBe(false)
-    expect(t.trackEvolution.wash).toEqual({ DAMP: 0, WET: 0 })
+    expect(t.trackEvolution.wash).toEqual({ DAMP: 0.35, WET: 0.8 })
     expect(t.incidents.wetErrorMultiplier).toEqual({ DRY: 1, DAMP: 1, WET: 1 })
     expect(t.incidents.circuitRiskWeight).toBe(0)
-    expect(t.ai.scGambleMaxDelay).toBe(0)
+    expect(t.ai.scGambleMaxDelay).toBe(3)
     // Values the switch-on tasks rely on are present, not undefined (z.object strips unknown keys).
     expect(t.ai.scGambleChance).toBeCloseTo(0.35)
     expect(t.drs.detectionGap).toBe(1.0)

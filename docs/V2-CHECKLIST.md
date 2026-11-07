@@ -554,3 +554,23 @@ a thumb; refusal copy appears on a lap the AI wins from; SHARE CODE into a
 chat app, copy it back from the chat, IMPORT, PLAY: the situation matches;
 paste a damaged code: friendly error; reinstall: codes survive only as
 shared text (expected).
+
+### 2.0: track, DRS, SC, pit lane (scope 2026-11-07, Task 12')
+
+Switch-on result (MODEL_SPEC §17.1): rubber wash and the SC gamble ship ON; DRS, circuit/wet
+incident risk, the double stack and penalties ship OFF after failing a gate with their fallback.
+Phone-test the shipped two, and the four OFF ones only from a debug build with them forced on.
+
+**Phone pass (shipped):** lap 1 is visibly slower and the TRACK GRIP strip fills; a shower drains it
+with one GRIP RESET; the SC meter reads a chance under a clear race, OUT under a neutralisation, and
+its reasons card opens and closes (focus, Escape, outside tap).
+
+**Phone pass (debug build, all on):** DRS pills on the tower one sector ahead, a "TRAIN ×N" bracket
+behind a slow car, the player's pill reads "DRS ✕" inside it; the SC meter rises at Harbour Lights and
+in rain; both team cars boxing under the SC queue (PitTimer QUEUE first, radio "you first"); a
+track-limits warning toast, then a 5 s penalty with a heavy haptic, "+5" on the tower and
+"P4 ▸ P6 after +5s"; staying out to the flag adds it, boxing serves it; 60 fps with train links drawn.
+
+**Calls for Veet:** wash 0.35/0.80; DRS on or off (lantern_quay passing gate 0.183 vs 0.20 — drop its
+DRS zone?); whether to spend gridFinishSpearman headroom on risk / stack / penalties; SC gamble
+threshold 0.35 (never reached with risk off); SC meter bands 15/30%.

@@ -1,12 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useRaceStore } from '@state/raceStore'
+import { makeTuning, withV2Off } from '../fixtures/tuning'
 
 describe('an automatic plan stop on the HUD', () => {
   beforeEach(() => {
     useRaceStore.getState().resetRace()
     useRaceStore.getState().startSeasonRace('d_voss', 4242, 'bengaluru', 'rookie',
       { startCompound: 'M', plannedStops: [{ lap: 3, compound: 'H' }] }, null, undefined, true)
-    useRaceStore.setState({ phase: 'racing' })
+    // Not a 2.0 test: race it with the 2.0 switches off (DRS shifts this seed into a red flag).
+    const config = useRaceStore.getState().config!
+    useRaceStore.setState({ phase: 'racing', config: { ...config, tuning: makeTuning(withV2Off()) } })
   })
 
   it('shows the car in the pit lane, like a manual stop', () => {
