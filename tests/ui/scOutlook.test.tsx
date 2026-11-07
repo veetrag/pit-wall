@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { ScOutlook, outlookLabel, REASON_TEXT } from '@ui/ScOutlook'
 import { useRaceStore } from '@state/raceStore'
 import { initRace } from '@engine/race'
@@ -50,5 +50,58 @@ describe('pit panel SC chance line (spec §9.1)', () => {
     useRaceStore.setState({ raceState: { ...initRace(config), lap: 10, safetyCar: { kind: 'sc', lapsRemaining: 2 } as never } })
     render(<Probe />)
     expect(screen.getByText('none')).toBeTruthy()
+  })
+})
+
+describe('SC meter card behaviour', () => {
+  beforeEach(() => useRaceStore.getState().resetRace())
+  const setup = (lap = 10) => {
+    const config = makeConfig({}, 3, 'harbour_lights')
+    const st = initRace(config)
+    useRaceStore.setState({ config, raceState: { ...st, lap }, phase: 'racing' })
+    return st
+  }
+
+  it('lit segments step 35/65/100% opacity', () => {
+    setup()
+    render(<ScOutlook />)
+    const ops = screen.getAllByTestId('sc-seg').map(e => parseFloat((e as HTMLElement).style.opacity))
+    const lit = ops.filter(o => o > 0.2)
+    expect(lit).toEqual([0.35, 0.65, 1].slice(0, lit.length))
+  })
+
+  it('focuses the card on open, Escape closes and returns focus', () => {
+    setup()
+    render(<ScOutlook />)
+    const btn = screen.getByRole('button')
+    fireEvent.click(btn)
+    const card = screen.getByRole('dialog')
+    expect(document.activeElement).toBe(card)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(btn.getAttribute('aria-expanded')).toBe('false')
+    expect(document.activeElement).toBe(btn)
+  })
+
+  it('closes on outside tap and on lap change', () => {
+    const st = setup()
+    render(<ScOutlook />)
+    const btn = screen.getByRole('button')
+    fireEvent.click(btn)
+    fireEvent.pointerDown(document.body)
+    expect(btn.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(btn)
+    expect(btn.getAttribute('aria-expanded')).toBe('true')
+    act(() => useRaceStore.setState({ raceState: { ...st, lap: 11 } }))
+    expect(btn.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('OUT is not expandable', () => {
+    const config = makeConfig({}, 3, 'harbour_lights')
+    useRaceStore.setState({ config, raceState: { ...initRace(config), lap: 10, safetyCar: { kind: 'sc', lapsRemaining: 2 } as never }, phase: 'racing' })
+    render(<ScOutlook />)
+    const btn = screen.getByRole('button')
+    expect(btn.hasAttribute('aria-expanded')).toBe(false)
+    fireEvent.click(btn)
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })
