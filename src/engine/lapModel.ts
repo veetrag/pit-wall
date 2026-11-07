@@ -113,7 +113,11 @@ export function computeSectorTime(
     }
   }
 
-  const raw = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + wingDelta + noiseSample + spinLoss
+  const raw0 = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + wingDelta + noiseSample + spinLoss
+  // 2.0 deltas (spec §3.2). Added only when non-zero: no `+ 0` on the off path (byte identity).
+  let v2Delta = 0
+  if (ctx.drsOpen) v2Delta -= tuning.drs.timeGain
+  const raw = v2Delta === 0 ? raw0 : raw0 + v2Delta
 
   // Safety car: every car is scaled by the same factor, so this changes no
   // GAPS -- its entire purpose is to make the pit-loss discount meaningful, by

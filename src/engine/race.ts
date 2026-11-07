@@ -5,6 +5,7 @@ import { executeStop } from './pitStop'
 import { computeSectorTime, NO_CTX, type SectorContext } from './lapModel'
 import { rubberLapsFor } from './track'
 import { wingOvertakeFactor } from './setup'
+import { drsOpenSet, drsOvertakeFactor } from './drs'
 import { openingTimeline } from './weather'
 import { aiDecision } from './strategy'
 import { circuitTraits } from './circuitTraits'
@@ -153,12 +154,14 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   // Once per tick, not per car (spec §4.3). Undefined unless rain can wash rubber.
   const rubber = rubberLapsFor(state, config.tuning)
   const ctxBase: SectorContext = rubber === undefined ? NO_CTX : { rubberLaps: rubber }
+  // DRS from the PRE-tick order, once per tick (ruling D1).
+  const drsOpen = drsOpenSet(config, state, sector)
 
   // 1. Compute sector time for each car. Retired cars are frozen entirely —
   // no more sector time, no more sim work happens to them.
   const updatedCars: CarState[] = state.cars.map(car => {
     if (car.retired) return car
-    const result = computeSectorTime(config, car, sector, rng, state.weatherState, state.safetyCar, ctxBase)
+    const result = computeSectorTime(config, car, sector, rng, state.weatherState, state.safetyCar, drsOpen.has(car.driverId) ? { ...ctxBase, drsOpen: true } : ctxBase)
     newSectorResults.push(result)
     let updated = { ...car, raceTime: car.raceTime + result.sectorTime }
 
@@ -369,7 +372,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   // newOvertakeEvents, so skipping the call is what suppresses the events; there
   // is no separate event list to leave empty.
   const afterOvertakesActive = safetyCar === null
-    ? resolveOvertakes(config, penalisedCars, sector, state.lap, rng, newOvertakeEvents)
+    ? resolveOvertakes(config, penalisedCars, sector, state.lap, rng, newOvertakeEvents, drsOpen)
     : penalisedCars
   const afterOvertakes = [...afterOvertakesActive, ...retiredCars]
 
@@ -538,6 +541,7 @@ function resolveOvertakes(
   lap: number,
   rng: Rng,
   events: OvertakeEvent[],
+  drsOpen: ReadonlySet<string>,
 ): CarState[] {
   const sorted = [...cars].sort((a, b) => a.raceTime - b.raceTime)
   const result = [...sorted]
@@ -574,12 +578,12 @@ function resolveOvertakes(
     const defenderDriver = config.drivers.find(d => d.id === ahead.driverId)!
     const attackMult = config.tuning.overtaking.attackRacecraftBase + (attackerDriver.facets.racecraft / 100)
     const defendMult = 1 - (defenderDriver.facets.racecraft / 100) * config.tuning.overtaking.defenceRacecraftFactor
-    const prob = Math.min(
-      0.85,
-      (config.tuning.overtaking.base * sectorEase +
+    const raw = (config.tuning.overtaking.base * sectorEase +
         paceAdv * config.tuning.overtaking.paceMultiplier * sectorEase) *
-        attackMult * defendMult * wingOvertakeFactor(config, behind.driverId, ahead.driverId, sector),
-    )
+        attackMult * defendMult * wingOvertakeFactor(config, behind.driverId, ahead.driverId, sector)
+    const drsF = drsOvertakeFactor(config, drsOpen, behind.driverId, ahead.driverId)
+    // Multiplied only when it does something, so the off path is the pre-2.0 expression.
+    const prob = Math.min(0.85, drsF === 1 ? raw : raw * drsF)
     if (prob > bestProb) {
       bestProb = prob
       bestIdx = i

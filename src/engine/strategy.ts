@@ -1,6 +1,7 @@
 import type { RaceConfig, CarState, RaceState, Compound, WeatherState, PaceMode, StrategyBrain } from './types'
 import { tyreCliffFraction, effectiveTyreAge, resolveAllocatedCompound } from './tyres'
 import { createRng, type Rng } from './rng'
+import { inTrainBehindHead } from './drs'
 
 const CLIFF_EMERGENCY_THRESHOLD = 1.5
 
@@ -204,6 +205,14 @@ export function aiDecision(
     }
   }
 
+  // OPTIMAL: train escape -- box out of a DRS train into clear air (spec §3.3),
+  // the first step on MODEL_SPEC §9.4's "price traffic". Pure threshold, no
+  // draw. Kept a separate named branch so plan Task 10's SC gamble can be
+  // ordered against it explicitly.
+  if (brain === 'optimal' && shouldEscapeTrain(config, car, state, cliffFrac, remainingLaps, nextStop)) {
+    return pitWith(car, nextStop!.compound, 'neutral')
+  }
+
   // M5: aiPaceModeAggression scales how readily a brain reaches for PUSH —
   // rookie rivals attack less, pro rivals attack more, on top of the same
   // fresh-tyre gating. Only the discretionary "push on fresh tyres" calls
@@ -236,4 +245,15 @@ export function shouldAIPit(
 ): { pit: boolean; compound: Compound } {
   const d = aiDecision(config, car, state, createRng(1))
   return { pit: d.pit, compound: d.compound }
+}
+
+/** Optimal brain's DRS-train escape rule (spec §3.3). Inert unless drs.enabled && aiTrainEscape. */
+function shouldEscapeTrain(
+  config: RaceConfig, car: CarState, state: RaceState, cliffFrac: number, remainingLaps: number,
+  nextStop: { lap: number } | undefined,
+): boolean {
+  const drs = config.tuning.drs
+  return drs.enabled && drs.aiTrainEscape && nextStop !== undefined &&
+    car.lapsInDirtyAir >= 3 && cliffFrac >= 0.50 && nextStop.lap - car.lap <= 8 && remainingLaps > 8 &&
+    inTrainBehindHead(config, state, car.driverId)
 }
