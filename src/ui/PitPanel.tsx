@@ -12,6 +12,7 @@ import { useSafetyCar } from '@hooks/useSafetyCar'
 import { soundService } from '@audio/soundService'
 import { KitButton, Pill, TyreChip, EASE, useReducedMotion, PRESS } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
+import { rejoinTrainSize } from '@state/towerV2'
 
 function driverCode(id: string | null, drivers: { id: string; code: string }[]): string {
   if (!id) return '---'
@@ -31,8 +32,11 @@ const ROW_STYLE = {
  */
 function ProjectionCard({ result, compoundLabel }: { result: ProjectionResult; compoundLabel: string }) {
   const config = useRaceStore(s => s.config)
+  const raceState = useRaceStore(s => s.raceState)
   const drivers = config?.drivers ?? []
   const reduced = useReducedMotion()
+  // Spec §3.4: null whenever DRS is off, so the card is unchanged from 1.9.
+  const trainSize = config && raceState ? rejoinTrainSize(config, raceState, result) : null
 
   const aheadCode = driverCode(result.driverAheadId, drivers)
   const behindCode = driverCode(result.driverBehindId, drivers)
@@ -73,6 +77,16 @@ function ProjectionCard({ result, compoundLabel }: { result: ProjectionResult; c
         </span>
         <span> · {myCode} · +{gapAhead}s · fresh {compoundLabel}</span>
       </div>
+
+      {/* PitPanel 2.0 lines, in order: DRS note (this), SC chance, BOX BUSY, penalty. */}
+      {trainSize !== null && (
+        <div data-testid="rejoin-train-note" style={{
+          fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'var(--caution)',
+          fontVariantNumeric: 'tabular-nums', marginTop: 2,
+        }}>
+          Rejoins in a DRS train (×{trainSize})
+        </div>
+      )}
 
       {result.driverBehindId && (
         <div className="slant-row" style={{ ...ROW_STYLE, background: 'var(--grape)', color: 'var(--lilac)' }}>
