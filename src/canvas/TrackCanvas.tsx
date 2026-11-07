@@ -7,6 +7,7 @@ import { CIRCUIT_PATHS } from '@data/circuitPaths'
 import { TEAM_HEX } from './teamHex'
 import { floodlightPoints } from './floodlights'
 import type { RaceState, RaceConfig, WeatherState } from '@engine/types'
+import { trackGrip } from '@engine/track'
 
 type Point = [number, number]
 
@@ -286,16 +287,17 @@ function drawAtmosphere(graphics: PIXI.Graphics, cw: number, ch: number, atmosph
   graphics.rect(0, 0, cw, ch).fill(gradient)
 }
 
-// R6: rubber line — a faint, slowly-intensifying darker line on the racing
-// line, visualising trackEvolution. Redrawn on state updates only.
+// R6: rubber line — a darker line on the racing line that follows the engine's
+// trackGrip (spec 2026-10-24 §4.5): it builds as the race rubbers in and fades
+// when rain washes it. Redrawn once per lap change only.
+const rubberAlpha = (grip: number) => 0.15 + 0.35 * grip
 function drawRubberLine(
   graphics: PIXI.Graphics,
   arcTable: ReturnType<typeof buildArcTable>,
   transform: (p: Point) => Point,
-  evolutionFraction: number,
+  alpha: number,
 ) {
   graphics.clear()
-  if (evolutionFraction <= 0) return
   const pts = arcTable.pts.filter((_, i) => i % 2 === 0)
   const tfPts = pts.map(p => transform(p))
   if (tfPts.length < 2) return
@@ -303,7 +305,7 @@ function drawRubberLine(
   graphics.moveTo(x0, y0)
   for (let i = 1; i < tfPts.length; i++) graphics.lineTo(tfPts[i]![0], tfPts[i]![1])
   graphics.closePath()
-  graphics.stroke({ color: 0x000000, width: 3.5, alpha: Math.min(0.28, evolutionFraction * 0.28), cap: 'round', join: 'round' })
+  graphics.stroke({ color: 0x000000, width: 3.5, alpha, cap: 'round', join: 'round' })
 }
 
 function drawMarkers(
@@ -356,6 +358,7 @@ export function TrackCanvas() {
     let frameCounter = 0
     const flashExpiry = new Map<string, number>()
     let prevOvertakeCount = 0
+    let rubberLap = -1   // lap the rubber line was last drawn for (redrawn once per lap)
 
     // R2/R4: redrawn only when atmosphere/weather actually change, not per frame.
     let lastAtmosphere = ''
@@ -429,7 +432,8 @@ export function TrackCanvas() {
         if (raceState && config && arcTable && transform) {
           updateCars(app, dotMap, arcTable, transform, raceState, config)
           redrawAtmosphere(raceState.weatherState)
-          drawRubberLine(rubberGfx, arcTable, transform, raceState.trackEvolutionLaps / Math.max(1, config.tuning.trackEvolution.decayLaps))
+          rubberLap = raceState.lap
+          drawRubberLine(rubberGfx, arcTable, transform, rubberAlpha(trackGrip(raceState, config.tuning)))
           prevOvertakeCount = raceState.overtakeEvents.length
           // Snap displayT to targetT on first render
           for (const ds of dotMap.values()) {
@@ -540,7 +544,10 @@ export function TrackCanvas() {
               redrawAtmosphere(state.raceState.weatherState)
             }
 
-            drawRubberLine(rubberGfx, arcTable, transform, state.raceState.trackEvolutionLaps / Math.max(1, state.config.tuning.trackEvolution.decayLaps))
+            if (state.raceState.lap !== rubberLap) {
+              rubberLap = state.raceState.lap
+              drawRubberLine(rubberGfx, arcTable, transform, rubberAlpha(trackGrip(state.raceState, state.config.tuning)))
+            }
 
             const newCount = state.raceState.overtakeEvents.length
             if (newCount > prevOvertakeCount) {

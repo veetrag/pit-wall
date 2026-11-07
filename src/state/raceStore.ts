@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import {
   initRace, stepSector, projectPitNow, effectivePitLaneLoss,
-  applyPlayerPit, applyPlayerPace, applyPlanHold, applyCall, expectedPitStopTime, type PlayerCall,
+  applyPlayerPit, applyPlayerPace, applyPlanHold, applyCall, expectedPitStopTime, trackGrip, type PlayerCall,
   type RaceConfig, type RaceState, type Compound, type PaceMode, type ProjectionResult,
 } from '@engine/index'
 import { createRng, type Rng } from '@engine/rng'
@@ -19,6 +19,13 @@ import { startScenario } from '@engine/scenario'
 import { handoverFromCalls } from '@engine/customStart'
 import { redFlagPending } from '@engine/redFlag'
 import { neutralisationKind } from '@engine/incidents'
+
+/** Grip segments (of 10) a step washed away (spec 2026-10-24 §4.2); 0 when grip held or grew. */
+export function gripResetLost(prev: RaceState, next: RaceState, tuning: RaceConfig['tuning']): number {
+  if (next.lap === prev.lap) return 0
+  const seg = (s: RaceState) => Math.round(trackGrip(s, tuning) * 10)
+  return Math.max(0, seg(prev) - seg(next))
+}
 
 /**
  * 'red_flag' (spec 1.6 §4): the race is suspended at the step after which the
@@ -289,7 +296,12 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     // The red-flag card closes the panel: release a hold with it, logged at
     // the step count this step reaches, so replay applies it at the same point.
     const releaseHold = redPending && !!nextState.planHold
+    // GRIP RESET (spec §4.5): >= 2 segments so a rounding wobble never fires it.
+    const gripReset: AlertMessage[] = gripResetLost(raceState, nextState, config.tuning) >= 2
+      ? [{ id: `alert-${++alertCounter}`, severity: 'caution', category: 'RADIO', message: 'GRIP RESET — the rain washed the rubber away.', icon: '🌧️' }]
+      : []
     set(s => ({
+      ...(gripReset.length ? { hudAlerts: [...s.hudAlerts, ...gripReset] } : {}),
       raceState: releaseHold ? applyPlanHold(nextState, false) : nextState,
       ...(releaseHold ? { playerCalls: [...s.playerCalls, { step: s.stepCount + 1, kind: 'hold_plan' as const, hold: false }] } : {}),
       stepCount: s.stepCount + 1,
