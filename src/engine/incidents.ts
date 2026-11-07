@@ -1,4 +1,4 @@
-import type { CircuitSpec, NeutralisationKind, SafetyCarState, TuningConstants } from './types'
+import type { CircuitSpec, NeutralisationKind, RaceConfig, SafetyCarState, TuningConstants, WeatherState } from './types'
 import type { Rng } from './rng'
 import { gaussianPair } from './rng'
 
@@ -24,14 +24,36 @@ import { gaussianPair } from './rng'
  * deliberately does not touch `terminalFraction` -- a mistake, once made, is no
  * less likely to end the race for a consistent driver.
  */
-export function driverErrorChancePerSector(consistency: number, tuning: TuningConstants, crashRisk = 1): number {
-  const inc = tuning.incidents
-  const relief = (consistency / 100) * inc.consistencyReliefMax
-  return (inc.driverErrorPerLap / 3) * (1 - relief) * crashRisk
+/**
+ * Circuit and weather multiplier on driver error (spec 2026-10-24 §9.2, ruling O2).
+ * Exactly 1 when off (circuitRiskWeight 0, wetErrorMultiplier all 1).
+ *
+ * How it combines with the 1.7 trait `circuit.crashRisk` (circuitTraits.ts):
+ * race.ts passes `crashRisk * incidentRiskFactor(...)` to rollDriverError, so the
+ * two MULTIPLY. They are kept apart on purpose -- crashRisk is the authored
+ * per-circuit danger shipped in 1.7, incidentRisk the 2.0 calendar-wide blend
+ * (mean ~1.00, weighted by circuitRiskWeight). A circuit whose danger crashRisk
+ * already encodes carries incidentRisk 1.0 so it is not counted twice
+ * (lantern_quay: crashRisk 1.3, incidentRisk 1.0).
+ */
+export function incidentRiskFactor(config: Pick<RaceConfig, 'tuning' | 'circuit'>, weather: WeatherState): number {
+  const inc = config.tuning.incidents
+  const wet = inc.wetErrorMultiplier[weather]
+  const w = inc.circuitRiskWeight
+  const circuit = w === 0 ? 1 : 1 + w * ((config.circuit.incidentRisk ?? 1) - 1)
+  return wet === 1 && circuit === 1 ? 1 : wet * circuit
 }
 
-export function rollDriverError(consistency: number, tuning: TuningConstants, rng: Rng, crashRisk = 1): boolean {
-  const chance = driverErrorChancePerSector(consistency, tuning, crashRisk)
+/** `riskFactor` is the product of circuit.crashRisk and incidentRiskFactor (1 = neutral). */
+export function driverErrorChancePerSector(consistency: number, tuning: TuningConstants, riskFactor = 1): number {
+  const inc = tuning.incidents
+  const relief = (consistency / 100) * inc.consistencyReliefMax
+  const base = (inc.driverErrorPerLap / 3) * (1 - relief)
+  return riskFactor === 1 ? base : base * riskFactor
+}
+
+export function rollDriverError(consistency: number, tuning: TuningConstants, rng: Rng, riskFactor = 1): boolean {
+  const chance = driverErrorChancePerSector(consistency, tuning, riskFactor)
   return chance > 0 && rng() < chance
 }
 

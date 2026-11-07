@@ -160,7 +160,10 @@ function spearman(xs: number[], ys: number[]): number {
   return dx === 0 || dy === 0 ? 0 : num / Math.sqrt(dx * dy)
 }
 
-function buildConfig(seed: number, circuitId: string, difficulty: 'rookie' | 'pro', forceDry: boolean): RaceConfig {
+export function buildHarnessConfig(
+  seed: number, circuitId: string, difficulty: 'rookie' | 'pro', forceDry: boolean,
+  tuning: RaceConfig['tuning'] = loadGameData().tuning,
+): RaceConfig {
   const data = loadGameData()
   const circuit = data.circuits[circuitId]
   if (!circuit) throw new Error(`unknown circuit ${circuitId}`)
@@ -168,7 +171,7 @@ function buildConfig(seed: number, circuitId: string, difficulty: 'rookie' | 'pr
   const laps = circuit.laps
   return {
     circuit: forceDry ? { ...circuit, rainProbability: 0 } : circuit,
-    tuning: data.tuning,
+    tuning,
     compounds: data.compounds,
     drivers: data.drivers.drivers,
     teams: data.cars.teams,
@@ -227,7 +230,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
   for (let r = 0; r < races; r++) {
     const circuitId = circuitIds[r % circuitIds.length]!
     const seed = seedBase + r * 7919
-    const built = buildConfig(seed, circuitId, difficulty, forceDry)
+    const built = buildHarnessConfig(seed, circuitId, difficulty, forceDry)
     // playerDriverId is '__none__' here, so every car gets an AI wing.
     const config = opts.withSetups ? { ...built, setups: aiSetups(built) } : built
     let state = initRace(config)

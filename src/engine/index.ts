@@ -9,10 +9,12 @@ export {
 export { circuitTraits, type CircuitTraits, type TyreContext } from './circuitTraits'
 export { computeSectorTime } from './lapModel'
 export {
-  driverErrorChancePerSector, rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
+  driverErrorChancePerSector, incidentRiskFactor, rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
   rollVscDeployment, rollVscDuration, neutralisationKind, neutralisationPaceMultiplier, rollRedFlag,
 } from './incidents'
+export { neutralisationOutlook } from './outlook'
+export type { NeutralisationOutlook, OutlookReason } from './outlook'
 export { restartTyre, applyRedFlagRestart, restartConditions, redFlagPending, defaultRestartCompound } from './redFlag'
 export * from './setup'
 export { createRng, gaussianPair } from './rng'

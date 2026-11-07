@@ -61,7 +61,10 @@ describe('2.0 foundations', () => {
     const cs = Object.values(DATA.circuits)
     expect(cs).toHaveLength(14)
     const meanRisk = cs.reduce((s, c) => s + (c.incidentRisk ?? NaN), 0) / cs.length
-    expect(meanRisk).toBeCloseTo(1.0, 10)
+    // Not exact: lantern_quay's incidentRisk is 1.00, not 1.30 -- its crashRisk 1.3 /
+    // neutralisationRisk 1.5 (1.7 traits) already price its danger; 1.30 would compound
+    // to ~1.69x (controller ruling, Task 10). Calendar mean stays within ±0.05 of 1.
+    expect(Math.abs(meanRisk - 1.0)).toBeLessThanOrEqual(0.05)
     for (const c of cs) expect(c.drsSectors!.length).toBeGreaterThan(0)
   })
 })

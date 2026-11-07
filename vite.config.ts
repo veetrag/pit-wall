@@ -18,6 +18,7 @@ const SIMULATION_SUITES = [
   'tests/engine/difficultyProfile.test.ts',
   'tests/engine/debriefJudge.test.ts',
   'tests/engine/*Bands.test.ts',
+  'tests/engine/v2Bands.test.ts', // already matched by the glob; named for plan Task 10
   'tests/engine/mechanicalFailure.test.ts',
   'tests/engine/circuitDifferentiation.test.ts',
   'tests/engine/circuitTraits.test.ts',

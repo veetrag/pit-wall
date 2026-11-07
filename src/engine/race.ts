@@ -11,7 +11,7 @@ import { aiDecision } from './strategy'
 import { circuitTraits } from './circuitTraits'
 import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, resolveAllocatedCompound, effectiveTyreAge, tyreCliffFraction } from './tyres'
 import {
-  rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
+  rollDriverError, incidentRiskFactor, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
   rollVscDeployment, rollVscDuration, neutralisationKind, rollRedFlag,
 } from './incidents'
@@ -156,6 +156,9 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const ctxBase: SectorContext = rubber === undefined ? NO_CTX : { rubberLaps: rubber }
   // DRS from the PRE-tick order, once per tick (ruling D1).
   const drsOpen = drsOpenSet(config, state, sector)
+  // Once per tick (spec §9.2): crashRisk (1.7) times the 2.0 circuit/weather factor.
+  // Exactly traits.crashRisk when the 2.0 factor is off, so the stream is unchanged.
+  const riskFactor = incidentRiskFactor(config, state.weatherState)
 
   // 1. Compute sector time for each car. Retired cars are frozen entirely —
   // no more sector time, no more sim work happens to them.
@@ -221,7 +224,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     // has returned, so it does NOT appear in SectorResult.sectorTime. A UI that
     // needs to show it reads the IncidentEvent log instead.
     if (!updated.retired) {
-      if (rollDriverError(driver.facets.consistency, config.tuning, rng, traits.crashRisk)) {
+      if (rollDriverError(driver.facets.consistency, config.tuning, rng, riskFactor === 1 ? traits.crashRisk : traits.crashRisk * riskFactor)) {
         if (rollErrorIsTerminal(config.tuning, rng)) {
           updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'crash' }
           newIncidents.push({
