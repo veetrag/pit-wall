@@ -40,9 +40,12 @@ export function projectPitNow(
   // and recorded, so the two-compound rule at the flag sees the stop.
   const clonedPlayer = projState.cars.find(c => c.driverId === playerDriverId)!
   const fitted = resolveAllocatedCompound(newCompound, clonedPlayer.tyreAllocation) ?? newCompound
-  const stop = executeStop(config, { safetyCar: state.safetyCar, lap: state.lap, sector: state.sector },
+  const stop = executeStop(config, { safetyCar: state.safetyCar, lap: state.lap, sector: state.sector, boxFree: state.boxFree },
     clonedPlayer, fitted, rngForStop, { allowSlow: false })
-  projState = { ...projState, cars: projState.cars.map(c => c.driverId === playerDriverId ? stop.car : c) }
+  projState = {
+    ...projState, ...(stop.boxFree ? { boxFree: stop.boxFree } : {}),
+    cars: projState.cars.map(c => c.driverId === playerDriverId ? stop.car : c),
+  }
 
   // Fast-forward horizonLaps; optionally suppress overtake dice
   const projectionConfig = useOvertakeRolls ? config : {

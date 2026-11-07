@@ -9,6 +9,7 @@ export function PitTimer() {
   // The stop that HAPPENED (spec 1.6 §1), latched by raceStore at the stop.
   const stopDuration = useRaceStore(s => s.lastStopTime)
   const slow = useRaceStore(s => s.lastStopSlow)
+  const queue = useRaceStore(s => s.lastStopQueue)
   const reduced = useReducedMotion()
   const [visible, setVisible] = useState(false)
   const [key, setKey] = useState(0)
@@ -56,6 +57,14 @@ export function PitTimer() {
           <span>{isSlow ? `SLOW STOP +${slow.toFixed(1)}s` : 'PIT STOP'}</span>
           <span>{stopDuration.toFixed(1)}s</span>
         </div>
+        {queue > 0 && (
+          <div data-testid="pit-timer-queue" style={{
+            fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.1em',
+            color: isSlow ? 'var(--ink)' : 'var(--caution)', fontVariantNumeric: 'tabular-nums',
+          }}>
+            QUEUE +{queue.toFixed(1)}s · double stack
+          </div>
+        )}
         <div style={{ height: 4, borderRadius: 2, background: 'var(--ink)', overflow: 'hidden' }}>
           <motion.div
             initial={{ width: 0 }}

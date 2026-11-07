@@ -83,7 +83,7 @@ export interface StopContext {
 export interface StopOutcome {
   car: CarState
   cost: PitStopCost
-  /** Seconds queued behind the team-mate (spec §7). Stub: 0 until double-stacking lands. */
+  /** Seconds queued behind the team-mate (spec §7). 0 when double-stacking is off or the box is free. */
   queue: number
   /** Penalty seconds served at this stop (spec §8). Stub: 0 until penalties land. */
   served: number
@@ -120,12 +120,47 @@ export function executeStop(
   opts: { allowSlow?: boolean } = {},
 ): StopOutcome {
   const cost = pitStopTime(config, car.teamId, ctx.safetyCar, rng, opts)
-  const queue = 0
+  const queue = boxQueueEstimate(config, ctx.boxFree, car, ctx.safetyCar)
   const served = 0
   // Exactly cost.total when nothing is added: no `+ 0` on the golden path.
   const add = queue === 0 && served === 0 ? cost.total : cost.total + queue + served
   const events: IncidentEvent[] = []
   // Every slow stop is logged, whoever made it (spec 1.6 §1, ruling R4).
   if (cost.slow > 0) events.push({ lap: ctx.lap, sector: ctx.sector, kind: 'slow_stop', driverId: car.driverId, timeLoss: cost.slow })
-  return { car: fitTyres(config, car, compound, add), cost, queue, served, unsafe: false, events }
+  if (queue > 0) events.push({ lap: ctx.lap, sector: ctx.sector, kind: 'double_stack', driverId: car.driverId, timeLoss: queue })
+  const boxFree = claimBox(config, ctx, car, queue, cost)
+  return { car: fitTyres(config, car, compound, add), cost, queue, served, unsafe: false, boxFree, events }
+}
+
+/** Seconds a stop now would queue behind the team-mate (spec §7.2). 0 when off or the box is free. */
+export function boxQueueEstimate(
+  config: RaceConfig, boxFree: Record<string, number> | undefined, car: CarState, safetyCar: RaceState['safetyCar'],
+): number {
+  if (!config.tuning.doubleStack.enabled || !boxFree) return 0
+  const free = boxFree[car.teamId]
+  if (free === undefined) return 0
+  const laneIn = effectivePitLaneLoss(config.circuit, safetyCar, config.tuning) * config.tuning.doubleStack.entryShare
+  return Math.max(0, free - (car.raceTime + laneIn))
+}
+
+/**
+ * The box after this stop (spec §7): busy from arrival (car.raceTime, the car
+ * BEFORE the stop) + lane entry + queue + stationary + release gap. Undefined
+ * when double-stacking is off, so the state never gains `boxFree`.
+ */
+function claimBox(config: RaceConfig, ctx: StopContext, car: CarState, queue: number, cost: PitStopCost): Record<string, number> | undefined {
+  const ds = config.tuning.doubleStack
+  if (!ds.enabled) return undefined
+  const lane = effectivePitLaneLoss(config.circuit, ctx.safetyCar, config.tuning)
+  return { ...(ctx.boxFree ?? {}), [car.teamId]: car.raceTime + lane * ds.entryShare + queue + cost.stationary + ds.releaseGap }
+}
+
+/** The team keeps an AI car out a lap rather than queue too long (spec §7.2, ruling S2). Pure, no draw. */
+export function deferForBusyBox(
+  config: RaceConfig, car: CarState, queue: number, neutralised: boolean, weatherStop: boolean, cliffFrac: number,
+): boolean {
+  const d = config.tuning.doubleStack
+  if (!d.enabled || queue <= 0 || weatherStop || cliffFrac >= d.emergencyCliffFrac) return false
+  const brain = car.strategy.brain ?? 'naive'
+  return queue > (neutralised ? d.maxQueueNeutralised : d.maxQueue)[brain]
 }

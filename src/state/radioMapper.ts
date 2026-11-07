@@ -1,7 +1,7 @@
 import radioData from '@data/radio.json'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
 import { neutralisationKind } from '@engine/incidents'
-import type { RaceState, RaceConfig, Compound } from '@engine/types'
+import type { RaceState, RaceConfig, Compound, IncidentKind } from '@engine/types'
 import { wingOf } from '@engine/setup'
 import { soundService } from '@audio/soundService'
 import type { RadioRequest } from './radioRequests'
@@ -10,6 +10,14 @@ const RETIREMENT_RADIO: Record<'tyre' | 'mechanical' | 'crash', string> = {
   tyre: 'retired',
   mechanical: 'retired_mechanical',
   crash: 'retired_crash',
+}
+
+/**
+ * The player's 2.0 incidents and the radio trigger each one fires (spec
+ * 2026-10-24). One row per kind; later tasks add rows. Lines live in radio.json.
+ */
+export const V2_RADIO: Partial<Record<IncidentKind, string>> = {
+  double_stack: 'double_stack',
 }
 
 type RadioPool = Record<string, string[]>
@@ -76,6 +84,10 @@ export interface RadioState {
   prevVscCount: number
   prevSlowStops: number
   prevRedFlags: number
+  /** Cursor into the player's own incidents: each is radioed at most once. */
+  prevPlayerIncidents: number
+  /** Cursor into the team-mate's double_stack incidents. */
+  prevMateStacks: number
 }
 
 export function makeRadioState(): RadioState {
@@ -93,6 +105,8 @@ export function makeRadioState(): RadioState {
     prevVscCount: 0,
     prevSlowStops: 0,
     prevRedFlags: 0,
+    prevPlayerIncidents: 0,
+    prevMateStacks: 0,
   }
 }
 
@@ -120,6 +134,23 @@ export function processRadioTick(
   }
   next.prevRetired = player.retired
   if (player.retired) return next // nothing else is relevant once retired
+
+  // 2.0 incidents (V2_RADIO). A cursor, so each fires once however many ticks see it.
+  const mate = state.cars.find(c => c.teamId === player.teamId && c.driverId !== player.driverId)
+  const mateCode = mate ? (config.drivers.find(d => d.id === mate.driverId)?.code ?? mate.driverId) : ''
+  const mine = state.incidents.filter(i => i.driverId === player.driverId)
+  for (const ev of mine.slice(radio.prevPlayerIncidents)) {
+    const trigger = V2_RADIO[ev.kind]
+    if (trigger) tryPush(trigger, 1, { sec: ev.timeLoss?.toFixed(1) ?? '', mate: mateCode }, pushAlert)
+  }
+  next.prevPlayerIncidents = mine.length
+  // The team-mate queued behind the player: told when it lands within a lap of the player's last stop.
+  const mateStacks = mate ? state.incidents.filter(i => i.kind === 'double_stack' && i.driverId === mate.driverId) : []
+  const myLastStop = player.pitsDone > 0 ? player.lap - player.tyreAge : -Infinity
+  for (const ev of mateStacks.slice(radio.prevMateStacks)) {
+    if (Math.abs(ev.lap - myLastStop) <= 1) tryPush('double_stack_mate', 1, { mate: mateCode }, pushAlert)
+  }
+  next.prevMateStacks = mateStacks.length
 
   // 0a. The red flag (spec 1.6 §4): the most urgent call of the race.
   const redFlags = state.incidents.reduce((n, i) => n + (i.kind === 'red_flag' ? 1 : 0), 0)

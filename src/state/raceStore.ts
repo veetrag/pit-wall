@@ -78,6 +78,8 @@ interface RaceStore {
    */
   lastStopTime: number
   lastStopSlow: number
+  /** Seconds the player's most recent stop queued behind the team-mate (spec §7). */
+  lastStopQueue: number
   rng: Rng | null
   hudAlerts: AlertMessage[]
   radioState: RadioState
@@ -157,7 +159,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   pitEndTime: 0,
   pitLaneLoss: 0,
   lastStopTime: 0,
-  lastStopSlow: 0,
+  lastStopSlow: 0, lastStopQueue: 0,
   rng: null,
   hudAlerts: [],
   radioState: makeRadioState(),
@@ -169,7 +171,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
+    set({ phase: 'racing', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
   },
 
   startSeasonRace(playerDriverId, seed, circuitId, difficulty, playerStrategy, upgrades, gridOrder, dryStart, opts) {
@@ -189,7 +191,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       playerCalls.push({ step: 0, kind: 'pace', mode: pace })
     }
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls, stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe })
   },
 
   /**
@@ -204,14 +206,14 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   startScenarioRace(spec) {
     const config = buildScenarioConfig(spec)
     const { state, rng } = startScenario(config, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
+    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
   },
 
   startCustomStartRace(spec) {
     if (!spec.recipe || !spec.calls) return
     const config = buildConfigFromRecipe(spec.recipe)
     const { state, rng } = handoverFromCalls(config, spec.calls, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, recipe: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
+    set({ phase: 'racing', config, raceState: state, rng, recipe: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
   },
 
   initForStartSequence() {
@@ -219,7 +221,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const config = buildRaceConfig(seed, 'd_voss')
     const raceState = initRace(config)
     const rng = createRng(seed)
-    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
+    set({ phase: 'starting', config, raceState, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
   },
 
   confirmRaceStart() {
@@ -238,7 +240,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   },
 
   resetRace() {
-    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
+    set({ phase: 'idle', config: null, raceState: null, rng: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, hudAlerts: [], radioState: makeRadioState(), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
   },
 
   step() {
@@ -271,6 +273,11 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const autoSlow = autoStopped && after
       ? nextState.incidents.slice(raceState.incidents.length)
           .find(i => i.kind === 'slow_stop' && i.driverId === after.driverId)?.timeLoss ?? 0
+      : 0
+    // A plan stop's queue behind the team-mate (spec §7), from its double_stack incident.
+    const autoQueue = autoStopped && after
+      ? nextState.incidents.slice(raceState.incidents.length)
+          .find(i => i.kind === 'double_stack' && i.driverId === after.driverId)?.timeLoss ?? 0
       : 0
     const chargedLoss = autoStopped ? autoLoss : get().pitLaneLoss
     const stillInPit = autoStopped || (playerInPit && playerNow < pitEndTime + chargedLoss)
@@ -316,8 +323,9 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
         projectionResult: null,
         pitEndTime: after.raceTime,
         pitLaneLoss: autoLoss,
-        lastStopTime: expectedPitStopTime(config, after.teamId, nextState.safetyCar) + autoSlow,
+        lastStopTime: expectedPitStopTime(config, after.teamId, nextState.safetyCar) + autoSlow + autoQueue,
         lastStopSlow: autoSlow,
+        lastStopQueue: autoQueue,
         hudAlerts: [...s.hudAlerts, { id: `alert-${++alertCounter}`, severity: 'caution' as const, category: 'RADIO', message: 'Box box -- plan stop.', icon: '📻' }],
       } : {}),
       // The card takes the screen: nothing may be left half-decided under it.
@@ -354,6 +362,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const playerBefore = raceState.cars.find(c => c.isPlayer)?.raceTime ?? playerTime
     // applyPlayerPit adds only the stop, so the delta IS the stop, exactly.
     const slow = next.incidents.slice(raceState.incidents.length).find(i => i.kind === 'slow_stop')?.timeLoss ?? 0
+    const queue = next.incidents.slice(raceState.incidents.length).find(i => i.kind === 'double_stack')?.timeLoss ?? 0
     const id = `alert-${++alertCounter}`
     set(s => ({
       raceState: next,
@@ -367,6 +376,7 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
       pitLaneLoss: effectivePitLaneLoss(config.circuit, raceState.safetyCar, config.tuning),
       lastStopTime: playerTime - playerBefore,
       lastStopSlow: slow,
+      lastStopQueue: queue,
       hudAlerts: [...s.hudAlerts, { id, severity: 'caution' as const, category: 'RADIO', message: 'Box box box. Come in now.', icon: '📻' }],
     }))
   },

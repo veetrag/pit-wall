@@ -1,7 +1,7 @@
 import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound, IncidentEvent } from './types'
 import type { Rng } from './rng'
 import { createRng } from './rng'
-import { executeStop } from './pitStop'
+import { executeStop, boxQueueEstimate, deferForBusyBox } from './pitStop'
 import { computeSectorTime, NO_CTX, type SectorContext } from './lapModel'
 import { rubberLapsFor } from './track'
 import { wingOvertakeFactor } from './setup'
@@ -436,7 +436,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const restartNow = lapCompleted && activeKind === 'red'
 
   // One stop path (spec 2026-10-24 §0.4, ruling A4).
-  const stopCtx = { safetyCar, lap: state.lap, sector }
+  // The team boxes (spec §7): undefined when double-stacking is off.
+  let boxFree = config.tuning.doubleStack.enabled ? state.boxFree ?? {} : undefined
   const finalCars: CarState[] = afterOvertakes.map(car => {
     let updated = { ...car }
     if (car.retired) return updated // frozen: no more laps, pits, or AI
@@ -456,10 +457,11 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes, safetyCar }
         const decision = aiDecision(config, updated, stateForAI, rng)
         updated.paceMode = decision.paceMode
-        if (decision.pit && !raceEndsThisTick) {
-          const out = executeStop(config, stopCtx, updated, decision.compound, rng)
+        if (decision.pit && !raceEndsThisTick && !deferAiStop(config, updated, decision.compound, boxFree, safetyCar, state.weatherState)) {
+          const out = executeStop(config, { safetyCar, lap: state.lap, sector, boxFree }, updated, decision.compound, rng)
           updated = out.car
           newIncidents.push(...out.events)
+          boxFree = out.boxFree
         }
       } else if (config.playerStrategyOverride && !state.planHold) {
         // The player's own plan, executed exactly as the race setup screen
@@ -473,9 +475,10 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         if (nextStop && updated.lap >= nextStop.lap) {
           const compound = resolveAllocatedCompound(nextStop.compound, updated.tyreAllocation)
           if (compound) {
-            const out = executeStop(config, stopCtx, updated, compound, rng)
+            const out = executeStop(config, { safetyCar, lap: state.lap, sector, boxFree }, updated, compound, rng)
             updated = out.car
             newIncidents.push(...out.events)
+            boxFree = out.boxFree
           }
         }
       }
@@ -534,7 +537,26 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     safetyCar,
     incidents: newIncidents,
     weatherState: newWeatherState,
+    ...(boxFree !== undefined ? { boxFree } : {}),
   }
+}
+
+/**
+ * Whether the team keeps an AI car out rather than queue behind its team-mate
+ * (spec §7.2, ruling S2). No draw; always false when double-stacking is off.
+ */
+function deferAiStop(
+  config: RaceConfig, car: CarState, compound: Compound, boxFree: Record<string, number> | undefined,
+  safetyCar: RaceState['safetyCar'], weather: WeatherState,
+): boolean {
+  if (!config.tuning.doubleStack.enabled) return false
+  const q = boxQueueEstimate(config, boxFree, car, safetyCar)
+  if (q <= 0) return false
+  const spec = config.compounds[car.compound]
+  const driver = config.drivers.find(d => d.id === car.driverId)
+  const cliffFrac = spec && driver ? tyreCliffFraction(spec, effectiveTyreAge(car, driver, weather, config)) : 0
+  const weatherStop = config.compounds[compound]?.type !== spec?.type
+  return deferForBusyBox(config, car, q, safetyCar !== null, weatherStop, cliffFrac)
 }
 
 function resolveOvertakes(

@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useCoachStore } from '@state/coachStore'
 import { useCoachingActive } from '@hooks/useCoachingActive'
-import type { Compound } from '@engine/types'
+import type { Compound, RaceConfig, RaceState } from '@engine/types'
+import { boxQueueEstimate } from '@engine/pitStop'
 import type { ProjectionResult } from '@engine/projection'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
 import { effectivePitLaneLoss, neutralisationKind } from '@engine/incidents'
@@ -18,6 +19,20 @@ import { useScChanceLine } from './ScOutlook'
 function driverCode(id: string | null, drivers: { id: string; code: string }[]): string {
   if (!id) return '---'
   return drivers.find(d => d.id === id)?.code ?? id.replace('d_', '').toUpperCase().slice(0, 3)
+}
+
+/**
+ * BOX BUSY (spec §7.2): the queue a stop now would pay behind the team-mate,
+ * or null. A string, so the panel's selector re-renders only when the words change.
+ */
+export function boxBusyLine(config: RaceConfig | null, state: RaceState | null): string | null {
+  if (!config || !state || !state.boxFree) return null
+  const me = state.cars.find(c => c.isPlayer)
+  if (!me) return null
+  const q = boxQueueEstimate(config, state.boxFree, me, state.safetyCar)
+  if (q <= 0.05) return null
+  const mate = state.cars.find(c => c.teamId === me.teamId && c.driverId !== me.driverId)
+  return `BOX BUSY — ${driverCode(mate?.driverId ?? null, config.drivers)} in the box · +${q.toFixed(1)}s queue`
 }
 
 const ROW_STYLE = {
@@ -39,6 +54,7 @@ function ProjectionCard({ result, compoundLabel }: { result: ProjectionResult; c
   // A primitive selector: the card re-renders only when the size changes, not every sector.
   const trainSize = useRaceStore(s => s.config && s.raceState ? rejoinTrainSize(s.config, s.raceState, result) : null)
   const scLine = useScChanceLine()
+  const boxBusy = useRaceStore(s => boxBusyLine(s.config, s.raceState))
 
   const aheadCode = driverCode(result.driverAheadId, drivers)
   const behindCode = driverCode(result.driverBehindId, drivers)
@@ -96,6 +112,15 @@ function ProjectionCard({ result, compoundLabel }: { result: ProjectionResult; c
           letterSpacing: 1, fontVariantNumeric: 'tabular-nums', marginTop: 2,
         }}>
           {scLine}
+        </div>
+      )}
+
+      {boxBusy !== null && (
+        <div data-testid="box-busy-line" role="status" style={{
+          fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'var(--caution)',
+          fontVariantNumeric: 'tabular-nums', marginTop: 2,
+        }}>
+          {boxBusy}
         </div>
       )}
 

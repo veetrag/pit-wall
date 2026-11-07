@@ -29,10 +29,13 @@ export function applyPlayerPit(
   if (!player) return null
   const resolved = resolveAllocatedCompound(compound, player.tyreAllocation)
   if (!resolved) return null
-  const out = executeStop(config, { safetyCar: state.safetyCar, lap: state.lap, sector: state.sector }, player, resolved, rng)
+  const out = executeStop(config, { safetyCar: state.safetyCar, lap: state.lap, sector: state.sector, boxFree: state.boxFree }, player, resolved, rng)
   // A stop from the panel consumes a held plan stop (pitsDone + 1) and ends the hold.
   const { planHold: _held, ...unheld } = state
-  const next: RaceState = { ...unheld, cars: state.cars.map(car => car.isPlayer ? out.car : car) }
+  const next: RaceState = {
+    ...unheld, cars: state.cars.map(car => car.isPlayer ? out.car : car),
+    ...(out.boxFree !== undefined ? { boxFree: out.boxFree } : {}),
+  }
   // Logged at the moment of the call. The incidents array is only replaced
   // when there is something to log, so a fast stop leaves the log untouched.
   if (out.events.length === 0) return next
