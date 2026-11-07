@@ -214,6 +214,11 @@ export function RaceResult() {
                       </span> PTS</>
                     : 'NO POINTS'}
                 </span>
+                {!retired && (lastRaceEvents?.penaltyAddedSec ?? 0) > 0 && (
+                  <span data-testid="penalty-added" style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13, ...numeric }}>
+                    +{lastRaceEvents?.penaltyAddedSec}s added
+                  </span>
+                )}
                 {gridLine && (
                   <span style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 13 }}>{gridLine}</span>
                 )}

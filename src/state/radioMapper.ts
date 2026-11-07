@@ -18,6 +18,8 @@ const RETIREMENT_RADIO: Record<'tyre' | 'mechanical' | 'crash', string> = {
  */
 export const V2_RADIO: Partial<Record<IncidentKind, string>> = {
   double_stack: 'double_stack',
+  penalty_issued: 'penalty',
+  unsafe_release: 'unsafe_release',
 }
 
 type RadioPool = Record<string, string[]>
@@ -142,6 +144,11 @@ export function processRadioTick(
   for (const ev of mine.slice(radio.prevPlayerIncidents)) {
     const trigger = V2_RADIO[ev.kind]
     if (trigger) tryPush(trigger, 1, { sec: ev.timeLoss?.toFixed(1) ?? '', mate: mateCode }, pushAlert)
+    // The warning that uses up the allowance: one more and it is a penalty.
+    if (ev.kind === 'track_limits' && config.tuning.penalties.trackLimits.warningsAllowed > 0
+      && mine.filter(i => i.kind === 'track_limits' && i.lap * 3 + i.sector <= ev.lap * 3 + ev.sector).length === config.tuning.penalties.trackLimits.warningsAllowed) {
+      tryPush('track_limits_last', 1, {}, pushAlert)
+    }
   }
   next.prevPlayerIncidents = mine.length
   // The team-mate queued behind the player: told when it lands within a lap of the player's last stop.

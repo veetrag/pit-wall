@@ -13,7 +13,7 @@ const DRIVERS = loadGameData().drivers.drivers
 function history(overrides: (cars: CarHistory[]) => CarHistory[] = c => c): LapHistory {
   const cars: CarHistory[] = DRIVERS.map((d, i) => ({
     driverId: d.id, teamId: d.teamId, isPlayer: i === 6,
-    positions: Array.from({ length: 31 }, () => i + 1), pitLaps: [15], retiredLap: null, finish: i + 1,
+    positions: Array.from({ length: 31 }, () => i + 1), pitLaps: [15], penaltyLaps: [], retiredLap: null, finish: i + 1,
   }))
   return {
     totalLaps: 30, lapsRun: 30, cars: overrides(cars),

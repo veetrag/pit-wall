@@ -107,6 +107,8 @@ const RaceEventSummarySchema = z.object({
   overtakesGained: z.number(),
   pitsDone: z.number(),
   hadRain: z.boolean(),
+  // 2.0: optional, so older saves load unchanged (no version bump).
+  penaltyAddedSec: z.number().optional(),
 })
 const PlayerStrategySchema = z.object({
   startCompound: z.enum(['S', 'M', 'H', 'I', 'W']),

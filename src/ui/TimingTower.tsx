@@ -2,7 +2,8 @@ import { useRef, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
-import type { CarState } from '@engine/types'
+import type { CarState, RaceState } from '@engine/types'
+import { effectiveOrder } from '@engine/penalties'
 import { TyreChip, PRESS, EASE, snapIn } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSafetyCarDeployCount } from '@hooks/useSafetyCar'
@@ -38,6 +39,7 @@ function v2AriaSuffix(v2: TowerV2Row | undefined): string {
   if (v2.drs === 'open') s += ', DRS open'
   else if (v2.drs === 'neutralised') s += ', DRS neutralised'
   if (v2.train) s += `, in a DRS train of ${v2.train.size}`
+  if (v2.penaltySec > 0) s += `, ${v2.penaltySec} second penalty pending`
   return s
 }
 
@@ -48,6 +50,23 @@ const DRS_PILL = {
   fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 10, letterSpacing: 0.5,
   lineHeight: '14px', verticalAlign: 'middle',
 } as const
+
+/** The player's road position and where they would classify with pending penalties added (spec §8.3). Null when none is pending. */
+export function playerEffectivePosition(state: RaceState): { road: number; after: number } | null {
+  const me = state.cars.find(c => c.isPlayer)
+  if (!me || me.retired || !(me.penalty && me.penalty.pendingSec > 0)) return null
+  return { road: me.position, after: effectiveOrder(state).findIndex(c => c.isPlayer) + 1 }
+}
+
+/** A pending time penalty: hot fill, ink text; the "+5" itself is the signal, not the colour. */
+function PenaltyChip({ sec, onVolt }: { sec: number; onVolt: boolean }) {
+  return (
+    <span data-penalty-chip aria-hidden="true" style={{
+      ...DRS_PILL, borderRadius: 0, background: 'var(--hot)', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums',
+      boxShadow: onVolt ? 'inset 0 0 0 1px var(--ink)' : undefined,
+    }}>+{sec}</span>
+  )
+}
 
 function DrsPill({ state, onVolt }: { state: 'open' | 'neutralised'; onVolt: boolean }) {
   if (state === 'open') {
@@ -131,6 +150,7 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
   const v2Suffix = car.retired ? '' : v2AriaSuffix(v2)
   const train = car.retired ? null : v2?.train ?? null
   const drs = car.retired ? null : v2?.drs ?? null
+  const penaltySec = car.retired ? 0 : v2?.penaltySec ?? 0
   // Non-intel rows get a label only when there is a 2.0 fact to speak.
   const rowLabel = intel ? intel.label + v2Suffix
     : v2Suffix ? `P${car.position} ${driverCode} ${formatGap(gap, car.position)}${v2Suffix}` : undefined
@@ -230,6 +250,7 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
                 color: onVolt ? 'var(--ink)' : 'var(--lilac-dim)', verticalAlign: 'middle',
               }}>TRAIN ×{train.size}</span>
             )}
+            {penaltySec > 0 && <PenaltyChip sec={penaltySec} onVolt={onVolt} />}
             {drs && <DrsPill state={drs} onVolt={onVolt} />}
             {formatGap(gap, car.position)}
           </span>
@@ -358,6 +379,11 @@ export function TimingTower() {
     [config, lap, sig, intelId])
   // 2.0 facts, derived once per race state (not per row, not per frame).
   const v2 = useMemo(() => (config && raceState ? towerV2(config, raceState) : null), [config, raceState])
+  const effective = useMemo(() => {
+    const e = raceState ? playerEffectivePosition(raceState) : null
+    const sec = raceState?.cars.find(c => c.isPlayer)?.penalty?.pendingSec ?? 0
+    return e ? { ...e, sec } : null
+  }, [raceState])
   const select = (id: string) => { uiTap(); setIntelId(cur => (cur === id ? null : id)) }
   // The flag closes the card.
   useEffect(() => { if (phase === 'finished') setIntelId(null) }, [phase])
@@ -477,6 +503,18 @@ export function TimingTower() {
           )}
         </AnimatePresence>
       </div>
+      {effective && (
+        <div data-testid="penalty-readout" role="status" style={{
+          flexShrink: 0, padding: '4px 12px 6px', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12,
+          letterSpacing: 0.5, color: 'var(--lilac)', fontVariantNumeric: 'tabular-nums',
+        }}>
+          P{effective.road}{' '}
+          <span style={{ color: effective.after > effective.road ? 'var(--hot)' : 'var(--lilac)' }}>
+            {effective.after > effective.road ? '▼' : '▸'} P{effective.after}
+          </span>{' '}
+          after +{effective.sec}s
+        </div>
+      )}
       <AnimatePresence initial={false}>
         {openIntel && openCar && (
           <motion.div key="rival-intel" {...snapIn(reducedMotion)} style={{ flexShrink: 0, padding: '0 8px 8px' }}>

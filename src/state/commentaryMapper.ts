@@ -157,12 +157,15 @@ export function processCommentaryTick(
         if (line) lines.push(line)
         break
       }
-      // 2.0 steward/pit-lane kinds: no commentary yet. Engine emits none while
-      // the features ship off; Tasks 17-19 decide their lines.
-      case 'track_limits':
       case 'penalty_issued':
+      case 'penalty_added': {
+        const line = fill(ev.kind, { lap: evLap, code, sec: ev.timeLoss ?? 0 })
+        if (line) lines.push(line)
+        break
+      }
+      // Warnings, served penalties and the rest are the player's radio, not broadcast news.
+      case 'track_limits':
       case 'penalty_served':
-      case 'penalty_added':
       case 'unsafe_release':
       case 'double_stack':
         break

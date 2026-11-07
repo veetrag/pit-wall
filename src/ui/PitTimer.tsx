@@ -10,6 +10,18 @@ export function PitTimer() {
   const stopDuration = useRaceStore(s => s.lastStopTime)
   const slow = useRaceStore(s => s.lastStopSlow)
   const queue = useRaceStore(s => s.lastStopQueue)
+  // Seconds of penalty served at this stop (spec §8.3): the player's latest
+  // penalty_served, if it landed this lap or last. A primitive, so ticks without one do not re-render.
+  const served = useRaceStore(s => {
+    const rs = s.raceState
+    if (!rs) return 0
+    const id = s.config?.playerDriverId
+    for (let i = rs.incidents.length - 1; i >= 0; i--) {
+      const ev = rs.incidents[i]!
+      if (ev.driverId === id && ev.kind === 'penalty_served') return ev.lap >= rs.lap - 1 ? ev.timeLoss ?? 0 : 0
+    }
+    return 0
+  })
   const reduced = useReducedMotion()
   const [visible, setVisible] = useState(false)
   const [key, setKey] = useState(0)
@@ -57,6 +69,14 @@ export function PitTimer() {
           <span>{isSlow ? `SLOW STOP +${slow.toFixed(1)}s` : 'PIT STOP'}</span>
           <span>{stopDuration.toFixed(1)}s</span>
         </div>
+        {served > 0 && (
+          <div data-testid="pit-timer-penalty" style={{
+            fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.1em',
+            color: isSlow ? 'var(--ink)' : 'var(--hot)', fontVariantNumeric: 'tabular-nums',
+          }}>
+            PENALTY {served.toFixed(1)}s · served first
+          </div>
+        )}
         {queue > 0 && (
           <div data-testid="pit-timer-queue" style={{
             fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.1em',

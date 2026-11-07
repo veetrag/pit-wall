@@ -34,6 +34,8 @@ export interface RaceEventSummary {
   overtakesGained: number
   pitsDone: number
   hadRain: boolean
+  /** Seconds of unserved penalty added to the player's time at the flag (2.0, spec §8.3). Absent when none. */
+  penaltyAddedSec?: number
 }
 
 export interface PlayerStrategyChoice {

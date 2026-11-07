@@ -23,6 +23,8 @@ export interface CarHistory {
   pitLaps: number[]
   /** 1-based lap on which the car retired, or null. */
   retiredLap: number | null
+  /** 1-based lap of each penalty issued (2.0, spec §8.3), in order. */
+  penaltyLaps: number[]
   /** Final classified position (retired cars after every runner, as the race sorts them). */
   finish: number
 }
@@ -35,7 +37,7 @@ export function lapHistory(config: RaceConfig, seed: number, calls: readonly Pla
   const grid = initRace(config)
   const cars: CarHistory[] = grid.cars.map(c => ({
     driverId: c.driverId, teamId: c.teamId, isPlayer: c.isPlayer,
-    positions: [c.position], pitLaps: [], retiredLap: null, finish: c.position,
+    positions: [c.position], pitLaps: [], penaltyLaps: [], retiredLap: null, finish: c.position,
   }))
   const byId = new Map(cars.map(h => [h.driverId, h]))
   const pitsAtLastSample = new Map(grid.cars.map(c => [c.driverId, c.pitsDone]))
@@ -65,6 +67,11 @@ export function lapHistory(config: RaceConfig, seed: number, calls: readonly Pla
   for (const car of state.cars) {
     const h = byId.get(car.driverId)
     if (h !== undefined) h.finish = car.position
+  }
+
+  for (const ev of state.incidents) {
+    if (ev.kind !== 'penalty_issued' || ev.driverId === null) continue
+    byId.get(ev.driverId)?.penaltyLaps.push(ev.lap + 1)
   }
 
   const neutralisations: NeutralisationPeriod[] = []

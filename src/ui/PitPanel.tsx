@@ -55,6 +55,7 @@ function ProjectionCard({ result, compoundLabel }: { result: ProjectionResult; c
   const trainSize = useRaceStore(s => s.config && s.raceState ? rejoinTrainSize(s.config, s.raceState, result) : null)
   const scLine = useScChanceLine()
   const boxBusy = useRaceStore(s => boxBusyLine(s.config, s.raceState))
+  const penaltySec = useRaceStore(s => s.config?.tuning.penalties.enabled ? s.raceState?.cars.find(c => c.isPlayer)?.penalty?.pendingSec ?? 0 : 0)
 
   const aheadCode = driverCode(result.driverAheadId, drivers)
   const behindCode = driverCode(result.driverBehindId, drivers)
@@ -121,6 +122,15 @@ function ProjectionCard({ result, compoundLabel }: { result: ProjectionResult; c
           fontVariantNumeric: 'tabular-nums', marginTop: 2,
         }}>
           {boxBusy}
+        </div>
+      )}
+
+      {penaltySec > 0 && (
+        <div data-testid="penalty-serve-line" role="status" style={{
+          fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'var(--hot)',
+          fontVariantNumeric: 'tabular-nums', marginTop: 2,
+        }}>
+          Serves +{penaltySec}s penalty at this stop
         </div>
       )}
 
