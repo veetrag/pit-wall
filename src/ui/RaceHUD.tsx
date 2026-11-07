@@ -25,6 +25,7 @@ import { StartLights } from './StartLights'
 import { SettingsPanel } from './SettingsPanel'
 import { PitTimer } from './PitTimer'
 import { RedFlagCard } from './RedFlagCard'
+import { ScOutlook } from './ScOutlook'
 import { Component, type ReactNode } from 'react'
 import { useUiTap } from '@hooks/useUiTap'
 import { useReducedMotion, PRESS, ScreenFrame, HOLD_EXIT } from '@ui/kit'
@@ -120,6 +121,7 @@ export function StatusBar() {
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <ScOutlook />
         <SpeedControl />
         <SettingsPanel />
       </div>
