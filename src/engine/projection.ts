@@ -1,8 +1,8 @@
 import type { RaceConfig, RaceState, Compound } from './types'
 import { createRng } from './rng'
 import { stepSector } from './race'
-import { pitStopTime } from './pitStop'
-import { resolveAllocatedCompound, consumeTyreSet } from './tyres'
+import { executeStop } from './pitStop'
+import { resolveAllocatedCompound } from './tyres'
 import { isFinished } from './debrief'
 
 export interface ProjectionResult {
@@ -33,30 +33,16 @@ export function projectPitNow(
   // Reads the safety car off the state being projected, which is the whole
   // reason safetyCar lives on RaceState (spec 5.3): the "if you pit now"
   // overlay prices a stop under yellow correctly with no extra plumbing.
-  const playerTeamId = state.cars.find(c => c.driverId === playerDriverId)!.teamId
   // The EXPECTED stop: a slow stop is bad luck the player cannot plan for, so
-  // the overlay never prices one (spec 1.6 §1).
-  const stopTime = pitStopTime(config, playerTeamId, state.safetyCar, rngForStop, { allowSlow: false }).total
-
-  projState = {
-    ...projState,
-    cars: projState.cars.map(car => {
-      if (car.driverId !== playerDriverId) return car
-      // Fit what the live stop would fit (applyPlayerPit): the set the
-      // allocation actually has, consumed and recorded, so the two-compound
-      // rule at the flag sees the stop.
-      const fitted = resolveAllocatedCompound(newCompound, car.tyreAllocation) ?? newCompound
-      return {
-        ...car,
-        raceTime: car.raceTime + stopTime,
-        compound: fitted,
-        tyreAge: 0,
-        pitsDone: car.pitsDone + 1,
-        tyreAllocation: consumeTyreSet(car.tyreAllocation, fitted),
-        compoundsUsed: [...car.compoundsUsed, fitted],
-      }
-    }),
-  }
+  // the overlay never prices one (spec 1.6 §1). Routed through the race's own
+  // stop path (spec 2026-10-24 §0.4, ruling A4). It fits what the live stop
+  // would fit (applyPlayerPit): the set the allocation actually has, consumed
+  // and recorded, so the two-compound rule at the flag sees the stop.
+  const clonedPlayer = projState.cars.find(c => c.driverId === playerDriverId)!
+  const fitted = resolveAllocatedCompound(newCompound, clonedPlayer.tyreAllocation) ?? newCompound
+  const stop = executeStop(config, { safetyCar: state.safetyCar, lap: state.lap, sector: state.sector },
+    clonedPlayer, fitted, rngForStop, { allowSlow: false })
+  projState = { ...projState, cars: projState.cars.map(c => c.driverId === playerDriverId ? stop.car : c) }
 
   // Fast-forward horizonLaps; optionally suppress overtake dice
   const projectionConfig = useOvertakeRolls ? config : {

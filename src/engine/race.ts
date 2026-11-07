@@ -1,7 +1,7 @@
 import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound, IncidentEvent } from './types'
 import type { Rng } from './rng'
 import { createRng } from './rng'
-import { pitStopTime, type PitStopCost } from './pitStop'
+import { executeStop } from './pitStop'
 import { computeSectorTime } from './lapModel'
 import { wingOvertakeFactor } from './setup'
 import { openingTimeline } from './weather'
@@ -149,10 +149,6 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const newSectorResults = [...state.sectorResults]
   const newOvertakeEvents: OvertakeEvent[] = [...state.overtakeEvents]
   const newIncidents: IncidentEvent[] = [...state.incidents]
-  // Every slow stop is logged, whoever made it (spec 1.6 §1, ruling R4).
-  const logSlow = (stop: PitStopCost, driverId: string): void => {
-    if (stop.slow > 0) newIncidents.push({ lap: state.lap, sector, kind: 'slow_stop', driverId, timeLoss: stop.slow })
-  }
 
   // 1. Compute sector time for each car. Retired cars are frozen entirely —
   // no more sector time, no more sim work happens to them.
@@ -429,6 +425,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const redOut = neutralisationKind(safetyCar) === 'red'
   const restartNow = lapCompleted && activeKind === 'red'
 
+  // One stop path (spec 2026-10-24 §0.4, ruling A4).
+  const stopCtx = { safetyCar, lap: state.lap, sector }
   const finalCars: CarState[] = afterOvertakes.map(car => {
     let updated = { ...car }
     if (car.retired) return updated // frozen: no more laps, pits, or AI
@@ -442,24 +440,16 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       } else if (!updated.isPlayer) {
         // Build a state view for the AI decision (current positions, new lap)
         // `safetyCar` here is the post-tick value (deployed, ticked down or
-        // ended this tick), the same one pitStopTime charges below. Handing the
+        // ended this tick), the same one executeStop charges below. Handing the
         // AI the pre-tick value would let it box "under yellow" on the boundary
         // the neutralisation ends and pay the green-flag price.
         const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes, safetyCar }
         const decision = aiDecision(config, updated, stateForAI, rng)
         updated.paceMode = decision.paceMode
         if (decision.pit && !raceEndsThisTick) {
-          const stop = pitStopTime(config, car.teamId, safetyCar, rng)
-          updated = {
-            ...updated,
-            raceTime: updated.raceTime + stop.total,
-            compound: decision.compound,
-            tyreAge: 0,
-            pitsDone: updated.pitsDone + 1,
-            tyreAllocation: consumeTyreSet(updated.tyreAllocation, decision.compound),
-            compoundsUsed: [...updated.compoundsUsed, decision.compound],
-          }
-          logSlow(stop, car.driverId)
+          const out = executeStop(config, stopCtx, updated, decision.compound, rng)
+          updated = out.car
+          newIncidents.push(...out.events)
         }
       } else if (config.playerStrategyOverride && !state.planHold) {
         // The player's own plan, executed exactly as the race setup screen
@@ -473,17 +463,9 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         if (nextStop && updated.lap >= nextStop.lap) {
           const compound = resolveAllocatedCompound(nextStop.compound, updated.tyreAllocation)
           if (compound) {
-            const stop = pitStopTime(config, car.teamId, safetyCar, rng)
-            updated = {
-              ...updated,
-              raceTime: updated.raceTime + stop.total,
-              compound,
-              tyreAge: 0,
-              pitsDone: updated.pitsDone + 1,
-              tyreAllocation: consumeTyreSet(updated.tyreAllocation, compound),
-              compoundsUsed: [...updated.compoundsUsed, compound],
-            }
-            logSlow(stop, car.driverId)
+            const out = executeStop(config, stopCtx, updated, compound, rng)
+            updated = out.car
+            newIncidents.push(...out.events)
           }
         }
       }

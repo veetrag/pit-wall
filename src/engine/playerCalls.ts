@@ -1,7 +1,7 @@
 import type { RaceConfig, RaceState, Compound, PaceMode } from './types'
 import type { Rng } from './rng'
-import { resolveAllocatedCompound, consumeTyreSet } from './tyres'
-import { pitStopTime } from './pitStop'
+import { resolveAllocatedCompound } from './tyres'
+import { executeStop } from './pitStop'
 import { neutralisationKind } from './incidents'
 import { redFlagPending } from './redFlag'
 
@@ -29,30 +29,14 @@ export function applyPlayerPit(
   if (!player) return null
   const resolved = resolveAllocatedCompound(compound, player.tyreAllocation)
   if (!resolved) return null
-  const stop = pitStopTime(config, player.teamId, state.safetyCar, rng)
+  const out = executeStop(config, { safetyCar: state.safetyCar, lap: state.lap, sector: state.sector }, player, resolved, rng)
   // A stop from the panel consumes a held plan stop (pitsDone + 1) and ends the hold.
   const { planHold: _held, ...unheld } = state
-  const next: RaceState = {
-    ...unheld,
-    cars: state.cars.map(car => car.isPlayer
-      ? {
-          ...car,
-          raceTime: car.raceTime + stop.total,
-          compound: resolved,
-          tyreAge: 0,
-          pitsDone: car.pitsDone + 1,
-          tyreAllocation: consumeTyreSet(car.tyreAllocation, resolved),
-          compoundsUsed: [...car.compoundsUsed, resolved],
-        }
-      : car),
-  }
+  const next: RaceState = { ...unheld, cars: state.cars.map(car => car.isPlayer ? out.car : car) }
   // Logged at the moment of the call. The incidents array is only replaced
   // when there is something to log, so a fast stop leaves the log untouched.
-  if (stop.slow <= 0) return next
-  return {
-    ...next,
-    incidents: [...state.incidents, { lap: state.lap, sector: state.sector, kind: 'slow_stop', driverId: player.driverId, timeLoss: stop.slow }],
-  }
+  if (out.events.length === 0) return next
+  return { ...next, incidents: [...state.incidents, ...out.events] }
 }
 
 export function applyPlayerPace(state: RaceState, mode: PaceMode): RaceState {
