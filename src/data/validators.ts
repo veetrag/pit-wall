@@ -17,12 +17,20 @@ const DifficultyProfileSchema = z.object({
   pitCrewConsistency: z.number(),
 })
 
+/** A z.object with one schema `v` (default z.number()) for every key in `keys`. */
+const Rec = <K extends string, V extends z.ZodTypeAny = z.ZodNumber>(keys: readonly [K, ...K[]], v: V = z.number() as unknown as V) =>
+  z.object(Object.fromEntries(keys.map(k => [k, v])) as Record<K, V>)
+const PACE = ['push', 'neutral', 'conserve'] as const
+const WEATHER = ['DRY', 'DAMP', 'WET'] as const
+const BRAINS = ['naive', 'smart', 'optimal'] as const
+const Prob = z.number().min(0).max(1)
+
 export const TuningSchema = z.object({
   carPerformance: z.object({ deltaPerRating: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
   driverPerformance: z.object({ deltaPerSkill: z.number(), sectorSplit: z.tuple([z.number(), z.number(), z.number()]) }),
   fuel: z.object({ effectPerLap: z.number() }),
   noise: z.object({ sigmaPerSector: z.number(), consistencyReliefFactor: z.number() }),
-  trackEvolution: z.object({ startDelta: z.number(), decayLaps: z.number() }),
+  trackEvolution: z.object({ startDelta: z.number(), decayLaps: z.number(), wash: z.object({ DAMP: z.number().min(0).max(1), WET: z.number().min(0).max(1) }) }),
   traffic: z.object({
     gapThreshold: z.number(), penalty: z.number(), trafficCap: z.number(),
     // Scales the absolute per-sector penalty by hardCircuitScale / overtakingFactor,
@@ -187,6 +195,9 @@ export const TuningSchema = z.object({
     neutralisationCliffFrac: z.number().min(0),
     weatherConfirmLaps: z.number().int().min(1),
     weatherMinLapsLeft: z.number().int().min(0),
+    scGambleChance: z.number().min(0).max(1),
+    scGambleMaxDelay: z.number().int().min(0),
+    scGambleMaxCliffFrac: z.number().min(0),
   }),
   rivalIntel: z.object({
     halfWidth: z.object({
@@ -227,6 +238,8 @@ export const TuningSchema = z.object({
     errorTimeLossMean: z.number(),
     errorTimeLossSigma: z.number(),
     consistencyReliefMax: z.number().min(0).max(1),
+    wetErrorMultiplier: z.object({ DRY: z.number().min(0), DAMP: z.number().min(0), WET: z.number().min(0) }),
+    circuitRiskWeight: z.number().min(0).max(1),
     safetyCar: z.object({
       crashDeployChance: z.number().min(0).max(1),
       mechanicalDeployChance: z.number().min(0).max(1),
@@ -280,6 +293,25 @@ export const TuningSchema = z.object({
   }).refine(w => w.forecastSpread.length > w.forecastHorizon && w.forecastConfidence.length > w.forecastHorizon, {
     message: 'weather.forecastSpread and forecastConfidence need an entry for every lap up to forecastHorizon',
   }),
+  drs: z.object({
+    _note: z.string().optional(), enabled: z.boolean(), detectionGap: z.number().positive(),
+    enableAfterLaps: z.number().int().min(0), timeGain: z.number().min(0), overtakeBonus: z.number().min(0),
+    trainNeutralisation: Prob, trainMinCars: z.number().int().min(2), aiTrainEscape: z.boolean(),
+  }),
+  doubleStack: z.object({
+    _note: z.string().optional(), enabled: z.boolean(), entryShare: Prob, releaseGap: z.number().min(0),
+    maxQueue: Rec(BRAINS), maxQueueNeutralised: Rec(BRAINS), emergencyCliffFrac: z.number().positive(),
+  }),
+  penalties: z.object({
+    _note: z.string().optional(), enabled: z.boolean(), timePenaltySec: z.number().positive(),
+    trackLimits: z.object({
+      chancePerLap: Prob, warningsAllowed: z.number().int().min(0), paceModeFactor: Rec(PACE),
+      consistencyRelief: Prob, wetFactor: Rec(WEATHER),
+    }),
+    unsafeRelease: z.object({ chance: Prob, pitCrewRelief: Prob, stackedFactor: z.number().min(1) }),
+    aiCoverMargin: z.number().min(0),
+  }),
+  scOutlook: z.object({ horizonLaps: z.number().int().min(1), bands: z.tuple([Prob, Prob]).refine(([a, b]) => a < b, 'scOutlook.bands must be [lo, hi]') }),
   // Bands and their provenance live in MODEL_SPEC.md §3. Read only by tests —
   // src/engine/ never touches them (engine/types.ts keeps its own looser
   // declaration). Stays .optional() so a repo without bands still loads.
@@ -335,6 +367,8 @@ const CircuitSchema = z.object({
   driverSensitivity: z.tuple([z.number(), z.number(), z.number()]),
   overtakingFactor: z.tuple([z.number(), z.number(), z.number()]),
   pitLaneTimeLoss: z.number(),
+  drsSectors: z.array(z.union([z.literal(0), z.literal(1), z.literal(2)])).optional(),
+  incidentRisk: z.number().positive().optional(),
   rainProbability: z.number().optional(),
   // Narrowed to the six keys `tuning.weather.timeline.intensityBias` actually
   // defines. As a bare string an unknown value passed validation and then fell

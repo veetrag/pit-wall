@@ -6,6 +6,10 @@ export type PaceMode = 'push' | 'neutral' | 'conserve'
 export type SectorIndex = 0 | 1 | 2
 export type WeatherState = 'DRY' | 'DAMP' | 'WET'
 
+// ---- 2.0 (spec 2026-10-24, trimmed by plans/2026-11-07-v2.0-scope.md) ----
+/** Steward state per car (spec §8). Absent while penalties are off. */
+export interface PenaltyState { warnings: number; pendingSec: number; servedSec: number }
+
 export interface CompoundSpec {
   name: string
   type: 'dry' | 'wet'
@@ -22,7 +26,7 @@ export interface TuningConstants {
   driverPerformance: { deltaPerSkill: number; sectorSplit: [number, number, number] }
   fuel: { effectPerLap: number }
   noise: { sigmaPerSector: number; consistencyReliefFactor: number }
-  trackEvolution: { startDelta: number; decayLaps: number }
+  trackEvolution: { startDelta: number; decayLaps: number; wash: { DAMP: number; WET: number } }
   traffic: {
     gapThreshold: number
     penalty: number
@@ -121,7 +125,7 @@ export interface TuningConstants {
    * slick-shod car at once), and never with weatherMinLapsLeft laps or fewer
    * to go. confirm 1 / minLapsLeft 0 is the pre-1.6 rule exactly.
    */
-  ai: { neutralisationWindowLaps: number; neutralisationCliffFrac: number; weatherConfirmLaps: number; weatherMinLapsLeft: number }
+  ai: { neutralisationWindowLaps: number; neutralisationCliffFrac: number; weatherConfirmLaps: number; weatherMinLapsLeft: number; scGambleChance: number; scGambleMaxDelay: number; scGambleMaxCliffFrac: number }
   /** Rival intel box window (spec 2026-10-16 §2). Half-width in laps per brain; the brain is never shown. */
   rivalIntel: { halfWidth: Record<StrategyBrain, number>; maxOffsetLaps: number }
   /**
@@ -150,6 +154,10 @@ export interface TuningConstants {
     errorTimeLossMean: number
     errorTimeLossSigma: number
     consistencyReliefMax: number
+    /** Spec 2026-10-24 §6. Multiplies the driver-error chance by weather. All 1 = off. */
+    wetErrorMultiplier: Record<WeatherState, number>
+    /** Spec §6. Blend weight of CircuitSpec.incidentRisk. 0 = off. */
+    circuitRiskWeight: number
     safetyCar: {
       crashDeployChance: number
       mechanicalDeployChance: number
@@ -262,6 +270,38 @@ export interface TuningConstants {
   }
   /** Spec 2026-10-24 §2.2: a cooler night track wears tyres less. 1 = no effect. */
   timeOfDay: { _note?: string; nightWearFactor: number }
+  drs: {
+    enabled: boolean
+    detectionGap: number
+    enableAfterLaps: number
+    timeGain: number
+    overtakeBonus: number
+    trainNeutralisation: number
+    trainMinCars: number
+    aiTrainEscape: boolean
+  }
+  doubleStack: {
+    enabled: boolean
+    entryShare: number
+    releaseGap: number
+    maxQueue: Record<StrategyBrain, number>
+    maxQueueNeutralised: Record<StrategyBrain, number>
+    emergencyCliffFrac: number
+  }
+  penalties: {
+    enabled: boolean
+    timePenaltySec: number
+    trackLimits: {
+      chancePerLap: number
+      warningsAllowed: number
+      paceModeFactor: Record<PaceMode, number>
+      consistencyRelief: number
+      wetFactor: Record<WeatherState, number>
+    }
+    unsafeRelease: { chance: number; pitCrewRelief: number; stackedFactor: number }
+    aiCoverMargin: number
+  }
+  scOutlook: { horizonLaps: number; bands: [number, number] }
   _regressionBands?: Record<string, unknown>
 }
 
@@ -299,6 +339,10 @@ export interface CircuitSpec {
   crashRisk?: number
   /** Multiplies the SC and VSC deploy chances (capped at 1). Absent = 1. */
   neutralisationRisk?: number
+  /** 2.0 DRS zones (spec §3): sectors whose boundary opens DRS. */
+  drsSectors?: SectorIndex[]
+  /** 2.0 incident risk (spec §6). Calendar mean 1.00; inert at circuitRiskWeight 0. */
+  incidentRisk?: number
 }
 
 export interface DriverFacets {
@@ -377,6 +421,8 @@ export interface CarState {
   // Which roll ended the car's race, so the UI can attribute the retirement
   // correctly instead of assuming it was always a tyre failure.
   retiredCause: 'tyre' | 'mechanical' | 'crash' | null
+  /** 2.0 penalties (spec §8). Absent while penalties are off. */
+  penalty?: PenaltyState
 }
 
 export interface SectorResult {
@@ -386,6 +432,8 @@ export interface SectorResult {
   trafficPenalty: number
   noiseSample: number
   spinLoss: number
+  /** 2.0: this sector drew a track-limits warning (spec §8). Absent otherwise. */
+  trackLimits?: true
 }
 
 export interface OvertakeEvent {
@@ -405,6 +453,12 @@ export type IncidentKind =
   | 'slow_stop'
   | 'red_flag'
   | 'red_flag_restart'
+  | 'track_limits'
+  | 'penalty_issued'
+  | 'penalty_served'
+  | 'penalty_added'
+  | 'unsafe_release'
+  | 'double_stack'
 
 /**
  * A full safety car bunches the field; a virtual safety car slows every car and
@@ -468,6 +522,8 @@ export interface RaceState {
    * PIT clears it. ABSENT when not held, so the golden race is unchanged.
    */
   planHold?: true
+  /** 2.0 double stack (spec §7): race time each team's box is next free. Absent while off. */
+  boxFree?: Record<string, number>
 }
 
 export interface RaceConfig {

@@ -27,7 +27,7 @@ export type {
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
   TyreAllocation, DifficultyProfile, WeatherState, SafetyCarState,
-  IncidentEvent, IncidentKind, NeutralisationKind,
+  IncidentEvent, IncidentKind, NeutralisationKind, PenaltyState,
   AttackLevel, QualifyingCall, QualifyingLap, QualifyingResult,
 } from './types'
 export type { ProjectionResult } from './projection'
