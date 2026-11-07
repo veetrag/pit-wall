@@ -2,7 +2,8 @@ import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, Weath
 import type { Rng } from './rng'
 import { createRng } from './rng'
 import { executeStop } from './pitStop'
-import { computeSectorTime } from './lapModel'
+import { computeSectorTime, NO_CTX, type SectorContext } from './lapModel'
+import { rubberLapsFor } from './track'
 import { wingOvertakeFactor } from './setup'
 import { openingTimeline } from './weather'
 import { aiDecision } from './strategy'
@@ -149,12 +150,15 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const newSectorResults = [...state.sectorResults]
   const newOvertakeEvents: OvertakeEvent[] = [...state.overtakeEvents]
   const newIncidents: IncidentEvent[] = [...state.incidents]
+  // Once per tick, not per car (spec §4.3). Undefined unless rain can wash rubber.
+  const rubber = rubberLapsFor(state, config.tuning)
+  const ctxBase: SectorContext = rubber === undefined ? NO_CTX : { rubberLaps: rubber }
 
   // 1. Compute sector time for each car. Retired cars are frozen entirely —
   // no more sector time, no more sim work happens to them.
   const updatedCars: CarState[] = state.cars.map(car => {
     if (car.retired) return car
-    const result = computeSectorTime(config, car, sector, rng, state.weatherState, state.safetyCar)
+    const result = computeSectorTime(config, car, sector, rng, state.weatherState, state.safetyCar, ctxBase)
     newSectorResults.push(result)
     let updated = { ...car, raceTime: car.raceTime + result.sectorTime }
 

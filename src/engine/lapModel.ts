@@ -11,6 +11,15 @@ function facetToRating9(facet: number): number {
   return (1 - facet / 100) * 9
 }
 
+/** Per-tick facts race.ts computes once and hands to every car (spec 2026-10-24 §0.6). */
+export interface SectorContext {
+  /** Laps of rubber (§4). Absent = car.lap, the 1.6 formula. */
+  rubberLaps?: number
+  /** DRS open for this car in this sector (§3). */
+  drsOpen?: boolean
+}
+export const NO_CTX: SectorContext = Object.freeze({})
+
 export function computeSectorTime(
   config: RaceConfig,
   car: CarState,
@@ -18,6 +27,7 @@ export function computeSectorTime(
   rng: Rng,
   weatherState: WeatherState = 'DRY',
   safetyCar: SafetyCarState | null = null,
+  ctx: SectorContext = NO_CTX,
 ): SectorResult {
   const { tuning, circuit, compounds } = config
   const base = circuit.sectorBase[sector]!
@@ -61,7 +71,8 @@ export function computeSectorTime(
   const fuelDelta = -(car.lap * tuning.fuel.effectPerLap) / 3
 
   // --- Track evolution ---
-  const trackFraction = Math.max(0, 1 - car.lap / tuning.trackEvolution.decayLaps)
+  const rubber = ctx.rubberLaps ?? car.lap
+  const trackFraction = Math.max(0, 1 - rubber / tuning.trackEvolution.decayLaps)
   const trackDelta = (tuning.trackEvolution.startDelta * trackFraction) / 3
 
   // --- Pace mode delta ---
