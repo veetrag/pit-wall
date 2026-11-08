@@ -555,22 +555,32 @@ chat app, copy it back from the chat, IMPORT, PLAY: the situation matches;
 paste a damaged code: friendly error; reinstall: codes survive only as
 shared text (expected).
 
-### 2.0: track, DRS, SC, pit lane (scope 2026-11-07, Task 12')
+### 2.0: track, DRS, SC, pit lane (scope 2026-11-07, Task 12', round 2)
 
-Switch-on result (MODEL_SPEC §17.1): rubber wash and the SC gamble ship ON; DRS, circuit/wet
-incident risk, the double stack and penalties ship OFF after failing a gate with their fallback.
-Phone-test the shipped two, and the four OFF ones only from a debug build with them forced on.
+Switch-on result (MODEL_SPEC §17.1, Round 2: four-seed-base means, floors unchanged):
+**ON** — rubber wash, the SC meter + SC gamble, DRS, the double stack, penalties (all at plan values).
+The SC gamble is effectively dormant: with incident risk off the outlook never reaches its 0.35
+threshold, so AI cars never gamble (the meter itself is live for the player).
+**OFF** — circuit/wet incident risk (lantern_quay envelope rho 0.495-0.499 vs 0.50 through three
+shrink steps). It is the only item to test from a debug build with it forced on.
 
-**Phone pass (shipped):** lap 1 is visibly slower and the TRACK GRIP strip fills; a shower drains it
-with one GRIP RESET; the SC meter reads a chance under a clear race, OUT under a neutralisation, and
-its reasons card opens and closes (focus, Escape, outside tap).
+**Phone pass (shipped):**
+- Rubber: lap 1 visibly slower and the TRACK GRIP strip fills; a shower drains it with one GRIP RESET.
+- DRS: pills on the tower one sector ahead; a "TRAIN ×N" bracket behind a slow car, the player's pill
+  reads "DRS ✕" inside it; the train link is drawn on the canvas; 60 fps with links drawn.
+- SC meter: reads a chance under a clear race, OUT under a neutralisation; the reasons card opens and
+  closes (focus, Escape, outside tap).
+- Double stack: both team cars boxing under the SC show BOX BUSY and queue (PitTimer QUEUE first,
+  radio "you first"); background the app mid-stack and return.
+- Penalties: track-limits warning toast, then a 5 s penalty with a heavy haptic, "+5" chip on the
+  tower and "P4 ▸ P6 after +5s"; boxing serves it, staying out to the flag adds it.
+- TalkBack reads the SC meter, steward toast, grip strip, DRS pill and BOX BUSY; reduced motion keeps
+  them legible without movement; haptics fire on the penalty and the queue call.
 
-**Phone pass (debug build, all on):** DRS pills on the tower one sector ahead, a "TRAIN ×N" bracket
-behind a slow car, the player's pill reads "DRS ✕" inside it; the SC meter rises at Harbour Lights and
-in rain; both team cars boxing under the SC queue (PitTimer QUEUE first, radio "you first"); a
-track-limits warning toast, then a 5 s penalty with a heavy haptic, "+5" on the tower and
-"P4 ▸ P6 after +5s"; staying out to the flag adds it, boxing serves it; 60 fps with train links drawn.
+**Phone pass (debug build, risk forced on):** the SC meter rises at Harbour Lights and in rain, its
+reasons card lists street / wet.
 
-**Calls for Veet:** wash 0.35/0.80; DRS on or off (lantern_quay passing gate 0.183 vs 0.20 — drop its
-DRS zone?); whether to spend gridFinishSpearman headroom on risk / stack / penalties; SC gamble
-threshold 0.35 (never reached with risk off); SC meter bands 15/30%.
+**Calls for Veet:** DRS passes lantern_quay by 0.002 (0.202 vs 0.20) — feel-check passing there;
+cliff_edge now hands over P2 with a goal of P9 (par P10) — does it feel odd?; incident risk left off
+(the street circuit's envelope is already 0.501 with everything off); wash 0.35/0.80; SC gamble
+threshold 0.35 (dormant with risk off); SC meter bands 15/30%.

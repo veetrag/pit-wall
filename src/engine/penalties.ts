@@ -3,6 +3,9 @@ import type { CarState, IncidentEvent, PaceMode, PenaltyState, RaceConfig, RaceS
 /**
  * Penalties (spec 2026-10-24 §8.2, rulings N1-N3). Pure; no rng. Track limits
  * ride on lapModel's spare noise2, unsafe release on pitStopTime's g2.
+ *
+ * Invariant: a car has `penalty` <=> penalties.enabled at initRace. Readers key
+ * off `car.penalty`, never the switch (config is fixed for a race).
  */
 export function initPenalty(): PenaltyState { return { warnings: 0, pendingSec: 0, servedSec: 0 } }
 
