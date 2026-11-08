@@ -61,9 +61,16 @@ describe('lantern_quay (night street circuit)', () => {
   it('walls bite, but it is not a demolition derby', () => {
     expect(measure([ID], 'pro').crashesPerCarRace).toBeLessThanOrEqual(0.14)
   })
+  // Mean over four seed bases at n=240 each (MODEL_SPEC §17.1, 2.0 round 2): one
+  // n=120 sample has an SE of ~0.035 here, so a single draw could not tell DRS's
+  // 0.183 from the floor. The floor is unchanged.
   it('IS HARD TO PASS ON: a 0.4 s/lap faster car fails to clear in >= 20% of trials', () => {
-    const seeds = Array.from({ length: 120 }, (_, i) => 500 + 13 * i)
-    expect(measureClearing({ circuitId: ID, seeds, advantage: 0.4 }).failureRate).toBeGreaterThanOrEqual(0.20)
+    const rates = [1000, 4000, 7000, 10000].map(base => {
+      const seeds = Array.from({ length: 240 }, (_, i) => base + 13 * i)
+      return measureClearing({ circuitId: ID, seeds, advantage: 0.4 }).failureRate
+    })
+    const mean = rates.reduce((a, b) => a + b, 0) / rates.length
+    expect(mean, `per base ${rates.map(r => r.toFixed(3)).join(' ')}`).toBeGreaterThanOrEqual(0.20)
   })
 })
 

@@ -1164,6 +1164,9 @@ switched on alone, in the scope's order, on top of the ones before it, and measu
 n=240 cells on the 4-circuit SAMPLE). The gate suites were then run on the result. No band was
 widened. None of the STOP limits (crash > 0.12, dpos > 4.5, paceRank < 0.85) was reached.
 
+> **Superseded by "Round 2" at the end of this section:** DRS, the double stack and penalties now
+> ship ON; circuit/wet incident risk stays OFF.
+
 **Outcome: rubber wash and the optimal SC gamble ship ON. DRS, circuit/wet incident risk, the double
 stack and penalties ship OFF**, each after its one fallback (spec §12.3) also failed:
 
@@ -1311,3 +1314,42 @@ call: the street circuit has no DRS zone) would likely clear the passing gate; (
 gridFinishSpearman 0.60 floor is the binding constraint for three features — measure its headroom
 over more seed bases before switching any of them on; (c) `ai.scGambleChance` 0.35 is above any
 outlook the shipped tuning produces.
+
+#### Round 2: four-seed-base means (2026-11-08)
+
+Owner ruling: the four OFF features each missed a single-sample gate by < 0.01, inside the
+0.01-0.03 seed-base spread of rho. **Method change:** each failing gate metric is judged on the MEAN
+over four seed bases (1000, 4000, 7000, 10000) at n=240 each, at the SAME floor. Features were re-run
+in the scope's order, cumulatively on top of what was ON, with every existing band and STOP limit
+also checked on the mean. A feature that missed was shrunk up to three steps, then left OFF.
+Each cell ran pro SAMPLE, rookie SAMPLE, setups-on SAMPLE, lantern_quay pro and rookie (the
+newCircuitBands envelope) and the lantern_quay clearing trial (seeds base + 13i, i < 240).
+
+| Stage (cumulative) | Gate metric, 4-base mean | Floor | Decision |
+|---|---|---|---|
+| DRS, plan values | lantern_quay passing failure 0.202 (0.146 / 0.233 / 0.183 / 0.246) | ≥ 0.20 | **ON** |
+| Risk {1, 1.4, 1.8}, weight 1.0 | setups-on rho 0.5995 | > 0.60 | shrink |
+| Risk step 1: WET 1.6, weight 0.7 | setups-on 0.603, but lantern_quay pro envelope rho 0.499 | ≥ 0.50 | shrink |
+| Risk step 2: WET 1.6, weight 0.5 | lantern_quay pro rho 0.499 | ≥ 0.50 | shrink |
+| Risk step 3: WET 1.4, weight 0.5 | lantern_quay pro rho 0.495 | ≥ 0.50 | **OFF** |
+| Double stack, plan values (on DRS) | SAMPLE pro rho 0.635 (n=120 gate's metric) | > 0.60 | **ON** |
+| Penalties, plan values | SAMPLE pro rho 0.635, setups-on 0.624 | > 0.60 | **ON** |
+
+Risk: `circuitRiskWeight` cannot move lantern_quay (its `incidentRisk` is 1.0; its danger lives in
+`crashRisk`), so the shrink only touches the wet multipliers there. The street circuit's envelope
+rho was already 0.501 with every 2.0 switch off, and risk put it at 0.495-0.499 in every step.
+Step 3 (WET 1.4) goes beyond the two listed knobs because they were spent after step 2. With risk
+off the SC gamble is inert again, as in round 1.
+
+Shipped (rubber, gamble, DRS, stack, penalties), 4-base means at n=240: pro rho 0.635, dpos 3.595,
+paceRank 0.964, crash 0.0617, top 0.448; rookie rho 0.665, paceRank 0.921; setups-on rho 0.624;
+lantern_quay pro rho 0.520, crash 0.100; trains 36.8, stacks 5.9, penalties 0.59, unsafe releases
+0.55 per race (pro). No STOP limit reached. No band was widened or added (the live 2.0 rates are
+still unbanded; adding them is a separate call). Full per-seed lines:
+`.superpowers/sdd/2026-10-24-v2-deeper-race-strategy/task-12p-round2-report.md`.
+
+Gate tests changed to the same method, same floors: `newCircuitBands` lantern_quay IS HARD TO PASS
+ON (4 bases x 240 seeds), and `monteCarlo` "every gated metric" gridFinishSpearman (4 bases x n=240;
+the other metrics in that test keep their n=120 sample). With DRS on, 12 scenarios/classics moved
+and were re-authored from `scripts/find-scenarios.ts` (hold_the_train from harbour_lights at gap 2.0,
+SEEDS=2000: lantern_quay had no hit), and the three daily GOLDEN pins moved (release-note item).

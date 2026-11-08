@@ -13,12 +13,17 @@ const DATA = loadGameData()
 describe('2.0 foundations', () => {
   it('every 2.0 tuning block is declared and survives zod', () => {
     const t = DATA.tuning
-    // The 2.0 switch-on (scope 2026-11-07 Task 12', MODEL_SPEC §17.1): rubber
-    // wash and the SC gamble ship ON; DRS (lantern_quay passing gate), incident
-    // risk, the double stack and penalties (gridFinishSpearman floor) ship OFF.
-    expect(t.drs.enabled).toBe(false)
-    expect(t.doubleStack.enabled).toBe(false)
-    expect(t.penalties.enabled).toBe(false)
+    // The 2.0 switch-on (scope 2026-11-07 Task 12', round 2, MODEL_SPEC §17.1):
+    // rubber wash, the SC gamble, DRS, the double stack and penalties ship ON at
+    // their plan values; circuit/wet incident risk ships OFF (lantern_quay
+    // envelope rho, 4-seed-base mean, after three shrink steps).
+    expect(t.drs.enabled).toBe(true)
+    expect(t.drs.timeGain).toBe(0.2)
+    expect(t.drs.overtakeBonus).toBe(0.6)
+    expect(t.doubleStack.enabled).toBe(true)
+    expect(t.penalties.enabled).toBe(true)
+    expect(t.penalties.trackLimits.chancePerLap).toBe(0.012)
+    expect(t.penalties.unsafeRelease.chance).toBe(0.015)
     expect(t.trackEvolution.wash).toEqual({ DAMP: 0.35, WET: 0.8 })
     expect(t.incidents.wetErrorMultiplier).toEqual({ DRY: 1, DAMP: 1, WET: 1 })
     expect(t.incidents.circuitRiskWeight).toBe(0)

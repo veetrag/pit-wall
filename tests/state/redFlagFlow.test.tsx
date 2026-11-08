@@ -40,6 +40,10 @@ function startRed(playerCrashes = false) {
       redFlag: { crashChance: 1, maxPerRace: 1, minLapsLeft: 5, planWindowLaps: 15 },
     },
     tyreFailure: { chancePerLapOverThreshold: 0, maxChancePerLap: 0 },
+    // The store's raceState was initialised under the shipped tuning, which
+    // seeds a per-car penalty record when penalties are on; replay re-inits
+    // from this config, so the switch must match the state it is swapped under.
+    penalties: { enabled: c.tuning.penalties.enabled },
   })
   useRaceStore.setState({
     phase: 'racing',

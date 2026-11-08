@@ -149,9 +149,11 @@ const BRIEFS: Brief[] = [
       const car = st.cars.find(c => c.driverId === PLAYER)
       if (!car || s.position > 3 || s.lapsRemaining < 10 || s.lapsRemaining > 16 || wornFrac(cid, car) < 0.75) return false
       const behind = st.cars.find(c => !c.retired && c.position === car.position + 1)
-      return !!behind && behind.raceTime - car.raceTime <= 1.5 && wornFrac(cid, behind) <= wornFrac(cid, car) - 0.3
+      return !!behind && behind.raceTime - car.raceTime <= 2.0 && wornFrac(cid, behind) <= wornFrac(cid, car) - 0.3
     },
     // widen if no hit: circuitId 'lantern_quay', then gap 2.0
+    // 2.0 round 2 (DRS on): lantern_quay had no hit at SEEDS=2000 at 1.5 or 2.0;
+    // re-authored from harbour_lights at gap 2.0, SEEDS=2000.
   },
   {
     name: 'Undercut duel — P2, both on the first set', pack: 'historic', circuitId: 'costa_verde',
