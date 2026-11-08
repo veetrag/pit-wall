@@ -96,7 +96,7 @@
     "minCliffFracToCover": 0.45,
     "minRemainingLaps": 6
   },
-  "ai": { "neutralisationWindowLaps": 6, "neutralisationCliffFrac": 0.55, "weatherConfirmLaps": 2, "weatherMinLapsLeft": 3, "scGambleChance": 0.35, "scGambleMaxDelay": 3, "scGambleMaxCliffFrac": 0.85 },
+  "ai": { "neutralisationWindowLaps": 6, "neutralisationCliffFrac": 0.55, "weatherConfirmLaps": 2, "weatherMinLapsLeft": 3, "scGambleChance": 0.35, "scGambleMaxDelay": 3, "scGambleMaxCliffFrac": 0.85, "scGamblePushGate": 0.18 },
   "rivalIntel": { "halfWidth": { "naive": 2, "smart": 3, "optimal": 5 }, "maxOffsetLaps": 1 },
   "radioRequests": { "boxCliffFrac": 0.85, "boxPlanWindowLaps": 2, "minLapsLeft": 3, "pushGap": 1.0, "pushLapEnds": 2, "pushPaceMargin": 0.1, "pushMaxCliffFrac": 0.5, "cooldownLaps": 6, "maxPerRace": 3, "expirySec": 8 },
   "sprint": {
@@ -240,7 +240,8 @@
     "timePenaltySec": 5,
     "trackLimits": { "chancePerLap": 0.012, "warningsAllowed": 3, "paceModeFactor": { "push": 1.8, "neutral": 1.0, "conserve": 0.5 }, "consistencyRelief": 0.5, "wetFactor": { "DRY": 1.0, "DAMP": 1.5, "WET": 1.2 } },
     "unsafeRelease": { "chance": 0.015, "pitCrewRelief": 0.5, "stackedFactor": 2.5 },
-    "aiCoverMargin": 1.0
+    "aiCoverMargin": 1.0,
+    "aiCoverCliffMax": 0.7
   },
   "scOutlook": { "horizonLaps": 5, "bands": [0.15, 0.30] },
   "_regressionBands": {

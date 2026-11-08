@@ -6,8 +6,8 @@ import { initRace, stepSector } from '@engine/race'
 import { effectivePitLaneLoss } from '@engine/incidents'
 import { createRng } from '@engine/rng'
 import { makeDeterministicTuning } from '../fixtures/tuning'
-import { makeConfig } from '../fixtures/raceHarness'
-import type { RaceConfig } from '@engine/types'
+import { makeConfig, type TuningOverrides } from '../fixtures/raceHarness'
+import type { RaceConfig, RaceState } from '@engine/types'
 
 const cfg = (on = true): RaceConfig =>
   ({ ...makeConfig({}, 6, 'veloce'), allDry: true, tuning: makeDeterministicTuning(on ? { doubleStack: { enabled: true } } : {}) })
@@ -81,5 +81,57 @@ describe('double-stacked stops (spec §7)', () => {
     expect(s.lap).toBe(s.totalLaps)
     // Not every seed stacks; the assertion is that the mechanism is reachable and well-formed when it does.
     for (const e of s.incidents.filter(x => x.kind === 'double_stack')) expect(e.timeLoss!).toBeGreaterThan(0)
+  })
+})
+
+// Final-review fix: boxFree holds absolute raceTimes, so a rewrite of every
+// raceTime (SC compression, red-flag regrid) must drop it -- otherwise a stale
+// release time charges a phantom queue.
+describe('box release times survive no raceTime rewrite', () => {
+  const PHANTOM = 1e9
+  const phantomBoxes = (s: RaceState) => Object.fromEntries(s.cars.map(c => [c.teamId, PHANTOM]))
+  const noPhantom = (prev: RaceState, next: RaceState) => {
+    for (const t of Object.values(next.boxFree ?? {})) expect(t).toBeLessThan(PHANTOM)
+    const fresh = next.incidents.slice(prev.incidents.length).filter(i => i.kind === 'double_stack')
+    for (const i of fresh) expect(i.timeLoss ?? 0).toBeLessThan(60)
+  }
+  const crashy = (sc: boolean): RaceConfig => {
+    const base = makeConfig({
+      doubleStack: { enabled: true },
+      incidents: {
+        driverErrorPerLap: 3, consistencyReliefMax: 1, terminalFraction: 1,
+        safetyCar: { crashDeployChance: sc ? 1 : 0, mechanicalDeployChance: 0 },
+        vsc: { crashDeployChance: 0, mechanicalDeployChance: 0 },
+        redFlag: { crashChance: sc ? 0 : 1, maxPerRace: 1, minLapsLeft: 5, planWindowLaps: 15 },
+      },
+    } as TuningOverrides, 9)
+    return { ...base, lapsOverride: 20, allDry: true }
+  }
+  /** The step on which `hit` first holds for the new state, replayed to just before it. */
+  const before = (c: RaceConfig, hit: (s: RaceState) => boolean) => {
+    let s = initRace(c); let rng = createRng(c.seed); let k = 0
+    while (!hit(s) && k < 200) { s = stepSector(c, s, rng); k++ }
+    expect(hit(s), 'premise: the event happened').toBe(true)
+    s = initRace(c); rng = createRng(c.seed)
+    for (let i = 0; i < k - 1; i++) s = stepSector(c, s, rng)
+    return { s, rng }
+  }
+
+  it('SC compression drops stale box times', () => {
+    const c = crashy(true)
+    const { s, rng } = before(c, st => st.incidents.some(i => i.kind === 'safety_car_deployed'))
+    const prev = { ...s, boxFree: phantomBoxes(s) }
+    const next = stepSector(c, prev, rng)
+    expect(next.incidents.some(i => i.kind === 'safety_car_deployed')).toBe(true)
+    noPhantom(prev, next)
+  })
+
+  it('the red-flag regrid drops stale box times', () => {
+    const c = crashy(false)
+    const { s, rng } = before(c, st => st.incidents.some(i => i.kind === 'red_flag_restart'))
+    const prev = { ...s, boxFree: phantomBoxes(s) }
+    const next = stepSector(c, prev, rng)
+    expect(next.incidents.some(i => i.kind === 'red_flag_restart')).toBe(true)
+    noPhantom(prev, next)
   })
 })

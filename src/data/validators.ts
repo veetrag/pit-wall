@@ -196,8 +196,9 @@ export const TuningSchema = z.object({
     weatherConfirmLaps: z.number().int().min(1),
     weatherMinLapsLeft: z.number().int().min(0),
     scGambleChance: z.number().min(0).max(1),
-    scGambleMaxDelay: z.number().int().min(0),
+    scGambleMaxDelay: z.number().int().min(0).max(5),
     scGambleMaxCliffFrac: z.number().min(0),
+    scGamblePushGate: Prob,
   }),
   rivalIntel: z.object({
     halfWidth: z.object({
@@ -310,6 +311,7 @@ export const TuningSchema = z.object({
     }),
     unsafeRelease: z.object({ chance: Prob, pitCrewRelief: Prob, stackedFactor: z.number().min(1) }),
     aiCoverMargin: z.number().min(0),
+    aiCoverCliffMax: Prob,
   }),
   scOutlook: z.object({ horizonLaps: z.number().int().min(1), bands: z.tuple([Prob, Prob]).refine(([a, b]) => a < b, 'scOutlook.bands must be [lo, hi]') }),
   // Bands and their provenance live in MODEL_SPEC.md §3. Read only by tests —

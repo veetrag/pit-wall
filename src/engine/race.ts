@@ -444,7 +444,9 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
 
   // One stop path (spec 2026-10-24 §0.4, ruling A4).
   // The team boxes (spec §7): undefined when double-stacking is off.
-  let boxFree = config.tuning.doubleStack.enabled ? state.boxFree ?? {} : undefined
+  // boxFree holds ABSOLUTE raceTimes: an SC compression this tick rewrote them,
+  // so the old release times are stale and would charge a phantom queue. Drop them.
+  let boxFree = config.tuning.doubleStack.enabled ? (justDeployed ? {} : state.boxFree ?? {}) : undefined
   const finalCars: CarState[] = afterOvertakes.map(car => {
     let updated = { ...car }
     if (car.retired) return updated // frozen: no more laps, pits, or AI
@@ -504,6 +506,9 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     const { weather, lapsLeft } = restartConditions(state)
     carsAfterRestart = applyRedFlagRestart(config, finalCars, weather, lapsLeft, redFlagTyre)
     safetyCar = null     // no SC laps after the restart
+    // The regrid rewrote every raceTime: box release times are stale, and the
+    // restart is a free tyre change, so nobody is in a box.
+    if (boxFree !== undefined) boxFree = {}
     newIncidents.push({ lap: state.lap, sector, kind: 'red_flag_restart', driverId: null, timeLoss: null })
   }
 

@@ -92,7 +92,15 @@ export interface RadioState {
   prevMateStacks: number
 }
 
-export function makeRadioState(): RadioState {
+/**
+ * A fresh radio state. Pass the race state when starting mid-race (scenario,
+ * custom start): the incident cursors are seeded past every incident already
+ * in it, so the first tick does not replay their radio lines.
+ */
+export function makeRadioState(state?: RaceState): RadioState {
+  const player = state?.cars.find(c => c.isPlayer)
+  const mate = player ? state?.cars.find(c => c.teamId === player.teamId && c.driverId !== player.driverId) : undefined
+  const incidents = state?.incidents ?? []
   return {
     prevOvertakeCount: 0,
     prevLap: 0,
@@ -107,8 +115,8 @@ export function makeRadioState(): RadioState {
     prevVscCount: 0,
     prevSlowStops: 0,
     prevRedFlags: 0,
-    prevPlayerIncidents: 0,
-    prevMateStacks: 0,
+    prevPlayerIncidents: player ? incidents.filter(i => i.driverId === player.driverId).length : 0,
+    prevMateStacks: mate ? incidents.filter(i => i.kind === 'double_stack' && i.driverId === mate.driverId).length : 0,
   }
 }
 

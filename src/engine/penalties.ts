@@ -56,7 +56,7 @@ export function effectiveOrder(state: Pick<RaceState, 'cars'>): CarState[] {
 /** Smart/optimal with a penalty and no stop left: build the gap (spec §8.2). Pure. */
 export function aiPenaltyCoverPace(config: RaceConfig, car: CarState, state: RaceState, cliffFrac: number, proposed: PaceMode): PaceMode {
   const pend = car.penalty?.pendingSec ?? 0
-  if (pend <= 0 || (car.strategy.brain ?? 'naive') === 'naive' || car.strategy.plannedStops[car.pitsDone] || cliffFrac >= 0.7) return proposed
+  if (pend <= 0 || (car.strategy.brain ?? 'naive') === 'naive' || car.strategy.plannedStops[car.pitsDone] || cliffFrac >= config.tuning.penalties.aiCoverCliffMax) return proposed
   const sorted = state.cars.filter(c => !c.retired).sort((a, b) => a.raceTime - b.raceTime)
   const behind = sorted[sorted.findIndex(c => c.driverId === car.driverId) + 1]
   return behind && behind.raceTime - car.raceTime < pend + config.tuning.penalties.aiCoverMargin ? 'push' : proposed

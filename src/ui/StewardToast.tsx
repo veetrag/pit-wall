@@ -11,14 +11,15 @@ type Tone = 'caution' | 'hot'
  * The words race control says for one of the player's steward incidents
  * (spec 2026-10-24 §8.3). Warnings and investigations are caution, a penalty
  * is hot; the text always names it, so colour is never the only signal.
- * `warnings` is the player's warning count as of this event.
+ * `warnings` is the player's warning count as of this event; `penaltySec` is
+ * tuning.penalties.timePenaltySec, the fallback when an event carries no timeLoss.
  */
-export function stewardMessage(ev: IncidentEvent, warningsAllowed: number, warnings: number): { text: string; tone: Tone } | null {
+export function stewardMessage(ev: IncidentEvent, warningsAllowed: number, warnings: number, penaltySec: number): { text: string; tone: Tone } | null {
   switch (ev.kind) {
     case 'track_limits': return warnings <= warningsAllowed ? { text: `TRACK LIMITS · WARNING ${warnings}/${warningsAllowed}`, tone: 'caution' } : null
-    case 'penalty_issued': return { text: `${ev.timeLoss ?? 5}s TIME PENALTY`, tone: 'hot' }
+    case 'penalty_issued': return { text: `${ev.timeLoss ?? penaltySec}s TIME PENALTY`, tone: 'hot' }
     case 'unsafe_release': return { text: 'UNSAFE RELEASE — UNDER INVESTIGATION', tone: 'caution' }
-    case 'penalty_served': return { text: `${ev.timeLoss ?? 5}s PENALTY SERVED`, tone: 'caution' }
+    case 'penalty_served': return { text: `${ev.timeLoss ?? penaltySec}s PENALTY SERVED`, tone: 'caution' }
     default: return null
   }
 }
@@ -56,7 +57,7 @@ export function StewardToast() {
     // Walk newest first; the warning count steps back one per track_limits passed.
     let warnings = me.penalty?.warnings ?? 0
     for (const ev of fresh) {
-      const m = stewardMessage(ev, allowed, warnings)
+      const m = stewardMessage(ev, allowed, warnings, config.tuning.penalties.timePenaltySec)
       if (ev.kind === 'track_limits') warnings--
       if (m) {
         setMsg(prev => ({ ...m, id: (prev?.id ?? 0) + 1 }))

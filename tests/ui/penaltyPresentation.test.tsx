@@ -14,10 +14,12 @@ describe('penalties on screen (spec §8.3)', () => {
   beforeEach(() => useRaceStore.getState().resetRace())
 
   it('steward messages: warnings in caution, penalties in hot, words not colour', () => {
-    expect(stewardMessage(ev('track_limits'), 3, 2)).toEqual({ text: 'TRACK LIMITS · WARNING 2/3', tone: 'caution' })
-    expect(stewardMessage(ev('penalty_issued', 5), 3, 4)).toEqual({ text: '5s TIME PENALTY', tone: 'hot' })
-    expect(stewardMessage(ev('unsafe_release'), 3, 0)).toEqual({ text: 'UNSAFE RELEASE — UNDER INVESTIGATION', tone: 'caution' })
-    expect(stewardMessage(ev('penalty_served', 5), 3, 0)).toEqual({ text: '5s PENALTY SERVED', tone: 'caution' })
+    expect(stewardMessage(ev('track_limits'), 3, 2, 5)).toEqual({ text: 'TRACK LIMITS · WARNING 2/3', tone: 'caution' })
+    expect(stewardMessage(ev('penalty_issued', 5), 3, 4, 5)).toEqual({ text: '5s TIME PENALTY', tone: 'hot' })
+    expect(stewardMessage(ev('unsafe_release'), 3, 0, 5)).toEqual({ text: 'UNSAFE RELEASE — UNDER INVESTIGATION', tone: 'caution' })
+    expect(stewardMessage(ev('penalty_served', 5), 3, 0, 5)).toEqual({ text: '5s PENALTY SERVED', tone: 'caution' })
+    // No timeLoss on the event: the tuned penalty length, not a hardcoded 5.
+    expect(stewardMessage(ev('penalty_issued'), 3, 4, 10)).toEqual({ text: '10s TIME PENALTY', tone: 'hot' })
   })
 
   it('road position and position after penalties', () => {

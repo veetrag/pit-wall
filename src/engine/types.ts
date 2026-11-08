@@ -125,7 +125,7 @@ export interface TuningConstants {
    * slick-shod car at once), and never with weatherMinLapsLeft laps or fewer
    * to go. confirm 1 / minLapsLeft 0 is the pre-1.6 rule exactly.
    */
-  ai: { neutralisationWindowLaps: number; neutralisationCliffFrac: number; weatherConfirmLaps: number; weatherMinLapsLeft: number; scGambleChance: number; scGambleMaxDelay: number; scGambleMaxCliffFrac: number }
+  ai: { neutralisationWindowLaps: number; neutralisationCliffFrac: number; weatherConfirmLaps: number; weatherMinLapsLeft: number; scGambleChance: number; scGambleMaxDelay: number; scGambleMaxCliffFrac: number; scGamblePushGate: number }
   /** Rival intel box window (spec 2026-10-16 §2). Half-width in laps per brain; the brain is never shown. */
   rivalIntel: { halfWidth: Record<StrategyBrain, number>; maxOffsetLaps: number }
   /**
@@ -300,6 +300,7 @@ export interface TuningConstants {
     }
     unsafeRelease: { chance: number; pitCrewRelief: number; stackedFactor: number }
     aiCoverMargin: number
+    aiCoverCliffMax: number
   }
   scOutlook: { horizonLaps: number; bands: [number, number] }
   _regressionBands?: Record<string, unknown>

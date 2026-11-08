@@ -223,7 +223,7 @@ export function aiDecision(
       car.lap - nextStop.lap < ai.scGambleMaxDelay && cliffFrac < ai.scGambleMaxCliffFrac) {
     const o = neutralisationOutlook(config, state)
     if (o.kind === 'clear' && o.chance >= ai.scGambleChance) {
-      return { pit: false, compound: car.compound, paceMode: cliffFrac < 0.18 * aggression ? 'push' : 'neutral' }
+      return { pit: false, compound: car.compound, paceMode: cliffFrac < ai.scGamblePushGate * aggression ? 'push' : 'neutral' }
     }
   }
 
@@ -244,7 +244,7 @@ export function aiDecision(
   // Pace mode: push on fresh tyres, neutral otherwise.
   // Conserve is NOT used here — it hurts when pitting dynamically (slows the car
   // but doesn't defer the pit since we pit on cliff proximity, not lap count).
-  const paceMode: PaceMode = cliffFrac < 0.18 * aggression ? 'push' : 'neutral'
+  const paceMode: PaceMode = cliffFrac < ai.scGamblePushGate * aggression ? 'push' : 'neutral'
 
   return { pit: false, compound: car.compound, paceMode }
 }
