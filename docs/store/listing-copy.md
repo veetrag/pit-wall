@@ -120,6 +120,12 @@ and the podium pays for it turns a perceived bug into the stated premise.
 
 ---
 
+## What's new — 2.0
+
+Deeper race strategy. Rubber lays down on the track as the race runs, and rain washes it away: watch TRACK GRIP. DRS opens passing chances, and slow cars build DRS trains. A safety-car meter shows the chance and why. Both cars pitting? BOX BUSY, one waits. Stewards now punish track limits and unsafe releases: serve the time at your stop, or take it at the flag.
+
+---
+
 ## What's new — 1.3
 
 ```

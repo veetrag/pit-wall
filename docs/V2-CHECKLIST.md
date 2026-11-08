@@ -584,3 +584,15 @@ reasons card lists street / wet.
 cliff_edge now hands over P2 with a goal of P9 (par P10) — does it feel odd?; incident risk left off
 (the street circuit's envelope is already 0.501 with everything off); wash 0.35/0.80; SC gamble
 threshold 0.35 (dormant with risk off); SC meter bands 15/30%.
+
+### 2.0 release (scope 2026-11-07, Task 27)
+
+Ships as 2.0 / versionCode 13 (1.9 is 12). Run `npx cap sync android` from the repo root, never a
+worktree. No plugin or permission was added; `tests/data/androidManifest.test.ts` passes unchanged.
+
+On the RELEASE build (`docs/DEVICE-CHECKLIST.md` §1), mid-range phone as well as the Pixel:
+1. Cold start, then continue a 1.9 season save: it loads and nothing in it changed.
+2. A full Grand Prix at 1x holds 60 fps with a DRS train on the tower and the SC meter showing.
+3. SC meter, steward toast, grip strip, DRS pill and BOX BUSY: TalkBack labels, reduced motion,
+   haptics on and off (see the 2.0 pass above).
+4. Background the app during a double stack and return: the timer resumes correctly.
