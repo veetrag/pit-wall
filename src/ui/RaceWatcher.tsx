@@ -19,12 +19,16 @@ export function summarise(raceState: RaceState, tyreChanges: readonly number[]):
   const sorted = [...raceState.cars].sort((a, b) => a.position - b.position)
   const positions = sorted.map(car => ({ driverId: car.driverId, position: car.position, retired: car.retired, retiredCause: car.retiredCause }))
   const player = raceState.cars.find(c => c.isPlayer)
+  const penaltyAddedSec = raceState.incidents
+    .filter(i => i.kind === 'penalty_added' && i.driverId === player?.driverId)
+    .reduce((n, i) => n + (i.timeLoss ?? 0), 0)
   return {
     positions,
     events: {
       overtakesGained: raceState.overtakeEvents.filter(e => e.overtakerId === player?.driverId).length,
       pitsDone: player?.pitsDone ?? 0,
       hadRain: raceState.weatherTimeline.some(w => w !== 'DRY'),
+      ...(penaltyAddedSec > 0 ? { penaltyAddedSec } : {}),
     },
     stints: player
       ? { startCompound: player.compoundsUsed[0] ?? player.compound, longestStint: longestStint(tyreChanges, player.lap) }

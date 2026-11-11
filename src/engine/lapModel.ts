@@ -5,11 +5,22 @@ import { tyreDelta, effectiveTyreAge } from './tyres'
 import { crossoverPenalty } from './weather'
 import { wingSectorDelta } from './setup'
 import { neutralisationPaceMultiplier } from './incidents'
+import { normalCdf } from './pitStop'
+import { trackLimitsChance } from './penalties'
 
 // Convert a 0-100 facet to the 0-9 engine rating (0=best, 9=worst)
 function facetToRating9(facet: number): number {
   return (1 - facet / 100) * 9
 }
+
+/** Per-tick facts race.ts computes once and hands to every car (spec 2026-10-24 §0.6). */
+export interface SectorContext {
+  /** Laps of rubber (§4). Absent = car.lap, the 1.6 formula. */
+  rubberLaps?: number
+  /** DRS open for this car in this sector (§3). */
+  drsOpen?: boolean
+}
+export const NO_CTX: SectorContext = Object.freeze({})
 
 export function computeSectorTime(
   config: RaceConfig,
@@ -18,6 +29,7 @@ export function computeSectorTime(
   rng: Rng,
   weatherState: WeatherState = 'DRY',
   safetyCar: SafetyCarState | null = null,
+  ctx: SectorContext = NO_CTX,
 ): SectorResult {
   const { tuning, circuit, compounds } = config
   const base = circuit.sectorBase[sector]!
@@ -61,7 +73,8 @@ export function computeSectorTime(
   const fuelDelta = -(car.lap * tuning.fuel.effectPerLap) / 3
 
   // --- Track evolution ---
-  const trackFraction = Math.max(0, 1 - car.lap / tuning.trackEvolution.decayLaps)
+  const rubber = ctx.rubberLaps ?? car.lap
+  const trackFraction = Math.max(0, 1 - rubber / tuning.trackEvolution.decayLaps)
   const trackDelta = (tuning.trackEvolution.startDelta * trackFraction) / 3
 
   // --- Pace mode delta ---
@@ -102,7 +115,19 @@ export function computeSectorTime(
     }
   }
 
-  const raw = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + wingDelta + noiseSample + spinLoss
+  // Track limits (spec §8.2, ruling N2): the lower tail of noise2, which a
+  // non-spinning sector does not otherwise use. No draw; none under yellow (N3).
+  let trackLimits = false
+  if (car.penalty && safetyCar === null && spinLoss === 0) {
+    const p = trackLimitsChance(config, car, weatherState)
+    if (p > 0 && normalCdf(noise2) < p) trackLimits = true
+  }
+
+  const raw0 = base + carDelta + driverDelta + tyreSectorDelta + cpPenalty + fuelDelta + trackDelta + modeDelta + wingDelta + noiseSample + spinLoss
+  // 2.0 deltas (spec §3.2). Added only when non-zero: no `+ 0` on the off path (byte identity).
+  let v2Delta = 0
+  if (ctx.drsOpen) v2Delta -= tuning.drs.timeGain
+  const raw = v2Delta === 0 ? raw0 : raw0 + v2Delta
 
   // Safety car: every car is scaled by the same factor, so this changes no
   // GAPS -- its entire purpose is to make the pit-loss discount meaningful, by
@@ -124,5 +149,6 @@ export function computeSectorTime(
     trafficPenalty: 0,
     noiseSample,
     spinLoss,
+    ...(trackLimits ? { trackLimits: true as const } : {}),
   }
 }

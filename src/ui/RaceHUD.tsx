@@ -11,6 +11,7 @@ import { CoachMark } from './CoachMark'
 import { AmbienceDirector } from './AmbienceDirector'
 import { GameClock } from './GameClock'
 import { SafetyCarBanner } from './SafetyCarBanner'
+import { StewardToast } from './StewardToast'
 import { StartScreen } from './StartScreen'
 import { TimingTower } from './TimingTower'
 import { PaceModeToggle } from './PaceModeToggle'
@@ -25,6 +26,7 @@ import { StartLights } from './StartLights'
 import { SettingsPanel } from './SettingsPanel'
 import { PitTimer } from './PitTimer'
 import { RedFlagCard } from './RedFlagCard'
+import { ScOutlook } from './ScOutlook'
 import { Component, type ReactNode } from 'react'
 import { useUiTap } from '@hooks/useUiTap'
 import { useReducedMotion, PRESS, ScreenFrame, HOLD_EXIT } from '@ui/kit'
@@ -120,6 +122,7 @@ export function StatusBar() {
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <ScOutlook />
         <SpeedControl />
         <SettingsPanel />
       </div>
@@ -306,6 +309,9 @@ export function RaceHUD() {
             {/* Safety car — spec section 6 surface 1, above the tower because
                 its consequence (the field bunching) is read in the tower. */}
             {live && <SafetyCarBanner />}
+
+            {/* Race control's steward decisions for the player (spec §8.3); absolutely placed, so no layout cost. */}
+            {live && <StewardToast />}
 
             <div style={{ flex: 1, overflow: 'hidden', margin: '8px 8px 0', minHeight: 0 }}>
               <TimingTower />

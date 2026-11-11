@@ -117,8 +117,15 @@ describe('Monte-Carlo regression', () => {
     // staged floor would have gated against realism. Net effect is a tightening:
     // the ceiling drops 0.90 -> 0.80. The anti-lottery job the 0.78 floor did is
     // carried by minPaceRankCorrelation below (measured 0.9636).
-    expect(m.gridFinishSpearman, n).toBeGreaterThan(b.gridFinishSpearman[0])
-    expect(m.gridFinishSpearman, n).toBeLessThan(b.gridFinishSpearman[1])
+    // 2.0 round 2 (MODEL_SPEC §17.1): the floor is judged on the MEAN of four seed
+    // bases at n=240 each, not one n=120 draw (seed-base spread of rho is
+    // 0.01-0.03, larger than the 2.0 features' margin). Same band, same floor.
+    const rhos = [1000, 4000, 7000, 10000].map(seedBase =>
+      runRaces({ races: 240, circuitIds: SAMPLE, seedBase }).gridFinishSpearman)
+    const rho = rhos.reduce((a, c) => a + c, 0) / rhos.length
+    const rn = `mean of 4 seed bases x n=240: ${rhos.map(r => r.toFixed(3)).join(' ')}`
+    expect(rho, rn).toBeGreaterThan(b.gridFinishSpearman[0])
+    expect(rho, rn).toBeLessThan(b.gridFinishSpearman[1])
     // FINAL band, not staged. Measured 0.9636 post-change (0.988 before): car-pace rank still predicts
     // finish rank. Both sides are ranks (see `rankify` in the harness), so this
     // survives grid compression -- it only collapses if results go random.

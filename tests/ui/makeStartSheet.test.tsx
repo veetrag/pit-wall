@@ -91,7 +91,7 @@ describe('MakeStartSheet', () => {
     const DRIVERS = loadGameData().drivers.drivers
     useDebriefStore.setState({ history: {
       totalLaps: 46, lapsRun: 46, neutralisations: [],
-      cars: DRIVERS.map((d, i) => ({ driverId: d.id, teamId: d.teamId, isPlayer: d.id === 'd_park', positions: Array.from({ length: 47 }, () => i + 1), pitLaps: [], retiredLap: null, finish: i + 1 })),
+      cars: DRIVERS.map((d, i) => ({ driverId: d.id, teamId: d.teamId, isPlayer: d.id === 'd_park', positions: Array.from({ length: 47 }, () => i + 1), pitLaps: [], penaltyLaps: [], retiredLap: null, finish: i + 1 })),
     } })
     const { container } = render(<MakeStartSheet recipe={RECIPE} calls={[]} onClose={() => {}} />)
     fireEvent.change(screen.getByRole('slider', { name: 'Start lap' }), { target: { value: '12' } })

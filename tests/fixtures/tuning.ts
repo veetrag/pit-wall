@@ -22,7 +22,7 @@ import type { TuningConstants } from '@engine/types'
  * game. Anything a test genuinely wants different it states explicitly as an
  * override, where a reader can see it.
  */
-type DeepPartial<T> = T extends readonly unknown[] ? T
+export type DeepPartial<T> = T extends readonly unknown[] ? T
   : T extends object ? { [K in keyof T]?: DeepPartial<T[K]> }
   : T
 
@@ -91,8 +91,29 @@ export function zeroIncidents(
  * rather than a DNF lottery. Prefer this in engine tests; pass overrides for
  * anything else a test needs to pin.
  */
+/**
+ * Every 2.0 switch at its OFF value (spec 2026-10-24 §0.2, ruling A3; trimmed
+ * by plans/2026-11-07-v2.0-scope.md). With these the engine is the 1.9 engine
+ * byte for byte; byteIdentity relies on it. A new 2.0 switch MUST be added
+ * here in the task that creates it.
+ */
+export function v2Off(): DeepPartial<TuningConstants> {
+  return {
+    trackEvolution: { wash: { DAMP: 0, WET: 0 } },
+    drs: { enabled: false },
+    doubleStack: { enabled: false },
+    penalties: { enabled: false },
+    incidents: { wetErrorMultiplier: { DRY: 1, DAMP: 1, WET: 1 }, circuitRiskWeight: 0 },
+    ai: { scGambleMaxDelay: 0 },
+  }
+}
+
+/**
+ * The common engine-test baseline: v2Off() first, then the incident switches
+ * off, then the caller's overrides (which win over both).
+ */
 export function makeDeterministicTuning(overrides: DeepPartial<TuningConstants> = {}): TuningConstants {
-  return makeTuning(deepMerge({
+  return makeTuning(deepMerge(deepMerge(v2Off(), {
     incidents: {
       dnfPerLap: 0,
       driverErrorPerLap: 0,
@@ -117,5 +138,10 @@ export function makeDeterministicTuning(overrides: DeepPartial<TuningConstants> 
     pit: { slowStopChance: 0 },
     // The golden race predates night wear (spec 2026-10-24 §2.2).
     timeOfDay: { nightWearFactor: 1 },
-  }, overrides) as DeepPartial<TuningConstants>)
+  }), overrides) as DeepPartial<TuningConstants>)
+}
+
+/** `overrides` with every 2.0 switch off underneath (spec A3), for tests whose subject is not 2.0. */
+export function withV2Off(overrides: DeepPartial<TuningConstants> = {}): DeepPartial<TuningConstants> {
+  return deepMerge(v2Off(), overrides) as DeepPartial<TuningConstants>
 }

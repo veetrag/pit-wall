@@ -7,7 +7,7 @@ import { useSettingsStore } from '@state/settingsStore'
 import { useCoachStore } from '@state/coachStore'
 import { PitPanel } from '@ui/PitPanel'
 import { loadGameData } from '@data/validators'
-import { makeTuning } from '../fixtures/tuning'
+import { makeTuning, withV2Off } from '../fixtures/tuning'
 import type { RaceConfig, RaceState } from '@engine/types'
 import type { ProjectionResult } from '@engine/projection'
 
@@ -19,7 +19,7 @@ vi.mock('@capacitor/preferences', () => ({
 
 const DATA = loadGameData()
 const config = {
-  circuit: DATA.circuits['veloce']!, tuning: makeTuning({}), compounds: DATA.compounds,
+  circuit: DATA.circuits['veloce']!, tuning: makeTuning(withV2Off()), compounds: DATA.compounds,
   drivers: DATA.drivers.drivers, teams: DATA.cars.teams,
   strategies: DATA.strategies.defaults, playerDriverId: DATA.drivers.drivers[0]!.id, seed: 1,
 } as RaceConfig

@@ -4,6 +4,7 @@ import { useUiTap } from '@hooks/useUiTap'
 import { useRaceStore } from '@state/raceStore'
 import type { WeatherState } from '@engine/types'
 import { forecast, type WeatherForecast } from '@engine/forecast'
+import { TrackGrip } from '@ui/TrackGrip'
 
 const WEATHER_ICON: Record<WeatherState, string> = {
   DRY:  '☀',
@@ -158,6 +159,7 @@ export function WeatherStrip() {
           {text.strip}
         </div>
       </div>
+      <TrackGrip />
     </div>
   )
 }

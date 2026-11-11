@@ -84,6 +84,13 @@ itself a design gap worth recording.
 
 *Overtakes per race.* See §5. The metric is not gateable.
 
+**2.0 rates (2026-11-07, §17.1): no rows added.** DRS-train lap ends, double stacks, penalties
+and unsafe releases have harness metrics but no band, because the features that produce them ship
+OFF. Measured ON (4-circuit sample, n=240 per cell): DRS-train lap ends / race pro 38.121/37.879,
+rookie 39.071/40.163; double stacks / race pro 5.763/6.100, rookie 7.375/7.892; penalties / race pro
+0.533/0.600, rookie 0.421/0.550; unsafe releases / race pro 0.504/0.550, rookie 0.388/0.546. Size
+the band by the same rule from fresh lines when a feature ships on.
+
 ## 4. Staged gates
 
 Several §3 targets are **not reachable by data alone**, so gating on them today would ship a
@@ -809,6 +816,9 @@ Unlike the bands, these are not negotiable and are not subject to rebalancing.
    every sector of every race, making the car permanently invulnerable. Anything writing
    `reliability` must cap below 100.
 5. **Balance values live in `src/data/*.json`.** Never in logic.
+6. **2.0 adds no rng draw to the race path.** Track limits read lapModel's noise2 lower tail,
+   unsafe release pitStopTime's g2 lower tail. A new 2.0 mechanic that needs a draw must
+   short-circuit with none at a zero rate.
 
 ## 11. Known-broken tests
 
@@ -1144,3 +1154,202 @@ like night wear systematically favouring meridian. Veet's options:
 Thin margins seen during that run, all passing: SAMPLE safety cars 0.408/race at 1.0 against the
 0.40 floor (0.558 at 0.94); pace-rank correlation 0.915 at 0.94 against its 0.90 gate (0.952 at
 1.0, 0.96 and 0.98). No scenario was re-authored, because the factor did not change.
+
+### 17.1 2.0: track, DRS, SC, pit lane (2026-11-07)
+
+Spec `docs/superpowers/specs/2026-10-24-v2-deeper-race-strategy-design.md` §12–§13, as amended by
+`docs/superpowers/plans/2026-11-07-v2.0-scope.md` Task 12' (Tasks 12 + 20 merged). Each feature was
+switched on alone, in the scope's order, on top of the ones before it, and measured with
+`MEASURE=1 FEATURE=<label> npx vitest run tests/engine/v2Bands.test.ts -t "MEASURE 2.0"` (four
+n=240 cells on the 4-circuit SAMPLE). The gate suites were then run on the result. No band was
+widened. None of the STOP limits (crash > 0.12, dpos > 4.5, paceRank < 0.85) was reached.
+
+> **Superseded by "Round 2" at the end of this section:** DRS, the double stack and penalties now
+> ship ON; circuit/wet incident risk stays OFF.
+
+**Outcome: rubber wash and the optimal SC gamble ship ON. DRS, circuit/wet incident risk, the double
+stack and penalties ship OFF**, each after its one fallback (spec §12.3) also failed:
+
+| Feature | Gate that failed | ON | Fallback | Fallback value |
+|---|---|---|---|---|
+| DRS | `newCircuitBands` lantern_quay IS HARD TO PASS ON, failure rate ≥ 0.20 | 0.183 | `drs.overtakeBonus` 0.6 → 0.3 | 0.192 |
+| Circuit / wet risk | `setupBalance` setups-on gridFinishSpearman > 0.60 (n=240) | 0.592 | `wetErrorMultiplier` → {1, 1.2, 1.4} | 0.596 |
+| Double stack | `monteCarlo` every gated metric, gridFinishSpearman > 0.60 (n=120) | 0.597 | `maxQueueNeutralised.smart` 6 → 4 | 0.597 (unchanged) |
+| Penalties | MEASURE pro seedBase=1000 rho, floor 0.60 | 0.596 | `trackLimits.chancePerLap` 0.012 → 0.006 | 0.595 |
+
+Two things the reviewer should know about these four:
+- DRS's and the double stack's four MEASURE cells were all in band; the failing gates run a different
+  sample (one circuit, or n=120). The risk ON MEASURE cells were also in band (rho 0.607 lowest) and
+  only the setups-on gate failed. The gridFinishSpearman 0.60 floor had ~0.03 of headroom on the
+  SAMPLE before 2.0, and each feature spent some of it: DRS, risk, stack and penalties together took the
+  pro seedBase=1000 cell from 0.643 to 0.596. Credit is not additive and the ladder attributes the
+  failure to the feature that tipped it, so a different switch order would have kept a different
+  subset. This is a balance call for Veet, not a defect.
+- With DRS off no 2.0 rate is live, so **no new band was added**: `drsTrainLapEndsPerRace`,
+  `doubleStacksPerRace`, `penaltiesPerRace`, `unsafeReleasesPerRace` stay unbanded (harness metrics
+  exist; the MEASURE lines below give the ON values for sizing when a feature ships on).
+
+**The two that ship ON move nothing measurable.** Rubber wash is a track-wide pace term: every car pays
+the same green-track cost (the `stepSector` integration test in `tests/engine/trackRubber.test.ts`
+pins this), so order, gaps and AI decisions are unchanged and the rubber lines equal the baseline to
+every printed digit. The SC gamble needs `neutralisationOutlook` ≥ `ai.scGambleChance` 0.35; with
+incident risk off the outlook never reaches 0.30 on the SAMPLE (`MEASURE outlook bucket 2 n=0`), so
+it never fires and the gamble lines equal the risk lines. Both are live code paths for the player
+(TRACK GRIP strip, SC meter) but are inert for AI balance at these values — flagged for Veet.
+
+Baseline (every 2.0 switch off):
+```
+MEASURE baseline pro seedBase=1000 n=240 top=0.463 winners=7 dpos=3.575 rho=0.643 paceRank=0.952 mech=0.0708 crash=0.0619 sc=0.458 vsc=0.550 aiNeut=3.092 slow=0.679 red=0.058 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.4
+MEASURE baseline pro seedBase=7000 n=240 top=0.392 winners=7 dpos=3.603 rho=0.634 paceRank=0.952 mech=0.0656 crash=0.0583 sc=0.463 vsc=0.579 aiNeut=3.779 slow=0.696 red=0.042 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.3
+MEASURE baseline rookie seedBase=1000 n=240 top=0.438 winners=8 dpos=3.387 rho=0.667 paceRank=0.939 mech=0.0658 crash=0.0631 sc=0.525 vsc=0.662 aiNeut=3.837 slow=0.683 red=0.042 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=33.8
+MEASURE baseline rookie seedBase=7000 n=240 top=0.425 winners=7 dpos=3.440 rho=0.651 paceRank=0.915 mech=0.0700 crash=0.0552 sc=0.429 vsc=0.667 aiNeut=3.304 slow=0.738 red=0.054 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.0
+```
+(1) rubber: `trackEvolution.wash` → {DAMP 0.35, WET 0.80}:
+```
+MEASURE rubber pro seedBase=1000 n=240 top=0.463 winners=7 dpos=3.575 rho=0.643 paceRank=0.952 mech=0.0708 crash=0.0619 sc=0.458 vsc=0.550 aiNeut=3.092 slow=0.679 red=0.058 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.4
+MEASURE rubber pro seedBase=7000 n=240 top=0.392 winners=7 dpos=3.603 rho=0.634 paceRank=0.952 mech=0.0656 crash=0.0583 sc=0.463 vsc=0.579 aiNeut=3.779 slow=0.696 red=0.042 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.3
+MEASURE rubber rookie seedBase=1000 n=240 top=0.438 winners=8 dpos=3.387 rho=0.667 paceRank=0.939 mech=0.0658 crash=0.0631 sc=0.525 vsc=0.662 aiNeut=3.837 slow=0.683 red=0.042 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=33.8
+MEASURE rubber rookie seedBase=7000 n=240 top=0.425 winners=7 dpos=3.440 rho=0.651 paceRank=0.915 mech=0.0700 crash=0.0552 sc=0.429 vsc=0.667 aiNeut=3.304 slow=0.738 red=0.054 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.0
+```
+(2) DRS: `drs.enabled` → true (kept through step 6, switched off at the gate run):
+```
+MEASURE drs pro seedBase=1000 n=240 top=0.421 winners=8 dpos=3.698 rho=0.620 paceRank=0.964 mech=0.0698 crash=0.0598 sc=0.479 vsc=0.654 aiNeut=3.721 slow=0.567 red=0.092 trains=38.121 drsPass=0.389 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.3
+MEASURE drs pro seedBase=7000 n=240 top=0.417 winners=7 dpos=3.488 rho=0.654 paceRank=0.964 mech=0.0698 crash=0.0506 sc=0.425 vsc=0.583 aiNeut=3.379 slow=0.787 red=0.037 trains=37.879 drsPass=0.383 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=36.1
+MEASURE drs rookie seedBase=1000 n=240 top=0.438 winners=8 dpos=3.501 rho=0.651 paceRank=0.915 mech=0.0710 crash=0.0642 sc=0.567 vsc=0.662 aiNeut=3.737 slow=0.613 red=0.046 trains=39.071 drsPass=0.380 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.6
+MEASURE drs rookie seedBase=7000 n=240 top=0.442 winners=7 dpos=3.351 rho=0.667 paceRank=0.915 mech=0.0660 crash=0.0621 sc=0.508 vsc=0.654 aiNeut=3.367 slow=0.600 red=0.071 trains=40.163 drsPass=0.380 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.5
+```
+(3) risk: `wetErrorMultiplier` {1, 1.4, 1.8}, `circuitRiskWeight` 1.0:
+```
+MEASURE risk pro seedBase=1000 n=240 top=0.396 winners=7 dpos=3.753 rho=0.607 paceRank=0.964 mech=0.0702 crash=0.0762 sc=0.550 vsc=0.671 aiNeut=4.579 slow=0.688 red=0.100 trains=37.883 drsPass=0.387 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=36.0
+MEASURE risk pro seedBase=7000 n=240 top=0.425 winners=8 dpos=3.688 rho=0.621 paceRank=0.964 mech=0.0692 crash=0.0752 sc=0.500 vsc=0.650 aiNeut=4.075 slow=0.683 red=0.046 trains=37.063 drsPass=0.376 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=36.2
+MEASURE risk rookie seedBase=1000 n=240 top=0.400 winners=8 dpos=3.614 rho=0.629 paceRank=0.915 mech=0.0704 crash=0.0767 sc=0.567 vsc=0.704 aiNeut=4.017 slow=0.617 red=0.067 trains=39.263 drsPass=0.380 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.7
+MEASURE risk rookie seedBase=7000 n=240 top=0.388 winners=7 dpos=3.458 rho=0.653 paceRank=0.915 mech=0.0627 crash=0.0792 sc=0.496 vsc=0.625 aiNeut=3.167 slow=0.646 red=0.079 trains=39.625 drsPass=0.389 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.1
+```
+(3') risk fallback `wetErrorMultiplier` {1, 1.2, 1.4} (on rubber + DRS + gamble, stack off):
+```
+MEASURE risk-fallback pro seedBase=1000 n=240 top=0.421 winners=8 dpos=3.759 rho=0.602 paceRank=0.964 mech=0.0704 crash=0.0702 sc=0.529 vsc=0.662 aiNeut=4.067 slow=0.700 red=0.079 trains=37.846 drsPass=0.389 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.7
+MEASURE risk-fallback pro seedBase=7000 n=240 top=0.446 winners=7 dpos=3.637 rho=0.629 paceRank=0.964 mech=0.0683 crash=0.0692 sc=0.471 vsc=0.629 aiNeut=3.742 slow=0.662 red=0.050 trains=37.092 drsPass=0.375 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=36.2
+MEASURE risk-fallback rookie seedBase=1000 n=240 top=0.388 winners=8 dpos=3.588 rho=0.630 paceRank=0.915 mech=0.0675 crash=0.0744 sc=0.558 vsc=0.667 aiNeut=3.867 slow=0.517 red=0.067 trains=39.171 drsPass=0.383 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.4
+MEASURE risk-fallback rookie seedBase=7000 n=240 top=0.396 winners=7 dpos=3.431 rho=0.652 paceRank=0.915 mech=0.0631 crash=0.0733 sc=0.521 vsc=0.592 aiNeut=2.971 slow=0.708 red=0.058 trains=39.667 drsPass=0.385 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.4
+```
+(4) gamble: `ai.scGambleMaxDelay` → 3:
+```
+MEASURE gamble pro seedBase=1000 n=240 top=0.396 winners=7 dpos=3.753 rho=0.607 paceRank=0.964 mech=0.0702 crash=0.0762 sc=0.550 vsc=0.671 aiNeut=4.579 slow=0.688 red=0.100 trains=37.883 drsPass=0.387 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=36.0
+MEASURE gamble pro seedBase=7000 n=240 top=0.425 winners=8 dpos=3.688 rho=0.621 paceRank=0.964 mech=0.0692 crash=0.0752 sc=0.500 vsc=0.650 aiNeut=4.075 slow=0.683 red=0.046 trains=37.063 drsPass=0.376 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=36.2
+MEASURE gamble rookie seedBase=1000 n=240 top=0.400 winners=8 dpos=3.614 rho=0.629 paceRank=0.915 mech=0.0704 crash=0.0767 sc=0.567 vsc=0.704 aiNeut=4.017 slow=0.617 red=0.067 trains=39.263 drsPass=0.380 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.7
+MEASURE gamble rookie seedBase=7000 n=240 top=0.388 winners=7 dpos=3.458 rho=0.653 paceRank=0.915 mech=0.0627 crash=0.0792 sc=0.496 vsc=0.625 aiNeut=3.167 slow=0.646 red=0.079 trains=39.625 drsPass=0.389 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.1
+```
+(5) stack: `doubleStack.enabled` → true:
+```
+MEASURE stack pro seedBase=1000 n=240 top=0.371 winners=8 dpos=3.796 rho=0.603 paceRank=0.952 mech=0.0706 crash=0.0781 sc=0.546 vsc=0.688 aiNeut=3.979 slow=0.667 red=0.075 trains=36.429 drsPass=0.381 stacks=5.763 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.4
+MEASURE stack pro seedBase=7000 n=240 top=0.400 winners=7 dpos=3.739 rho=0.611 paceRank=0.939 mech=0.0623 crash=0.0821 sc=0.479 vsc=0.658 aiNeut=3.583 slow=0.713 red=0.063 trains=36.546 drsPass=0.383 stacks=6.100 pens=0.000 unsafe=0.000 tl=0.000 overtakes=36.9
+MEASURE stack rookie seedBase=1000 n=240 top=0.408 winners=8 dpos=3.627 rho=0.627 paceRank=0.915 mech=0.0721 crash=0.0796 sc=0.625 vsc=0.700 aiNeut=4.508 slow=0.617 red=0.050 trains=38.013 drsPass=0.379 stacks=7.375 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.3
+MEASURE stack rookie seedBase=7000 n=240 top=0.404 winners=7 dpos=3.479 rho=0.645 paceRank=0.952 mech=0.0635 crash=0.0815 sc=0.550 vsc=0.650 aiNeut=3.125 slow=0.633 red=0.067 trains=38.596 drsPass=0.386 stacks=7.892 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.2
+```
+(6) penalties: `penalties.enabled` → true (rho 0.596 < 0.60):
+```
+MEASURE penalties pro seedBase=1000 n=240 top=0.396 winners=8 dpos=3.822 rho=0.596 paceRank=0.952 mech=0.0690 crash=0.0802 sc=0.546 vsc=0.700 aiNeut=4.054 slow=0.625 red=0.075 trains=37.017 drsPass=0.382 stacks=5.921 pens=0.533 unsafe=0.504 tl=8.379 overtakes=35.5
+MEASURE penalties pro seedBase=7000 n=240 top=0.429 winners=8 dpos=3.717 rho=0.614 paceRank=0.964 mech=0.0635 crash=0.0810 sc=0.500 vsc=0.633 aiNeut=3.708 slow=0.700 red=0.063 trains=36.763 drsPass=0.384 stacks=6.142 pens=0.600 unsafe=0.550 tl=7.888 overtakes=36.9
+MEASURE penalties rookie seedBase=1000 n=240 top=0.400 winners=8 dpos=3.648 rho=0.625 paceRank=0.915 mech=0.0746 crash=0.0792 sc=0.629 vsc=0.742 aiNeut=4.142 slow=0.629 red=0.046 trains=37.904 drsPass=0.380 stacks=7.412 pens=0.421 unsafe=0.388 tl=6.742 overtakes=35.3
+MEASURE penalties rookie seedBase=7000 n=240 top=0.417 winners=7 dpos=3.492 rho=0.647 paceRank=0.952 mech=0.0665 crash=0.0819 sc=0.533 vsc=0.688 aiNeut=3.317 slow=0.633 red=0.075 trains=38.496 drsPass=0.386 stacks=7.896 pens=0.550 unsafe=0.546 tl=6.646 overtakes=35.3
+```
+(6') penalties fallback `trackLimits.chancePerLap` 0.006 (rho 0.595, still out; penalties are almost
+all unsafe releases, which the fallback does not touch):
+```
+MEASURE penalties-fallback pro seedBase=1000 n=240 top=0.396 winners=8 dpos=3.825 rho=0.595 paceRank=0.952 mech=0.0690 crash=0.0804 sc=0.546 vsc=0.696 aiNeut=4.054 slow=0.625 red=0.075 trains=36.996 drsPass=0.382 stacks=5.917 pens=0.504 unsafe=0.504 tl=4.392 overtakes=35.5
+MEASURE penalties-fallback pro seedBase=7000 n=240 top=0.429 winners=8 dpos=3.712 rho=0.615 paceRank=0.964 mech=0.0631 crash=0.0808 sc=0.504 vsc=0.629 aiNeut=3.708 slow=0.700 red=0.063 trains=36.750 drsPass=0.384 stacks=6.125 pens=0.554 unsafe=0.550 tl=4.058 overtakes=36.9
+MEASURE penalties-fallback rookie seedBase=1000 n=240 top=0.408 winners=8 dpos=3.638 rho=0.627 paceRank=0.915 mech=0.0742 crash=0.0790 sc=0.625 vsc=0.733 aiNeut=4.142 slow=0.629 red=0.046 trains=37.929 drsPass=0.381 stacks=7.412 pens=0.392 unsafe=0.388 tl=3.388 overtakes=35.3
+MEASURE penalties-fallback rookie seedBase=7000 n=240 top=0.417 winners=7 dpos=3.492 rho=0.647 paceRank=0.952 mech=0.0665 crash=0.0819 sc=0.533 vsc=0.688 aiNeut=3.317 slow=0.633 red=0.075 trains=38.496 drsPass=0.386 stacks=7.896 pens=0.546 unsafe=0.546 tl=3.288 overtakes=35.3
+```
+After penalties off (rubber, DRS, risk, gamble, stack):
+```
+MEASURE final pro seedBase=1000 n=240 top=0.371 winners=8 dpos=3.796 rho=0.603 paceRank=0.952 mech=0.0706 crash=0.0781 sc=0.546 vsc=0.688 aiNeut=3.979 slow=0.667 red=0.075 trains=36.429 drsPass=0.381 stacks=5.763 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.4
+MEASURE final pro seedBase=7000 n=240 top=0.400 winners=7 dpos=3.739 rho=0.611 paceRank=0.939 mech=0.0623 crash=0.0821 sc=0.479 vsc=0.658 aiNeut=3.583 slow=0.713 red=0.063 trains=36.546 drsPass=0.383 stacks=6.100 pens=0.000 unsafe=0.000 tl=0.000 overtakes=36.9
+MEASURE final rookie seedBase=1000 n=240 top=0.408 winners=8 dpos=3.627 rho=0.627 paceRank=0.915 mech=0.0721 crash=0.0796 sc=0.625 vsc=0.700 aiNeut=4.508 slow=0.617 red=0.050 trains=38.013 drsPass=0.379 stacks=7.375 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.3
+MEASURE final rookie seedBase=7000 n=240 top=0.404 winners=7 dpos=3.479 rho=0.645 paceRank=0.952 mech=0.0635 crash=0.0815 sc=0.550 vsc=0.650 aiNeut=3.125 slow=0.633 red=0.067 trains=38.596 drsPass=0.386 stacks=7.892 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.2
+```
+After risk off too (rubber, DRS, gamble, stack):
+```
+MEASURE final-riskoff pro seedBase=1000 n=240 top=0.396 winners=8 dpos=3.701 rho=0.613 paceRank=0.964 mech=0.0698 crash=0.0631 sc=0.446 vsc=0.625 aiNeut=3.358 slow=0.588 red=0.071 trains=36.058 drsPass=0.379 stacks=5.858 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.0
+MEASURE final-riskoff pro seedBase=7000 n=240 top=0.479 winners=7 dpos=3.496 rho=0.654 paceRank=0.964 mech=0.0694 crash=0.0569 sc=0.454 vsc=0.571 aiNeut=3.433 slow=0.746 red=0.054 trains=37.250 drsPass=0.380 stacks=6.354 pens=0.000 unsafe=0.000 tl=0.000 overtakes=36.7
+MEASURE final-riskoff rookie seedBase=1000 n=240 top=0.467 winners=8 dpos=3.415 rho=0.663 paceRank=0.915 mech=0.0690 crash=0.0621 sc=0.492 vsc=0.633 aiNeut=3.496 slow=0.558 red=0.071 trains=38.129 drsPass=0.376 stacks=7.604 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.8
+MEASURE final-riskoff rookie seedBase=7000 n=240 top=0.425 winners=7 dpos=3.369 rho=0.663 paceRank=0.952 mech=0.0673 crash=0.0602 sc=0.450 vsc=0.646 aiNeut=3.479 slow=0.683 red=0.067 trains=39.112 drsPass=0.379 stacks=7.983 pens=0.000 unsafe=0.000 tl=0.000 overtakes=35.5
+```
+Shipped (rubber + gamble; identical to the baseline):
+```
+MEASURE shipped pro seedBase=1000 n=240 top=0.463 winners=7 dpos=3.575 rho=0.643 paceRank=0.952 mech=0.0708 crash=0.0619 sc=0.458 vsc=0.550 aiNeut=3.092 slow=0.679 red=0.058 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.4
+MEASURE shipped pro seedBase=7000 n=240 top=0.392 winners=7 dpos=3.603 rho=0.634 paceRank=0.952 mech=0.0656 crash=0.0583 sc=0.463 vsc=0.579 aiNeut=3.779 slow=0.696 red=0.042 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.3
+MEASURE shipped rookie seedBase=1000 n=240 top=0.438 winners=8 dpos=3.387 rho=0.667 paceRank=0.939 mech=0.0658 crash=0.0631 sc=0.525 vsc=0.662 aiNeut=3.837 slow=0.683 red=0.042 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=33.8
+MEASURE shipped rookie seedBase=7000 n=240 top=0.425 winners=7 dpos=3.440 rho=0.651 paceRank=0.915 mech=0.0700 crash=0.0552 sc=0.429 vsc=0.667 aiNeut=3.304 slow=0.738 red=0.054 trains=0.000 drsPass=0.000 stacks=0.000 pens=0.000 unsafe=0.000 tl=0.000 overtakes=34.0
+```
+
+`MEASURE weather` (5 showery circuits, n=240 per cell), run at each stage of the gate run:
+```
+rubber+DRS+risk+gamble+stack: pro 61.975/64.958, rookie 62.133/64.871
+rubber+DRS+gamble+stack:      pro 62.979/66.204, rookie 63.313/65.933
+rubber+DRS+gamble:            pro 62.896/65.800, rookie 62.854/66.483
+shipped (rubber+gamble) and baseline (all off), identical:
+MEASURE weather pro seedBase=1000 n=240 aiWeatherStopsPerRace=62.896
+MEASURE weather pro seedBase=7000 n=240 aiWeatherStopsPerRace=65.858
+MEASURE weather rookie seedBase=1000 n=240 aiWeatherStopsPerRace=63.175
+MEASURE weather rookie seedBase=7000 n=240 aiWeatherStopsPerRace=66.183
+```
+All inside the 44.30 – 86.75 band.
+
+`MEASURE outlook` (the calibration gate, risk forced on in the test): bucket 0 n=4986 pred=0.113
+obs=0.110; bucket 1 n=3890 pred=0.183 obs=0.193; bucket 2 n=0.
+
+Diagnostics with DRS on: `drsPassShare` 0.376 – 0.389 (about 38% of passes are made with DRS open);
+track-limit warnings 8.4 / 7.9 pro, 6.7 / 6.6 rookie per race at 0.012 (4.4 / 4.1, 3.4 / 3.3 at 0.006).
+`optimalGainShipped` was not measured: the shipped tuning differs from the 1.9 tuning only by the
+two inert switches, so it equals the §9.4 value.
+
+**Replay.** `tests/state/v2Replay.test.ts` races harbour_lights (changeable, 50%) with all six
+switches forced on plus pit / pace / `hold_plan` calls, rebuilds it through `buildConfigFromRecipe`
+and through a PW1 start code, and asserts byte-identical final states. `CALL_KINDS` and
+`CODE_FORMAT = 1` are unchanged. No scenario, classic or daily GOLDEN pin moved.
+
+**Options for Veet**, none taken: (a) DRS — lantern_quay `drsSectors` [0] → [] (a circuit-data
+call: the street circuit has no DRS zone) would likely clear the passing gate; (b) the
+gridFinishSpearman 0.60 floor is the binding constraint for three features — measure its headroom
+over more seed bases before switching any of them on; (c) `ai.scGambleChance` 0.35 is above any
+outlook the shipped tuning produces.
+
+#### Round 2: four-seed-base means (2026-11-08)
+
+Owner ruling: the four OFF features each missed a single-sample gate by < 0.01, inside the
+0.01-0.03 seed-base spread of rho. **Method change:** each failing gate metric is judged on the MEAN
+over four seed bases (1000, 4000, 7000, 10000) at n=240 each, at the SAME floor. Features were re-run
+in the scope's order, cumulatively on top of what was ON, with every existing band and STOP limit
+also checked on the mean. A feature that missed was shrunk up to three steps, then left OFF.
+Each cell ran pro SAMPLE, rookie SAMPLE, setups-on SAMPLE, lantern_quay pro and rookie (the
+newCircuitBands envelope) and the lantern_quay clearing trial (seeds base + 13i, i < 240).
+
+| Stage (cumulative) | Gate metric, 4-base mean | Floor | Decision |
+|---|---|---|---|
+| DRS, plan values | lantern_quay passing failure 0.202 (0.146 / 0.233 / 0.183 / 0.246) | ≥ 0.20 | **ON** |
+| Risk {1, 1.4, 1.8}, weight 1.0 | setups-on rho 0.5995 | > 0.60 | shrink |
+| Risk step 1: WET 1.6, weight 0.7 | setups-on 0.603, but lantern_quay pro envelope rho 0.499 | ≥ 0.50 | shrink |
+| Risk step 2: WET 1.6, weight 0.5 | lantern_quay pro rho 0.499 | ≥ 0.50 | shrink |
+| Risk step 3: WET 1.4, weight 0.5 | lantern_quay pro rho 0.495 | ≥ 0.50 | **OFF** |
+| Double stack, plan values (on DRS) | SAMPLE pro rho 0.635 (n=120 gate's metric) | > 0.60 | **ON** |
+| Penalties, plan values | SAMPLE pro rho 0.635, setups-on 0.624 | > 0.60 | **ON** |
+
+Risk: `circuitRiskWeight` cannot move lantern_quay (its `incidentRisk` is 1.0; its danger lives in
+`crashRisk`), so the shrink only touches the wet multipliers there. The street circuit's envelope
+rho was already 0.501 with every 2.0 switch off, and risk put it at 0.495-0.499 in every step.
+Step 3 (WET 1.4) goes beyond the two listed knobs because they were spent after step 2. With risk
+off the SC gamble is inert again, as in round 1.
+
+Shipped (rubber, gamble, DRS, stack, penalties), 4-base means at n=240: pro rho 0.635, dpos 3.595,
+paceRank 0.964, crash 0.0617, top 0.448; rookie rho 0.665, paceRank 0.921; setups-on rho 0.624;
+lantern_quay pro rho 0.520, crash 0.100; trains 36.8, stacks 5.9, penalties 0.59, unsafe releases
+0.55 per race (pro). No STOP limit reached. No band was widened or added (the live 2.0 rates are
+still unbanded; adding them is a separate call). Full per-seed lines:
+`.superpowers/sdd/2026-10-24-v2-deeper-race-strategy/task-12p-round2-report.md`.
+
+Gate tests changed to the same method, same floors: `newCircuitBands` lantern_quay IS HARD TO PASS
+ON (4 bases x 240 seeds), and `monteCarlo` "every gated metric" gridFinishSpearman (4 bases x n=240;
+the other metrics in that test keep their n=120 sample). With DRS on, 12 scenarios/classics moved
+and were re-authored from `scripts/find-scenarios.ts` (hold_the_train from harbour_lights at gap 2.0,
+SEEDS=2000: lantern_quay had no hit), and the three daily GOLDEN pins moved (release-note item).

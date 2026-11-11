@@ -1,6 +1,8 @@
 import type { RaceConfig, CarState, RaceState, Compound, WeatherState, PaceMode, StrategyBrain } from './types'
 import { tyreCliffFraction, effectiveTyreAge, resolveAllocatedCompound } from './tyres'
 import { createRng, type Rng } from './rng'
+import { inTrainBehindHead } from './drs'
+import { neutralisationOutlook } from './outlook'
 
 const CLIFF_EMERGENCY_THRESHOLD = 1.5
 
@@ -211,6 +213,28 @@ export function aiDecision(
   // preference, so it stays unconditional.
   const aggression = config.paceModeAggression ?? 1.0
 
+  // OPTIMAL: the SC gamble (spec §9.2) -- hold a DUE planned stop a lap or three
+  // when a neutralisation is likely. ORDER (controller ruling, plan Task 10): it
+  // sits BEFORE the train escape and the planned stop, and may delay them only
+  // while the tyres are under ai.scGambleMaxCliffFrac; at or over it, this branch
+  // is skipped and the train escape / planned stop below win. Never more than
+  // scGambleMaxDelay laps late. Pure, no draw; off at scGambleMaxDelay 0.
+  if (brain === 'optimal' && ai.scGambleMaxDelay > 0 && nextStop && car.lap >= nextStop.lap &&
+      car.lap - nextStop.lap < ai.scGambleMaxDelay && cliffFrac < ai.scGambleMaxCliffFrac) {
+    const o = neutralisationOutlook(config, state)
+    if (o.kind === 'clear' && o.chance >= ai.scGambleChance) {
+      return { pit: false, compound: car.compound, paceMode: cliffFrac < ai.scGamblePushGate * aggression ? 'push' : 'neutral' }
+    }
+  }
+
+  // OPTIMAL: train escape -- box out of a DRS train into clear air (spec §3.3),
+  // the first step on MODEL_SPEC §9.4's "price traffic". Pure threshold, no
+  // draw. Kept a separate named branch so plan Task 10's SC gamble can be
+  // ordered against it explicitly.
+  if (brain === 'optimal' && shouldEscapeTrain(config, car, state, cliffFrac, remainingLaps, nextStop)) {
+    return pitWith(car, nextStop!.compound, 'neutral')
+  }
+
   // Planned stop
   if (nextStop && car.lap >= nextStop.lap) {
     const paceMode: PaceMode = cliffFrac < 0.20 * aggression ? 'push' : 'neutral'
@@ -220,7 +244,7 @@ export function aiDecision(
   // Pace mode: push on fresh tyres, neutral otherwise.
   // Conserve is NOT used here — it hurts when pitting dynamically (slows the car
   // but doesn't defer the pit since we pit on cliff proximity, not lap count).
-  const paceMode: PaceMode = cliffFrac < 0.18 * aggression ? 'push' : 'neutral'
+  const paceMode: PaceMode = cliffFrac < ai.scGamblePushGate * aggression ? 'push' : 'neutral'
 
   return { pit: false, compound: car.compound, paceMode }
 }
@@ -236,4 +260,15 @@ export function shouldAIPit(
 ): { pit: boolean; compound: Compound } {
   const d = aiDecision(config, car, state, createRng(1))
   return { pit: d.pit, compound: d.compound }
+}
+
+/** Optimal brain's DRS-train escape rule (spec §3.3). Inert unless drs.enabled && aiTrainEscape. */
+function shouldEscapeTrain(
+  config: RaceConfig, car: CarState, state: RaceState, cliffFrac: number, remainingLaps: number,
+  nextStop: { lap: number } | undefined,
+): boolean {
+  const drs = config.tuning.drs
+  return drs.enabled && drs.aiTrainEscape && nextStop !== undefined &&
+    car.lapsInDirtyAir >= 3 && cliffFrac >= 0.50 && nextStop.lap - car.lap <= 8 && remainingLaps > 8 &&
+    inTrainBehindHead(config, state, car.driverId)
 }

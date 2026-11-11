@@ -106,7 +106,7 @@ describe('the wash', () => {
 describe('the lap chart', () => {
   it('draws the red-flag lap as a hot band, distinct from SC and VSC', () => {
     const cars = ['a', 'b'].map((id, i) => ({
-      driverId: id, teamId: 't1', isPlayer: i === 0, positions: [i + 1, i + 1, i + 1], pitLaps: [], retiredLap: null, finish: i + 1,
+      driverId: id, teamId: 't1', isPlayer: i === 0, positions: [i + 1, i + 1, i + 1], pitLaps: [], penaltyLaps: [], retiredLap: null, finish: i + 1,
     }))
     const history = { totalLaps: 3, lapsRun: 3, cars, neutralisations: [{ kind: 'red', startLap: 2, endLap: 2 }, { kind: 'sc', startLap: 1, endLap: 1 }] } as unknown as Parameters<typeof LapChart>[0]['history']
     const { container } = render(<LapChart history={history} playerDriverId="a" />)

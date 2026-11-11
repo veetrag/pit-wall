@@ -149,3 +149,15 @@ describe('retirements', () => {
     expect(h.cars.find(c => c.isPlayer)).toBeDefined()
   }, 60_000)
 })
+
+describe('lapHistory penalties (2.0, spec §8.3)', () => {
+  it('records the 1-based lap of every penalty issued', () => {
+    const base = makeConfig({}, 9, 'veloce')
+    // Every offence is a penalty (no warnings) and offences are frequent, so some car is penalised.
+    const config: RaceConfig = { ...base, tuning: makeDeterministicTuning({ penalties: { enabled: true, trackLimits: { chancePerLap: 1, warningsAllowed: 0 } } }) }
+    const h = lapHistory(config, config.seed, [])
+    const laps = h.cars.flatMap(c => c.penaltyLaps)
+    expect(laps.length).toBeGreaterThan(0)
+    for (const l of laps) { expect(l).toBeGreaterThanOrEqual(1); expect(l).toBeLessThanOrEqual(h.totalLaps) }
+  })
+})

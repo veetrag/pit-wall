@@ -9,15 +9,17 @@ export {
 export { circuitTraits, type CircuitTraits, type TyreContext } from './circuitTraits'
 export { computeSectorTime } from './lapModel'
 export {
-  driverErrorChancePerSector, rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
+  driverErrorChancePerSector, incidentRiskFactor, rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
   rollVscDeployment, rollVscDuration, neutralisationKind, neutralisationPaceMultiplier, rollRedFlag,
 } from './incidents'
+export { neutralisationOutlook } from './outlook'
+export type { NeutralisationOutlook, OutlookReason } from './outlook'
 export { restartTyre, applyRedFlagRestart, restartConditions, redFlagPending, defaultRestartCompound } from './redFlag'
 export * from './setup'
 export { createRng, gaussianPair } from './rng'
-export { pitStopTime, expectedPitStopTime, slowStopComponent, normalCdf } from './pitStop'
-export type { PitStopCost } from './pitStop'
+export { pitStopTime, expectedPitStopTime, slowStopComponent, normalCdf, fitTyres, executeStop } from './pitStop'
+export type { PitStopCost, StopContext, StopOutcome } from './pitStop'
 export { generateWeatherTimeline, openingTimeline } from './weather'
 export { forecast, forecastOffset } from './forecast'
 export type { WeatherForecast } from './forecast'
@@ -27,7 +29,7 @@ export type {
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
   TyreAllocation, DifficultyProfile, WeatherState, SafetyCarState,
-  IncidentEvent, IncidentKind, NeutralisationKind,
+  IncidentEvent, IncidentKind, NeutralisationKind, PenaltyState,
   AttackLevel, QualifyingCall, QualifyingLap, QualifyingResult,
 } from './types'
 export type { ProjectionResult } from './projection'
@@ -43,3 +45,7 @@ export { rivalIntel, intelOffset } from './rivalIntel'
 export type { RivalIntel } from './rivalIntel'
 export { PIT_CLIFF_THRESHOLD } from './strategy'
 export { handoverFromCalls, parFromHandover, prefixCalls } from './customStart'
+export { rubberLaps, rubberLapsFor, trackGrip, trackPaceDelta } from './track'
+export type { SectorContext } from './lapModel'
+export { greenSinceLap, drsOpenSet, drsOvertakeFactor, drsTrains, inTrainBehindHead } from './drs'
+export { initPenalty, trackLimitsChance, recordTrackLimits, unsafeReleaseChance, addPendingAtFlag, effectiveOrder, aiPenaltyCoverPace } from './penalties'

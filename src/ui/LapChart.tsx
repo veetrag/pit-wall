@@ -12,6 +12,9 @@ const CODE = new Map(DATA.drivers.drivers.map(d => [d.id, d.code]))
 // Team colours are data (cars.json), like every other team swatch in the UI.
 const TEAM_COLOR = new Map(DATA.cars.teams.map(t => [t.id, t.colorPrimary]))
 
+/** Seconds per time penalty, for the "+5" glyph and summary (data, never a literal). */
+const PENALTY_SEC = DATA.tuning.penalties.timePenaltySec
+
 const W = 340
 const H = 210
 const PAD = { l: 30, r: 10, t: 8, b: 20 }
@@ -45,6 +48,7 @@ export function lapChartSummary(history: LapHistory, playerDriverId: string): st
     const pos = car.positions[lap]
     if (pos !== undefined) parts.push(`P${pos} after the stop on lap ${lap}`)
   }
+  for (const lap of car.penaltyLaps) parts.push(`${PENALTY_SEC}-second penalty on lap ${lap}`)
   parts.push(car.retiredLap !== null ? `retired on lap ${car.retiredLap}` : `finished P${car.finish}`)
   return parts.join(', ')
 }
@@ -91,6 +95,18 @@ function Line({ car, g, tier, colour, reduced }: { car: CarHistory; g: Geometry;
         return (
           <circle key={i} data-pit cx={g.x(lap)} cy={g.y(p)} r={tier === 'field' ? 1.5 : tier === 'near' ? 2.5 : 3.5}
             style={{ fill: 'var(--ink)', stroke, strokeWidth: 1.5 }} />
+        )
+      })}
+      {car.penaltyLaps.map((lap, i) => {
+        // Retired before the end of that lap: pin the glyph to the line's last vertex.
+        const at = Math.min(lap, car.positions.length - 1)
+        const p = car.positions[at]
+        if (p === undefined) return null
+        return (
+          <text key={`pen${i}`} data-penalty x={g.x(at)} y={g.y(p) - 5} textAnchor="middle"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 10, fill: 'var(--hot)', fontVariantNumeric: 'tabular-nums' }}>
+            +{PENALTY_SEC}
+          </text>
         )
       })}
       {car.retiredLap !== null && last !== undefined && (

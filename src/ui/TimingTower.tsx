@@ -2,12 +2,14 @@ import { useRef, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useSettingsStore } from '@state/settingsStore'
-import type { CarState } from '@engine/types'
+import type { CarState, RaceState } from '@engine/types'
+import { effectiveOrder } from '@engine/penalties'
 import { TyreChip, PRESS, EASE, snapIn } from '@ui/kit'
 import { useUiTap } from '@hooks/useUiTap'
 import { useSafetyCarDeployCount } from '@hooks/useSafetyCar'
 import { rivalIntel } from '@engine/rivalIntel'
 import { RivalIntelCard, intelAriaLabel } from './RivalIntelCard'
+import { towerV2, type TowerV2Row } from '@state/towerV2'
 
 // Default compact view targets a fixed row count centred on the player (not a
 // fixed radius) so a P1 or P20 player still gets a full-looking window instead
@@ -30,7 +32,55 @@ function formatGap(gap: number, position: number): string {
   return `+${gap.toFixed(1)}`
 }
 
-function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, intel }: {
+/** Spoken suffix for the 2.0 facts; '' when DRS is off, so 1.9 rows are unchanged. */
+function v2AriaSuffix(v2: TowerV2Row | undefined): string {
+  if (!v2) return ''
+  let s = ''
+  if (v2.drs === 'open') s += ', DRS open'
+  else if (v2.drs === 'neutralised') s += ', DRS neutralised'
+  if (v2.train) s += `, in a DRS train of ${v2.train.size}`
+  if (v2.penaltySec > 0) s += `, ${v2.penaltySec} second penalty pending`
+  return s
+}
+
+// Compact pill sized for a 36px tower row (the kit Pill is a 13px/7px control
+// chip, too tall here). Text carries the state; colour only reinforces it.
+const DRS_PILL = {
+  display: 'inline-block', marginRight: 6, padding: '1px 5px', borderRadius: 999,
+  fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 10, letterSpacing: 0.5,
+  lineHeight: '14px', verticalAlign: 'middle',
+} as const
+
+/** The player's road position and where they would classify with pending penalties added (spec §8.3). Null when none is pending. */
+export function playerEffectivePosition(state: RaceState): { road: number; after: number } | null {
+  const me = state.cars.find(c => c.isPlayer)
+  if (!me || me.retired || !(me.penalty && me.penalty.pendingSec > 0)) return null
+  return { road: me.position, after: effectiveOrder(state).findIndex(c => c.isPlayer) + 1 }
+}
+
+/** A pending time penalty: hot fill, ink text; the "+5" itself is the signal, not the colour. */
+function PenaltyChip({ sec, onVolt }: { sec: number; onVolt: boolean }) {
+  return (
+    <span data-penalty-chip aria-hidden="true" style={{
+      ...DRS_PILL, borderRadius: 0, background: 'var(--hot)', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums',
+      boxShadow: onVolt ? 'inset 0 0 0 1px var(--ink)' : undefined,
+    }}>+{sec}</span>
+  )
+}
+
+function DrsPill({ state, onVolt }: { state: 'open' | 'neutralised'; onVolt: boolean }) {
+  if (state === 'open') {
+    return <span data-drs-pill="open" style={{ ...DRS_PILL, background: onVolt ? 'var(--ink)' : 'var(--gain)', color: onVolt ? 'var(--gain)' : 'var(--ink)' }}>DRS</span>
+  }
+  return (
+    <span data-drs-pill="neutralised" title="Neutralised — the car ahead has DRS too" style={{
+      ...DRS_PILL, color: onVolt ? 'var(--ink)' : 'var(--lilac-dim)',
+      boxShadow: `inset 0 0 0 1px ${onVolt ? 'var(--ink)' : 'var(--lilac-dim)'}`,
+    }}>DRS ✕</span>
+  )
+}
+
+function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, intel, v2 }: {
   car: CarState
   leaderTime: number
   displayName?: string
@@ -39,6 +89,8 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
   compressed?: boolean
   /** Present on rival rows only: the row becomes a button that opens the intel card. */
   intel?: { label: string; selected: boolean; onSelect: () => void; onClose: () => void }
+  /** 2.0 facts (DRS, train); all-null while DRS is disabled. */
+  v2?: TowerV2Row
 }) {
   const gap = car.raceTime - leaderTime
   const driverCode = displayName ?? car.driverId.replace('d_', '').toUpperCase().slice(0, 3)
@@ -95,6 +147,13 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
     : 'var(--grape)'
   const onVolt = car.isPlayer && !car.retired && !compressed
   const textColor = car.retired ? 'var(--lilac-dim)' : onVolt ? 'var(--ink)' : 'var(--white)'
+  const v2Suffix = car.retired ? '' : v2AriaSuffix(v2)
+  const train = car.retired ? null : v2?.train ?? null
+  const drs = car.retired ? null : v2?.drs ?? null
+  const penaltySec = car.retired ? 0 : v2?.penaltySec ?? 0
+  // Non-intel rows get a label only when there is a 2.0 fact to speak.
+  const rowLabel = intel ? intel.label + v2Suffix
+    : v2Suffix ? `P${car.position} ${driverCode} ${formatGap(gap, car.position)}${v2Suffix}` : undefined
 
   return (
     <motion.div
@@ -105,9 +164,9 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
       data-intel-row={intel ? car.driverId : undefined}
       className={intel ? 'slant-row kit-focus' : 'slant-row'}
       transition={ROW_SPRING}
-      role={intel ? 'button' : undefined}
+      role={intel ? 'button' : rowLabel ? 'group' : undefined}
       tabIndex={intel ? 0 : undefined}
-      aria-label={intel?.label}
+      aria-label={rowLabel}
       aria-expanded={intel ? intel.selected : undefined}
       data-selected={intel?.selected ? 'true' : undefined}
       onClick={intel?.onSelect}
@@ -129,8 +188,20 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
         color: textColor,
         transition: 'background 0.4s ease',
         cursor: intel ? 'pointer' : undefined,
+        position: train ? 'relative' : undefined,
       }}
     >
+      {/* DRS-train bracket: a --dusk bar on the left edge, inset past the
+          slant's clip, rounded only at the train's ends. It moves with the
+          row's own layout FLIP. */}
+      {train && (
+        <span aria-hidden="true" data-train-bracket style={{
+          position: 'absolute', left: 6, width: 3, background: 'var(--dusk)',
+          top: train.first ? 5 : 0, bottom: train.last ? 5 : 0,
+          borderTopLeftRadius: train.first ? 2 : 0, borderTopRightRadius: train.first ? 2 : 0,
+          borderBottomLeftRadius: train.last ? 2 : 0, borderBottomRightRadius: train.last ? 2 : 0,
+        }} />
+      )}
       <span style={{
         fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 20,
         fontVariantNumeric: 'tabular-nums', lineHeight: 1,
@@ -171,6 +242,16 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
                 {flash === 'gain' ? '▲' : '▼'}
               </span>
             )}
+            {/* The head never has DRS (nobody within range ahead), so its gap
+                cell has room for the train label; the 46px code column does not. */}
+            {train?.first && (
+              <span style={{
+                marginRight: 6, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 10, letterSpacing: 0.5,
+                color: onVolt ? 'var(--ink)' : 'var(--lilac-dim)', verticalAlign: 'middle',
+              }}>TRAIN ×{train.size}</span>
+            )}
+            {penaltySec > 0 && <PenaltyChip sec={penaltySec} onVolt={onVolt} />}
+            {drs && <DrsPill state={drs} onVolt={onVolt} />}
             {formatGap(gap, car.position)}
           </span>
           <span style={{
@@ -296,6 +377,13 @@ export function TimingTower() {
     () => (intelId && raceState && config ? rivalIntel(config, raceState, intelId) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [config, lap, sig, intelId])
+  // 2.0 facts, derived once per race state (not per row, not per frame).
+  const v2 = useMemo(() => (config && raceState ? towerV2(config, raceState) : null), [config, raceState])
+  const effective = useMemo(() => {
+    const e = raceState ? playerEffectivePosition(raceState) : null
+    const sec = raceState?.cars.find(c => c.isPlayer)?.penalty?.pendingSec ?? 0
+    return e ? { ...e, sec } : null
+  }, [raceState])
   const select = (id: string) => { uiTap(); setIntelId(cur => (cur === id ? null : id)) }
   // The flag closes the card.
   useEffect(() => { if (phase === 'finished') setIntelId(null) }, [phase])
@@ -403,6 +491,7 @@ export function TimingTower() {
                 teamColor={teamColorMap.get(row.car.teamId)}
                 wide={wide}
                 compressed={compressing}
+                v2={v2?.get(row.car.driverId)}
                 intel={labels.has(row.car.driverId) ? {
                   label: labels.get(row.car.driverId)!,
                   selected: intelId === row.car.driverId,
@@ -414,6 +503,18 @@ export function TimingTower() {
           )}
         </AnimatePresence>
       </div>
+      {effective && (
+        <div data-testid="penalty-readout" role="status" style={{
+          flexShrink: 0, padding: '4px 12px 6px', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 12,
+          letterSpacing: 0.5, color: 'var(--lilac)', fontVariantNumeric: 'tabular-nums',
+        }}>
+          P{effective.road}{' '}
+          <span style={{ color: effective.after > effective.road ? 'var(--hot)' : 'var(--lilac)' }}>
+            {effective.after > effective.road ? '▼' : '▸'} P{effective.after}
+          </span>{' '}
+          after +{effective.sec}s
+        </div>
+      )}
       <AnimatePresence initial={false}>
         {openIntel && openCar && (
           <motion.div key="rival-intel" {...snapIn(reducedMotion)} style={{ flexShrink: 0, padding: '0 8px 8px' }}>

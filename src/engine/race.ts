@@ -1,15 +1,18 @@
 import type { RaceConfig, RaceState, CarState, SectorIndex, OvertakeEvent, WeatherState, Compound, IncidentEvent } from './types'
 import type { Rng } from './rng'
 import { createRng } from './rng'
-import { pitStopTime, type PitStopCost } from './pitStop'
-import { computeSectorTime } from './lapModel'
+import { initPenalty, recordTrackLimits, addPendingAtFlag, aiPenaltyCoverPace } from './penalties'
+import { executeStop, boxQueueEstimate, deferForBusyBox } from './pitStop'
+import { computeSectorTime, NO_CTX, type SectorContext } from './lapModel'
+import { rubberLapsFor } from './track'
 import { wingOvertakeFactor } from './setup'
+import { drsOpenSet, drsOvertakeFactor } from './drs'
 import { openingTimeline } from './weather'
 import { aiDecision } from './strategy'
 import { circuitTraits } from './circuitTraits'
 import { UNLIMITED_TYRE_ALLOCATION, consumeTyreSet, resolveAllocatedCompound, effectiveTyreAge, tyreCliffFraction } from './tyres'
 import {
-  rollDriverError, rollErrorIsTerminal, rollErrorTimeLoss,
+  rollDriverError, incidentRiskFactor, rollErrorIsTerminal, rollErrorTimeLoss,
   rollSafetyCarDeployment, rollSafetyCarDuration, compressRaceTimes, effectivePitLaneLoss,
   rollVscDeployment, rollVscDuration, neutralisationKind, rollRedFlag,
 } from './incidents'
@@ -120,6 +123,7 @@ export function initRace(config: RaceConfig): RaceState {
       retired: false,
       retiredLap: null,
       retiredCause: null,
+      ...(config.tuning.penalties.enabled ? { penalty: initPenalty() } : {}),
     }
   })
 
@@ -149,18 +153,27 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const newSectorResults = [...state.sectorResults]
   const newOvertakeEvents: OvertakeEvent[] = [...state.overtakeEvents]
   const newIncidents: IncidentEvent[] = [...state.incidents]
-  // Every slow stop is logged, whoever made it (spec 1.6 §1, ruling R4).
-  const logSlow = (stop: PitStopCost, driverId: string): void => {
-    if (stop.slow > 0) newIncidents.push({ lap: state.lap, sector, kind: 'slow_stop', driverId, timeLoss: stop.slow })
-  }
+  // Once per tick, not per car (spec §4.3). Undefined unless rain can wash rubber.
+  const rubber = rubberLapsFor(state, config.tuning)
+  const ctxBase: SectorContext = rubber === undefined ? NO_CTX : { rubberLaps: rubber }
+  // DRS from the PRE-tick order, once per tick (ruling D1).
+  const drsOpen = drsOpenSet(config, state, sector)
+  // Once per tick (spec §9.2): crashRisk (1.7) times the 2.0 circuit/weather factor.
+  // Exactly traits.crashRisk when the 2.0 factor is off, so the stream is unchanged.
+  const riskFactor = incidentRiskFactor(config, state.weatherState)
 
   // 1. Compute sector time for each car. Retired cars are frozen entirely —
   // no more sector time, no more sim work happens to them.
   const updatedCars: CarState[] = state.cars.map(car => {
     if (car.retired) return car
-    const result = computeSectorTime(config, car, sector, rng, state.weatherState, state.safetyCar)
+    const result = computeSectorTime(config, car, sector, rng, state.weatherState, state.safetyCar, drsOpen.has(car.driverId) ? { ...ctxBase, drsOpen: true } : ctxBase)
     newSectorResults.push(result)
     let updated = { ...car, raceTime: car.raceTime + result.sectorTime }
+    if (result.trackLimits && updated.penalty) {
+      const r = recordTrackLimits(config, updated, car.lap, sector)
+      updated = { ...updated, penalty: r.penalty }
+      newIncidents.push(...r.events)
+    }
 
     // Tyre failure risk: once cliffFraction runs meaningfully past the
     // threshold, roll a per-sector chance of a puncture/mechanical failure
@@ -218,7 +231,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     // has returned, so it does NOT appear in SectorResult.sectorTime. A UI that
     // needs to show it reads the IncidentEvent log instead.
     if (!updated.retired) {
-      if (rollDriverError(driver.facets.consistency, config.tuning, rng, traits.crashRisk)) {
+      if (rollDriverError(driver.facets.consistency, config.tuning, rng, riskFactor === 1 ? traits.crashRisk : traits.crashRisk * riskFactor)) {
         if (rollErrorIsTerminal(config.tuning, rng)) {
           updated = { ...updated, retired: true, retiredLap: car.lap, retiredCause: 'crash' }
           newIncidents.push({
@@ -369,7 +382,7 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   // newOvertakeEvents, so skipping the call is what suppresses the events; there
   // is no separate event list to leave empty.
   const afterOvertakesActive = safetyCar === null
-    ? resolveOvertakes(config, penalisedCars, sector, state.lap, rng, newOvertakeEvents)
+    ? resolveOvertakes(config, penalisedCars, sector, state.lap, rng, newOvertakeEvents, drsOpen)
     : penalisedCars
   const afterOvertakes = [...afterOvertakesActive, ...retiredCars]
 
@@ -429,6 +442,11 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const redOut = neutralisationKind(safetyCar) === 'red'
   const restartNow = lapCompleted && activeKind === 'red'
 
+  // One stop path (spec 2026-10-24 §0.4, ruling A4).
+  // The team boxes (spec §7): undefined when double-stacking is off.
+  // boxFree holds ABSOLUTE raceTimes: an SC compression this tick rewrote them,
+  // so the old release times are stale and would charge a phantom queue. Drop them.
+  let boxFree = config.tuning.doubleStack.enabled ? (justDeployed ? {} : state.boxFree ?? {}) : undefined
   const finalCars: CarState[] = afterOvertakes.map(car => {
     let updated = { ...car }
     if (car.retired) return updated // frozen: no more laps, pits, or AI
@@ -442,24 +460,23 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       } else if (!updated.isPlayer) {
         // Build a state view for the AI decision (current positions, new lap)
         // `safetyCar` here is the post-tick value (deployed, ticked down or
-        // ended this tick), the same one pitStopTime charges below. Handing the
+        // ended this tick), the same one executeStop charges below. Handing the
         // AI the pre-tick value would let it box "under yellow" on the boundary
         // the neutralisation ends and pay the green-flag price.
         const stateForAI: RaceState = { ...state, lap: updated.lap, cars: afterOvertakes, safetyCar }
         const decision = aiDecision(config, updated, stateForAI, rng)
         updated.paceMode = decision.paceMode
-        if (decision.pit && !raceEndsThisTick) {
-          const stop = pitStopTime(config, car.teamId, safetyCar, rng)
-          updated = {
-            ...updated,
-            raceTime: updated.raceTime + stop.total,
-            compound: decision.compound,
-            tyreAge: 0,
-            pitsDone: updated.pitsDone + 1,
-            tyreAllocation: consumeTyreSet(updated.tyreAllocation, decision.compound),
-            compoundsUsed: [...updated.compoundsUsed, decision.compound],
-          }
-          logSlow(stop, car.driverId)
+        if (updated.penalty) {
+          const drv = config.drivers.find(d => d.id === updated.driverId)
+          const spec = config.compounds[updated.compound]
+          const cliffFracNow = spec && drv ? tyreCliffFraction(spec, effectiveTyreAge(updated, drv, state.weatherState, config)) : 0
+          updated.paceMode = aiPenaltyCoverPace(config, updated, stateForAI, cliffFracNow, updated.paceMode)
+        }
+        if (decision.pit && !raceEndsThisTick && !deferAiStop(config, updated, decision.compound, boxFree, safetyCar, state.weatherState)) {
+          const out = executeStop(config, { safetyCar, lap: state.lap, sector, boxFree }, updated, decision.compound, rng)
+          updated = out.car
+          newIncidents.push(...out.events)
+          boxFree = out.boxFree
         }
       } else if (config.playerStrategyOverride && !state.planHold) {
         // The player's own plan, executed exactly as the race setup screen
@@ -473,17 +490,10 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
         if (nextStop && updated.lap >= nextStop.lap) {
           const compound = resolveAllocatedCompound(nextStop.compound, updated.tyreAllocation)
           if (compound) {
-            const stop = pitStopTime(config, car.teamId, safetyCar, rng)
-            updated = {
-              ...updated,
-              raceTime: updated.raceTime + stop.total,
-              compound,
-              tyreAge: 0,
-              pitsDone: updated.pitsDone + 1,
-              tyreAllocation: consumeTyreSet(updated.tyreAllocation, compound),
-              compoundsUsed: [...updated.compoundsUsed, compound],
-            }
-            logSlow(stop, car.driverId)
+            const out = executeStop(config, { safetyCar, lap: state.lap, sector, boxFree }, updated, compound, rng)
+            updated = out.car
+            newIncidents.push(...out.events)
+            boxFree = out.boxFree
           }
         }
       }
@@ -496,6 +506,9 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     const { weather, lapsLeft } = restartConditions(state)
     carsAfterRestart = applyRedFlagRestart(config, finalCars, weather, lapsLeft, redFlagTyre)
     safetyCar = null     // no SC laps after the restart
+    // The regrid rewrote every raceTime: box release times are stale, and the
+    // restart is a free tyre change, so nobody is in a box.
+    if (boxFree !== undefined) boxFree = {}
     newIncidents.push({ lap: state.lap, sector, kind: 'red_flag_restart', driverId: null, timeLoss: null })
   }
 
@@ -515,10 +528,14 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       })
     : carsAfterRestart
 
+  // Unserved penalties go on at the flag, before the classification (spec §8.2).
+  const flag = isRaceEnd && config.tuning.penalties.enabled ? addPendingAtFlag(carsBeforeSort, state.lap, sector) : null
+  if (flag) newIncidents.push(...flag.events)
+
   // Re-sort and assign positions: active cars by raceTime; retired cars sort
   // after every classified runner, ranked by retiredLap descending (later
   // retirement = closer to being classified — real motorsport convention).
-  const resorted = [...carsBeforeSort].sort((a, b) => {
+  const resorted = [...(flag?.cars ?? carsBeforeSort)].sort((a, b) => {
     if (a.retired !== b.retired) return a.retired ? 1 : -1
     if (a.retired && b.retired) return (b.retiredLap ?? 0) - (a.retiredLap ?? 0)
     return a.raceTime - b.raceTime
@@ -542,7 +559,26 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
     safetyCar,
     incidents: newIncidents,
     weatherState: newWeatherState,
+    ...(boxFree !== undefined ? { boxFree } : {}),
   }
+}
+
+/**
+ * Whether the team keeps an AI car out rather than queue behind its team-mate
+ * (spec §7.2, ruling S2). No draw; always false when double-stacking is off.
+ */
+function deferAiStop(
+  config: RaceConfig, car: CarState, compound: Compound, boxFree: Record<string, number> | undefined,
+  safetyCar: RaceState['safetyCar'], weather: WeatherState,
+): boolean {
+  if (!config.tuning.doubleStack.enabled) return false
+  const q = boxQueueEstimate(config, boxFree, car, safetyCar)
+  if (q <= 0) return false
+  const spec = config.compounds[car.compound]
+  const driver = config.drivers.find(d => d.id === car.driverId)
+  const cliffFrac = spec && driver ? tyreCliffFraction(spec, effectiveTyreAge(car, driver, weather, config)) : 0
+  const weatherStop = config.compounds[compound]?.type !== spec?.type
+  return deferForBusyBox(config, car, q, safetyCar !== null, weatherStop, cliffFrac)
 }
 
 function resolveOvertakes(
@@ -552,6 +588,7 @@ function resolveOvertakes(
   lap: number,
   rng: Rng,
   events: OvertakeEvent[],
+  drsOpen: ReadonlySet<string>,
 ): CarState[] {
   const sorted = [...cars].sort((a, b) => a.raceTime - b.raceTime)
   const result = [...sorted]
@@ -588,12 +625,12 @@ function resolveOvertakes(
     const defenderDriver = config.drivers.find(d => d.id === ahead.driverId)!
     const attackMult = config.tuning.overtaking.attackRacecraftBase + (attackerDriver.facets.racecraft / 100)
     const defendMult = 1 - (defenderDriver.facets.racecraft / 100) * config.tuning.overtaking.defenceRacecraftFactor
-    const prob = Math.min(
-      0.85,
-      (config.tuning.overtaking.base * sectorEase +
+    const raw = (config.tuning.overtaking.base * sectorEase +
         paceAdv * config.tuning.overtaking.paceMultiplier * sectorEase) *
-        attackMult * defendMult * wingOvertakeFactor(config, behind.driverId, ahead.driverId, sector),
-    )
+        attackMult * defendMult * wingOvertakeFactor(config, behind.driverId, ahead.driverId, sector)
+    const drsF = drsOvertakeFactor(config, drsOpen, behind.driverId, ahead.driverId)
+    // Multiplied only when it does something, so the off path is the pre-2.0 expression.
+    const prob = Math.min(0.85, drsF === 1 ? raw : raw * drsF)
     if (prob > bestProb) {
       bestProb = prob
       bestIdx = i

@@ -157,6 +157,18 @@ export function processCommentaryTick(
         if (line) lines.push(line)
         break
       }
+      case 'penalty_issued':
+      case 'penalty_added': {
+        const line = fill(ev.kind, { lap: evLap, code, sec: ev.timeLoss ?? 0 })
+        if (line) lines.push(line)
+        break
+      }
+      // Warnings, served penalties and the rest are the player's radio, not broadcast news.
+      case 'track_limits':
+      case 'penalty_served':
+      case 'unsafe_release':
+      case 'double_stack':
+        break
       default: {
         const _exhaustive: never = ev.kind
         void _exhaustive
