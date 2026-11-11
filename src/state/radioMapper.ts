@@ -94,27 +94,29 @@ export interface RadioState {
 
 /**
  * A fresh radio state. Pass the race state when starting mid-race (scenario,
- * custom start): the incident cursors are seeded past every incident already
- * in it, so the first tick does not replay their radio lines.
+ * custom start): every count cursor is seeded past what already happened in
+ * it (incidents, red flags, VSCs, slow stops, spins, overtakes), so the first
+ * tick does not replay their radio lines.
  */
 export function makeRadioState(state?: RaceState): RadioState {
   const player = state?.cars.find(c => c.isPlayer)
   const mate = player ? state?.cars.find(c => c.teamId === player.teamId && c.driverId !== player.driverId) : undefined
   const incidents = state?.incidents ?? []
+  const count = (kind: IncidentKind) => incidents.reduce((n, i) => n + (i.kind === kind ? 1 : 0), 0)
   return {
-    prevOvertakeCount: 0,
-    prevLap: 0,
-    prevPlayerTyreAge: 0,
+    prevOvertakeCount: state?.overtakeEvents.length ?? 0,
+    prevLap: state?.lap ?? 0,
+    prevPlayerTyreAge: player?.tyreAge ?? 0,
     prevPlayerPos: -1,
     prevGap: Infinity,
-    prevSpinCount: 0,
+    prevSpinCount: player ? (state?.sectorResults ?? []).filter(r => r.driverId === player.driverId && r.spinLoss > 0).length : 0,
     hasWon: false,
     cliffWarned: false,
-    prevRetired: false,
+    prevRetired: player?.retired ?? false,
     lowWingWarned: false,
-    prevVscCount: 0,
-    prevSlowStops: 0,
-    prevRedFlags: 0,
+    prevVscCount: count('vsc_deployed'),
+    prevSlowStops: player ? incidents.filter(i => i.kind === 'slow_stop' && i.driverId === player.driverId).length : 0,
+    prevRedFlags: count('red_flag'),
     prevPlayerIncidents: player ? incidents.filter(i => i.driverId === player.driverId).length : 0,
     prevMateStacks: mate ? incidents.filter(i => i.kind === 'double_stack' && i.driverId === mate.driverId).length : 0,
   }

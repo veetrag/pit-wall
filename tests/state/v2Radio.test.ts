@@ -73,3 +73,28 @@ describe('V2_RADIO and the player-incident cursor (spec 2026-10-24)', () => {
   })
 })
 
+
+describe('mid-race handover replays no earlier radio line (2.0 follow-up)', () => {
+  it('a handover past a red flag, VSC, slow stop, spin and overtake fires none of their lines on the first tick', () => {
+    clock()
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const config = { ...makeConfig({}, 2), playerDriverId: 'd_voss' }
+    const s0 = initRace(config)
+    const me = s0.cars.find(c => c.isPlayer)!
+    const rival = s0.cars.find(c => !c.isPlayer)!
+    const handover: RaceState = {
+      ...s0,
+      lap: 12,
+      incidents: [
+        { lap: 3, sector: 1, kind: 'red_flag', driverId: rival.driverId, timeLoss: null },
+        { lap: 5, sector: 0, kind: 'vsc_deployed', driverId: rival.driverId, timeLoss: null },
+        { lap: 7, sector: 2, kind: 'slow_stop', driverId: me.driverId, timeLoss: 2.1 },
+      ],
+      sectorResults: [{ driverId: me.driverId, sectorTime: 30, tyreContribution: 0, trafficPenalty: 0, noiseSample: 0, spinLoss: 3 }],
+      overtakeEvents: [{ lap: 8, sector: 1, overtakerId: me.driverId, overtakenId: rival.driverId }],
+    }
+    const lines: string[] = []
+    processRadioTick(handover, config, makeRadioState(handover), m => { lines.push(m) })
+    expect(lines).toEqual([])
+  })
+})
