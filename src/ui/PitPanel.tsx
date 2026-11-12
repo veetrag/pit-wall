@@ -52,7 +52,7 @@ function ProjectionCard({ result, compoundLabel }: { result: ProjectionResult; c
   const reduced = useReducedMotion()
   // Spec §3.4: null whenever DRS is off, so the card is unchanged from 1.9.
   // A primitive selector: the card re-renders only when the size changes, not every sector.
-  const trainSize = useRaceStore(s => s.config && s.raceState ? rejoinTrainSize(s.config, s.raceState, result) : null)
+  const trainSize = useRaceStore(s => s.config ? rejoinTrainSize(s.config, result) : null)
   const scLine = useScChanceLine()
   const boxBusy = useRaceStore(s => boxBusyLine(s.config, s.raceState))
   const penaltySec = useRaceStore(s => s.config?.tuning.penalties.enabled ? s.raceState?.cars.find(c => c.isPlayer)?.penalty?.pendingSec ?? 0 : 0)
