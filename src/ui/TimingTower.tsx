@@ -50,11 +50,11 @@ export function trainBracketSegments(
     const h = row.type === 'real' && row.car.isPlayer ? PLAYER_ROW_H : ROW_H
     const t = row.type === 'real' && !row.car.retired ? v2?.get(row.car.driverId)?.train ?? null : null
     if (t && prevTrain === t.index && out.length > 0) out[out.length - 1]!.height = y + h - out[out.length - 1]!.top
+    // A lone visible row of a train (the rest windowed off) still gets its bar.
     else if (t && row.type === 'real') out.push({ key: `train-${row.car.driverId}`, top: y, height: h, train: t.index })
     prevTrain = t ? t.index : null
     y += h + ROW_GAP
   }
-  // A lone visible row of a train (the rest windowed off) still gets its bar.
   return out.map(({ key, top, height }) => ({ key, top, height }))
 }
 
@@ -517,7 +517,10 @@ export function TimingTower() {
         justifyContent: 'flex-start', position: 'relative',
       }}>
         {/* DRS-train brackets: absolutely placed over the rows so one bar spans
-            the whole train; nothing renders while DRS is off (no train facts). */}
+            the whole train; nothing renders while DRS is off (no train facts).
+            Accepted caveats: geometry is from the current rows only, so an
+            exiting ghost row (0.22 s exit) or rows entering/exiting when the
+            compact window shifts can make the bar lead the rows briefly. */}
         <AnimatePresence initial={false}>
           {trainBracketSegments(rows, v2 ?? null).map(seg => (
             <TrainBracket key={seg.key} top={seg.top} height={seg.height} reduced={reducedMotion} />

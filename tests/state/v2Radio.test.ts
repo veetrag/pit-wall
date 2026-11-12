@@ -54,6 +54,7 @@ describe('V2_RADIO and the player-incident cursor (spec 2026-10-24)', () => {
     const seeded = makeRadioState(handover)
     expect(seeded.prevPlayerIncidents).toBe(3)
     expect(seeded.prevMateStacks).toBe(1)
+    expect(makeRadioState(handover).incidentScan?.index).toBe(handover.incidents.length)
     // First tick: exactly what a clean state at the same moment would say -- no incident replay.
     const withPast: string[] = []
     const clean: string[] = []

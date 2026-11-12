@@ -93,7 +93,8 @@ export interface RadioState {
   /**
    * Running totals over `state.incidents[0, index)`, so each tick only reads
    * the incidents appended since the last one (the log is append-only).
-   * Absent on a fresh state: the first tick scans the log once. Reset if the
+   * Seeded by makeRadioState from a handover state; absent only on a
+   * state made without one (the first tick then scans the log once). Reset if the
    * player or team-mate identity changes.
    */
   incidentScan?: IncidentScan
@@ -183,6 +184,7 @@ export function makeRadioState(state?: RaceState): RadioState {
     prevRedFlags: count('red_flag'),
     prevPlayerIncidents: player ? incidents.filter(i => i.driverId === player.driverId).length : 0,
     prevMateStacks: mate ? incidents.filter(i => i.kind === 'double_stack' && i.driverId === mate.driverId).length : 0,
+    incidentScan: player ? scanIncidents(incidents, undefined, player.driverId, mate?.driverId ?? null).scan : undefined,
   }
 }
 
