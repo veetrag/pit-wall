@@ -39,14 +39,11 @@ export function towerV2(config: RaceConfig, state: RaceState): Map<string, Tower
 
 /**
  * Size of the DRS train the player would rejoin into, or null (spec §3.4):
- * the rejoin gap to the car ahead is within detection range and that car is
- * itself in a train (counted from the current order, without the player).
- * The returned size includes the player.
+ * `drsTrains` evaluated on the projected race state by projectPitNow, so the
+ * order is the projected one, not an approximation from the current order.
+ * The returned size includes the player. Null whenever DRS is off.
  */
-export function rejoinTrainSize(config: RaceConfig, state: RaceState, result: ProjectionResult): number | null {
-  const d = config.tuning.drs
-  if (!d.enabled || result.driverAheadId === null || result.rejoinGap > d.detectionGap) return null
-  const others = { cars: state.cars.filter(c => c.driverId !== config.playerDriverId) }
-  const train = drsTrains(config, others).find(t => t.carIds.includes(result.driverAheadId!))
-  return train ? train.carIds.length + 1 : null
+export function rejoinTrainSize(config: RaceConfig, result: ProjectionResult): number | null {
+  if (!config.tuning.drs.enabled) return null
+  return result.rejoinTrainSize ?? null
 }

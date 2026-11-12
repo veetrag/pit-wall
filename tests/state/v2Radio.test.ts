@@ -54,6 +54,7 @@ describe('V2_RADIO and the player-incident cursor (spec 2026-10-24)', () => {
     const seeded = makeRadioState(handover)
     expect(seeded.prevPlayerIncidents).toBe(3)
     expect(seeded.prevMateStacks).toBe(1)
+    expect(makeRadioState(handover).incidentScan?.index).toBe(handover.incidents.length)
     // First tick: exactly what a clean state at the same moment would say -- no incident replay.
     const withPast: string[] = []
     const clean: string[] = []
@@ -96,5 +97,40 @@ describe('mid-race handover replays no earlier radio line (2.0 follow-up)', () =
     const lines: string[] = []
     processRadioTick(handover, config, makeRadioState(handover), m => { lines.push(m) })
     expect(lines).toEqual([])
+  })
+
+  it('with a long pre-existing log, new lines fire exactly once and each tick scans only new incidents', () => {
+    clock()
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const config = { ...makeConfig({}, 2), playerDriverId: 'd_voss' }
+    const s0 = initRace(config)
+    const me = s0.cars.find(c => c.isPlayer)!
+    const rival = s0.cars.find(c => !c.isPlayer && c.teamId !== me.teamId)!
+    const log: IncidentEvent[] = []
+    for (let i = 0; i < 5000; i++) {
+      log.push({ lap: 1 + (i % 40), sector: 0, kind: i % 2 ? 'track_limits' : 'slow_stop', driverId: i % 7 ? rival.driverId : me.driverId, timeLoss: 1 })
+    }
+    const long: RaceState = { ...s0, lap: 41, incidents: log }
+    let r = makeRadioState(long)
+    const lines: string[] = []
+    r = processRadioTick(long, config, r, m => { lines.push(m) })
+    expect(lines.filter(l => /stack|busy/i.test(l))).toHaveLength(0)
+    expect(r.incidentScan!.index).toBe(5000)
+    const ev: IncidentEvent = { lap: 42, sector: 1, kind: 'double_stack', driverId: me.driverId, timeLoss: 1.4 }
+    const next: RaceState = { ...long, incidents: [...log, ev] }
+    const after: string[] = []
+    // Proof the old full-log filter is gone: a log that throws if read below the cursor.
+    const guarded = new Proxy(next.incidents, {
+      get(target, prop, recv) {
+        if (typeof prop === 'string' && /^\d+$/.test(prop) && Number(prop) < 5000) throw new Error(`read old incident ${prop}`)
+        if (prop === 'filter' || prop === 'reduce' || prop === 'slice') throw new Error(`full-log ${prop}`)
+        return Reflect.get(target, prop, recv)
+      },
+    })
+    r = processRadioTick({ ...next, incidents: guarded }, config, r, m => { after.push(m) })
+    expect(after.filter(l => /stack|busy/i.test(l))).toHaveLength(1)
+    const again: string[] = []
+    processRadioTick({ ...next, incidents: guarded }, config, r, m => { again.push(m) })
+    expect(again.filter(l => /stack|busy/i.test(l))).toHaveLength(0)
   })
 })

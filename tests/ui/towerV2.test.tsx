@@ -1,12 +1,14 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { towerV2, rejoinTrainSize } from '@state/towerV2'
-import { TimingTower } from '@ui/TimingTower'
+import { TimingTower, trainBracketSegments } from '@ui/TimingTower'
 import { useRaceStore } from '@state/raceStore'
 import { PitPanel } from '@ui/PitPanel'
 import { act } from 'react'
 import { initRace } from '@engine/race'
-import type { ProjectionResult } from '@engine/projection'
+import { projectPitNow, projectPitState, type ProjectionResult } from '@engine/projection'
+import { drsTrains } from '@engine/drs'
+import type { RaceConfig, RaceState } from '@engine/types'
 import { makeDeterministicTuning } from '../fixtures/tuning'
 import { makeConfig } from '../fixtures/raceHarness'
 
@@ -70,33 +72,74 @@ describe('DRS on the tower (spec §3.4)', () => {
   })
 })
 
+describe('DRS-train bracket (spec §3.4)', () => {
+  it('draws one continuous bracket spanning the train rows and their gaps', () => {
+    mount(true)
+    const bars = document.querySelectorAll('[data-train-bracket]')
+    expect(bars.length).toBe(1)
+  })
+
+  it('segments a train into one run, split by a ghost row, sized from row heights', () => {
+    const { config, state, order } = setup()
+    const v2 = towerV2(config, state)
+    const real = (id: string) => ({ type: 'real' as const, car: state.cars.find(c => c.driverId === id)! })
+    const rows = order.slice(0, 6).map(real)
+    // player (46) + three 36 rows + three 3 px gaps, from the 2 px list padding
+    expect(trainBracketSegments(rows, v2)).toEqual([{ key: `train-${order[0]}`, top: 2, height: 46 + 3 * 36 + 3 * 3 }])
+    const split = [rows[0]!, rows[1]!, { type: 'ghost' as const }, rows[2]!, rows[3]!]
+    expect(trainBracketSegments(split, v2).map(s => s.key)).toEqual([`train-${order[0]}`, `train-${order[2]}`])
+    expect(trainBracketSegments(rows, null)).toEqual([])
+  })
+})
+
 describe('rejoin-in-train note (spec §3.4)', () => {
-  const proj = (aheadId: string | null, gap: number): ProjectionResult => ({
-    rejoinPosition: 5, rejoinGap: gap, rejoinGapBehind: 1, driverAheadId: aheadId, driverBehindId: null,
-    lapsProjected: 4, netEstimatePosition: 5, netEstimateLap: 10,
+  const proj = (trainSize: number | null): ProjectionResult => ({
+    rejoinPosition: 5, rejoinGap: 0.6, rejoinGapBehind: 1, driverAheadId: null, driverBehindId: null,
+    lapsProjected: 4, netEstimatePosition: 5, netEstimateLap: 10, rejoinTrainSize: trainSize,
+  })
+  /** A packed field: every car 0.4 s apart, so the player rejoins into the pack. */
+  function packed(enabled = true, spacing = 0.4) {
+    const { config, state } = setup(enabled)
+    return { config, state: { ...state, cars: state.cars.map((c, i) => ({ ...c, raceTime: i * spacing })) } }
+  }
+  const trainOfPlayer = (config: RaceConfig, s: RaceState) =>
+    drsTrains(config, s).find(t => t.carIds.includes(config.playerDriverId))?.carIds.length ?? null
+
+  it('matches drsTrains on the projected state', () => {
+    let hits = 0
+    for (const spacing of [0.4, 0.8, 3]) {
+      const { config, state } = packed(true, spacing)
+      for (const c of ['S', 'M', 'H'] as const) {
+        for (const seed of [1, 7, 42]) {
+          const result = projectPitNow(config, state, c, seed)
+          const expected = trainOfPlayer(config, projectPitState(config, state, c, seed))
+          expect(result.rejoinTrainSize).toBe(expected)
+          expect(rejoinTrainSize(config, result)).toBe(expected)
+          if (expected !== null) hits++
+        }
+      }
+    }
+    expect(hits, 'the fixture must exercise a real train rejoin').toBeGreaterThan(0)
   })
 
-  it('names the train size including the player when rejoining close behind a train car', () => {
-    const { config, state, order } = setup()
-    expect(order[0], 'the player leads this fixture').toBe('d_voss')
-    // Without the player, cars 1-3 still form a train of 3; the player rejoining makes 4.
-    expect(rejoinTrainSize(config, state, proj(order[3]!, 0.6))).toBe(4)
-  })
-
-  it('is null when the gap is beyond detection, the car ahead is free, or DRS is off', () => {
-    const { config, state, order } = setup()
-    expect(rejoinTrainSize(config, state, proj(order[3]!, 1.5))).toBeNull()
-    expect(rejoinTrainSize(config, state, proj(null, 0.3))).toBeNull()
-    const off = setup(false)
-    expect(rejoinTrainSize(off.config, off.state, proj(order[3]!, 0.3))).toBeNull()
+  it('is null when DRS is off or the rejoin is not in a train', () => {
+    const off = packed(false)
+    const r = projectPitNow(off.config, off.state, 'M', 42)
+    expect(r.rejoinTrainSize).toBeNull()
+    expect(rejoinTrainSize(off.config, r)).toBeNull()
+    expect(rejoinTrainSize(off.config, proj(4)), 'DRS off overrides any stored size').toBeNull()
+    const spread = packed(true, 30)
+    const s = projectPitNow(spread.config, spread.state, 'M', 42)
+    expect(trainOfPlayer(spread.config, projectPitState(spread.config, spread.state, 'M', 42))).toBeNull()
+    expect(rejoinTrainSize(spread.config, s)).toBeNull()
   })
 
   it('shows the note in the pit panel only when DRS is on', () => {
     for (const enabled of [true, false]) {
-      const { config, state, order } = setup(enabled)
+      const { config, state } = setup(enabled)
       render(<PitPanel />)
       act(() => {
-        useRaceStore.setState({ pitPanelOpen: true, config, raceState: state, projectionResult: proj(order[3]!, 0.6), updateProjection: () => {} })
+        useRaceStore.setState({ pitPanelOpen: true, config, raceState: state, projectionResult: proj(4), updateProjection: () => {} })
       })
       const note = screen.queryByText('Rejoins in a DRS train (×4)')
       if (enabled) expect(note).toBeTruthy()
@@ -104,6 +147,16 @@ describe('rejoin-in-train note (spec §3.4)', () => {
       cleanup()
       useRaceStore.setState({ pitPanelOpen: false, projectionResult: null })
     }
+  })
+
+  it('shows no note when the projected rejoin is not in a train', () => {
+    const { config, state } = setup(true)
+    render(<PitPanel />)
+    act(() => {
+      useRaceStore.setState({ pitPanelOpen: true, config, raceState: state, projectionResult: proj(null), updateProjection: () => {} })
+    })
+    expect(screen.queryByTestId('rejoin-train-note')).toBeNull()
+    useRaceStore.setState({ pitPanelOpen: false, projectionResult: null })
   })
 })
 

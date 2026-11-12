@@ -1,5 +1,5 @@
 export { initRace, stepSector } from './race'
-export { projectPitNow } from './projection'
+export { projectPitNow, projectPitState } from './projection'
 export { shouldAIPit, aiDecision, bestDryCompound } from './strategy'
 export type { AIDecision } from './strategy'
 export {

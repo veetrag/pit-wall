@@ -90,6 +90,71 @@ export interface RadioState {
   prevPlayerIncidents: number
   /** Cursor into the team-mate's double_stack incidents. */
   prevMateStacks: number
+  /**
+   * Running totals over `state.incidents[0, index)`, so each tick only reads
+   * the incidents appended since the last one (the log is append-only).
+   * Seeded by makeRadioState from a handover state; absent only on a
+   * state made without one (the first tick then scans the log once). Reset if the
+   * player or team-mate identity changes.
+   */
+  incidentScan?: IncidentScan
+}
+
+interface IncidentScan {
+  index: number
+  playerId: string
+  mateId: string | null
+  redFlags: number
+  vsc: number
+  mySlow: number
+  lastSlowLoss: number
+  myCount: number
+  mateStacks: number
+  /** lap*3+sector of each of the player's track_limits incidents, in log order. */
+  myTrackLimits: number[]
+}
+
+type Incident = RaceState['incidents'][number]
+
+/**
+ * Extends the scan over the incidents appended since `prev.index`. Returns
+ * the new scan plus the player's and mate's double_stack incidents found in
+ * the new range (in log order).
+ */
+function scanIncidents(
+  incidents: readonly Incident[], prev: IncidentScan | undefined, playerId: string, mateId: string | null,
+): { scan: IncidentScan; newMine: Incident[]; newMateStacks: Incident[]; myBefore: number; mateBefore: number } {
+  const fresh = !prev || prev.playerId !== playerId || prev.mateId !== mateId || prev.index > incidents.length
+  const scan: IncidentScan = fresh
+    ? { index: 0, playerId, mateId, redFlags: 0, vsc: 0, mySlow: 0, lastSlowLoss: 0, myCount: 0, mateStacks: 0, myTrackLimits: [] }
+    : { ...prev }
+  const myBefore = scan.myCount
+  const mateBefore = scan.mateStacks
+  const newMine: Incident[] = []
+  const newMateStacks: Incident[] = []
+  let tl = scan.myTrackLimits
+  for (let i = scan.index; i < incidents.length; i++) {
+    const ev = incidents[i]!
+    if (ev.kind === 'red_flag') scan.redFlags++
+    else if (ev.kind === 'vsc_deployed') scan.vsc++
+    if (ev.driverId === playerId) {
+      scan.myCount++
+      newMine.push(ev)
+      if (ev.kind === 'slow_stop') { scan.mySlow++; scan.lastSlowLoss = ev.timeLoss ?? 0 }
+      if (ev.kind === 'track_limits') { if (tl === scan.myTrackLimits) tl = [...tl]; tl.push(ev.lap * 3 + ev.sector) }
+    } else if (mateId !== null && ev.driverId === mateId && ev.kind === 'double_stack') {
+      scan.mateStacks++
+      newMateStacks.push(ev)
+    }
+  }
+  scan.myTrackLimits = tl
+  scan.index = incidents.length
+  return { scan, newMine, newMateStacks, myBefore, mateBefore }
+}
+
+/** The k-th onward incidents of a driver: the new range when the cursor is in step, else a full filter (seeded oddly). */
+function fromCursor(all: () => Incident[], cursor: number, scannedBefore: number, fresh: Incident[]): Incident[] {
+  return cursor === scannedBefore ? fresh : all().slice(cursor)
 }
 
 /**
@@ -119,6 +184,7 @@ export function makeRadioState(state?: RaceState): RadioState {
     prevRedFlags: count('red_flag'),
     prevPlayerIncidents: player ? incidents.filter(i => i.driverId === player.driverId).length : 0,
     prevMateStacks: mate ? incidents.filter(i => i.kind === 'double_stack' && i.driverId === mate.driverId).length : 0,
+    incidentScan: player ? scanIncidents(incidents, undefined, player.driverId, mate?.driverId ?? null).scan : undefined,
   }
 }
 
@@ -150,27 +216,34 @@ export function processRadioTick(
   // 2.0 incidents (V2_RADIO). A cursor, so each fires once however many ticks see it.
   const mate = state.cars.find(c => c.teamId === player.teamId && c.driverId !== player.driverId)
   const mateCode = mate ? (config.drivers.find(d => d.id === mate.driverId)?.code ?? mate.driverId) : ''
-  const mine = state.incidents.filter(i => i.driverId === player.driverId)
-  for (const ev of mine.slice(radio.prevPlayerIncidents)) {
+  const { scan, newMine, newMateStacks, myBefore, mateBefore } =
+    scanIncidents(state.incidents, radio.incidentScan, player.driverId, mate?.driverId ?? null)
+  next.incidentScan = scan
+  const allowed = config.tuning.penalties.trackLimits.warningsAllowed
+  for (const ev of fromCursor(() => state.incidents.filter(i => i.driverId === player.driverId), radio.prevPlayerIncidents, myBefore, newMine)) {
     const trigger = V2_RADIO[ev.kind]
     if (trigger) tryPush(trigger, 1, { sec: ev.timeLoss?.toFixed(1) ?? '', mate: mateCode }, pushAlert)
     // The warning that uses up the allowance: one more and it is a penalty.
-    if (ev.kind === 'track_limits' && config.tuning.penalties.trackLimits.warningsAllowed > 0
-      && mine.filter(i => i.kind === 'track_limits' && i.lap * 3 + i.sector <= ev.lap * 3 + ev.sector).length === config.tuning.penalties.trackLimits.warningsAllowed) {
-      tryPush('track_limits_last', 1, {}, pushAlert)
+    if (ev.kind === 'track_limits' && allowed > 0) {
+      const at = ev.lap * 3 + ev.sector
+      let n = 0
+      for (const k of scan.myTrackLimits) if (k <= at) n++
+      if (n === allowed) tryPush('track_limits_last', 1, {}, pushAlert)
     }
   }
-  next.prevPlayerIncidents = mine.length
+  next.prevPlayerIncidents = scan.myCount
   // The team-mate queued behind the player: told when it lands within a lap of the player's last stop.
-  const mateStacks = mate ? state.incidents.filter(i => i.kind === 'double_stack' && i.driverId === mate.driverId) : []
   const myLastStop = player.pitsDone > 0 ? player.lap - player.tyreAge : -Infinity
-  for (const ev of mateStacks.slice(radio.prevMateStacks)) {
+  const mateNew = mate
+    ? fromCursor(() => state.incidents.filter(i => i.kind === 'double_stack' && i.driverId === mate.driverId), radio.prevMateStacks, mateBefore, newMateStacks)
+    : []
+  for (const ev of mateNew) {
     if (Math.abs(ev.lap - myLastStop) <= 1) tryPush('double_stack_mate', 1, { mate: mateCode }, pushAlert)
   }
-  next.prevMateStacks = mateStacks.length
+  next.prevMateStacks = scan.mateStacks
 
   // 0a. The red flag (spec 1.6 §4): the most urgent call of the race.
-  const redFlags = state.incidents.reduce((n, i) => n + (i.kind === 'red_flag' ? 1 : 0), 0)
+  const redFlags = scan.redFlags
   if (redFlags > radio.prevRedFlags) tryPush('red_flag', 2, {}, pushAlert)
   next.prevRedFlags = redFlags
 
@@ -178,7 +251,7 @@ export function processRadioTick(
   // now-or-never call. Same window the AI reacts on (tuning.ai), so the
   // engineer never tells the player to box for a stop the smart teams would
   // not take. (Pre-flight ruling P6: planned stop only, no tyre-wear clause.)
-  const vscCount = state.incidents.reduce((n, i) => n + (i.kind === 'vsc_deployed' ? 1 : 0), 0)
+  const vscCount = scan.vsc
   // Only while the VSC is still live: never call a cheap stop that has gone.
   const liveKind = neutralisationKind(state.safetyCar)
   let vscLive: boolean
@@ -199,11 +272,10 @@ export function processRadioTick(
 
   // 0c. The player's own slow stop (spec 1.6 §1). Counted from the incident
   // log, so a stop made by the PIT button between ticks is not missed.
-  const mySlow = state.incidents.filter(i => i.kind === 'slow_stop' && i.driverId === player.driverId)
-  if (mySlow.length > radio.prevSlowStops) {
-    tryPush('slow_stop', 2, { loss: (mySlow[mySlow.length - 1]!.timeLoss ?? 0).toFixed(1) }, pushAlert)
+  if (scan.mySlow > radio.prevSlowStops) {
+    tryPush('slow_stop', 2, { loss: scan.lastSlowLoss.toFixed(1) }, pushAlert)
   }
-  next.prevSlowStops = mySlow.length
+  next.prevSlowStops = scan.mySlow
 
   // 1. Tyre cliff (high priority, fire once per stint)
   if (compound) {

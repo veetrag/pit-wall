@@ -4,6 +4,7 @@ import { stepSector } from './race'
 import { executeStop } from './pitStop'
 import { resolveAllocatedCompound } from './tyres'
 import { isFinished } from './debrief'
+import { drsTrains } from './drs'
 
 export interface ProjectionResult {
   rejoinPosition: number
@@ -14,15 +15,35 @@ export interface ProjectionResult {
   lapsProjected: number
   netEstimatePosition: number
   netEstimateLap: number
+  /**
+   * Size of the DRS train the player sits in on the projected state (spec
+   * §3.4: `drsTrains` runs on the projected order), or null when DRS is off or
+   * the player is not in a train. Optional so hand-built results stay valid.
+   */
+  rejoinTrainSize?: number | null
 }
 
-export function projectPitNow(
+/** Overtake dice suppressed unless tuning asks for them. */
+function projectionConfigOf(config: RaceConfig): RaceConfig {
+  return config.tuning.projection.useOvertakeRolls ? config : {
+    ...config,
+    tuning: { ...config.tuning, overtaking: { ...config.tuning.overtaking, base: 0 } },
+  }
+}
+
+/**
+ * The race state `horizonLaps` after a stop now: the clone, the expected stop
+ * and the fast-forward that projectPitNow reads its answer from. Exported so
+ * callers and tests can evaluate other pure reads (e.g. `drsTrains`) on the
+ * exact projected order. Pure: same inputs, same state.
+ */
+export function projectPitState(
   config: RaceConfig,
   state: RaceState,
   newCompound: Compound,
   seed: number,
-): ProjectionResult {
-  const { horizonLaps, useOvertakeRolls } = config.tuning.projection
+): RaceState {
+  const { horizonLaps } = config.tuning.projection
   const playerDriverId = config.playerDriverId
 
   // Deep-clone to avoid mutating live state
@@ -48,15 +69,26 @@ export function projectPitNow(
   }
 
   // Fast-forward horizonLaps; optionally suppress overtake dice
-  const projectionConfig = useOvertakeRolls ? config : {
-    ...config,
-    tuning: { ...config.tuning, overtaking: { ...config.tuning.overtaking, base: 0 } },
-  }
+  const projectionConfig = projectionConfigOf(config)
   const rng = createRng(seed + 1)
   // Never past the flag: a step after it only adds time to every car.
   for (let i = 0; i < horizonLaps * 3 && !isFinished(projState); i++) {
     projState = stepSector(projectionConfig, projState, rng)
   }
+
+  return projState
+}
+
+export function projectPitNow(
+  config: RaceConfig,
+  state: RaceState,
+  newCompound: Compound,
+  seed: number,
+): ProjectionResult {
+  const { horizonLaps } = config.tuning.projection
+  const playerDriverId = config.playerDriverId
+  const projectionConfig = projectionConfigOf(config)
+  const projState = projectPitState(config, state, newCompound, seed)
 
   const playerCar = projState.cars.find(c => c.driverId === playerDriverId)!
   const position = playerCar.position
@@ -66,6 +98,10 @@ export function projectPitNow(
   const behindCar = sortedByPosition[position] ?? null
   const rejoinGap = aheadCar ? playerCar.raceTime - aheadCar.raceTime : 0
   const rejoinGapBehind = behindCar ? behindCar.raceTime - playerCar.raceTime : 0
+  // Pure read of the projected state: no extra step, no rng draw.
+  const rejoinTrain = config.tuning.drs.enabled
+    ? drsTrains(config, projState).find(t => t.carIds.includes(playerDriverId)) ?? null
+    : null
 
   // Net estimate: continue to longer horizon from where we are now
   const { netEstimateHorizonLaps } = config.tuning.projection
@@ -89,5 +125,6 @@ export function projectPitNow(
     lapsProjected: horizonLaps,
     netEstimatePosition: netPlayerCar.position,
     netEstimateLap,
+    rejoinTrainSize: rejoinTrain ? rejoinTrain.carIds.length : null,
   }
 }
