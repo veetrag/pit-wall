@@ -26,6 +26,56 @@ export function compactWindowSize(textSize: 'standard' | 'large'): number {
 const GRID = '26px 5px 46px 1fr 30px'
 const GRID_WIDE = '26px 5px minmax(0, 1fr) 56px 30px'
 const ROW_SPRING = { duration: 0.22, ease: EASE } as const
+// Row geometry, shared with the DRS-train bracket overlay (which spans rows).
+const ROW_H = 36
+const PLAYER_ROW_H = 46
+const ROW_GAP = 3
+const LIST_PAD_TOP = 2
+
+/**
+ * One continuous DRS-train bracket per run of consecutive displayed rows in
+ * the same train (spec §3.4). Geometry comes from the fixed row heights, so
+ * the bracket spans the 3 px gaps between rows instead of breaking at each.
+ * A ghost row, a retired row or a different train ends a run. Keyed by the
+ * run's first car so a train gaining/losing cars at the back animates in place.
+ */
+export function trainBracketSegments(
+  rows: ReadonlyArray<{ type: 'ghost' } | { type: 'real'; car: Pick<CarState, 'driverId' | 'isPlayer' | 'retired'> }>,
+  v2: ReadonlyMap<string, TowerV2Row> | null,
+): { key: string; top: number; height: number }[] {
+  const out: { key: string; top: number; height: number; train: number }[] = []
+  let y = LIST_PAD_TOP
+  let prevTrain: number | null = null
+  for (const row of rows) {
+    const h = row.type === 'real' && row.car.isPlayer ? PLAYER_ROW_H : ROW_H
+    const t = row.type === 'real' && !row.car.retired ? v2?.get(row.car.driverId)?.train ?? null : null
+    if (t && prevTrain === t.index && out.length > 0) out[out.length - 1]!.height = y + h - out[out.length - 1]!.top
+    else if (t && row.type === 'real') out.push({ key: `train-${row.car.driverId}`, top: y, height: h, train: t.index })
+    prevTrain = t ? t.index : null
+    y += h + ROW_GAP
+  }
+  // A lone visible row of a train (the rest windowed off) still gets its bar.
+  return out.map(({ key, top, height }) => ({ key, top, height }))
+}
+
+/** The bracket bar: grows/shrinks with the rows' FLIP timing; opacity only when reduced. */
+function TrainBracket({ top, height, reduced }: { top: number; height: number; reduced: boolean }) {
+  const inset = 5   // past the slant clip at a row's top and bottom edge
+  return (
+    <motion.span
+      aria-hidden="true"
+      data-train-bracket
+      initial={reduced ? { opacity: 0, top: top + inset, height: height - 2 * inset } : { opacity: 0, top: top + inset, height: 0 }}
+      animate={{ opacity: 1, top: top + inset, height: height - 2 * inset }}
+      exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
+      transition={reduced ? { duration: 0.12, top: { duration: 0 }, height: { duration: 0 } } : ROW_SPRING}
+      style={{
+        position: 'absolute', left: 8 + 6, width: 3, borderRadius: 2,
+        background: 'var(--dusk)', pointerEvents: 'none', zIndex: 1,
+      }}
+    />
+  )
+}
 
 function formatGap(gap: number, position: number): string {
   if (position === 1) return 'LEAD'
@@ -179,7 +229,7 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
         gridTemplateColumns: wide ? GRID_WIDE : GRID,
         alignItems: 'center',
         columnGap: 6,
-        height: car.isPlayer ? 46 : 36,
+        height: car.isPlayer ? PLAYER_ROW_H : ROW_H,
         padding: '0 12px',
         flexShrink: 0,
         background: rowBg,
@@ -188,20 +238,8 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
         color: textColor,
         transition: 'background 0.4s ease',
         cursor: intel ? 'pointer' : undefined,
-        position: train ? 'relative' : undefined,
       }}
     >
-      {/* DRS-train bracket: a --dusk bar on the left edge, inset past the
-          slant's clip, rounded only at the train's ends. It moves with the
-          row's own layout FLIP. */}
-      {train && (
-        <span aria-hidden="true" data-train-bracket style={{
-          position: 'absolute', left: 6, width: 3, background: 'var(--dusk)',
-          top: train.first ? 5 : 0, bottom: train.last ? 5 : 0,
-          borderTopLeftRadius: train.first ? 2 : 0, borderTopRightRadius: train.first ? 2 : 0,
-          borderBottomLeftRadius: train.last ? 2 : 0, borderBottomRightRadius: train.last ? 2 : 0,
-        }} />
-      )}
       <span style={{
         fontFamily: 'var(--font-display)', fontWeight: 900, fontStyle: 'italic', fontSize: 20,
         fontVariantNumeric: 'tabular-nums', lineHeight: 1,
@@ -475,9 +513,16 @@ export function TimingTower() {
       </div>
       <div style={{
         flex: 1, overflowY: expanded ? 'auto' : 'hidden', minHeight: 0,
-        display: 'flex', flexDirection: 'column', gap: 3, padding: '2px 8px 8px',
-        justifyContent: 'flex-start',
+        display: 'flex', flexDirection: 'column', gap: ROW_GAP, padding: `${LIST_PAD_TOP}px 8px 8px`,
+        justifyContent: 'flex-start', position: 'relative',
       }}>
+        {/* DRS-train brackets: absolutely placed over the rows so one bar spans
+            the whole train; nothing renders while DRS is off (no train facts). */}
+        <AnimatePresence initial={false}>
+          {trainBracketSegments(rows, v2 ?? null).map(seg => (
+            <TrainBracket key={seg.key} top={seg.top} height={seg.height} reduced={reducedMotion} />
+          ))}
+        </AnimatePresence>
         <AnimatePresence initial={false}>
           {rows.map((row) =>
             row.type === 'ghost' ? (

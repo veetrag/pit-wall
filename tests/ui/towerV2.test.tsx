@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { towerV2, rejoinTrainSize } from '@state/towerV2'
-import { TimingTower } from '@ui/TimingTower'
+import { TimingTower, trainBracketSegments } from '@ui/TimingTower'
 import { useRaceStore } from '@state/raceStore'
 import { PitPanel } from '@ui/PitPanel'
 import { act } from 'react'
@@ -69,6 +69,26 @@ describe('DRS on the tower (spec §3.4)', () => {
     expect(screen.queryByText(/TRAIN ×/)).toBeNull()
     expect(screen.queryByLabelText(/DRS/i)).toBeNull()
     expect(document.querySelector('[data-train-bracket]')).toBeNull()
+  })
+})
+
+describe('DRS-train bracket (spec §3.4)', () => {
+  it('draws one continuous bracket spanning the train rows and their gaps', () => {
+    mount(true)
+    const bars = document.querySelectorAll('[data-train-bracket]')
+    expect(bars.length).toBe(1)
+  })
+
+  it('segments a train into one run, split by a ghost row, sized from row heights', () => {
+    const { config, state, order } = setup()
+    const v2 = towerV2(config, state)
+    const real = (id: string) => ({ type: 'real' as const, car: state.cars.find(c => c.driverId === id)! })
+    const rows = order.slice(0, 6).map(real)
+    // player (46) + three 36 rows + three 3 px gaps, from the 2 px list padding
+    expect(trainBracketSegments(rows, v2)).toEqual([{ key: `train-${order[0]}`, top: 2, height: 46 + 3 * 36 + 3 * 3 }])
+    const split = [rows[0]!, rows[1]!, { type: 'ghost' as const }, rows[2]!, rows[3]!]
+    expect(trainBracketSegments(split, v2).map(s => s.key)).toEqual([`train-${order[0]}`, `train-${order[2]}`])
+    expect(trainBracketSegments(rows, null)).toEqual([])
   })
 })
 
