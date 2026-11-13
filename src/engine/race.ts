@@ -5,6 +5,7 @@ import { initPenalty, recordTrackLimits, addPendingAtFlag, aiPenaltyCoverPace } 
 import { executeStop, boxQueueEstimate, deferForBusyBox } from './pitStop'
 import { computeSectorTime, NO_CTX, type SectorContext } from './lapModel'
 import { rubberLapsFor } from './track'
+import { initThermal, thermalAfterSector } from './thermal'
 import { wingOvertakeFactor } from './setup'
 import { drsOpenSet, drsOvertakeFactor } from './drs'
 import { openingTimeline } from './weather'
@@ -124,6 +125,8 @@ export function initRace(config: RaceConfig): RaceState {
       retiredLap: null,
       retiredCause: null,
       ...(config.tuning.penalties.enabled ? { penalty: initPenalty() } : {}),
+      // 2.1 (spec §5.2): last key, absent while off (byte identity).
+      ...(config.tuning.tyreTemp.enabled ? { thermal: initThermal(config.tuning) } : {}),
     }
   })
 
@@ -174,6 +177,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       updated = { ...updated, penalty: r.penalty }
       newIncidents.push(...r.events)
     }
+    // 2.1 tyre temperature (spec §5.2): from the pre-sector car; overwriting in place keeps key order.
+    if (updated.thermal) updated = { ...updated, thermal: thermalAfterSector(config, car, state.weatherState, state.safetyCar !== null) }
 
     // Tyre failure risk: once cliffFraction runs meaningfully past the
     // threshold, roll a per-sector chance of a puncture/mechanical failure

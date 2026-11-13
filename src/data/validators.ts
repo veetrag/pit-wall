@@ -23,6 +23,7 @@ const Rec = <K extends string, V extends z.ZodTypeAny = z.ZodNumber>(keys: reado
 const PACE = ['push', 'neutral', 'conserve'] as const
 const WEATHER = ['DRY', 'DAMP', 'WET'] as const
 const BRAINS = ['naive', 'smart', 'optimal'] as const
+const COMPOUNDS = ['S', 'M', 'H', 'I', 'W'] as const
 const Prob = z.number().min(0).max(1)
 
 export const TuningSchema = z.object({
@@ -314,6 +315,17 @@ export const TuningSchema = z.object({
     aiCoverCliffMax: Prob,
   }),
   scOutlook: z.object({ horizonLaps: z.number().int().min(1), bands: z.tuple([Prob, Prob]).refine(([a, b]) => a < b, 'scOutlook.bands must be [lo, hi]') }),
+  tyreTemp: z.object({
+    _note: z.string().optional(), enabled: z.boolean(), defaultTrackTemp: z.number(),
+    weatherOffset: Rec(WEATHER), runningHeat: z.number(), paceHeat: Rec(PACE),
+    dirtyAirHeat: z.number(), neutralisedHeat: z.number(), responsePerSector: z.number().gt(0).max(1),
+    blankets: z.number(), formationWarm: z.number(),
+    windows: Rec(COMPOUNDS, z.tuple([z.number(), z.number()]).refine(([lo, hi]) => lo < hi, 'tyreTemp.windows must be [lo, hi]')),
+    coldCoeff: z.number().min(0), overheatCoeff: z.number().min(0), overheatWearPerLap: z.number().min(0),
+    grainMargin: z.number().min(0), grainOnsetLaps: z.number().int().min(1), grainDurationLaps: z.number().int().min(1),
+    grainPenalty: z.number().min(0), grainMaxGrip: Prob, grainCompounds: z.array(z.enum(COMPOUNDS)),
+    ai: z.object({ hotExcess: z.number().min(0), coldDeficit: z.number().min(0) }),
+  }),
   // Bands and their provenance live in MODEL_SPEC.md §3. Read only by tests —
   // src/engine/ never touches them (engine/types.ts keeps its own looser
   // declaration). Stays .optional() so a repo without bands still loads.
@@ -371,6 +383,7 @@ const CircuitSchema = z.object({
   pitLaneTimeLoss: z.number(),
   drsSectors: z.array(z.union([z.literal(0), z.literal(1), z.literal(2)])).optional(),
   incidentRisk: z.number().positive().optional(),
+  trackTempC: z.number().optional(),
   rainProbability: z.number().optional(),
   // Narrowed to the six keys `tuning.weather.timeline.intensityBias` actually
   // defines. As a bare string an unknown value passed validation and then fell

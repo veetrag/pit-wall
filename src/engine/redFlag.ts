@@ -2,6 +2,7 @@ import type { RaceConfig, RaceState, CarState, Compound, WeatherState } from './
 import { resolveAllocatedCompound, consumeTyreSet } from './tyres'
 import { bestDryCompound } from './strategy'
 import { neutralisationKind } from './incidents'
+import { initThermal } from './thermal'
 
 /**
  * The conditions a red-flag restart is decided on, read from the state BEFORE
@@ -56,7 +57,9 @@ export function applyRedFlagRestart(
   return cars.map(car => {
     const i = slot.get(car.driverId)
     if (i === undefined) return car
-    const regridded: CarState = { ...car, raceTime: leader + i * gap }
+    // 2.1 (ruling I1): blankets plus a formation-style warm-up, for every
+    // running car -- including one with no sets left, which keeps its tyre.
+    const regridded: CarState = { ...car, raceTime: leader + i * gap, ...(car.thermal ? { thermal: initThermal(config.tuning) } : {}) }
     const { compound, consumesPlan } = restartTyre(config, car, weather, lapsLeft, car.isPlayer ? playerChoice : undefined)
     const resolved = resolveAllocatedCompound(compound, car.tyreAllocation)
     if (!resolved) return regridded      // no sets of any kind left: it restarts on what it has

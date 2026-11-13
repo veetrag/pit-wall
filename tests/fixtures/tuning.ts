@@ -103,6 +103,7 @@ export function v2Off(): DeepPartial<TuningConstants> {
     drs: { enabled: false },
     doubleStack: { enabled: false },
     penalties: { enabled: false },
+    tyreTemp: { enabled: false },
     incidents: { wetErrorMultiplier: { DRY: 1, DAMP: 1, WET: 1 }, circuitRiskWeight: 0 },
     ai: { scGambleMaxDelay: 0 },
   }

@@ -1,4 +1,4 @@
-import type { RaceState, TuningConstants, WeatherState } from './types'
+import type { CircuitSpec, RaceState, TuningConstants, WeatherState } from './types'
 
 /**
  * Laps of rubber on the racing line after `lap` completed laps (spec
@@ -37,4 +37,9 @@ export function trackGrip(state: Pick<RaceState, 'weatherTimeline' | 'lap'>, tun
 export function trackPaceDelta(state: Pick<RaceState, 'weatherTimeline' | 'lap'>, tuning: TuningConstants): number {
   const { startDelta, decayLaps } = tuning.trackEvolution
   return startDelta * Math.max(0, 1 - rubberLaps(state.weatherTimeline, state.lap, tuning) / decayLaps)
+}
+
+/** 2.1 track temperature °C (spec §5.2): the circuit's value, else the default, plus the weather offset. */
+export function trackTemp(circuit: CircuitSpec, weather: WeatherState, tuning: TuningConstants): number {
+  return (circuit.trackTempC ?? tuning.tyreTemp.defaultTrackTemp) + tuning.tyreTemp.weatherOffset[weather]
 }

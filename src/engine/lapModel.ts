@@ -7,6 +7,7 @@ import { wingSectorDelta } from './setup'
 import { neutralisationPaceMultiplier } from './incidents'
 import { normalCdf } from './pitStop'
 import { trackLimitsChance } from './penalties'
+import { thermalPace } from './thermal'
 
 // Convert a 0-100 facet to the 0-9 engine rating (0=best, 9=worst)
 function facetToRating9(facet: number): number {
@@ -127,6 +128,7 @@ export function computeSectorTime(
   // 2.0 deltas (spec §3.2). Added only when non-zero: no `+ 0` on the off path (byte identity).
   let v2Delta = 0
   if (ctx.drsOpen) v2Delta -= tuning.drs.timeGain
+  if (car.thermal) v2Delta += thermalPace(config, car, weatherState, safetyCar !== null)
   const raw = v2Delta === 0 ? raw0 : raw0 + v2Delta
 
   // Safety car: every car is scaled by the same factor, so this changes no

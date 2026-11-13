@@ -244,6 +244,30 @@
     "aiCoverCliffMax": 0.7
   },
   "scOutlook": { "horizonLaps": 5, "bands": [0.15, 0.30] },
+  "tyreTemp": {
+    "_note": "Spec 2026-10-24 §5.2. One temperature per car (H1). Shipped off until the 2.1 switch-on.",
+    "enabled": false,
+    "defaultTrackTemp": 32,
+    "weatherOffset": { "DRY": 0, "DAMP": -20, "WET": -35 },
+    "runningHeat": 62,
+    "paceHeat": { "push": 8, "neutral": 0, "conserve": -6 },
+    "dirtyAirHeat": 3,
+    "neutralisedHeat": -25,
+    "responsePerSector": 0.35,
+    "blankets": 70,
+    "formationWarm": 15,
+    "windows": { "S": [75, 100], "M": [85, 108], "H": [92, 115], "I": [50, 85], "W": [35, 75] },
+    "coldCoeff": 0.20,
+    "overheatCoeff": 0.20,
+    "overheatWearPerLap": 0.08,
+    "grainMargin": 8,
+    "grainOnsetLaps": 2,
+    "grainDurationLaps": 4,
+    "grainPenalty": 0.35,
+    "grainMaxGrip": 0.85,
+    "grainCompounds": ["S", "M"],
+    "ai": { "hotExcess": 4, "coldDeficit": 6 }
+  },
   "_regressionBands": {
     "career": {
       "erosionBitesWithinSeasons": 10,

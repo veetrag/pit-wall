@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rubberLaps, rubberLapsFor, trackGrip, trackPaceDelta } from '@engine/track'
+import { rubberLaps, rubberLapsFor, trackGrip, trackPaceDelta, trackTemp } from '@engine/track'
 import { computeSectorTime } from '@engine/lapModel'
 import { initRace, stepSector } from '@engine/race'
 import { createRng } from '@engine/rng'
@@ -63,5 +63,13 @@ describe('track rubber (spec §4)', () => {
       expect(r.driverId).toBe(off[i]!.driverId)
       expect(r.sectorTime - off[i]!.sectorTime, r.driverId).toBeCloseTo(expected, 9)
     }
+  })
+
+  it('track temperature: circuit value, else the default, plus the weather offset', () => {
+    const TT = makeDeterministicTuning({ tyreTemp: { enabled: true } })
+    const c = makeConfig({}, 1).circuit
+    expect(trackTemp({ ...c, trackTempC: 44 }, 'DRY', TT)).toBe(44)
+    expect(trackTemp({ ...c, trackTempC: undefined }, 'DRY', TT)).toBe(32)
+    expect(trackTemp({ ...c, trackTempC: 30 }, 'WET', TT)).toBe(30 + TT.tyreTemp.weatherOffset.WET)
   })
 })

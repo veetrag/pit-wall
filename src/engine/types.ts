@@ -9,6 +9,8 @@ export type WeatherState = 'DRY' | 'DAMP' | 'WET'
 // ---- 2.0 (spec 2026-10-24, trimmed by plans/2026-11-07-v2.0-scope.md) ----
 /** Steward state per car (spec §8). Absent while penalties are off. */
 export interface PenaltyState { warnings: number; pendingSec: number; servedSec: number }
+/** 2.1: one tyre temperature per car (spec §5, ruling H1). heatWear: extra laps of effective age. Absent while tyreTemp is off. */
+export interface ThermalState { temp: number; coldLaps: number; grainLaps: number; heatWear: number }
 
 export interface CompoundSpec {
   name: string
@@ -303,6 +305,29 @@ export interface TuningConstants {
     aiCoverCliffMax: number
   }
   scOutlook: { horizonLaps: number; bands: [number, number] }
+  tyreTemp: {
+    enabled: boolean
+    defaultTrackTemp: number
+    weatherOffset: Record<WeatherState, number>
+    runningHeat: number
+    paceHeat: Record<PaceMode, number>
+    dirtyAirHeat: number
+    neutralisedHeat: number
+    responsePerSector: number
+    blankets: number
+    formationWarm: number
+    windows: Record<Compound, [number, number]>
+    coldCoeff: number
+    overheatCoeff: number
+    overheatWearPerLap: number
+    grainMargin: number
+    grainOnsetLaps: number
+    grainDurationLaps: number
+    grainPenalty: number
+    grainMaxGrip: number
+    grainCompounds: Compound[]
+    ai: { hotExcess: number; coldDeficit: number }
+  }
   _regressionBands?: Record<string, unknown>
 }
 
@@ -344,6 +369,8 @@ export interface CircuitSpec {
   drsSectors?: SectorIndex[]
   /** 2.0 incident risk (spec §6). Calendar mean 1.00; inert at circuitRiskWeight 0. */
   incidentRisk?: number
+  /** 2.1 track temperature °C (spec §5.2). Career calendar mean 32. */
+  trackTempC?: number
 }
 
 export interface DriverFacets {
@@ -424,6 +451,8 @@ export interface CarState {
   retiredCause: 'tyre' | 'mechanical' | 'crash' | null
   /** 2.0 penalties (spec §8). Absent while penalties are off. */
   penalty?: PenaltyState
+  /** 2.1 tyre temperature (spec §5). Absent while tyreTemp is off. */
+  thermal?: ThermalState
 }
 
 export interface SectorResult {
@@ -460,6 +489,7 @@ export type IncidentKind =
   | 'penalty_added'
   | 'unsafe_release'
   | 'double_stack'
+  | 'graining'
 
 /**
  * A full safety car bunches the field; a virtual safety car slows every car and
