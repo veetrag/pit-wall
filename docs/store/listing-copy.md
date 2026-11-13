@@ -122,7 +122,7 @@ and the podium pays for it turns a perceived bug into the stated premise.
 
 ## What's new — 2.1
 
-Tyres have a temperature. Fresh sets leave the pits cold; the pit panel prices each out-lap. Hards take longer to switch on — on a cool track they may never reach the window. Push on a hot track and they overheat, wearing faster. Softs and mediums can grain after a safety car. The tyre meter shows COLD / IN WINDOW / HOT. DRS trains: smoother brackets, truer pit note. Scenarios and shared starts no longer replay old radio calls. Dailies and shared starts made before 2.1 may play out differently.
+Tyres have a temperature. Fresh slicks leave the pits cold; the pit panel prices each out-lap. Hards take longer to switch on — on cool tracks they may never reach the window. Push on a hot track and they overheat, wearing faster. Softs and mediums can grain after a safety car. The tyre meter shows COLD / IN WINDOW / HOT. DRS trains: smoother brackets, truer pit note. Scenarios and shared starts no longer replay old radio calls. Dailies and shared starts made before 2.1 may play out differently.
 
 499 / 500 characters (the dash counts as one).
 

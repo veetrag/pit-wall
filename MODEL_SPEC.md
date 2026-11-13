@@ -1433,7 +1433,7 @@ the tick the SC/VSC ends, 582 (45%) start while it is still out, and 1 in green 
 is, in effect, a safety-car feature: a slick cooled behind the SC/VSC (`neutralisedHeat`) on a still-
 green track trips the H4 onset at the lap end. It is not a re-triggering loop: no neutralisation in
 the sample lasted more than five laps ("long" is empty) and the 4–5-lap bucket is no worse than the
-short one. The model is unchanged; only the radio defers "We're graining" while the field is
+short one. The graining model and its tuning are unchanged; only the radio defers "We're graining" while the field is
 neutralised and says it once green resumes if the tyre is still graining (UI only — the race is
 identical). Warmer restarts (`neutralisedHeat` −15, Rung 2) would cut the rate ~5× if Veet finds it
 too frequent on the phone.
