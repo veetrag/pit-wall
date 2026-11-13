@@ -2,10 +2,10 @@ import { useEffect } from 'react'
 import { useRaceStore } from '@state/raceStore'
 import { useCoachStore } from '@state/coachStore'
 import { useCoachingActive } from '@hooks/useCoachingActive'
-import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
+import { tyreCliffFraction, effectiveTyreAge, thermalStatus } from '@engine/index'
 import { wingOf } from '@engine/setup'
 import type { RaceConfig, RaceState } from '@engine/types'
-import { TyreMeter } from '@ui/kit'
+import { TyreMeter, type TyreThermal } from '@ui/kit'
 
 // Keyed rather than a ternary chain on purpose. This used to read
 // `retiredCause === 'mechanical' ? 'mechanical failure' : 'tyre failure'`,
@@ -27,7 +27,7 @@ const RETIREMENT_CAUSE_TEXT: Record<'tyre' | 'mechanical' | 'crash', string> = {
  * conditional hook -- `player.retired` flips mid-race while the component stays
  * mounted.
  */
-function cliffStatus(raceState: RaceState | null, config: RaceConfig | null) {
+export function cliffStatus(raceState: RaceState | null, config: RaceConfig | null) {
   if (!raceState || !config) return null
   const player = raceState.cars.find(c => c.isPlayer)
   if (!player) return null
@@ -39,6 +39,24 @@ function cliffStatus(raceState: RaceState | null, config: RaceConfig | null) {
   const fraction = spec ? tyreCliffFraction(spec, effAge) : 0
   const cliffIn = spec ? Math.max(0, Math.ceil((spec.cliff - effAge) / Math.max(wearRate, 0.01))) : null
   return { player, spec, effAge, wearRate, fraction, cliffIn, pastCliff: fraction >= 1.0, retired: player.retired }
+}
+
+/**
+ * The player's tyre-temperature band for the meter (spec §5.4), or undefined
+ * while tyre temperature is off. Piecewise, so the marker always agrees with
+ * the word: lo-20..lo fills the cold quarter, the window lo..hi the middle half,
+ * hi..hi+20 the hot quarter (clamped at the ends). No degrees reach the HUD (H5).
+ */
+export function thermalMeter(raceState: RaceState | null, config: RaceConfig | null): TyreThermal | undefined {
+  if (!raceState || !config) return undefined
+  const player = raceState.cars.find(c => c.isPlayer)
+  const st = player ? thermalStatus(config, player, raceState.weatherState) : null
+  if (!st) return undefined
+  const clamp01 = (x: number) => Math.min(1, Math.max(0, x))
+  const pos = st.temp < st.lo ? 0.25 * clamp01((st.temp - (st.lo - 20)) / 20)
+    : st.temp > st.hi ? 0.75 + 0.25 * clamp01((st.temp - st.hi) / 20)
+    : 0.25 + 0.5 * ((st.temp - st.lo) / Math.max(1, st.hi - st.lo))
+  return { zone: st.zone, pos, grainLaps: st.grainLaps }
 }
 
 export function TelemetryZone() {
@@ -60,6 +78,8 @@ export function TelemetryZone() {
   // coach mark that fires on a different definition of "the cliff is coming"
   // than the meter draws is a tutorial that points at the wrong thing.
   const cliff = cliffStatus(raceState, config)
+  // Same rule: pure, above the returns (2.1 tyre temperature; undefined while off).
+  const thermal = thermalMeter(raceState, config)
 
   const approaching = cliff !== null && !cliff.retired && cliff.cliffIn !== null &&
     cliff.cliffIn <= 5 && !cliff.pastCliff
@@ -109,6 +129,7 @@ export function TelemetryZone() {
         lapsOnTyre={player.tyreAge}
         cliffLaps={cliffIn}
         pastCliff={pastCliff}
+        thermal={thermal}
       />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <span style={{

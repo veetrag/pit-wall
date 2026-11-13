@@ -90,6 +90,7 @@ function v2AriaSuffix(v2: TowerV2Row | undefined): string {
   else if (v2.drs === 'neutralised') s += ', DRS neutralised'
   if (v2.train) s += `, in a DRS train of ${v2.train.size}`
   if (v2.penaltySec > 0) s += `, ${v2.penaltySec} second penalty pending`
+  if (v2.coldTyres) s += ', cold tyres'
   return s
 }
 
@@ -201,6 +202,7 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
   const train = car.retired ? null : v2?.train ?? null
   const drs = car.retired ? null : v2?.drs ?? null
   const penaltySec = car.retired ? 0 : v2?.penaltySec ?? 0
+  const coldTyres = !car.retired && (v2?.coldTyres ?? false)
   // Non-intel rows get a label only when there is a 2.0 fact to speak.
   const rowLabel = intel ? intel.label + v2Suffix
     : v2Suffix ? `P${car.position} ${driverCode} ${formatGap(gap, car.position)}${v2Suffix}` : undefined
@@ -287,6 +289,13 @@ function TowerRow({ car, leaderTime, displayName, teamColor, wide, compressed, i
                 marginRight: 6, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 10, letterSpacing: 0.5,
                 color: onVolt ? 'var(--ink)' : 'var(--lilac-dim)', verticalAlign: 'middle',
               }}>TRAIN ×{train.size}</span>
+            )}
+            {/* 2.1: a fresh set still below its window. The word is the signal; the row label speaks it. */}
+            {coldTyres && (
+              <span data-cold-tag aria-hidden="true" style={{
+                marginRight: 6, fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 11, letterSpacing: 0.5,
+                color: onVolt ? 'var(--ink)' : 'var(--caution)', verticalAlign: 'middle',
+              }}>COLD</span>
             )}
             {penaltySec > 0 && <PenaltyChip sec={penaltySec} onVolt={onVolt} />}
             {drs && <DrsPill state={drs} onVolt={onVolt} />}

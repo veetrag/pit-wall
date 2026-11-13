@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   initThermal, outLapThermal, thermalTarget, thermalWindow, thermalPace, thermalAfterSector,
-  thermalAtLapEnd, thermalStatus, aiThermalPaceMode,
+  thermalAtLapEnd, thermalStatus, aiThermalPaceMode, outLapCost,
 } from '@engine/thermal'
 import { effectiveTyreAge } from '@engine/tyres'
 import { rivalIntel } from '@engine/rivalIntel'
@@ -281,5 +281,31 @@ describe('overheating wear, graining, AI (spec §5.2–§5.3)', () => {
     expect(after.paceMode).toBe('neutral')         // naive: no thermal pace call, even this cold
     const grains = next.incidents.filter(e => e.kind === 'graining')
     expect(grains).toEqual([{ lap: 6, sector: 2, kind: 'graining', driverId: after.driverId, timeLoss: null }])
+  })
+})
+
+describe('outLapCost (spec §5.4)', () => {
+  it('prices the first lap from blankets; 0 when the model is off', () => {
+    const config = cfg()
+    const c = car0(config)
+    expect(outLapCost(config, c, 'H', 'DRY')).toBeGreaterThan(outLapCost(config, c, 'M', 'DRY'))
+    expect(outLapCost(config, c, 'S', 'DRY')).toBeLessThan(0.05)
+    const off = { ...config, tuning: makeDeterministicTuning() }
+    expect(outLapCost(off, initRace(off).cars[0]!, 'H', 'DRY')).toBe(0)
+  })
+
+  it('is the same three-sector sum the stop path charges, from blanket temperature', () => {
+    const config = cfg()
+    const c = car0(config)
+    // Whatever the car's current temperature: the fitted set starts at blankets.
+    const hot = { ...c, thermal: { temp: 110, coldLaps: 0, grainLaps: 2, heatWear: 1 } }
+    expect(outLapCost(config, hot, 'H', 'DRY')).toBeCloseTo(lapCost(config, 'H', 70, c), 12)
+  })
+
+  it('costs nothing under a neutralisation (ruling H6) or on the wrong tyre family (H3)', () => {
+    const config = cfg()
+    const c = car0(config)
+    expect(outLapCost(config, c, 'H', 'DRY', true)).toBe(0)
+    expect(outLapCost(config, c, 'H', 'WET')).toBe(0)
   })
 })

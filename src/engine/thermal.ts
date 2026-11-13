@@ -1,4 +1,4 @@
-import type { CarState, PaceMode, RaceConfig, ThermalState, TuningConstants, WeatherState } from './types'
+import type { CarState, Compound, PaceMode, RaceConfig, ThermalState, TuningConstants, WeatherState } from './types'
 import { trackTemp } from './track'
 
 /**
@@ -68,6 +68,25 @@ export function thermalAfterSector(config: RaceConfig, car: CarState, weather: W
     temp: th.temp + config.tuning.tyreTemp.responsePerSector * (target - th.temp),
     heatWear: wear === 0 ? th.heatWear : th.heatWear + wear,
   }
+}
+
+/**
+ * Seconds the first lap on a fresh `compound` costs from blanket temperature
+ * (spec §5.4): three sectors, temperature evolving, exactly as stepSector
+ * charges them after fitTyres. 0 while off (keyed on the car, per the
+ * invariant), and 0 while `neutralised` (ruling H6). For the pit panel.
+ */
+export function outLapCost(
+  config: RaceConfig, car: CarState, compound: Compound, weather: WeatherState, neutralised = false,
+): number {
+  if (!car.thermal) return 0
+  let c: CarState = { ...car, compound, thermal: outLapThermal(config.tuning) }
+  let sum = 0
+  for (let s = 0; s < 3; s++) {
+    sum += thermalPace(config, c, weather, neutralised)
+    c = { ...c, thermal: thermalAfterSector(config, c, weather, neutralised) }
+  }
+  return sum
 }
 
 /**

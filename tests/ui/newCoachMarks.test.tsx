@@ -88,6 +88,31 @@ describe('the new marks are owed per mark (spec 1.6 §9)', () => {
     expect(useCoachStore.getState().done).not.toHaveProperty('pit_window')
   })
 
+  it('TYRE_TEMP fires on the first out-lap after a stop, and only with tyre temperature on', () => {
+    const outLap = (thermal: boolean, pitsDone: number, tyreAge: number) => {
+      const player = {
+        driverId: 'd_voss', teamId: 'apex', isPlayer: true, position: 5, pitsDone, retired: false, tyreAge,
+        strategy: { plannedStops: [] },
+        ...(thermal ? { thermal: { temp: 70, coldLaps: 0, grainLaps: 0, heatWear: 0 } } : {}),
+      } as unknown as CarState
+      act(() => {
+        useRaceStore.setState({
+          phase: 'racing',
+          raceState: { cars: [player], lap: 20, totalLaps: 50, sector: 0, incidents: [], safetyCar: null } as unknown as RaceState,
+        })
+      })
+    }
+    render(<Probe />)
+    outLap(true, 0, 0)
+    expect(useCoachStore.getState().active, 'the start is not an out-lap').toBeNull()
+    outLap(false, 1, 0)
+    expect(useCoachStore.getState().active, 'tyre temperature off').toBeNull()
+    outLap(true, 1, 3)
+    expect(useCoachStore.getState().active, 'not on a used set').toBeNull()
+    outLap(true, 1, 0)
+    expect(useCoachStore.getState().active).toBe('tyre_temp')
+  })
+
   it('neither fires before lights out', () => {
     render(<Probe />)
     race(7, 9, [SC], 'starting')

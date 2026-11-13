@@ -169,3 +169,51 @@ describe('canvas DRS-train links (spec §3.4)', () => {
     expect(trainLinkPairs(off.config, off.state)).toEqual([])
   })
 })
+
+describe('COLD tag on the tower (2.1, spec §5.4)', () => {
+  function coldSetup(on: boolean) {
+    const base = makeConfig({}, 5, 'veloce')
+    const config: RaceConfig = { ...base, allDry: true, playerDriverId: 'd_voss',
+      tuning: makeDeterministicTuning(on ? { tyreTemp: { enabled: true } } : {}) }
+    const s = initRace(config)
+    const fresh = s.cars[2]!.driverId
+    const cars = s.cars.map((c, i) => ({
+      ...c, lap: 6, position: i + 1, raceTime: i * 3, tyreAge: c.driverId === fresh ? 0 : 5, pitsDone: c.driverId === fresh ? 1 : 0,
+      compound: c.driverId === fresh ? 'H' as const : c.compound,
+      ...(on ? { thermal: { temp: c.driverId === fresh ? 70 : 95, coldLaps: 0, grainLaps: 0, heatWear: 0 } } : {}),
+    }))
+    return { config, state: { ...s, lap: 6, sector: 0 as const, cars, weatherState: 'DRY' as const }, fresh }
+  }
+
+  it('flags only a running car on a fresh set below its window', () => {
+    const { config, state, fresh } = coldSetup(true)
+    const rows = towerV2(config, state)
+    expect(rows.get(fresh)!.coldTyres).toBe(true)
+    expect([...rows.entries()].filter(([, r]) => r.coldTyres).map(([id]) => id)).toEqual([fresh])
+    // A used set that is cold is not "fresh and cold"; a retired car never carries a tag.
+    const used = { ...state, cars: state.cars.map(c => c.driverId === fresh ? { ...c, tyreAge: 1 } : c) }
+    expect(towerV2(config, used).get(fresh)!.coldTyres).toBe(false)
+    const out = { ...state, cars: state.cars.map(c => c.driverId === fresh ? { ...c, retired: true } : c) }
+    expect(towerV2(config, out).get(fresh)!.coldTyres).toBe(false)
+  })
+
+  it('is false for every row while tyre temperature is off', () => {
+    const { config, state } = coldSetup(false)
+    for (const row of towerV2(config, state).values()) expect(row.coldTyres).toBe(false)
+  })
+
+  it('renders COLD as a word and speaks it in the row label', () => {
+    const { config, state } = coldSetup(true)
+    useRaceStore.setState({ config, raceState: state, phase: 'racing' })
+    render(<TimingTower />)
+    expect(screen.getAllByText('COLD')).toHaveLength(1)
+    expect(screen.getAllByLabelText(/cold tyres/i)).toHaveLength(1)
+  })
+
+  it('renders no COLD tag while off', () => {
+    const { config, state } = coldSetup(false)
+    useRaceStore.setState({ config, raceState: state, phase: 'racing' })
+    render(<TimingTower />)
+    expect(screen.queryByText('COLD')).toBeNull()
+  })
+})

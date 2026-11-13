@@ -48,7 +48,7 @@ export { handoverFromCalls, parFromHandover, prefixCalls } from './customStart'
 export { rubberLaps, rubberLapsFor, trackGrip, trackPaceDelta, trackTemp } from './track'
 export {
   initThermal, outLapThermal, thermalTarget, thermalWindow, thermalPace, thermalAfterSector,
-  thermalAtLapEnd, thermalStatus, aiThermalPaceMode,
+  thermalAtLapEnd, thermalStatus, aiThermalPaceMode, outLapCost,
 } from './thermal'
 export type { SectorContext } from './lapModel'
 export { greenSinceLap, drsOpenSet, drsOvertakeFactor, drsTrains, inTrainBehindHead } from './drs'

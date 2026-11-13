@@ -157,5 +157,8 @@
   "double_stack_mate": ["Double stack — you first, {mate} queues behind."],
   "penalty": ["Five-second penalty. We serve it at the stop — or build the gap.", "That's a five. Push, we need the margin."],
   "unsafe_release": ["Unsafe release, they're looking at it."],
-  "track_limits_last": ["That's your last warning on track limits."]
+  "track_limits_last": ["That's your last warning on track limits."],
+  "graining": ["We're graining. It'll clean up in a few laps.", "Front-left is graining. Hold it, it clears."],
+  "tyres_hot": ["Tyres are cooked. Manage them.", "Overheating the rears. Ease off."],
+  "tyres_in": ["Tyres are in. Go."]
 }

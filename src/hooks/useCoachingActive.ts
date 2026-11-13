@@ -25,7 +25,7 @@ export function useCoachingActive(): boolean {
 }
 
 /**
- * The 1.6 marks (safety_car, pit_window, radio_request), each owed until
+ * The 1.6 marks (safety_car, pit_window, radio_request; 2.1 tyre_temp), each owed until
  * dismissed once. Any season race or sprint, never a scenario; independent of
  * racesStarted and coachMarksSeen (spec 1.6 §9, ruling in plan Task 3).
  */

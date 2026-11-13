@@ -249,6 +249,7 @@ export function useNewTutorialMarks(): void {
   const racePhase = useRaceStore(s => s.phase)
   const scOwed = useNewCoachMarkOwed('safety_car')
   const windowOwed = useNewCoachMarkOwed('pit_window')
+  const tempOwed = useNewCoachMarkOwed('tyre_temp')
   const deployCount = useSafetyCarOnlyDeployCount()
   const lapsToStop = useRaceStore(s => {
     const rs = s.raceState
@@ -256,12 +257,18 @@ export function useNewTutorialMarks(): void {
     const next = p && !p.retired ? p.strategy.plannedStops[p.pitsDone] : undefined
     return rs && next ? next.lap - rs.lap : null
   })
+  // 2.1: the player's first out-lap on a fresh, cold set (tyre temperature on only).
+  const coldOutLap = useRaceStore(s => {
+    const p = s.raceState?.cars.find(c => c.isPlayer)
+    return !!p?.thermal && p.tyreAge === 0 && p.pitsDone > 0
+  })
   const request = useCoachStore(s => s.request)
   useEffect(() => {
     if (racePhase !== 'racing') return
     if (scOwed && deployCount > 0) request('safety_car')
     if (windowOwed && lapsToStop !== null && lapsToStop >= 1 && lapsToStop <= 2) request('pit_window')
-  }, [racePhase, scOwed, windowOwed, deployCount, lapsToStop, request])
+    if (tempOwed && coldOutLap) request('tyre_temp')
+  }, [racePhase, scOwed, windowOwed, tempOwed, deployCount, lapsToStop, coldOutLap, request])
 }
 
 export function RaceHUD() {
@@ -374,6 +381,11 @@ export function RaceHUD() {
         id="radio_request"
         title="YOUR DRIVER IS ASKING"
         body="Answer YES or NO before the bar runs out. No answer means no."
+      />
+      <CoachMark
+        id="tyre_temp"
+        title="COLD TYRES"
+        body="Fresh tyres start cold. Hards take most of a lap to switch on — watch the temperature band."
       />
     </ScreenFrame>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
 import { useCoachStore } from '@state/coachStore'
@@ -6,7 +6,7 @@ import { useCoachingActive } from '@hooks/useCoachingActive'
 import type { Compound, RaceConfig, RaceState } from '@engine/types'
 import { boxQueueEstimate } from '@engine/pitStop'
 import type { ProjectionResult } from '@engine/projection'
-import { tyreCliffFraction, effectiveTyreAge } from '@engine/index'
+import { tyreCliffFraction, effectiveTyreAge, outLapCost } from '@engine/index'
 import { effectivePitLaneLoss, neutralisationKind } from '@engine/incidents'
 import { useHaptics, ImpactStyle } from '@hooks/useHaptics'
 import { useSafetyCar } from '@hooks/useSafetyCar'
@@ -194,6 +194,7 @@ const ALL_COMPOUNDS: { id: Compound; label: string; wet: boolean }[] = [
 function PitPanelDrawer() {
   const { pitNow, closePitPanel, projectionResult, updateProjection } = useRaceStore()
   const raceState = useRaceStore(s => s.raceState)
+  const config = useRaceStore(s => s.config)
   const { impact } = useHaptics()
   const uiTap = useUiTap()
   const reduced = useReducedMotion()
@@ -216,6 +217,19 @@ function PitPanelDrawer() {
   // `cars?.`: a partially-built race state (tests) may have no cars yet; the
   // sets line is then simply omitted rather than guessed.
   const allocation = raceState?.cars?.find(c => c.isPlayer)?.tyreAllocation
+
+  // What each compound's cold out-lap costs (2.1, spec §5.4), once per raceState.
+  // Empty while tyre temperature is off (outLapCost keys off car.thermal), and
+  // ~0 under a neutralisation (ruling H6), so no line shows then.
+  const outLap = useMemo(() => {
+    const out: Partial<Record<Compound, number>> = {}
+    const player = raceState?.cars?.find(c => c.isPlayer)
+    if (!config || !raceState || !player?.thermal) return out
+    for (const { id } of availableCompounds) {
+      out[id] = outLapCost(config, player, id, raceState.weatherState, raceState.safetyCar !== null)
+    }
+    return out
+  }, [config, raceState]) // eslint-disable-line react-hooks/exhaustive-deps -- availableCompounds derives from raceState
 
   // A compound with no sets left cannot be fitted (the engine would substitute
   // another or not stop at all), so it is not offered. Unknown allocation
@@ -333,6 +347,8 @@ function PitPanelDrawer() {
             const active = selected === id
             const sets = allocation?.[id]
             const empty = !hasSets(id)
+            const cost = outLap[id] ?? 0
+            const outLapId = cost > 0.05 ? `pit-outlap-${id}` : undefined
             return (
               <motion.button
                 key={id}
@@ -340,6 +356,7 @@ function PitPanelDrawer() {
                 role="radio"
                 aria-checked={active}
                 aria-disabled={empty || undefined}
+                aria-describedby={outLapId}
                 className="slant-sm kit-focus"
                 whileTap={reduced || empty ? undefined : { scale: 0.96 }} transition={PRESS}
                 onClick={() => handleSelect(id)}
@@ -349,23 +366,37 @@ function PitPanelDrawer() {
                   opacity: empty ? 0.4 : 1,
                   background: active ? 'var(--volt)' : 'var(--grape)',
                   color: active ? 'var(--ink)' : 'var(--white)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
                 }}
               >
-                <TyreChip compound={id} size={24} onInk={!active} />
-                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                  <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>
-                    {label}
-                  </span>
-                  {sets !== undefined && (
-                    <span style={{
-                      fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 11,
-                      color: active ? 'var(--dusk)' : 'var(--lilac-dim)', fontVariantNumeric: 'tabular-nums',
-                    }}>
-                      {sets} set{sets === 1 ? '' : 's'}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <TyreChip compound={id} size={24} onInk={!active} />
+                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <span style={{ fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14, letterSpacing: 0.5 }}>
+                      {label}
                     </span>
-                  )}
+                    {sets !== undefined && (
+                      <span style={{
+                        fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 11,
+                        color: active ? 'var(--dusk)' : 'var(--lilac-dim)', fontVariantNumeric: 'tabular-nums',
+                      }}>
+                        {sets} set{sets === 1 ? '' : 's'}
+                      </span>
+                    )}
+                  </span>
                 </span>
+                {/* 2.1 out-lap price: its own line across the chip, because at 360 px the
+                    text column beside the tyre glyph is ~43 px and this needs ~68. Condensed
+                    display type, like the tower's TRAIN/COLD tags. */}
+                {outLapId && (
+                  <span id={outLapId} style={{
+                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12, letterSpacing: 0.3,
+                    whiteSpace: 'nowrap', lineHeight: '14px',
+                    color: active ? 'var(--dusk)' : 'var(--lilac-dim)', fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    OUT-LAP +{cost.toFixed(2)}s
+                  </span>
+                )}
               </motion.button>
             )
           })}
