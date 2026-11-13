@@ -629,3 +629,19 @@ Lantern Quay) — feature or noise? (warmer restarts, `neutralisedHeat` −15, c
 second hard out-lap price the undercut right?; `vsc_gamble` and `lantern_gamble` are now defensive
 scenarios (goal behind the handover position); the lantern_quay rookie rho mean (0.509) is the
 thinnest margin left.
+
+### 2.1 release (scope 2026-11-13, Task R)
+
+Ships as 2.1 / versionCode 14 (2.0 is 13). Run `npx cap sync android` from the repo root, never a
+worktree. No plugin or permission was added; `tests/data/androidManifest.test.ts` passes unchanged.
+Release note: daily challenges and shared starts made before 2.1 play out differently.
+
+On the RELEASE build (`docs/DEVICE-CHECKLIST.md` §1), mid-range phone as well as the Pixel:
+1. Cold start, then continue a 2.0 season save: it loads and nothing in it changed.
+2. A full Grand Prix at 1x holds 60 fps with COLD tags, a DRS train and the SC meter showing.
+3. Tyre band, COLD tag, OUT-LAP line, GRAINING chip: TalkBack labels, reduced motion, large text,
+   haptics on and off.
+4. Red Flag Restart scenario: every car restarts at the blanket + formation temperature.
+5. A 2.0-era share code imports, shows the "plays out differently" warning, then plays.
+6. 2.0 follow-ups: the DRS-train bracket grows and shrinks as one bar at 1x and 4x; the pit panel's
+   train note matches the tower after BOX; a scenario or custom start fires no stale radio line.
