@@ -624,8 +624,10 @@ moved (release-note item: daily challenges and shared starts made before 2.1 pla
 - 60 fps at 1× with a DRS train and COLD tags on the tower.
 - The pit sheet at 360×640 fits all four projection lines plus the OUT-LAP chips.
 
-**Calls for Veet:** graining clusters in the three laps after an SC/VSC (54% of onsets; ~6/race at
-Lantern Quay) — feature or noise? (warmer restarts, `neutralisedHeat` −15, cut it ~5×); does a half
+**Calls for Veet:** graining is effectively a safety-car feature — of 1,291 onsets in a 480-race sim,
+708 started on the tick the SC/VSC ended, 582 while it was still out and 1 in green running (MODEL_SPEC
+§17.2; ~1.2–2.6 onsets/race on the 4-circuit sample, ~6/race at Lantern Quay only) — feature or noise?
+(warmer restarts, `neutralisedHeat` −15, cut it ~5×); does a half
 second hard out-lap price the undercut right?; `vsc_gamble` and `lantern_gamble` are now defensive
 scenarios (goal behind the handover position); the lantern_quay rookie rho mean (0.509) is the
 thinnest margin left.

@@ -1425,12 +1425,18 @@ MEASURE thermal graining-after-neutralisation races=960 perRace=1.304 other=575/
 MEASURE rung2 graining-after-neutralisation races=960 perRace=0.180 other=36/794680 (0.05/1000 car-laps) short: ends=875 grains=117 (2.26/1000 car-laps) mid: ends=133 grains=20 (2.54/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
 MEASURE rung3 graining-after-neutralisation races=960 perRace=0.134 other=44/794660 (0.06/1000 car-laps) short: ends=873 grains=80 (1.55/1000 car-laps) mid: ends=134 grains=5 (0.63/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
 ```
-Graining **does** cluster after a neutralisation: at the shipped values 54% of all onsets fall within
-three laps of an SC/VSC ending, at 12.1 per 1000 car-laps against 0.72 elsewhere (~17×). It is the H4
-mechanism (a cooled S/M on a still-green track), not a re-triggering loop: no neutralisation in the
-sample lasted more than five laps ("long" is empty) and the 4–5-lap bucket is no worse than the
-short one. Warmer restarts (`neutralisedHeat` −15, Rung 2) would cut the post-SC rate ~5× if Veet
-finds it too frequent on the phone.
+**Correction (2.1 final review).** The measurement above undercounts how tied graining is to the
+safety car: its "other" bucket (the 0.72/1000 car-laps, and so the "54% within three laps … against
+elsewhere" reading first written here) counted onsets *during* a neutralisation as "elsewhere".
+Re-attributed per onset on a 480-race sim at the shipped values, of 1,291 onsets **708 (55%) start on
+the tick the SC/VSC ends, 582 (45%) start while it is still out, and 1 in green running.** Graining
+is, in effect, a safety-car feature: a slick cooled behind the SC/VSC (`neutralisedHeat`) on a still-
+green track trips the H4 onset at the lap end. It is not a re-triggering loop: no neutralisation in
+the sample lasted more than five laps ("long" is empty) and the 4–5-lap bucket is no worse than the
+short one. The model is unchanged; only the radio defers "We're graining" while the field is
+neutralised and says it once green resumes if the tyre is still graining (UI only — the race is
+identical). Warmer restarts (`neutralisedHeat` −15, Rung 2) would cut the rate ~5× if Veet finds it
+too frequent on the phone.
 
 `optimalGain` on the shipped tuning (`MEASURE_OPTIMAL=1`, paired, n=2000; `strategy.test.ts`):
 ```

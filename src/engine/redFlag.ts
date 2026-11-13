@@ -62,7 +62,9 @@ export function applyRedFlagRestart(
     const regridded: CarState = { ...car, raceTime: leader + i * gap, ...(car.thermal ? { thermal: initThermal(config.tuning) } : {}) }
     const { compound, consumesPlan } = restartTyre(config, car, weather, lapsLeft, car.isPlayer ? playerChoice : undefined)
     const resolved = resolveAllocatedCompound(compound, car.tyreAllocation)
-    if (!resolved) return regridded      // no sets of any kind left: it restarts on what it has
+    // No sets of any kind left: it restarts on what it has -- warmed, but the
+    // overheating wear already done to that set stays on it.
+    if (!resolved) return car.thermal ? { ...regridded, thermal: { ...initThermal(config.tuning), heatWear: car.thermal.heatWear } } : regridded
     return {
       ...regridded,
       compound: resolved,

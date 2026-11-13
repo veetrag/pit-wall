@@ -197,6 +197,14 @@ describe('COLD tag on the tower (2.1, spec §5.4)', () => {
     expect(towerV2(config, out).get(fresh)!.coldTyres).toBe(false)
   })
 
+  it('NO COLD TAG ON A SLICK IN THE DAMP (ruling H3): the crossover model owns that tyre', () => {
+    const { config, state, fresh } = coldSetup(true)
+    expect(towerV2(config, { ...state, weatherState: 'DAMP' }).get(fresh)!.coldTyres).toBe(false)
+    // ...and an inter on a wet track, the right family, still reads cold.
+    const inters = { ...state, weatherState: 'WET' as const, cars: state.cars.map(c => c.driverId === fresh ? { ...c, compound: 'I' as const, thermal: { temp: 20, coldLaps: 0, grainLaps: 0, heatWear: 0 } } : c) }
+    expect(towerV2(config, inters).get(fresh)!.coldTyres).toBe(true)
+  })
+
   it('is false for every row while tyre temperature is off', () => {
     const { config, state } = coldSetup(false)
     for (const row of towerV2(config, state).values()) expect(row.coldTyres).toBe(false)

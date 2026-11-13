@@ -114,14 +114,18 @@ export function thermalAtLapEnd(
 
 /**
  * Where the tyre sits against its window, for the UI and radio. About the
- * window, not pace: a car behind the SC still reads COLD. Null while off.
+ * window, not pace: a car behind the SC still reads COLD. Null while off, and
+ * null while thermal pace does not apply (ruling H3: a slick on a wet track or
+ * a wet-family tyre on a dry one belongs to the crossover model), so no
+ * consumer -- meter, tower tag, radio, coach mark -- reads HOT/COLD there.
  */
 export function thermalStatus(
   config: RaceConfig, car: CarState, weather: WeatherState,
 ): { zone: 'cold' | 'window' | 'hot'; lo: number; hi: number; temp: number; grainLaps: number } | null {
   if (!car.thermal) return null
   const [lo, hi] = config.tuning.tyreTemp.windows[car.compound]
-  const { deficit, excess } = thermalWindow(config, car, weather)
+  const { deficit, excess, applies } = thermalWindow(config, car, weather)
+  if (!applies) return null
   const zone: 'cold' | 'window' | 'hot' = deficit > 0 ? 'cold' : excess > 0 ? 'hot' : 'window'
   return { zone, lo, hi, temp: car.thermal.temp, grainLaps: car.thermal.grainLaps }
 }

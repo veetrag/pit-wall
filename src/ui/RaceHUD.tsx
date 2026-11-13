@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
+import { thermalStatus } from '@engine/index'
 import { useClockStore, type GameSpeed } from '@state/clockStore'
 import { useCoachStore } from '@state/coachStore'
 import { useCoachingActive, useNewCoachMarkOwed } from '@hooks/useCoachingActive'
@@ -257,10 +258,14 @@ export function useNewTutorialMarks(): void {
     const next = p && !p.retired ? p.strategy.plannedStops[p.pitsDone] : undefined
     return rs && next ? next.lap - rs.lap : null
   })
-  // 2.1: the player's first out-lap on a fresh, cold set (tyre temperature on only).
+  // 2.1: the player's first out-lap on a fresh set that reads COLD (tyre
+  // temperature on, and only where thermal pace applies -- ruling H3: not a
+  // slick in the damp or an inter on a dry track).
   const coldOutLap = useRaceStore(s => {
-    const p = s.raceState?.cars.find(c => c.isPlayer)
-    return !!p?.thermal && p.tyreAge === 0 && p.pitsDone > 0
+    const rs = s.raceState
+    const p = rs?.cars.find(c => c.isPlayer)
+    if (!rs || !s.config || !p?.thermal || p.tyreAge !== 0 || p.pitsDone === 0) return false
+    return thermalStatus(s.config, p, rs.weatherState)?.zone === 'cold'
   })
   const request = useCoachStore(s => s.request)
   useEffect(() => {
@@ -385,7 +390,7 @@ export function RaceHUD() {
       <CoachMark
         id="tyre_temp"
         title="COLD TYRES"
-        body="Fresh tyres start cold. Hards take most of a lap to switch on — watch the temperature band."
+        body="Fresh tyres start cold. Hards take longer to switch on — on a cool track they may never reach the window. Watch the temperature band."
       />
     </ScreenFrame>
   )

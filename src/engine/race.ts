@@ -461,8 +461,10 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       updated.tyreAge += 1
       updated.lap += 1
       updated.lapsInDirtyAir = inDirtyAir.has(car.driverId) ? car.lapsInDirtyAir + 1 : 0
-      if (updated.thermal) {
+      if (updated.thermal && !restartNow) {
         // 2.1 (spec §5.2): graining onset/countdown. A stop below re-blankets the set.
+        // Not on the red-flag restart: applyRedFlagRestart re-blankets every
+        // running car below, so an onset here would be a phantom incident.
         const lapEnd = thermalAtLapEnd(config, updated, state.weatherState, gripNow)
         updated.thermal = lapEnd.thermal
         if (lapEnd.grained) newIncidents.push({ lap: state.lap, sector, kind: 'graining', driverId: car.driverId, timeLoss: null })

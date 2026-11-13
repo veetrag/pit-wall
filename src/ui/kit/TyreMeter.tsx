@@ -55,9 +55,13 @@ export function TyreMeter({ compound, wear, lapsOnTyre, cliffLaps, pastCliff = f
             <span className="slant-sm" style={{ background: 'var(--dusk)' }} />
             <span className="slant-sm" style={{ background: 'rgba(var(--gain-rgb), 0.55)' }} />
             <span className="slant-sm" style={{ background: 'rgba(var(--hot-rgb), 0.55)' }} />
-            <motion.span data-thermal-marker initial={false} animate={{ left: `${thermal.pos * 100}%` }}
+            {/* A full-width carrier slides by transform (a % of its own width = the
+                track's), so a tick re-composites rather than re-laying out. */}
+            <motion.span data-thermal-marker initial={false} animate={{ x: `${thermal.pos * 100}%` }}
               transition={{ duration: reduced ? 0 : 0.2, ease: EASE }}
-              style={{ position: 'absolute', top: -3, width: 3, height: 14, marginLeft: -1.5, background: 'var(--white)' }} />
+              style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+              <span style={{ position: 'absolute', left: 0, top: -3, width: 3, height: 14, marginLeft: -1.5, background: 'var(--white)' }} />
+            </motion.span>
           </div>
           {/* Keyed on the zone: a change of zone snaps the word in along the slant (opacity only when reduced). */}
           <motion.span key={thermal.zone}

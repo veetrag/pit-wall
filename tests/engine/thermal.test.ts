@@ -258,6 +258,16 @@ describe('overheating wear, graining, AI (spec §5.2–§5.3)', () => {
     expect(thermalStatus(config, { ...car0(config), thermal: undefined }, 'DRY')).toBeNull()
   })
 
+  it('NO STATUS WHERE THERMAL PACE DOES NOT APPLY (H3): inters on a dry track never read HOT, slicks in the damp never COLD', () => {
+    const config = cfg()
+    expect(thermalStatus(config, car0(config, { compound: 'I', thermal: th(140) }), 'DRY')).toBeNull()
+    expect(thermalStatus(config, car0(config, { compound: 'W', thermal: th(140) }), 'DRY')).toBeNull()
+    expect(thermalStatus(config, car0(config, { compound: 'H', thermal: th(40) }), 'DAMP')).toBeNull()
+    expect(thermalStatus(config, car0(config, { compound: 'S', thermal: th(40) }), 'WET')).toBeNull()
+    // The right family still reads.
+    expect(thermalStatus(config, car0(config, { compound: 'I', thermal: th(20) }), 'WET')?.zone).toBe('cold')
+  })
+
   it('AI: a hot pusher backs off, a cold car pushes, a neutralisation changes nothing', () => {
     const config = cfg()
     const hot = car0(config, { compound: 'S', paceMode: 'push', thermal: th(106) })
@@ -309,6 +319,38 @@ describe('overheating wear, graining, AI (spec §5.2–§5.3)', () => {
     expect(after.paceMode).toBe('neutral')         // naive: no thermal pace call, even this cold
     const grains = next.incidents.filter(e => e.kind === 'graining')
     expect(grains).toEqual([{ lap: 6, sector: 2, kind: 'graining', driverId: after.driverId, timeLoss: null }])
+  })
+})
+
+describe('red-flag restart (ruling I1)', () => {
+  const th = (temp: number, extra: Partial<{ coldLaps: number; grainLaps: number; heatWear: number }> = {}) =>
+    ({ temp, coldLaps: 0, grainLaps: 0, heatWear: 0, ...extra })
+
+  it('NO PHANTOM GRAINING ON THE RESTART TICK: the re-blanket replaces the lap-end onset', () => {
+    const config = cfg('aurora')
+    const s0 = initRace(config)
+    const id = s0.cars[3]!.driverId
+    const cars = s0.cars.map(c => ({ ...c, lap: 6, ...(c.driverId === id
+      ? { compound: 'M' as const, tyreAge: 2, thermal: th(60, { coldLaps: 1 }), strategy: { ...c.strategy, brain: 'naive' as const, plannedStops: [] } }
+      : {}) }))
+    const green: RaceState = { ...s0, lap: 6, sector: 2, cars }
+    // Control: the same car on a green boundary grains (see the race test above).
+    expect(stepSector(config, green, createRng(5)).incidents.some(e => e.kind === 'graining')).toBe(true)
+    const red: RaceState = { ...green, safetyCar: { deployedLap: 6, lapsRemaining: 0, cause: 'crash', kind: 'red' } }
+    const next = stepSector(config, red, createRng(5))
+    expect(next.incidents.map(e => e.kind)).toContain('red_flag_restart')
+    expect(next.incidents.some(e => e.kind === 'graining')).toBe(false)
+    expect(next.cars.find(c => c.driverId === id)!.thermal).toEqual(initThermal(config.tuning))
+  })
+
+  it('A CAR THAT KEEPS ITS TYRE KEEPS ITS OVERHEATING WEAR; a fresh set starts at 0', () => {
+    const config = cfg()
+    const s = initRace(config)
+    const empty = { S: 0, M: 0, H: 0, I: 0, W: 0 }
+    const kept = applyRedFlagRestart(config, s.cars.map(c => ({ ...c, tyreAllocation: empty, thermal: th(100, { heatWear: 1.25, grainLaps: 2 }) })), 'DRY', 20)
+    for (const c of kept) expect(c.thermal).toEqual({ ...initThermal(config.tuning), heatWear: 1.25 })
+    const fresh = applyRedFlagRestart(config, s.cars.map(c => ({ ...c, thermal: th(100, { heatWear: 1.25 }) })), 'DRY', 20)
+    for (const c of fresh) expect(c.thermal).toEqual(initThermal(config.tuning))
   })
 })
 

@@ -76,6 +76,19 @@ describe('TelemetryZone reads the band from the engine (spec §5.4)', () => {
     expect(at(120).zone).toBe('hot')
   })
 
+  it('IS ABSENT WHERE THERMAL PACE DOES NOT APPLY (H3): inters on a dry track never read HOT', () => {
+    const { config, state } = race(true, { compound: 'I', thermal: th(140) })
+    expect(thermalMeter(state, config)).toBeUndefined()
+    act(() => { useRaceStore.setState({ config, raceState: state }) })
+    render(<TelemetryZone />)
+    expect(screen.queryByRole('meter', { name: /tyre temperature/i })).toBeNull()
+    expect(screen.queryByText('HOT')).toBeNull()
+    cleanup()
+    // Slicks in the damp never read COLD.
+    const damp = race(true, { compound: 'H', thermal: th(40) })
+    expect(thermalMeter({ ...damp.state, weatherState: 'DAMP' }, damp.config)).toBeUndefined()
+  })
+
   it('is absent while tyre temperature is off', () => {
     const { config, state } = race(false)
     expect(thermalMeter(state, config)).toBeUndefined()
@@ -136,6 +149,27 @@ describe('pit panel out-lap price (spec §5.4)', () => {
     const on = race(true, { compound: 'M', tyreAge: 14, thermal: th(95) })
     open(on.config, { ...on.state, safetyCar: { deployedLap: 7, lapsRemaining: 3, cause: 'crash' } })
     expect(screen.queryByText(/OUT-LAP/)).toBeNull()
+  })
+
+  it('no out-lap line for a slick fitted in the damp (ruling H3): outLapCost is 0 there', () => {
+    const on = race(true, { compound: 'M', tyreAge: 14, thermal: th(95) })
+    const damp = { ...on.state, weatherState: 'DAMP' as const }
+    const player = damp.cars.find(c => c.isPlayer)!
+    for (const c of ['S', 'M', 'H'] as const) expect(outLapCost(on.config, player, c, 'DAMP')).toBe(0)
+    expect(outLapCost(on.config, player, 'I', 'DRY')).toBe(0)
+    open(on.config, damp)
+    for (const name of [/SOFT/, /MEDIUM/, /HARD/]) {
+      const chip = screen.queryByRole('radio', { name })
+      if (chip) expect(chip.getAttribute('aria-describedby')).toBeNull()
+    }
+  })
+
+  it('the out-lap line on the selected (volt) chip is ink (CLAUDE.md §6.1)', () => {
+    const { config, state } = race(true, { compound: 'M', tyreAge: 14, thermal: th(95) })
+    open(config, state)
+    act(() => { screen.getByRole('radio', { name: /HARD/ }).click() })
+    const hard = outLapCost(config, state.cars.find(c => c.isPlayer)!, 'H', 'DRY')
+    expect((screen.getByText(`OUT-LAP +${hard.toFixed(2)}s`) as HTMLElement).style.color).toBe('var(--ink)')
   })
 })
 

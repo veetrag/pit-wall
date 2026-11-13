@@ -104,6 +104,11 @@ export interface RadioState {
   hotWarned: boolean
   /** 2.1: this out-lap has read COLD on an earlier tick, so the turn to the window earns "tyres are in". */
   outLapCold: boolean
+  /**
+   * 2.1: the player started graining while the field was neutralised; the
+   * line waits for green (and is dropped if the grain has cleared by then).
+   */
+  grainingDeferred: boolean
 }
 
 interface IncidentScan {
@@ -194,6 +199,7 @@ export function makeRadioState(state?: RaceState, config?: RaceConfig): RadioSta
     incidentScan: player ? scanIncidents(incidents, undefined, player.driverId, mate?.driverId ?? null).scan : undefined,
     hotWarned: !!(state && config && player && thermalStatus(config, player, state.weatherState)?.zone === 'hot'),
     outLapCold: false,
+    grainingDeferred: false,
   }
 }
 
@@ -229,7 +235,12 @@ export function processRadioTick(
     scanIncidents(state.incidents, radio.incidentScan, player.driverId, mate?.driverId ?? null)
   next.incidentScan = scan
   const allowed = config.tuning.penalties.trackLimits.warningsAllowed
+  // Graining nearly always starts behind (or as) the SC/VSC (MODEL_SPEC §17.2):
+  // "We're graining" over a neutralised field is noise, so it waits for green.
+  const neutralised = neutralisationKind(state.safetyCar) !== null
+  let grainingDeferred = radio.grainingDeferred
   for (const ev of fromCursor(() => state.incidents.filter(i => i.driverId === player.driverId), radio.prevPlayerIncidents, myBefore, newMine)) {
+    if (ev.kind === 'graining' && neutralised) { grainingDeferred = true; continue }
     const trigger = V2_RADIO[ev.kind]
     if (trigger) tryPush(trigger, 1, { sec: ev.timeLoss?.toFixed(1) ?? '', mate: mateCode }, pushAlert)
     // The warning that uses up the allowance: one more and it is a penalty.
@@ -241,6 +252,11 @@ export function processRadioTick(
     }
   }
   next.prevPlayerIncidents = scan.myCount
+  if (grainingDeferred && !neutralised) {
+    // Green again: say it once if the tyre is still graining, else let it go.
+    if (!(player.thermal && player.thermal.grainLaps > 0) || tryPush('graining', 1, {}, pushAlert)) grainingDeferred = false
+  }
+  next.grainingDeferred = grainingDeferred
   // The team-mate queued behind the player: told when it lands within a lap of the player's last stop.
   const myLastStop = player.pitsDone > 0 ? player.lap - player.tyreAge : -Infinity
   const mateNew = mate

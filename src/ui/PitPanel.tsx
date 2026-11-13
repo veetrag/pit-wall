@@ -392,7 +392,7 @@ function PitPanelDrawer() {
                   <span id={outLapId} style={{
                     fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12, letterSpacing: 0.3,
                     whiteSpace: 'nowrap', lineHeight: '14px',
-                    color: active ? 'var(--dusk)' : 'var(--lilac-dim)', fontVariantNumeric: 'tabular-nums',
+                    color: active ? 'var(--ink)' : 'var(--lilac-dim)', fontVariantNumeric: 'tabular-nums',
                   }}>
                     OUT-LAP +{cost.toFixed(2)}s
                   </span>
