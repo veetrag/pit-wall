@@ -36,8 +36,13 @@ describe('2.0 foundations', () => {
     expect(t.penalties.trackLimits.warningsAllowed).toBe(3)
     expect(t.penalties.unsafeRelease.stackedFactor).toBe(2.5)
     expect(t.scOutlook.bands).toEqual([0.15, 0.30])
-    // 2.1 tyre temperature (scope 2026-11-13 Task 5): declared, shipped off until Task S.
-    expect(t.tyreTemp.enabled).toBe(false)
+    // 2.1 tyre temperature: declared in Task 5, switched on in Task S at shrink Rung 3 (MODEL_SPEC §17.2).
+    expect(t.tyreTemp.enabled).toBe(true)
+    expect(t.tyreTemp.coldCoeff).toBe(0.08)
+    expect(t.tyreTemp.overheatCoeff).toBe(0.08)
+    expect(t.tyreTemp.overheatWearPerLap).toBe(0.05)
+    expect(t.tyreTemp.neutralisedHeat).toBe(-15)
+    expect(t.tyreTemp.grainPenalty).toBe(0.20)
     expect(t.tyreTemp.windows.H).toEqual([92, 115])
   })
 
@@ -84,7 +89,8 @@ describe('2.0 foundations', () => {
     expect(career).toHaveLength(12)
     const meanTemp = career.reduce((s, id) => s + (DATA.circuits[id]!.trackTempC ?? NaN), 0) / career.length
     expect(meanTemp).toBeCloseTo(32, 10)
-    expect(DATA.circuits['lantern_quay']!.trackTempC).toBe(27)
+    // 27 in Task 5; 31 since the 2.1 switch-on's circuit-data rung (Rung C, MODEL_SPEC §17.2).
+    expect(DATA.circuits['lantern_quay']!.trackTempC).toBe(31)
     expect(DATA.circuits['mesa_roja']!.trackTempC).toBe(42)
   })
 })

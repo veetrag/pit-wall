@@ -68,8 +68,10 @@ describe('judgeCalls', () => {
     // Make failure certain once past the cliff threshold, then find the
     // first planned-stop lap at which the player's Mediums fail. Stopping
     // three laps earlier must then avoid it -- and the debrief must say so.
+    // Tyre temperature off (2.1 switch-on, MODEL_SPEC §17.2): this test is about the
+    // debrief, and with thermal on this seed's race diverges so no planned lap fails.
     const certain = (c: RaceConfig): RaceConfig => ({
-      ...c, circuit: { ...c.circuit, laps: 30 }, tuning: { ...c.tuning, tyreFailure: { ...c.tuning.tyreFailure, chancePerLapOverThreshold: 1e6, maxChancePerLap: 3 } },
+      ...c, circuit: { ...c.circuit, laps: 30 }, tuning: { ...c.tuning, tyreTemp: { ...c.tuning.tyreTemp, enabled: false }, tyreFailure: { ...c.tuning.tyreFailure, chancePerLapOverThreshold: 1e6, maxChancePerLap: 3 } },
     })
     let failing: RaceConfig | null = null
     let failLap = 0

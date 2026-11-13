@@ -65,6 +65,7 @@ be corrected or must update this document with an argument.
 | **AI weather stops / race (showery circuits)** | — (spec 2026-10-17 §0.1: confirm 2 laps, none with ≤ 3 laps left; was ~100/race) | 5 showery circuits, n=240 per cell: pro 63.992/66.475, rookie 63.342/66.729 | **44.30 – 86.75** | **Yes** — sized [floor(0.7×min), ceil(1.3×max)] to 0.05. Counts AI stops that change tyre family |
 | **Slow pit stops / race** | — (spec 2026-10-17 §1: 4% per stop x (1 − pitCrew × 0.8), +2.0–6.0 s) | 4-circuit sample, n=240 per cell: pro 0.658/0.721, rookie 0.696/0.675 | **0.45 – 0.95** | **Yes** — same sizing rule. Decided from the second value of the gaussianPair every stop already draws: no stream shift |
 | **Red flags / race** | — (spec 2026-10-17 §4: 5% per crash, max 1, none in the last 5 laps; ≈ one every ~10–15 races) | 4-circuit sample, n=240 per cell: pro 0.067/0.054, rookie 0.037/0.063 | **0.00 – 0.10** | **Yes** — same sizing rule; gated at n=240 with a "live" assertion carrying the floor |
+| **Graining onsets / race** | — (spec 2026-10-24 §5.2, ruling H4; 2.1 shipped at Rung 3, §17.2) | 4-circuit sample, n=240 per cell: pro 0.063/0.113, rookie 0.487/0.550 | **0.00 – 0.75** | **Yes** — same sizing rule; the floor rounds to 0, so the gate also asserts the rate is live (> 0), as for red flags |
 | Driver errors / race | not separately published | all 12, n=720: **5.18 / 5.24** pro, **5.08 / 5.28** rookie (field-wide, non-terminal plus terminal) | — | **No — diagnostic.** The gated consequence is the crash rate above |
 | Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | **1.3454** mean over four seed bases (1.3066–1.3769, pro, n=200 per circuit) — **below the 1.5 floor, and the circuit-sensitivity plan moved it DOWN.** Reverting only the two `lapModel.ts` lines that plan changed measures **1.5238** (1.4952–1.5523) on the same seeds: inside the band. Per-circuit, wired, sorted: grand_savane 2.591, altiplano 2.639, sol_desert 2.651, veloce 2.718, silverpark 2.744, highland 2.815, costa_verde 2.835, aurora 2.897, monsoon_bay 3.033, bengaluru 3.045, kaido 3.455, harbour_lights 3.568 | **1.5 – 2.5×** — **NOT MET, and regressed** | **Yes**, but on a *fixed pair* and for a narrower purpose than the band. `tests/engine/circuitDifferentiation.test.ts` gates harbour_lights ÷ grand_savane at **> 1.15** (measured 1.2968 ± 0.0451 pro over six n=120 seed bases) as a floor against the calendar flattening. That gate **cannot** fail on a renormalising of the sensitivities — verified by mutation, which passes at 1.44 — so the wiring itself is guarded by the fingerprint pairs in that file, not by this ratio. See §7 and §4 for the mechanism |
 | Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9879** pro / **0.9152–0.9394** rookie post-incidents — it went UP, from 0.9636 / 0.9152. Chaos removed cars without decoupling results from pace, which is the reassuring result and the opposite of the lottery this gate exists to catch. **Read it narrowly.** The reference pace ranking is computed from the *global* `sectorSplit`, not from `circuit.carSensitivity`, so it is circuit-blind and disagrees with the engine's own per-circuit order on 9 of 12 circuits. An unmoved value therefore shows results are still tied to car quality **in general** — the lottery failure mode is absent — and is **not** evidence that per-circuit weighting left pace ordering untouched, which an earlier version of this row wrongly inferred. See `tests/engine/monteCarloHarness.ts` | **≥ 0.90** — final, never to be widened | **Yes** |
@@ -818,7 +819,7 @@ Unlike the bands, these are not negotiable and are not subject to rebalancing.
 5. **Balance values live in `src/data/*.json`.** Never in logic.
 6. **2.0 adds no rng draw to the race path.** Track limits read lapModel's noise2 lower tail,
    unsafe release pitStopTime's g2 lower tail. A new 2.0 mechanic that needs a draw must
-   short-circuit with none at a zero rate.
+   short-circuit with none at a zero rate. Tyre temperature adds none (deterministic dynamics).
 
 ## 11. Known-broken tests
 
@@ -1353,3 +1354,388 @@ ON (4 bases x 240 seeds), and `monteCarlo` "every gated metric" gridFinishSpearm
 the other metrics in that test keep their n=120 sample). With DRS on, 12 scenarios/classics moved
 and were re-authored from `scripts/find-scenarios.ts` (hold_the_train from harbour_lights at gap 2.0,
 SEEDS=2000: lantern_quay had no hit), and the three daily GOLDEN pins moved (release-note item).
+
+### 17.2 2.1: tyre temperature (2026-11-13)
+
+Scope `docs/superpowers/plans/2026-11-13-v2.1-scope.md` §5 (Task S); spec
+`docs/superpowers/specs/2026-10-24-v2-deeper-race-strategy-design.md` §5 (rulings H1–H6), §12.3.
+
+**Method: §17.1 Round 2's four-seed-base means.** Every gate is judged on the MEAN over seed bases
+1000/4000/7000/10000 at n=240 each, at the unchanged floors, with
+`MEASURE=1 FEATURE=<label> npx vitest run tests/engine/v2Bands.test.ts -t "MEASURE 2.1"`. Each base
+runs pro SAMPLE, rookie SAMPLE, setups-on SAMPLE, lantern_quay pro and rookie, mesa_roja pro and
+rookie, and the lantern_quay clearing trial (seeds base + 13i, i < 240). The scope's gate table adds
+one single-sample gate: the lantern_quay envelope's own n=120 test (`newCircuitBands`) must also pass.
+The shrink ladder is cumulative: Rung C (circuit data) → Rungs 1–3 → OFF.
+
+**Outcome: tyre temperature ships ON, at Rung 3, with lantern_quay `trackTempC` 31 (Rung C).**
+No STOP limit was reached (max crash 0.1047 at lantern_quay rookie, dpos ≤ 4.38, paceRank ≥ 0.903 in
+any single cell, SAMPLE tyreDnf 0.0003–0.0004 against a 0.0003 baseline, graining ≤ 8.6/race, no NaN).
+No floor was lowered and no existing band moved.
+
+| Stage (cumulative) | Binding gate: lantern_quay envelope rho, n=120 (`newCircuitBands`) | 4-base means: LQ pro / rookie rho (floor 0.50) | Decision |
+|---|---|---|---|
+| Plan values | rookie **0.496** (pro 0.504) | 0.521 / 0.509 | Rung C |
+| Rung C: lantern_quay `trackTempC` 27 → 31 | pro **0.490** | 0.518 / 0.534 | Rung 1 |
+| Rung 1: `coldCoeff`, `overheatCoeff` 0.20 → 0.12 | pro **0.477** | 0.514 / 0.525 | Rung 2 |
+| Rung 2: + `neutralisedHeat` −25 → −15, `grainPenalty` 0.35 → 0.20 | pro **0.499** | 0.523 / 0.531 | Rung 3 |
+| Rung 3: + coeffs → 0.08, `overheatWearPerLap` 0.08 → 0.05 | pro **0.513** (all 7 newCircuitBands tests pass) | 0.514 / 0.523 | **ON** |
+
+**Read this before accepting the shrink (a judgement for Veet, not a fact about thermal).** Every
+four-base MEAN gate passed at the plan values: SAMPLE pro rho 0.630, setups-on 0.627, lantern_quay
+0.521 / 0.509, clearing 0.2021, rookie paceRank 0.929, dpos 3.632, mesa_roja tyreDnf ≤ 0.0017 and
+stops 3.620 vs SAMPLE + 0.6 = 3.309. The whole ladder was driven by the one gate Round 2 did not
+convert to a four-base mean: a single n=120 lantern_quay sample, SE ≈ 0.035. Its value moved
+0.496 → 0.490 → 0.477 → 0.499 → 0.513 across rungs that each made thermal *weaker*, which is noise,
+not a trend; the four-base means sat in 0.509–0.534 throughout. Rung 3 is where the draw happened to
+land above 0.50.
+
+Shipped values (`tuning.json` `tyreTemp`): `enabled` true, `coldCoeff` 0.08, `overheatCoeff` 0.08,
+`overheatWearPerLap` 0.05, `neutralisedHeat` −15, `grainPenalty` 0.20; everything else at the plan
+values (§5.2 of the scope). `circuits.json`: lantern_quay `trackTempC` 31 (the career calendar is
+untouched, mean 32).
+
+**Ruling H6, and why.** Thermal pace is 0 while a SC/VSC is out: the tyres still cool
+(`neutralisedHeat`), so the restart is cold, but no car loses lap time behind the safety car. Charging
+it would reshuffle the queue under yellow by compound alone, a churn the rho floor cannot afford, and
+it is not what the player can see or act on.
+
+**Diagnostics at the shipped values (four-base means).** Hot sector share (tyre above its window)
+pro 0.099, rookie 0.077, mesa_roja pro 0.176, lantern_quay pro 0.026; cold share pro 0.067, rookie
+0.065, lantern_quay pro 0.074. Graining onsets per race: SAMPLE pro 0.134, rookie 0.511, setups-on
+0.154, lantern_quay 0.009, mesa_roja 0.000 — banded (§3) from the MEASURE 2.0 cells below.
+
+*Graining after a neutralisation (Task 6 review note).* `MEASURE 2.1 graining after neutralisations`
+counts onsets in the three laps after each SC/VSC ends, against car-laps exposed (SAMPLE pro, 960 races):
+```
+MEASURE thermal graining-after-neutralisation races=960 perRace=1.304 other=575/794340 (0.72/1000 car-laps) short: ends=881 grains=627 (12.07/1000 car-laps) mid: ends=136 grains=50 (6.16/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
+MEASURE rung3 graining-after-neutralisation races=960 perRace=0.134 other=44/794660 (0.06/1000 car-laps) short: ends=873 grains=80 (1.55/1000 car-laps) mid: ends=134 grains=5 (0.63/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
+```
+(the first line is the plan values, the second the shipped Rung 3). Graining **does** cluster after a
+neutralisation: at the plan values 54% of all onsets fell within three laps of an SC/VSC ending, at
+12.1 per 1000 car-laps against 0.72 elsewhere (~17×); at the shipped values 66% (1.55 vs 0.06 per 1000
+car-laps). It is the H4 mechanism working as designed (a cooled S/M on a still-green track), not a
+loop: no neutralisation in the sample lasted more than five laps, so "long" is empty, and the mid
+(4–5 lap) bucket is no worse than the short one. Rung 2's warmer restarts (`neutralisedHeat` −15) cut the
+post-SC rate ~5×.
+
+`optimalGain` on the shipped tuning (`MEASURE_OPTIMAL=1`, paired, n=2000; `strategy.test.ts`):
+```
+MEASURE optimalGain shipped=1.261 se=0.080 (smart=3.198 se=0.060)   tyreTemp off (2.0 shipped)
+MEASURE optimalGain shipped=1.579 se=0.076 (smart=3.233 se=0.061)   plan values
+MEASURE optimalGain shipped=1.438 se=0.077 (smart=3.230 se=0.060)   shipped (Rung 3)
+```
+Against §9.4 (0.17 on the deterministic tuning, where no incident or 2.x feature runs): tyre
+temperature does not shrink OPTIMAL's edge on the shipped tuning, it grows it by ~0.18 positions (2.3
+SE), most likely because smart/optimal cars manage temperature (`aiThermalPaceMode`) and naive ones
+cook their softs; the spec §5.5 expectation that cold out-laps would shrink the undercut is not
+visible in this number.
+
+Other gates at the shipped values: `MEASURE weather` pro 62.742/66.079, rookie 63.125/66.375 (band
+44.30 – 86.75); `MEASURE outlook` bucket 0 n=4999 pred 0.114 obs 0.104, bucket 1 n=3908 pred 0.183
+obs 0.184 (calibrated, |obs − pred| ≤ 0.06). The gate suites (scope S.5 step 6) pass.
+
+`MEASURE 2.0` (band sizing, plan values then shipped):
+```
+MEASURE thermal pro seedBase=1000 n=240 top=0.421 winners=8 dpos=3.658 rho=0.624 paceRank=0.964 mech=0.0717 crash=0.0600 sc=0.487 vsc=0.583 aiNeut=3.929 slow=0.567 red=0.058 trains=36.304 drsPass=0.378 stacks=6.417 pens=0.550 unsafe=0.508 tl=8.454 graining=1.196 hot=0.102 cold=0.074 tyreDnf=0.0000 stops=2.652 overtakes=35.3
+MEASURE thermal pro seedBase=7000 n=240 top=0.425 winners=6 dpos=3.577 rho=0.640 paceRank=0.964 mech=0.0669 crash=0.0585 sc=0.496 vsc=0.567 aiNeut=3.429 slow=0.754 red=0.046 trains=37.021 drsPass=0.377 stacks=6.604 pens=0.642 unsafe=0.579 tl=8.387 graining=1.063 hot=0.096 cold=0.084 tyreDnf=0.0000 stops=2.800 overtakes=35.4
+MEASURE thermal rookie seedBase=1000 n=240 top=0.408 winners=8 dpos=3.554 rho=0.637 paceRank=0.915 mech=0.0638 crash=0.0681 sc=0.529 vsc=0.521 aiNeut=4.208 slow=0.608 red=0.058 trains=38.296 drsPass=0.378 stacks=7.763 pens=0.508 unsafe=0.479 tl=7.071 graining=2.275 hot=0.077 cold=0.074 tyreDnf=0.0000 stops=2.472 overtakes=34.9
+MEASURE thermal rookie seedBase=7000 n=240 top=0.425 winners=7 dpos=3.367 rho=0.662 paceRank=0.952 mech=0.0608 crash=0.0627 sc=0.537 vsc=0.537 aiNeut=3.804 slow=0.692 red=0.063 trains=38.396 drsPass=0.365 stacks=7.763 pens=0.617 unsafe=0.613 tl=7.008 graining=2.621 hot=0.074 cold=0.083 tyreDnf=0.0004 stops=2.582 overtakes=35.4
+MEASURE final pro seedBase=1000 n=240 top=0.463 winners=8 dpos=3.658 rho=0.624 paceRank=0.964 mech=0.0765 crash=0.0612 sc=0.471 vsc=0.683 aiNeut=3.346 slow=0.700 red=0.046 trains=36.092 drsPass=0.378 stacks=6.096 pens=0.667 unsafe=0.600 tl=8.250 graining=0.063 hot=0.101 cold=0.063 tyreDnf=0.0000 stops=2.679 overtakes=35.4
+MEASURE final pro seedBase=7000 n=240 top=0.438 winners=8 dpos=3.550 rho=0.645 paceRank=0.964 mech=0.0663 crash=0.0550 sc=0.479 vsc=0.537 aiNeut=3.638 slow=0.771 red=0.054 trains=37.579 drsPass=0.377 stacks=6.475 pens=0.579 unsafe=0.558 tl=8.358 graining=0.113 hot=0.099 cold=0.070 tyreDnf=0.0000 stops=2.762 overtakes=36.0
+MEASURE final rookie seedBase=1000 n=240 top=0.412 winners=8 dpos=3.442 rho=0.657 paceRank=0.915 mech=0.0717 crash=0.0592 sc=0.504 vsc=0.592 aiNeut=3.625 slow=0.654 red=0.042 trains=38.425 drsPass=0.373 stacks=7.675 pens=0.537 unsafe=0.517 tl=6.983 graining=0.487 hot=0.077 cold=0.062 tyreDnf=0.0004 stops=2.458 overtakes=34.8
+MEASURE final rookie seedBase=7000 n=240 top=0.417 winners=6 dpos=3.360 rho=0.664 paceRank=0.915 mech=0.0619 crash=0.0625 sc=0.479 vsc=0.600 aiNeut=3.567 slow=0.592 red=0.054 trains=38.258 drsPass=0.369 stacks=7.983 pens=0.617 unsafe=0.583 tl=6.883 graining=0.550 hot=0.076 cold=0.067 tyreDnf=0.0013 stops=2.584 overtakes=36.1
+```
+
+MEASURE 2.1 lines, every stage:
+
+Baseline (tyre temperature off = 2.0 shipped; matches §17.1 Round 2: rho 0.635, setups 0.624,
+lantern_quay 0.520, clearing 0.202):
+```
+MEASURE baseline sample-pro seedBase=1000 n=240 rho=0.616 dpos=3.685 paceRank=0.964 crash=0.0638 mech=0.0688 top=0.408 winners=8.00 sc=0.442 tyreDnf=0.0000 stops=2.669 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline sample-pro seedBase=4000 n=240 rho=0.635 dpos=3.601 paceRank=0.964 crash=0.0648 mech=0.0688 top=0.479 winners=7.00 sc=0.504 tyreDnf=0.0000 stops=2.679 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline sample-pro seedBase=7000 n=240 rho=0.647 dpos=3.528 paceRank=0.964 crash=0.0587 mech=0.0690 top=0.463 winners=6.00 sc=0.475 tyreDnf=0.0000 stops=2.754 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline sample-pro seedBase=10000 n=240 rho=0.643 dpos=3.567 paceRank=0.964 crash=0.0596 mech=0.0654 top=0.442 winners=6.00 sc=0.492 tyreDnf=0.0013 stops=2.681 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline sample-pro MEAN(1000/4000/7000/10000) rho=0.635 dpos=3.596 paceRank=0.964 crash=0.0617 mech=0.0680 top=0.448 winners=6.75 sc=0.478 tyreDnf=0.0003 stops=2.696 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline sample-rookie seedBase=1000 n=240 rho=0.655 dpos=3.454 paceRank=0.915 crash=0.0615 mech=0.0688 top=0.433 winners=8.00 sc=0.496 tyreDnf=0.0000 stops=2.461 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline sample-rookie seedBase=4000 n=240 rho=0.656 dpos=3.455 paceRank=0.915 crash=0.0679 mech=0.0621 top=0.392 winners=7.00 sc=0.529 tyreDnf=0.0006 stops=2.445 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline sample-rookie seedBase=7000 n=240 rho=0.662 dpos=3.386 paceRank=0.915 crash=0.0615 mech=0.0692 top=0.425 winners=7.00 sc=0.483 tyreDnf=0.0004 stops=2.590 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline sample-rookie seedBase=10000 n=240 rho=0.687 dpos=3.252 paceRank=0.939 crash=0.0567 mech=0.0638 top=0.400 winners=7.00 sc=0.487 tyreDnf=0.0002 stops=2.475 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline sample-rookie MEAN(1000/4000/7000/10000) rho=0.665 dpos=3.387 paceRank=0.921 crash=0.0619 mech=0.0659 top=0.412 winners=7.25 sc=0.499 tyreDnf=0.0003 stops=2.493 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline setups-pro seedBase=1000 n=240 rho=0.625 dpos=3.655 paceRank=0.964 crash=0.0594 mech=0.0648 top=0.425 winners=8.00 sc=0.450 tyreDnf=0.0000 stops=2.644 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline setups-pro seedBase=4000 n=240 rho=0.636 dpos=3.624 paceRank=0.964 crash=0.0671 mech=0.0665 top=0.425 winners=7.00 sc=0.521 tyreDnf=0.0000 stops=2.657 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline setups-pro seedBase=7000 n=240 rho=0.627 dpos=3.700 paceRank=0.964 crash=0.0575 mech=0.0683 top=0.388 winners=7.00 sc=0.504 tyreDnf=0.0002 stops=2.770 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline setups-pro seedBase=10000 n=240 rho=0.608 dpos=3.745 paceRank=0.964 crash=0.0606 mech=0.0671 top=0.433 winners=7.00 sc=0.454 tyreDnf=0.0010 stops=2.666 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline setups-pro MEAN(1000/4000/7000/10000) rho=0.624 dpos=3.681 paceRank=0.964 crash=0.0611 mech=0.0667 top=0.418 winners=7.25 sc=0.482 tyreDnf=0.0003 stops=2.684 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-pro seedBase=1000 n=240 rho=0.518 dpos=4.336 paceRank=0.988 crash=0.1015 mech=0.0856 top=0.346 winners=8.00 sc=1.021 tyreDnf=0.0000 stops=4.706 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-pro seedBase=4000 n=240 rho=0.519 dpos=4.357 paceRank=0.988 crash=0.1015 mech=0.0875 top=0.313 winners=7.00 sc=1.071 tyreDnf=0.0002 stops=4.689 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-pro seedBase=7000 n=240 rho=0.513 dpos=4.383 paceRank=0.976 crash=0.0967 mech=0.0856 top=0.321 winners=7.00 sc=1.004 tyreDnf=0.0000 stops=4.882 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-pro seedBase=10000 n=240 rho=0.529 dpos=4.309 paceRank=0.988 crash=0.0996 mech=0.0844 top=0.333 winners=7.00 sc=0.983 tyreDnf=0.0004 stops=4.706 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-pro MEAN(1000/4000/7000/10000) rho=0.520 dpos=4.346 paceRank=0.985 crash=0.0998 mech=0.0858 top=0.328 winners=7.25 sc=1.020 tyreDnf=0.0002 stops=4.746 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-rookie seedBase=1000 n=240 rho=0.518 dpos=4.281 paceRank=0.915 crash=0.0960 mech=0.0894 top=0.304 winners=7.00 sc=0.988 tyreDnf=0.0006 stops=4.409 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-rookie seedBase=4000 n=240 rho=0.535 dpos=4.240 paceRank=0.964 crash=0.1050 mech=0.0815 top=0.317 winners=8.00 sc=1.008 tyreDnf=0.0004 stops=4.375 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-rookie seedBase=7000 n=240 rho=0.528 dpos=4.222 paceRank=0.952 crash=0.1021 mech=0.0835 top=0.362 winners=7.00 sc=1.087 tyreDnf=0.0019 stops=4.603 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-rookie seedBase=10000 n=240 rho=0.521 dpos=4.258 paceRank=0.988 crash=0.1008 mech=0.0817 top=0.325 winners=7.00 sc=1.063 tyreDnf=0.0006 stops=4.424 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline lantern_quay-rookie MEAN(1000/4000/7000/10000) rho=0.526 dpos=4.250 paceRank=0.955 crash=0.1010 mech=0.0840 top=0.327 winners=7.25 sc=1.036 tyreDnf=0.0009 stops=4.453 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-pro seedBase=1000 n=240 rho=0.620 dpos=3.702 paceRank=0.988 crash=0.0704 mech=0.0810 top=0.550 winners=6.00 sc=0.537 tyreDnf=0.0002 stops=3.495 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-pro seedBase=4000 n=240 rho=0.625 dpos=3.646 paceRank=0.988 crash=0.0723 mech=0.0773 top=0.550 winners=5.00 sc=0.571 tyreDnf=0.0000 stops=3.590 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-pro seedBase=7000 n=240 rho=0.651 dpos=3.536 paceRank=0.988 crash=0.0681 mech=0.0758 top=0.521 winners=4.00 sc=0.550 tyreDnf=0.0000 stops=3.643 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-pro seedBase=10000 n=240 rho=0.619 dpos=3.701 paceRank=0.964 crash=0.0696 mech=0.0817 top=0.571 winners=5.00 sc=0.558 tyreDnf=0.0000 stops=3.601 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-pro MEAN(1000/4000/7000/10000) rho=0.629 dpos=3.646 paceRank=0.982 crash=0.0701 mech=0.0790 top=0.548 winners=5.00 sc=0.554 tyreDnf=0.0001 stops=3.582 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-rookie seedBase=1000 n=240 rho=0.670 dpos=3.368 paceRank=0.952 crash=0.0704 mech=0.0804 top=0.421 winners=4.00 sc=0.604 tyreDnf=0.0017 stops=2.800 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-rookie seedBase=4000 n=240 rho=0.672 dpos=3.332 paceRank=0.939 crash=0.0683 mech=0.0762 top=0.487 winners=7.00 sc=0.517 tyreDnf=0.0015 stops=2.919 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-rookie seedBase=7000 n=240 rho=0.655 dpos=3.455 paceRank=0.976 crash=0.0704 mech=0.0831 top=0.412 winners=7.00 sc=0.613 tyreDnf=0.0019 stops=2.947 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-rookie seedBase=10000 n=240 rho=0.656 dpos=3.424 paceRank=0.952 crash=0.0683 mech=0.0750 top=0.508 winners=6.00 sc=0.500 tyreDnf=0.0010 stops=2.869 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline mesa_roja-rookie MEAN(1000/4000/7000/10000) rho=0.663 dpos=3.395 paceRank=0.955 crash=0.0694 mech=0.0787 top=0.457 winners=6.00 sc=0.558 tyreDnf=0.0015 stops=2.884 graining=0.000 hot=0.000 cold=0.000
+MEASURE baseline clearing-lantern_quay seedBase=1000 n=240 failure=0.146
+MEASURE baseline clearing-lantern_quay seedBase=4000 n=240 failure=0.233
+MEASURE baseline clearing-lantern_quay seedBase=7000 n=240 failure=0.183
+MEASURE baseline clearing-lantern_quay seedBase=10000 n=240 failure=0.246
+MEASURE baseline clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
+```
+
+Plan values (`tyreTemp.enabled` true):
+```
+MEASURE thermal sample-pro seedBase=1000 n=240 rho=0.624 dpos=3.658 paceRank=0.964 crash=0.0600 mech=0.0717 top=0.421 winners=8.00 sc=0.487 tyreDnf=0.0000 stops=2.652 graining=1.196 hot=0.102 cold=0.074
+MEASURE thermal sample-pro seedBase=4000 n=240 rho=0.634 dpos=3.619 paceRank=0.964 crash=0.0635 mech=0.0698 top=0.408 winners=7.00 sc=0.487 tyreDnf=0.0000 stops=2.672 graining=1.333 hot=0.096 cold=0.081
+MEASURE thermal sample-pro seedBase=7000 n=240 rho=0.640 dpos=3.577 paceRank=0.964 crash=0.0585 mech=0.0669 top=0.425 winners=6.00 sc=0.496 tyreDnf=0.0000 stops=2.800 graining=1.063 hot=0.096 cold=0.084
+MEASURE thermal sample-pro seedBase=10000 n=240 rho=0.620 dpos=3.672 paceRank=0.988 crash=0.0606 mech=0.0683 top=0.421 winners=7.00 sc=0.492 tyreDnf=0.0013 stops=2.712 graining=1.625 hot=0.094 cold=0.084
+MEASURE thermal sample-pro MEAN(1000/4000/7000/10000) rho=0.630 dpos=3.632 paceRank=0.970 crash=0.0607 mech=0.0692 top=0.419 winners=7.00 sc=0.491 tyreDnf=0.0003 stops=2.709 graining=1.304 hot=0.097 cold=0.081
+MEASURE thermal sample-rookie seedBase=1000 n=240 rho=0.637 dpos=3.554 paceRank=0.915 crash=0.0681 mech=0.0638 top=0.408 winners=8.00 sc=0.529 tyreDnf=0.0000 stops=2.472 graining=2.275 hot=0.077 cold=0.074
+MEASURE thermal sample-rookie seedBase=4000 n=240 rho=0.660 dpos=3.387 paceRank=0.915 crash=0.0610 mech=0.0656 top=0.417 winners=7.00 sc=0.475 tyreDnf=0.0006 stops=2.459 graining=2.212 hot=0.075 cold=0.080
+MEASURE thermal sample-rookie seedBase=7000 n=240 rho=0.662 dpos=3.367 paceRank=0.952 crash=0.0627 mech=0.0608 top=0.425 winners=7.00 sc=0.537 tyreDnf=0.0004 stops=2.582 graining=2.621 hot=0.074 cold=0.083
+MEASURE thermal sample-rookie seedBase=10000 n=240 rho=0.663 dpos=3.405 paceRank=0.936 crash=0.0600 mech=0.0665 top=0.404 winners=7.00 sc=0.463 tyreDnf=0.0000 stops=2.485 graining=2.204 hot=0.075 cold=0.076
+MEASURE thermal sample-rookie MEAN(1000/4000/7000/10000) rho=0.656 dpos=3.428 paceRank=0.929 crash=0.0630 mech=0.0642 top=0.414 winners=7.25 sc=0.501 tyreDnf=0.0003 stops=2.499 graining=2.328 hot=0.075 cold=0.078
+MEASURE thermal setups-pro seedBase=1000 n=240 rho=0.612 dpos=3.744 paceRank=0.964 crash=0.0627 mech=0.0669 top=0.383 winners=8.00 sc=0.483 tyreDnf=0.0000 stops=2.645 graining=1.554 hot=0.100 cold=0.078
+MEASURE thermal setups-pro seedBase=4000 n=240 rho=0.632 dpos=3.658 paceRank=0.964 crash=0.0692 mech=0.0615 top=0.412 winners=7.00 sc=0.529 tyreDnf=0.0000 stops=2.668 graining=1.421 hot=0.098 cold=0.079
+MEASURE thermal setups-pro seedBase=7000 n=240 rho=0.627 dpos=3.701 paceRank=0.964 crash=0.0592 mech=0.0658 top=0.429 winners=7.00 sc=0.487 tyreDnf=0.0000 stops=2.789 graining=1.079 hot=0.096 cold=0.086
+MEASURE thermal setups-pro seedBase=10000 n=240 rho=0.636 dpos=3.610 paceRank=0.952 crash=0.0550 mech=0.0660 top=0.400 winners=7.00 sc=0.500 tyreDnf=0.0013 stops=2.672 graining=1.383 hot=0.097 cold=0.080
+MEASURE thermal setups-pro MEAN(1000/4000/7000/10000) rho=0.627 dpos=3.678 paceRank=0.961 crash=0.0615 mech=0.0651 top=0.406 winners=7.25 sc=0.500 tyreDnf=0.0003 stops=2.693 graining=1.359 hot=0.098 cold=0.081
+MEASURE thermal lantern_quay-pro seedBase=1000 n=240 rho=0.511 dpos=4.375 paceRank=0.988 crash=0.0971 mech=0.0860 top=0.317 winners=8.00 sc=0.950 tyreDnf=0.0000 stops=4.713 graining=5.817 hot=0.010 cold=0.165
+MEASURE thermal lantern_quay-pro seedBase=4000 n=240 rho=0.508 dpos=4.421 paceRank=0.964 crash=0.1060 mech=0.0852 top=0.296 winners=7.00 sc=0.971 tyreDnf=0.0002 stops=4.703 graining=5.996 hot=0.011 cold=0.172
+MEASURE thermal lantern_quay-pro seedBase=7000 n=240 rho=0.534 dpos=4.237 paceRank=0.976 crash=0.0979 mech=0.0829 top=0.354 winners=7.00 sc=1.021 tyreDnf=0.0000 stops=4.917 graining=6.279 hot=0.010 cold=0.174
+MEASURE thermal lantern_quay-pro seedBase=10000 n=240 rho=0.530 dpos=4.263 paceRank=0.988 crash=0.0958 mech=0.0873 top=0.300 winners=7.00 sc=0.912 tyreDnf=0.0010 stops=4.747 graining=5.463 hot=0.011 cold=0.168
+MEASURE thermal lantern_quay-pro MEAN(1000/4000/7000/10000) rho=0.521 dpos=4.324 paceRank=0.979 crash=0.0992 mech=0.0854 top=0.317 winners=7.25 sc=0.964 tyreDnf=0.0003 stops=4.770 graining=5.889 hot=0.010 cold=0.170
+MEASURE thermal lantern_quay-rookie seedBase=1000 n=240 rho=0.513 dpos=4.318 paceRank=0.915 crash=0.1033 mech=0.0923 top=0.321 winners=7.00 sc=1.017 tyreDnf=0.0015 stops=4.434 graining=7.871 hot=0.002 cold=0.151
+MEASURE thermal lantern_quay-rookie seedBase=4000 n=240 rho=0.523 dpos=4.267 paceRank=0.903 crash=0.1065 mech=0.0781 top=0.313 winners=8.00 sc=1.008 tyreDnf=0.0015 stops=4.377 graining=7.971 hot=0.003 cold=0.154
+MEASURE thermal lantern_quay-rookie seedBase=7000 n=240 rho=0.503 dpos=4.365 paceRank=0.939 crash=0.1056 mech=0.0833 top=0.329 winners=7.00 sc=1.038 tyreDnf=0.0008 stops=4.586 graining=8.958 hot=0.002 cold=0.151
+MEASURE thermal lantern_quay-rookie seedBase=10000 n=240 rho=0.497 dpos=4.357 paceRank=0.927 crash=0.1033 mech=0.0838 top=0.342 winners=7.00 sc=1.012 tyreDnf=0.0010 stops=4.427 graining=9.421 hot=0.002 cold=0.156
+MEASURE thermal lantern_quay-rookie MEAN(1000/4000/7000/10000) rho=0.509 dpos=4.327 paceRank=0.921 crash=0.1047 mech=0.0844 top=0.326 winners=7.25 sc=1.019 tyreDnf=0.0012 stops=4.456 graining=8.555 hot=0.002 cold=0.153
+MEASURE thermal mesa_roja-pro seedBase=1000 n=240 rho=0.642 dpos=3.598 paceRank=0.988 crash=0.0667 mech=0.0794 top=0.537 winners=4.00 sc=0.567 tyreDnf=0.0000 stops=3.525 graining=0.000 hot=0.174 cold=0.062
+MEASURE thermal mesa_roja-pro seedBase=4000 n=240 rho=0.612 dpos=3.746 paceRank=0.988 crash=0.0777 mech=0.0725 top=0.483 winners=5.00 sc=0.583 tyreDnf=0.0002 stops=3.639 graining=0.000 hot=0.174 cold=0.063
+MEASURE thermal mesa_roja-pro seedBase=7000 n=240 rho=0.614 dpos=3.715 paceRank=0.988 crash=0.0756 mech=0.0715 top=0.533 winners=5.00 sc=0.554 tyreDnf=0.0000 stops=3.667 graining=0.000 hot=0.172 cold=0.063
+MEASURE thermal mesa_roja-pro seedBase=10000 n=240 rho=0.627 dpos=3.655 paceRank=0.988 crash=0.0663 mech=0.0754 top=0.487 winners=7.00 sc=0.558 tyreDnf=0.0002 stops=3.650 graining=0.000 hot=0.175 cold=0.061
+MEASURE thermal mesa_roja-pro MEAN(1000/4000/7000/10000) rho=0.624 dpos=3.679 paceRank=0.988 crash=0.0716 mech=0.0747 top=0.510 winners=5.25 sc=0.566 tyreDnf=0.0001 stops=3.620 graining=0.000 hot=0.174 cold=0.063
+MEASURE thermal mesa_roja-rookie seedBase=1000 n=240 rho=0.666 dpos=3.375 paceRank=0.952 crash=0.0729 mech=0.0775 top=0.492 winners=6.00 sc=0.571 tyreDnf=0.0025 stops=2.792 graining=0.000 hot=0.102 cold=0.062
+MEASURE thermal mesa_roja-rookie seedBase=4000 n=240 rho=0.662 dpos=3.409 paceRank=0.952 crash=0.0746 mech=0.0717 top=0.450 winners=7.00 sc=0.529 tyreDnf=0.0010 stops=2.958 graining=0.000 hot=0.102 cold=0.060
+MEASURE thermal mesa_roja-rookie seedBase=7000 n=240 rho=0.646 dpos=3.504 paceRank=0.952 crash=0.0706 mech=0.0794 top=0.471 winners=7.00 sc=0.542 tyreDnf=0.0019 stops=2.969 graining=0.000 hot=0.102 cold=0.061
+MEASURE thermal mesa_roja-rookie seedBase=10000 n=240 rho=0.649 dpos=3.484 paceRank=0.952 crash=0.0708 mech=0.0798 top=0.512 winners=7.00 sc=0.650 tyreDnf=0.0015 stops=2.907 graining=0.000 hot=0.100 cold=0.066
+MEASURE thermal mesa_roja-rookie MEAN(1000/4000/7000/10000) rho=0.656 dpos=3.443 paceRank=0.952 crash=0.0722 mech=0.0771 top=0.481 winners=6.75 sc=0.573 tyreDnf=0.0017 stops=2.907 graining=0.000 hot=0.101 cold=0.062
+MEASURE thermal clearing-lantern_quay seedBase=1000 n=240 failure=0.146
+MEASURE thermal clearing-lantern_quay seedBase=4000 n=240 failure=0.233
+MEASURE thermal clearing-lantern_quay seedBase=7000 n=240 failure=0.183
+MEASURE thermal clearing-lantern_quay seedBase=10000 n=240 failure=0.246
+MEASURE thermal clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
+MEASURE thermal graining-after-neutralisation races=960 perRace=1.304 other=575/794340 (0.72/1000 car-laps) short: ends=881 grains=627 (12.07/1000 car-laps) mid: ends=136 grains=50 (6.16/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
+```
+
+Rung C (lantern_quay `trackTempC` 31):
+```
+MEASURE rungC sample-pro seedBase=1000 n=240 rho=0.624 dpos=3.658 paceRank=0.964 crash=0.0600 mech=0.0717 top=0.421 winners=8.00 sc=0.487 tyreDnf=0.0000 stops=2.652 graining=1.196 hot=0.102 cold=0.074
+MEASURE rungC sample-pro seedBase=4000 n=240 rho=0.634 dpos=3.619 paceRank=0.964 crash=0.0635 mech=0.0698 top=0.408 winners=7.00 sc=0.487 tyreDnf=0.0000 stops=2.672 graining=1.333 hot=0.096 cold=0.081
+MEASURE rungC sample-pro seedBase=7000 n=240 rho=0.640 dpos=3.577 paceRank=0.964 crash=0.0585 mech=0.0669 top=0.425 winners=6.00 sc=0.496 tyreDnf=0.0000 stops=2.800 graining=1.063 hot=0.096 cold=0.084
+MEASURE rungC sample-pro seedBase=10000 n=240 rho=0.620 dpos=3.672 paceRank=0.988 crash=0.0606 mech=0.0683 top=0.421 winners=7.00 sc=0.492 tyreDnf=0.0013 stops=2.712 graining=1.625 hot=0.094 cold=0.084
+MEASURE rungC sample-pro MEAN(1000/4000/7000/10000) rho=0.630 dpos=3.632 paceRank=0.970 crash=0.0607 mech=0.0692 top=0.419 winners=7.00 sc=0.491 tyreDnf=0.0003 stops=2.709 graining=1.304 hot=0.097 cold=0.081
+MEASURE rungC sample-rookie seedBase=1000 n=240 rho=0.637 dpos=3.554 paceRank=0.915 crash=0.0681 mech=0.0638 top=0.408 winners=8.00 sc=0.529 tyreDnf=0.0000 stops=2.472 graining=2.275 hot=0.077 cold=0.074
+MEASURE rungC sample-rookie seedBase=4000 n=240 rho=0.660 dpos=3.387 paceRank=0.915 crash=0.0610 mech=0.0656 top=0.417 winners=7.00 sc=0.475 tyreDnf=0.0006 stops=2.459 graining=2.212 hot=0.075 cold=0.080
+MEASURE rungC sample-rookie seedBase=7000 n=240 rho=0.662 dpos=3.367 paceRank=0.952 crash=0.0627 mech=0.0608 top=0.425 winners=7.00 sc=0.537 tyreDnf=0.0004 stops=2.582 graining=2.621 hot=0.074 cold=0.083
+MEASURE rungC sample-rookie seedBase=10000 n=240 rho=0.663 dpos=3.405 paceRank=0.936 crash=0.0600 mech=0.0665 top=0.404 winners=7.00 sc=0.463 tyreDnf=0.0000 stops=2.485 graining=2.204 hot=0.075 cold=0.076
+MEASURE rungC sample-rookie MEAN(1000/4000/7000/10000) rho=0.656 dpos=3.428 paceRank=0.929 crash=0.0630 mech=0.0642 top=0.414 winners=7.25 sc=0.501 tyreDnf=0.0003 stops=2.499 graining=2.328 hot=0.075 cold=0.078
+MEASURE rungC setups-pro seedBase=1000 n=240 rho=0.612 dpos=3.744 paceRank=0.964 crash=0.0627 mech=0.0669 top=0.383 winners=8.00 sc=0.483 tyreDnf=0.0000 stops=2.645 graining=1.554 hot=0.100 cold=0.078
+MEASURE rungC setups-pro seedBase=4000 n=240 rho=0.632 dpos=3.658 paceRank=0.964 crash=0.0692 mech=0.0615 top=0.412 winners=7.00 sc=0.529 tyreDnf=0.0000 stops=2.668 graining=1.421 hot=0.098 cold=0.079
+MEASURE rungC setups-pro seedBase=7000 n=240 rho=0.627 dpos=3.701 paceRank=0.964 crash=0.0592 mech=0.0658 top=0.429 winners=7.00 sc=0.487 tyreDnf=0.0000 stops=2.789 graining=1.079 hot=0.096 cold=0.086
+MEASURE rungC setups-pro seedBase=10000 n=240 rho=0.636 dpos=3.610 paceRank=0.952 crash=0.0550 mech=0.0660 top=0.400 winners=7.00 sc=0.500 tyreDnf=0.0013 stops=2.672 graining=1.383 hot=0.097 cold=0.080
+MEASURE rungC setups-pro MEAN(1000/4000/7000/10000) rho=0.627 dpos=3.678 paceRank=0.961 crash=0.0615 mech=0.0651 top=0.406 winners=7.25 sc=0.500 tyreDnf=0.0003 stops=2.693 graining=1.359 hot=0.098 cold=0.081
+MEASURE rungC lantern_quay-pro seedBase=1000 n=240 rho=0.497 dpos=4.466 paceRank=0.988 crash=0.1010 mech=0.0873 top=0.321 winners=7.00 sc=0.983 tyreDnf=0.0000 stops=4.725 graining=4.146 hot=0.027 cold=0.089
+MEASURE rungC lantern_quay-pro seedBase=4000 n=240 rho=0.552 dpos=4.170 paceRank=0.976 crash=0.0990 mech=0.0808 top=0.342 winners=7.00 sc=0.979 tyreDnf=0.0000 stops=4.714 graining=3.979 hot=0.027 cold=0.090
+MEASURE rungC lantern_quay-pro seedBase=7000 n=240 rho=0.515 dpos=4.409 paceRank=0.976 crash=0.0975 mech=0.0867 top=0.346 winners=7.00 sc=0.925 tyreDnf=0.0000 stops=4.891 graining=4.567 hot=0.025 cold=0.092
+MEASURE rungC lantern_quay-pro seedBase=10000 n=240 rho=0.507 dpos=4.430 paceRank=0.964 crash=0.1006 mech=0.0844 top=0.308 winners=7.00 sc=1.067 tyreDnf=0.0008 stops=4.749 graining=4.112 hot=0.025 cold=0.094
+MEASURE rungC lantern_quay-pro MEAN(1000/4000/7000/10000) rho=0.518 dpos=4.369 paceRank=0.976 crash=0.0995 mech=0.0848 top=0.329 winners=7.00 sc=0.989 tyreDnf=0.0002 stops=4.770 graining=4.201 hot=0.026 cold=0.091
+MEASURE rungC lantern_quay-rookie seedBase=1000 n=240 rho=0.541 dpos=4.191 paceRank=0.939 crash=0.1015 mech=0.0915 top=0.338 winners=7.00 sc=1.038 tyreDnf=0.0004 stops=4.450 graining=7.521 hot=0.010 cold=0.095
+MEASURE rungC lantern_quay-rookie seedBase=4000 n=240 rho=0.550 dpos=4.138 paceRank=0.939 crash=0.0960 mech=0.0840 top=0.346 winners=8.00 sc=0.992 tyreDnf=0.0010 stops=4.389 graining=6.596 hot=0.010 cold=0.090
+MEASURE rungC lantern_quay-rookie seedBase=7000 n=240 rho=0.530 dpos=4.228 paceRank=0.915 crash=0.0975 mech=0.0777 top=0.342 winners=7.00 sc=0.963 tyreDnf=0.0008 stops=4.605 graining=6.917 hot=0.008 cold=0.090
+MEASURE rungC lantern_quay-rookie seedBase=10000 n=240 rho=0.517 dpos=4.298 paceRank=0.976 crash=0.0952 mech=0.0854 top=0.317 winners=7.00 sc=1.054 tyreDnf=0.0010 stops=4.435 graining=7.683 hot=0.009 cold=0.094
+MEASURE rungC lantern_quay-rookie MEAN(1000/4000/7000/10000) rho=0.534 dpos=4.214 paceRank=0.942 crash=0.0976 mech=0.0846 top=0.335 winners=7.25 sc=1.011 tyreDnf=0.0008 stops=4.470 graining=7.179 hot=0.009 cold=0.092
+MEASURE rungC mesa_roja-pro seedBase=1000 n=240 rho=0.642 dpos=3.598 paceRank=0.988 crash=0.0667 mech=0.0794 top=0.537 winners=4.00 sc=0.567 tyreDnf=0.0000 stops=3.525 graining=0.000 hot=0.174 cold=0.062
+MEASURE rungC mesa_roja-pro seedBase=4000 n=240 rho=0.612 dpos=3.746 paceRank=0.988 crash=0.0777 mech=0.0725 top=0.483 winners=5.00 sc=0.583 tyreDnf=0.0002 stops=3.639 graining=0.000 hot=0.174 cold=0.063
+MEASURE rungC mesa_roja-pro seedBase=7000 n=240 rho=0.614 dpos=3.715 paceRank=0.988 crash=0.0756 mech=0.0715 top=0.533 winners=5.00 sc=0.554 tyreDnf=0.0000 stops=3.667 graining=0.000 hot=0.172 cold=0.063
+MEASURE rungC mesa_roja-pro seedBase=10000 n=240 rho=0.627 dpos=3.655 paceRank=0.988 crash=0.0663 mech=0.0754 top=0.487 winners=7.00 sc=0.558 tyreDnf=0.0002 stops=3.650 graining=0.000 hot=0.175 cold=0.061
+MEASURE rungC mesa_roja-pro MEAN(1000/4000/7000/10000) rho=0.624 dpos=3.679 paceRank=0.988 crash=0.0716 mech=0.0747 top=0.510 winners=5.25 sc=0.566 tyreDnf=0.0001 stops=3.620 graining=0.000 hot=0.174 cold=0.063
+MEASURE rungC mesa_roja-rookie seedBase=1000 n=240 rho=0.666 dpos=3.375 paceRank=0.952 crash=0.0729 mech=0.0775 top=0.492 winners=6.00 sc=0.571 tyreDnf=0.0025 stops=2.792 graining=0.000 hot=0.102 cold=0.062
+MEASURE rungC mesa_roja-rookie seedBase=4000 n=240 rho=0.662 dpos=3.409 paceRank=0.952 crash=0.0746 mech=0.0717 top=0.450 winners=7.00 sc=0.529 tyreDnf=0.0010 stops=2.958 graining=0.000 hot=0.102 cold=0.060
+MEASURE rungC mesa_roja-rookie seedBase=7000 n=240 rho=0.646 dpos=3.504 paceRank=0.952 crash=0.0706 mech=0.0794 top=0.471 winners=7.00 sc=0.542 tyreDnf=0.0019 stops=2.969 graining=0.000 hot=0.102 cold=0.061
+MEASURE rungC mesa_roja-rookie seedBase=10000 n=240 rho=0.649 dpos=3.484 paceRank=0.952 crash=0.0708 mech=0.0798 top=0.512 winners=7.00 sc=0.650 tyreDnf=0.0015 stops=2.907 graining=0.000 hot=0.100 cold=0.066
+MEASURE rungC mesa_roja-rookie MEAN(1000/4000/7000/10000) rho=0.656 dpos=3.443 paceRank=0.952 crash=0.0722 mech=0.0771 top=0.481 winners=6.75 sc=0.573 tyreDnf=0.0017 stops=2.907 graining=0.000 hot=0.101 cold=0.062
+MEASURE rungC clearing-lantern_quay seedBase=1000 n=240 failure=0.146
+MEASURE rungC clearing-lantern_quay seedBase=4000 n=240 failure=0.233
+MEASURE rungC clearing-lantern_quay seedBase=7000 n=240 failure=0.183
+MEASURE rungC clearing-lantern_quay seedBase=10000 n=240 failure=0.246
+MEASURE rungC clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
+MEASURE rungC graining-after-neutralisation races=960 perRace=1.304 other=575/794340 (0.72/1000 car-laps) short: ends=881 grains=627 (12.07/1000 car-laps) mid: ends=136 grains=50 (6.16/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
+```
+
+Rung 1 (`coldCoeff`/`overheatCoeff` 0.12):
+```
+MEASURE rung1 sample-pro seedBase=1000 n=240 rho=0.625 dpos=3.651 paceRank=0.964 crash=0.0598 mech=0.0729 top=0.438 winners=8.00 sc=0.483 tyreDnf=0.0000 stops=2.664 graining=1.488 hot=0.103 cold=0.076
+MEASURE rung1 sample-pro seedBase=4000 n=240 rho=0.641 dpos=3.566 paceRank=0.939 crash=0.0596 mech=0.0648 top=0.467 winners=8.00 sc=0.454 tyreDnf=0.0000 stops=2.663 graining=1.163 hot=0.097 cold=0.076
+MEASURE rung1 sample-pro seedBase=7000 n=240 rho=0.626 dpos=3.649 paceRank=0.964 crash=0.0606 mech=0.0690 top=0.438 winners=7.00 sc=0.467 tyreDnf=0.0000 stops=2.766 graining=0.992 hot=0.097 cold=0.083
+MEASURE rung1 sample-pro seedBase=10000 n=240 rho=0.643 dpos=3.570 paceRank=0.964 crash=0.0567 mech=0.0715 top=0.417 winners=7.00 sc=0.450 tyreDnf=0.0017 stops=2.698 graining=1.646 hot=0.097 cold=0.082
+MEASURE rung1 sample-pro MEAN(1000/4000/7000/10000) rho=0.634 dpos=3.609 paceRank=0.958 crash=0.0592 mech=0.0695 top=0.440 winners=7.50 sc=0.464 tyreDnf=0.0004 stops=2.698 graining=1.322 hot=0.098 cold=0.079
+MEASURE rung1 sample-rookie seedBase=1000 n=240 rho=0.657 dpos=3.420 paceRank=0.915 crash=0.0621 mech=0.0642 top=0.404 winners=8.00 sc=0.529 tyreDnf=0.0006 stops=2.475 graining=2.337 hot=0.078 cold=0.075
+MEASURE rung1 sample-rookie seedBase=4000 n=240 rho=0.657 dpos=3.422 paceRank=0.915 crash=0.0592 mech=0.0700 top=0.408 winners=7.00 sc=0.521 tyreDnf=0.0002 stops=2.460 graining=2.683 hot=0.075 cold=0.083
+MEASURE rung1 sample-rookie seedBase=7000 n=240 rho=0.659 dpos=3.390 paceRank=0.915 crash=0.0621 mech=0.0635 top=0.404 winners=7.00 sc=0.463 tyreDnf=0.0002 stops=2.577 graining=2.063 hot=0.073 cold=0.076
+MEASURE rung1 sample-rookie seedBase=10000 n=240 rho=0.670 dpos=3.356 paceRank=0.915 crash=0.0587 mech=0.0715 top=0.396 winners=7.00 sc=0.425 tyreDnf=0.0004 stops=2.472 graining=2.167 hot=0.075 cold=0.076
+MEASURE rung1 sample-rookie MEAN(1000/4000/7000/10000) rho=0.661 dpos=3.397 paceRank=0.915 crash=0.0605 mech=0.0673 top=0.403 winners=7.25 sc=0.484 tyreDnf=0.0004 stops=2.496 graining=2.313 hot=0.075 cold=0.078
+MEASURE rung1 setups-pro seedBase=1000 n=240 rho=0.608 dpos=3.750 paceRank=0.964 crash=0.0619 mech=0.0665 top=0.454 winners=9.00 sc=0.458 tyreDnf=0.0000 stops=2.651 graining=1.642 hot=0.099 cold=0.077
+MEASURE rung1 setups-pro seedBase=4000 n=240 rho=0.654 dpos=3.513 paceRank=0.964 crash=0.0656 mech=0.0623 top=0.433 winners=7.00 sc=0.504 tyreDnf=0.0000 stops=2.669 graining=1.525 hot=0.098 cold=0.078
+MEASURE rung1 setups-pro seedBase=7000 n=240 rho=0.619 dpos=3.740 paceRank=0.964 crash=0.0577 mech=0.0675 top=0.408 winners=7.00 sc=0.492 tyreDnf=0.0000 stops=2.788 graining=1.429 hot=0.096 cold=0.086
+MEASURE rung1 setups-pro seedBase=10000 n=240 rho=0.606 dpos=3.780 paceRank=0.952 crash=0.0594 mech=0.0690 top=0.375 winners=7.00 sc=0.512 tyreDnf=0.0013 stops=2.681 graining=1.792 hot=0.098 cold=0.081
+MEASURE rung1 setups-pro MEAN(1000/4000/7000/10000) rho=0.622 dpos=3.696 paceRank=0.961 crash=0.0611 mech=0.0663 top=0.418 winners=7.50 sc=0.492 tyreDnf=0.0003 stops=2.697 graining=1.597 hot=0.098 cold=0.081
+MEASURE rung1 lantern_quay-pro seedBase=1000 n=240 rho=0.485 dpos=4.510 paceRank=0.988 crash=0.1031 mech=0.0935 top=0.296 winners=7.00 sc=1.075 tyreDnf=0.0002 stops=4.710 graining=4.246 hot=0.026 cold=0.092
+MEASURE rung1 lantern_quay-pro seedBase=4000 n=240 rho=0.533 dpos=4.286 paceRank=0.952 crash=0.0981 mech=0.0838 top=0.342 winners=7.00 sc=0.954 tyreDnf=0.0000 stops=4.682 graining=3.808 hot=0.027 cold=0.089
+MEASURE rung1 lantern_quay-pro seedBase=7000 n=240 rho=0.520 dpos=4.371 paceRank=0.976 crash=0.1000 mech=0.0817 top=0.354 winners=7.00 sc=0.975 tyreDnf=0.0000 stops=4.870 graining=4.154 hot=0.024 cold=0.090
+MEASURE rung1 lantern_quay-pro seedBase=10000 n=240 rho=0.520 dpos=4.347 paceRank=0.988 crash=0.0998 mech=0.0848 top=0.304 winners=7.00 sc=0.988 tyreDnf=0.0010 stops=4.721 graining=3.583 hot=0.026 cold=0.092
+MEASURE rung1 lantern_quay-pro MEAN(1000/4000/7000/10000) rho=0.514 dpos=4.379 paceRank=0.976 crash=0.1003 mech=0.0859 top=0.324 winners=7.00 sc=0.998 tyreDnf=0.0003 stops=4.746 graining=3.948 hot=0.026 cold=0.091
+MEASURE rung1 lantern_quay-rookie seedBase=1000 n=240 rho=0.530 dpos=4.245 paceRank=0.927 crash=0.1025 mech=0.0883 top=0.308 winners=8.00 sc=0.992 tyreDnf=0.0017 stops=4.455 graining=7.096 hot=0.009 cold=0.094
+MEASURE rung1 lantern_quay-rookie seedBase=4000 n=240 rho=0.530 dpos=4.219 paceRank=0.891 crash=0.0971 mech=0.0831 top=0.313 winners=8.00 sc=0.971 tyreDnf=0.0004 stops=4.381 graining=7.017 hot=0.010 cold=0.093
+MEASURE rung1 lantern_quay-rookie seedBase=7000 n=240 rho=0.516 dpos=4.279 paceRank=0.927 crash=0.1031 mech=0.0800 top=0.321 winners=7.00 sc=0.942 tyreDnf=0.0010 stops=4.582 graining=7.029 hot=0.008 cold=0.092
+MEASURE rung1 lantern_quay-rookie seedBase=10000 n=240 rho=0.524 dpos=4.245 paceRank=0.927 crash=0.1058 mech=0.0790 top=0.317 winners=7.00 sc=1.025 tyreDnf=0.0006 stops=4.434 graining=7.992 hot=0.009 cold=0.095
+MEASURE rung1 lantern_quay-rookie MEAN(1000/4000/7000/10000) rho=0.525 dpos=4.247 paceRank=0.918 crash=0.1021 mech=0.0826 top=0.315 winners=7.50 sc=0.982 tyreDnf=0.0009 stops=4.463 graining=7.283 hot=0.009 cold=0.093
+MEASURE rung1 mesa_roja-pro seedBase=1000 n=240 rho=0.624 dpos=3.668 paceRank=0.964 crash=0.0702 mech=0.0823 top=0.542 winners=5.00 sc=0.575 tyreDnf=0.0002 stops=3.524 graining=0.000 hot=0.171 cold=0.064
+MEASURE rung1 mesa_roja-pro seedBase=4000 n=240 rho=0.612 dpos=3.704 paceRank=0.988 crash=0.0706 mech=0.0748 top=0.558 winners=6.00 sc=0.575 tyreDnf=0.0004 stops=3.651 graining=0.000 hot=0.175 cold=0.063
+MEASURE rung1 mesa_roja-pro seedBase=7000 n=240 rho=0.611 dpos=3.771 paceRank=0.964 crash=0.0740 mech=0.0835 top=0.471 winners=5.00 sc=0.633 tyreDnf=0.0000 stops=3.653 graining=0.000 hot=0.171 cold=0.066
+MEASURE rung1 mesa_roja-pro seedBase=10000 n=240 rho=0.599 dpos=3.762 paceRank=0.952 crash=0.0698 mech=0.0792 top=0.550 winners=5.00 sc=0.588 tyreDnf=0.0004 stops=3.613 graining=0.000 hot=0.173 cold=0.060
+MEASURE rung1 mesa_roja-pro MEAN(1000/4000/7000/10000) rho=0.611 dpos=3.726 paceRank=0.967 crash=0.0711 mech=0.0799 top=0.530 winners=5.25 sc=0.593 tyreDnf=0.0003 stops=3.610 graining=0.000 hot=0.173 cold=0.063
+MEASURE rung1 mesa_roja-rookie seedBase=1000 n=240 rho=0.665 dpos=3.405 paceRank=0.952 crash=0.0754 mech=0.0769 top=0.454 winners=7.00 sc=0.583 tyreDnf=0.0010 stops=2.796 graining=0.000 hot=0.102 cold=0.063
+MEASURE rung1 mesa_roja-rookie seedBase=4000 n=240 rho=0.649 dpos=3.461 paceRank=0.952 crash=0.0748 mech=0.0779 top=0.487 winners=6.00 sc=0.500 tyreDnf=0.0008 stops=2.954 graining=0.000 hot=0.102 cold=0.062
+MEASURE rung1 mesa_roja-rookie seedBase=7000 n=240 rho=0.629 dpos=3.585 paceRank=0.952 crash=0.0704 mech=0.0850 top=0.412 winners=6.00 sc=0.546 tyreDnf=0.0015 stops=2.965 graining=0.000 hot=0.101 cold=0.061
+MEASURE rung1 mesa_roja-rookie seedBase=10000 n=240 rho=0.655 dpos=3.458 paceRank=0.952 crash=0.0715 mech=0.0806 top=0.483 winners=6.00 sc=0.579 tyreDnf=0.0006 stops=2.907 graining=0.000 hot=0.101 cold=0.064
+MEASURE rung1 mesa_roja-rookie MEAN(1000/4000/7000/10000) rho=0.650 dpos=3.477 paceRank=0.952 crash=0.0730 mech=0.0801 top=0.459 winners=6.25 sc=0.552 tyreDnf=0.0010 stops=2.905 graining=0.000 hot=0.101 cold=0.062
+MEASURE rung1 clearing-lantern_quay seedBase=1000 n=240 failure=0.146
+MEASURE rung1 clearing-lantern_quay seedBase=4000 n=240 failure=0.233
+MEASURE rung1 clearing-lantern_quay seedBase=7000 n=240 failure=0.183
+MEASURE rung1 clearing-lantern_quay seedBase=10000 n=240 failure=0.246
+MEASURE rung1 clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
+MEASURE rung1 graining-after-neutralisation races=960 perRace=1.322 other=621/795820 (0.78/1000 car-laps) short: ends=851 grains=598 (11.87/1000 car-laps) mid: ends=138 grains=50 (6.11/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
+```
+
+Rung 2 (+ `neutralisedHeat` −15, `grainPenalty` 0.20):
+```
+MEASURE rung2 sample-pro seedBase=1000 n=240 rho=0.616 dpos=3.702 paceRank=0.964 crash=0.0587 mech=0.0760 top=0.429 winners=8.00 sc=0.475 tyreDnf=0.0000 stops=2.668 graining=0.150 hot=0.104 cold=0.064
+MEASURE rung2 sample-pro seedBase=4000 n=240 rho=0.639 dpos=3.576 paceRank=0.964 crash=0.0619 mech=0.0660 top=0.483 winners=8.00 sc=0.450 tyreDnf=0.0000 stops=2.658 graining=0.146 hot=0.099 cold=0.063
+MEASURE rung2 sample-pro seedBase=7000 n=240 rho=0.629 dpos=3.650 paceRank=0.964 crash=0.0610 mech=0.0708 top=0.429 winners=8.00 sc=0.458 tyreDnf=0.0000 stops=2.761 graining=0.138 hot=0.097 cold=0.072
+MEASURE rung2 sample-pro seedBase=10000 n=240 rho=0.648 dpos=3.527 paceRank=0.964 crash=0.0565 mech=0.0677 top=0.412 winners=7.00 sc=0.479 tyreDnf=0.0008 stops=2.695 graining=0.287 hot=0.098 cold=0.069
+MEASURE rung2 sample-pro MEAN(1000/4000/7000/10000) rho=0.633 dpos=3.614 paceRank=0.964 crash=0.0595 mech=0.0702 top=0.439 winners=7.75 sc=0.466 tyreDnf=0.0002 stops=2.695 graining=0.180 hot=0.100 cold=0.067
+MEASURE rung2 sample-rookie seedBase=1000 n=240 rho=0.648 dpos=3.478 paceRank=0.915 crash=0.0644 mech=0.0658 top=0.429 winners=8.00 sc=0.563 tyreDnf=0.0002 stops=2.474 graining=0.487 hot=0.078 cold=0.062
+MEASURE rung2 sample-rookie seedBase=4000 n=240 rho=0.648 dpos=3.468 paceRank=0.915 crash=0.0648 mech=0.0669 top=0.388 winners=7.00 sc=0.546 tyreDnf=0.0000 stops=2.457 graining=0.383 hot=0.075 cold=0.067
+MEASURE rung2 sample-rookie seedBase=7000 n=240 rho=0.653 dpos=3.423 paceRank=0.915 crash=0.0644 mech=0.0681 top=0.412 winners=7.00 sc=0.463 tyreDnf=0.0006 stops=2.575 graining=0.388 hot=0.073 cold=0.064
+MEASURE rung2 sample-rookie seedBase=10000 n=240 rho=0.673 dpos=3.344 paceRank=0.915 crash=0.0594 mech=0.0698 top=0.396 winners=7.00 sc=0.454 tyreDnf=0.0002 stops=2.482 graining=0.487 hot=0.076 cold=0.064
+MEASURE rung2 sample-rookie MEAN(1000/4000/7000/10000) rho=0.656 dpos=3.428 paceRank=0.915 crash=0.0632 mech=0.0677 top=0.406 winners=7.25 sc=0.506 tyreDnf=0.0003 stops=2.497 graining=0.436 hot=0.076 cold=0.064
+MEASURE rung2 setups-pro seedBase=1000 n=240 rho=0.617 dpos=3.710 paceRank=0.964 crash=0.0629 mech=0.0658 top=0.417 winners=9.00 sc=0.442 tyreDnf=0.0000 stops=2.658 graining=0.204 hot=0.099 cold=0.064
+MEASURE rung2 setups-pro seedBase=4000 n=240 rho=0.643 dpos=3.583 paceRank=0.964 crash=0.0665 mech=0.0598 top=0.417 winners=7.00 sc=0.475 tyreDnf=0.0000 stops=2.661 graining=0.192 hot=0.099 cold=0.067
+MEASURE rung2 setups-pro seedBase=7000 n=240 rho=0.618 dpos=3.743 paceRank=0.964 crash=0.0598 mech=0.0658 top=0.404 winners=7.00 sc=0.504 tyreDnf=0.0000 stops=2.772 graining=0.179 hot=0.097 cold=0.074
+MEASURE rung2 setups-pro seedBase=10000 n=240 rho=0.614 dpos=3.733 paceRank=0.952 crash=0.0556 mech=0.0717 top=0.396 winners=7.00 sc=0.483 tyreDnf=0.0010 stops=2.684 graining=0.138 hot=0.100 cold=0.069
+MEASURE rung2 setups-pro MEAN(1000/4000/7000/10000) rho=0.623 dpos=3.692 paceRank=0.961 crash=0.0612 mech=0.0658 top=0.408 winners=7.50 sc=0.476 tyreDnf=0.0003 stops=2.694 graining=0.178 hot=0.099 cold=0.068
+MEASURE rung2 lantern_quay-pro seedBase=1000 n=240 rho=0.498 dpos=4.452 paceRank=0.988 crash=0.0985 mech=0.0879 top=0.321 winners=7.00 sc=1.021 tyreDnf=0.0004 stops=4.704 graining=0.000 hot=0.028 cold=0.072
+MEASURE rung2 lantern_quay-pro seedBase=4000 n=240 rho=0.536 dpos=4.279 paceRank=0.988 crash=0.1004 mech=0.0810 top=0.333 winners=7.00 sc=0.971 tyreDnf=0.0000 stops=4.695 graining=0.017 hot=0.027 cold=0.073
+MEASURE rung2 lantern_quay-pro seedBase=7000 n=240 rho=0.525 dpos=4.328 paceRank=0.976 crash=0.0950 mech=0.0846 top=0.379 winners=7.00 sc=0.904 tyreDnf=0.0000 stops=4.860 graining=0.000 hot=0.025 cold=0.071
+MEASURE rung2 lantern_quay-pro seedBase=10000 n=240 rho=0.531 dpos=4.296 paceRank=0.988 crash=0.0958 mech=0.0835 top=0.317 winners=7.00 sc=0.958 tyreDnf=0.0010 stops=4.706 graining=0.021 hot=0.026 cold=0.074
+MEASURE rung2 lantern_quay-pro MEAN(1000/4000/7000/10000) rho=0.523 dpos=4.339 paceRank=0.985 crash=0.0974 mech=0.0843 top=0.337 winners=7.00 sc=0.964 tyreDnf=0.0004 stops=4.741 graining=0.009 hot=0.026 cold=0.073
+MEASURE rung2 lantern_quay-rookie seedBase=1000 n=240 rho=0.517 dpos=4.305 paceRank=0.927 crash=0.1025 mech=0.0892 top=0.325 winners=7.00 sc=0.971 tyreDnf=0.0008 stops=4.422 graining=0.004 hot=0.009 cold=0.077
+MEASURE rung2 lantern_quay-rookie seedBase=4000 n=240 rho=0.539 dpos=4.183 paceRank=0.915 crash=0.1015 mech=0.0810 top=0.283 winners=8.00 sc=1.025 tyreDnf=0.0006 stops=4.380 graining=0.013 hot=0.010 cold=0.077
+MEASURE rung2 lantern_quay-rookie seedBase=7000 n=240 rho=0.534 dpos=4.175 paceRank=0.988 crash=0.0990 mech=0.0808 top=0.333 winners=7.00 sc=0.958 tyreDnf=0.0013 stops=4.576 graining=0.058 hot=0.008 cold=0.077
+MEASURE rung2 lantern_quay-rookie seedBase=10000 n=240 rho=0.532 dpos=4.214 paceRank=0.924 crash=0.1025 mech=0.0835 top=0.292 winners=7.00 sc=1.004 tyreDnf=0.0008 stops=4.439 graining=0.079 hot=0.009 cold=0.078
+MEASURE rung2 lantern_quay-rookie MEAN(1000/4000/7000/10000) rho=0.531 dpos=4.219 paceRank=0.939 crash=0.1014 mech=0.0836 top=0.308 winners=7.25 sc=0.990 tyreDnf=0.0009 stops=4.455 graining=0.039 hot=0.009 cold=0.077
+MEASURE rung2 mesa_roja-pro seedBase=1000 n=240 rho=0.621 dpos=3.682 paceRank=0.952 crash=0.0737 mech=0.0794 top=0.550 winners=6.00 sc=0.596 tyreDnf=0.0002 stops=3.536 graining=0.000 hot=0.175 cold=0.043
+MEASURE rung2 mesa_roja-pro seedBase=4000 n=240 rho=0.619 dpos=3.676 paceRank=0.988 crash=0.0696 mech=0.0767 top=0.596 winners=5.00 sc=0.575 tyreDnf=0.0000 stops=3.650 graining=0.000 hot=0.175 cold=0.043
+MEASURE rung2 mesa_roja-pro seedBase=7000 n=240 rho=0.625 dpos=3.680 paceRank=0.964 crash=0.0702 mech=0.0796 top=0.521 winners=5.00 sc=0.571 tyreDnf=0.0000 stops=3.650 graining=0.000 hot=0.173 cold=0.043
+MEASURE rung2 mesa_roja-pro seedBase=10000 n=240 rho=0.615 dpos=3.696 paceRank=0.988 crash=0.0698 mech=0.0785 top=0.529 winners=4.00 sc=0.588 tyreDnf=0.0006 stops=3.587 graining=0.000 hot=0.174 cold=0.042
+MEASURE rung2 mesa_roja-pro MEAN(1000/4000/7000/10000) rho=0.620 dpos=3.683 paceRank=0.973 crash=0.0708 mech=0.0785 top=0.549 winners=5.00 sc=0.582 tyreDnf=0.0002 stops=3.606 graining=0.000 hot=0.174 cold=0.043
+MEASURE rung2 mesa_roja-rookie seedBase=1000 n=240 rho=0.673 dpos=3.362 paceRank=0.952 crash=0.0715 mech=0.0767 top=0.504 winners=6.00 sc=0.567 tyreDnf=0.0015 stops=2.810 graining=0.000 hot=0.103 cold=0.039
+MEASURE rung2 mesa_roja-rookie seedBase=4000 n=240 rho=0.659 dpos=3.425 paceRank=0.952 crash=0.0717 mech=0.0762 top=0.508 winners=5.00 sc=0.487 tyreDnf=0.0008 stops=2.945 graining=0.000 hot=0.102 cold=0.038
+MEASURE rung2 mesa_roja-rookie seedBase=7000 n=240 rho=0.637 dpos=3.536 paceRank=0.952 crash=0.0712 mech=0.0823 top=0.450 winners=5.00 sc=0.617 tyreDnf=0.0013 stops=2.960 graining=0.000 hot=0.101 cold=0.039
+MEASURE rung2 mesa_roja-rookie seedBase=10000 n=240 rho=0.665 dpos=3.415 paceRank=0.952 crash=0.0692 mech=0.0758 top=0.517 winners=6.00 sc=0.571 tyreDnf=0.0006 stops=2.887 graining=0.000 hot=0.101 cold=0.038
+MEASURE rung2 mesa_roja-rookie MEAN(1000/4000/7000/10000) rho=0.658 dpos=3.434 paceRank=0.952 crash=0.0709 mech=0.0778 top=0.495 winners=5.50 sc=0.560 tyreDnf=0.0010 stops=2.901 graining=0.000 hot=0.102 cold=0.038
+MEASURE rung2 clearing-lantern_quay seedBase=1000 n=240 failure=0.146
+MEASURE rung2 clearing-lantern_quay seedBase=4000 n=240 failure=0.233
+MEASURE rung2 clearing-lantern_quay seedBase=7000 n=240 failure=0.183
+MEASURE rung2 clearing-lantern_quay seedBase=10000 n=240 failure=0.246
+MEASURE rung2 clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
+MEASURE rung2 graining-after-neutralisation races=960 perRace=0.180 other=36/794680 (0.05/1000 car-laps) short: ends=875 grains=117 (2.26/1000 car-laps) mid: ends=133 grains=20 (2.54/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
+```
+
+Rung 3, shipped (+ coefficients 0.08, `overheatWearPerLap` 0.05):
+```
+MEASURE rung3 sample-pro seedBase=1000 n=240 rho=0.624 dpos=3.658 paceRank=0.964 crash=0.0612 mech=0.0765 top=0.463 winners=8.00 sc=0.471 tyreDnf=0.0000 stops=2.679 graining=0.063 hot=0.101 cold=0.063
+MEASURE rung3 sample-pro seedBase=4000 n=240 rho=0.617 dpos=3.713 paceRank=0.964 crash=0.0677 mech=0.0702 top=0.442 winners=7.00 sc=0.517 tyreDnf=0.0000 stops=2.663 graining=0.208 hot=0.097 cold=0.066
+MEASURE rung3 sample-pro seedBase=7000 n=240 rho=0.645 dpos=3.550 paceRank=0.964 crash=0.0550 mech=0.0663 top=0.438 winners=8.00 sc=0.479 tyreDnf=0.0000 stops=2.762 graining=0.113 hot=0.099 cold=0.070
+MEASURE rung3 sample-pro seedBase=10000 n=240 rho=0.641 dpos=3.578 paceRank=0.952 crash=0.0537 mech=0.0735 top=0.383 winners=7.00 sc=0.475 tyreDnf=0.0015 stops=2.673 graining=0.154 hot=0.099 cold=0.069
+MEASURE rung3 sample-pro MEAN(1000/4000/7000/10000) rho=0.632 dpos=3.625 paceRank=0.961 crash=0.0594 mech=0.0716 top=0.431 winners=7.50 sc=0.485 tyreDnf=0.0004 stops=2.694 graining=0.134 hot=0.099 cold=0.067
+MEASURE rung3 sample-rookie seedBase=1000 n=240 rho=0.657 dpos=3.442 paceRank=0.915 crash=0.0592 mech=0.0717 top=0.412 winners=8.00 sc=0.504 tyreDnf=0.0004 stops=2.458 graining=0.487 hot=0.077 cold=0.062
+MEASURE rung3 sample-rookie seedBase=4000 n=240 rho=0.654 dpos=3.433 paceRank=0.915 crash=0.0600 mech=0.0671 top=0.417 winners=7.00 sc=0.475 tyreDnf=0.0000 stops=2.456 graining=0.463 hot=0.076 cold=0.066
+MEASURE rung3 sample-rookie seedBase=7000 n=240 rho=0.664 dpos=3.360 paceRank=0.915 crash=0.0625 mech=0.0619 top=0.417 winners=6.00 sc=0.479 tyreDnf=0.0013 stops=2.584 graining=0.550 hot=0.076 cold=0.067
+MEASURE rung3 sample-rookie seedBase=10000 n=240 rho=0.683 dpos=3.313 paceRank=0.915 crash=0.0577 mech=0.0669 top=0.438 winners=7.00 sc=0.483 tyreDnf=0.0000 stops=2.464 graining=0.546 hot=0.077 cold=0.064
+MEASURE rung3 sample-rookie MEAN(1000/4000/7000/10000) rho=0.664 dpos=3.387 paceRank=0.915 crash=0.0598 mech=0.0669 top=0.421 winners=7.00 sc=0.485 tyreDnf=0.0004 stops=2.491 graining=0.511 hot=0.077 cold=0.065
+MEASURE rung3 setups-pro seedBase=1000 n=240 rho=0.619 dpos=3.694 paceRank=0.964 crash=0.0558 mech=0.0700 top=0.375 winners=8.00 sc=0.425 tyreDnf=0.0000 stops=2.646 graining=0.158 hot=0.101 cold=0.063
+MEASURE rung3 setups-pro seedBase=4000 n=240 rho=0.631 dpos=3.664 paceRank=0.964 crash=0.0681 mech=0.0631 top=0.429 winners=7.00 sc=0.450 tyreDnf=0.0000 stops=2.650 graining=0.142 hot=0.099 cold=0.067
+MEASURE rung3 setups-pro seedBase=7000 n=240 rho=0.622 dpos=3.702 paceRank=0.964 crash=0.0579 mech=0.0635 top=0.371 winners=7.00 sc=0.500 tyreDnf=0.0000 stops=2.777 graining=0.121 hot=0.098 cold=0.073
+MEASURE rung3 setups-pro seedBase=10000 n=240 rho=0.625 dpos=3.654 paceRank=0.964 crash=0.0583 mech=0.0685 top=0.388 winners=7.00 sc=0.454 tyreDnf=0.0015 stops=2.662 graining=0.196 hot=0.098 cold=0.065
+MEASURE rung3 setups-pro MEAN(1000/4000/7000/10000) rho=0.624 dpos=3.678 paceRank=0.964 crash=0.0601 mech=0.0663 top=0.391 winners=7.25 sc=0.457 tyreDnf=0.0004 stops=2.683 graining=0.154 hot=0.099 cold=0.067
+MEASURE rung3 lantern_quay-pro seedBase=1000 n=240 rho=0.505 dpos=4.402 paceRank=0.976 crash=0.1037 mech=0.0846 top=0.338 winners=7.00 sc=1.021 tyreDnf=0.0000 stops=4.708 graining=0.000 hot=0.028 cold=0.073
+MEASURE rung3 lantern_quay-pro seedBase=4000 n=240 rho=0.509 dpos=4.402 paceRank=0.964 crash=0.1027 mech=0.0898 top=0.304 winners=7.00 sc=1.029 tyreDnf=0.0000 stops=4.678 graining=0.017 hot=0.027 cold=0.076
+MEASURE rung3 lantern_quay-pro seedBase=7000 n=240 rho=0.507 dpos=4.420 paceRank=0.988 crash=0.1013 mech=0.0869 top=0.350 winners=7.00 sc=1.017 tyreDnf=0.0000 stops=4.874 graining=0.000 hot=0.025 cold=0.076
+MEASURE rung3 lantern_quay-pro seedBase=10000 n=240 rho=0.536 dpos=4.215 paceRank=0.976 crash=0.0956 mech=0.0860 top=0.325 winners=7.00 sc=0.925 tyreDnf=0.0002 stops=4.722 graining=0.021 hot=0.026 cold=0.072
+MEASURE rung3 lantern_quay-pro MEAN(1000/4000/7000/10000) rho=0.514 dpos=4.360 paceRank=0.976 crash=0.1008 mech=0.0868 top=0.329 winners=7.00 sc=0.998 tyreDnf=0.0001 stops=4.745 graining=0.009 hot=0.026 cold=0.074
+MEASURE rung3 lantern_quay-rookie seedBase=1000 n=240 rho=0.525 dpos=4.259 paceRank=0.915 crash=0.0960 mech=0.0915 top=0.275 winners=7.00 sc=0.971 tyreDnf=0.0019 stops=4.436 graining=0.004 hot=0.009 cold=0.074
+MEASURE rung3 lantern_quay-rookie seedBase=4000 n=240 rho=0.520 dpos=4.276 paceRank=0.964 crash=0.1019 mech=0.0865 top=0.317 winners=8.00 sc=1.004 tyreDnf=0.0006 stops=4.373 graining=0.000 hot=0.010 cold=0.078
+MEASURE rung3 lantern_quay-rookie seedBase=7000 n=240 rho=0.525 dpos=4.245 paceRank=0.988 crash=0.0998 mech=0.0877 top=0.379 winners=7.00 sc=1.038 tyreDnf=0.0010 stops=4.588 graining=0.025 hot=0.009 cold=0.077
+MEASURE rung3 lantern_quay-rookie seedBase=10000 n=240 rho=0.520 dpos=4.281 paceRank=0.927 crash=0.1019 mech=0.0833 top=0.296 winners=7.00 sc=0.938 tyreDnf=0.0013 stops=4.425 graining=0.008 hot=0.009 cold=0.075
+MEASURE rung3 lantern_quay-rookie MEAN(1000/4000/7000/10000) rho=0.523 dpos=4.265 paceRank=0.948 crash=0.0999 mech=0.0872 top=0.317 winners=7.25 sc=0.988 tyreDnf=0.0012 stops=4.456 graining=0.009 hot=0.009 cold=0.076
+MEASURE rung3 mesa_roja-pro seedBase=1000 n=240 rho=0.618 dpos=3.726 paceRank=0.964 crash=0.0725 mech=0.0838 top=0.558 winners=6.00 sc=0.621 tyreDnf=0.0002 stops=3.501 graining=0.000 hot=0.177 cold=0.043
+MEASURE rung3 mesa_roja-pro seedBase=4000 n=240 rho=0.621 dpos=3.698 paceRank=0.988 crash=0.0773 mech=0.0785 top=0.537 winners=4.00 sc=0.621 tyreDnf=0.0000 stops=3.618 graining=0.000 hot=0.177 cold=0.043
+MEASURE rung3 mesa_roja-pro seedBase=7000 n=240 rho=0.619 dpos=3.681 paceRank=0.988 crash=0.0715 mech=0.0765 top=0.512 winners=6.00 sc=0.588 tyreDnf=0.0002 stops=3.639 graining=0.000 hot=0.175 cold=0.043
+MEASURE rung3 mesa_roja-pro seedBase=10000 n=240 rho=0.589 dpos=3.819 paceRank=0.964 crash=0.0735 mech=0.0775 top=0.496 winners=5.00 sc=0.596 tyreDnf=0.0000 stops=3.585 graining=0.000 hot=0.177 cold=0.042
+MEASURE rung3 mesa_roja-pro MEAN(1000/4000/7000/10000) rho=0.612 dpos=3.731 paceRank=0.976 crash=0.0737 mech=0.0791 top=0.526 winners=5.25 sc=0.606 tyreDnf=0.0001 stops=3.585 graining=0.000 hot=0.176 cold=0.043
+MEASURE rung3 mesa_roja-rookie seedBase=1000 n=240 rho=0.675 dpos=3.340 paceRank=0.952 crash=0.0715 mech=0.0777 top=0.483 winners=7.00 sc=0.550 tyreDnf=0.0013 stops=2.804 graining=0.000 hot=0.102 cold=0.038
+MEASURE rung3 mesa_roja-rookie seedBase=4000 n=240 rho=0.644 dpos=3.489 paceRank=0.952 crash=0.0762 mech=0.0823 top=0.463 winners=7.00 sc=0.563 tyreDnf=0.0023 stops=2.941 graining=0.000 hot=0.103 cold=0.039
+MEASURE rung3 mesa_roja-rookie seedBase=7000 n=240 rho=0.663 dpos=3.393 paceRank=0.952 crash=0.0710 mech=0.0758 top=0.546 winners=6.00 sc=0.537 tyreDnf=0.0019 stops=2.960 graining=0.000 hot=0.101 cold=0.039
+MEASURE rung3 mesa_roja-rookie seedBase=10000 n=240 rho=0.657 dpos=3.475 paceRank=0.952 crash=0.0706 mech=0.0802 top=0.604 winners=6.00 sc=0.542 tyreDnf=0.0013 stops=2.878 graining=0.000 hot=0.102 cold=0.039
+MEASURE rung3 mesa_roja-rookie MEAN(1000/4000/7000/10000) rho=0.660 dpos=3.424 paceRank=0.952 crash=0.0723 mech=0.0790 top=0.524 winners=6.50 sc=0.548 tyreDnf=0.0017 stops=2.896 graining=0.000 hot=0.102 cold=0.039
+MEASURE rung3 clearing-lantern_quay seedBase=1000 n=240 failure=0.146
+MEASURE rung3 clearing-lantern_quay seedBase=4000 n=240 failure=0.233
+MEASURE rung3 clearing-lantern_quay seedBase=7000 n=240 failure=0.183
+MEASURE rung3 clearing-lantern_quay seedBase=10000 n=240 failure=0.246
+MEASURE rung3 clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
+MEASURE rung3 graining-after-neutralisation races=960 perRace=0.134 other=44/794660 (0.06/1000 car-laps) short: ends=873 grains=80 (1.55/1000 car-laps) mid: ends=134 grains=5 (0.63/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
+```
+
+The single-sample n=120 lantern_quay envelope (`newCircuitBands`, seedBase 1000): plan values pro
+0.5037 / rookie 0.4956; Rung C pro 0.4896; Rung 1 pro 0.4775; Rung 2 pro 0.4993; Rung 3 pro 0.5126
+(all seven tests pass).
+
+**Scenarios, classics and daily pins.** Tyre temperature changes every race, so 12 of 13 shipped
+scenarios moved (only `red_flag_restart` held) and were re-authored from `scripts/find-scenarios.ts`
+(first hit, goal = par − 1, blurbs checked against the handover state and rewritten where a fact
+changed). `hold_the_train` had no hit at SEEDS=2000 at harbour_lights or lantern_quay (gap 2.0, the
+brief's last widening) and was **dropped**. `vsc_gamble` is searched at its shipped circuit
+(bengaluru, recorded in the script); a4a2eda's "par no worse than the handover" narrowing had no hit
+at SEEDS=2000, so it is now a defensive scenario (handover P3, par P6, goal P5). The three daily
+GOLDEN pins: 2026-11-01 unchanged; 2027-02-14 and 2027-07-04 moved (release-note item). The 730-day
+daily sweep has no last-resort day.
+
+**Options for Veet.** (a) Convert the lantern_quay envelope's rho check to the four-base mean, as
+Round 2 did for the passing gate and the SAMPLE rho, and ship the plan values (and lantern_quay
+`trackTempC` 27): every mean gate passed there, and a hard out-lap would cost 0.38–0.67 s (sol_desert to
+aurora) rather than the shipped 0.15–0.27 s (`outLapCost`, H from blanket temperature; softs 0.007). (b) Keep Rung 3 and judge the feel on the phone first. (c) The
+graining rate after a neutralisation, and OPTIMAL's larger edge, are both live consequences worth a
+feel check, not defects.

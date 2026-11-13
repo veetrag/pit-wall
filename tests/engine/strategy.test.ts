@@ -3,7 +3,7 @@ import { shouldAIPit, aiDecision } from '@engine/strategy'
 import { initRace, stepSector } from '@engine/race'
 import { createRng } from '@engine/rng'
 import type { RaceConfig, CarState, RaceState, TuningConstants, CircuitSpec, CompoundSpec, StrategyBrain } from '@engine/types'
-import { makeDeterministicTuning } from '../fixtures/tuning'
+import { makeDeterministicTuning, makeTuning } from '../fixtures/tuning'
 
 const TUNING: TuningConstants = makeDeterministicTuning()
 
@@ -184,7 +184,7 @@ function makeStrategyConfig(brain: Brain, startCompound: 'M' | 'H', pitLap: numb
   }
 }
 
-function makeValidationConfig(seed: number): RaceConfig {
+function makeValidationConfig(seed: number, tuning: RaceConfig['tuning'] = TUNING): RaceConfig {
   const IDENTICAL_FACETS = { power: 75, aero: 75, handling: 75, reliability: 99, pitCrew: 75 }
   // tyreManagement: 0 → effAge = realAge × degMultiplier (no management buffering)
   // This ensures cliff penalties are felt at the nominal cliff lap, making NAIVE's late pit costly
@@ -227,7 +227,7 @@ function makeValidationConfig(seed: number): RaceConfig {
     // key in it. That is the same partial-literal defect that once poisoned
     // five fixtures with NaN -- vitest does not typecheck, so it surfaces only
     // under `tsc --noEmit`.
-    tuning: TUNING,
+    tuning,
     compounds: FULL_COMPOUNDS,
     drivers,
     teams,
@@ -254,14 +254,14 @@ describe('strategy value validation', () => {
   // standard error rather than a bare point estimate. The pairing matters: all
   // three brains race each other in the same race, so seed-to-seed variation in
   // how hard the race was cancels out of the difference.
-  function measureGains(races: number, firstSeed = 1) {
+  function measureGains(races: number, firstSeed = 1, tuning: RaceConfig['tuning'] = TUNING) {
     const brainToDriver: Record<Brain, string> = { naive: 'd0', smart: 'd1', optimal: 'd2' }
     const posSum: Record<Brain, number> = { naive: 0, smart: 0, optimal: 0 }
     const diffSum: Record<'smart' | 'optimal', number> = { smart: 0, optimal: 0 }
     const diffSumSq: Record<'smart' | 'optimal', number> = { smart: 0, optimal: 0 }
 
     for (let seed = firstSeed; seed < firstSeed + races; seed++) {
-      const config = makeValidationConfig(seed)
+      const config = makeValidationConfig(seed, tuning)
       const final = runFullRace(config)
       const pos = (brain: Brain): number =>
         final.cars.find(c => c.driverId === brainToDriver[brain])?.position ?? NaN
@@ -341,4 +341,14 @@ describe('strategy value validation', () => {
     // over a nominally faster one into a queue -- is separate, later work.
     expect(m.optimal.gain, `n=${RACES}, SE=${m.optimal.se.toFixed(3)}`).toBeGreaterThanOrEqual(0.05)
   }, 300_000) // 8000 full races x 3 brains
+
+  // Diagnostic, not a gate (2.1 scope Task S.1; plan L2851): the same paired measurement on
+  // the SHIPPED tuning (makeTuning(), so tyre temperature and every shipped 2.x switch are on).
+  // Cold out-laps shrink the undercut (spec §5.5); this number is the evidence (MODEL_SPEC §17.2).
+  // MEASURE_OPTIMAL=1 npx vitest run tests/engine/strategy.test.ts -t "MEASURE optimalGain" --reporter=verbose
+  it.runIf(process.env.MEASURE_OPTIMAL === '1')('MEASURE optimalGain on the shipped tuning, n=2000', () => {
+    const m = measureGains(2000, 1, makeTuning())
+    // eslint-disable-next-line no-console
+    console.log(`MEASURE optimalGain shipped=${m.optimal.gain.toFixed(3)} se=${m.optimal.se.toFixed(3)} (smart=${m.smart.gain.toFixed(3)} se=${m.smart.se.toFixed(3)})`)
+  }, 300_000)
 })

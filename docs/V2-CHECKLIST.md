@@ -596,3 +596,37 @@ On the RELEASE build (`docs/DEVICE-CHECKLIST.md` §1), mid-range phone as well a
 3. SC meter, steward toast, grip strip, DRS pill and BOX BUSY: TalkBack labels, reduced motion,
    haptics on and off (see the 2.0 pass above).
 4. Background the app during a double stack and return: the timer resumes correctly.
+
+### 2.1: tyre temperature (scope 2026-11-13, Task S)
+
+**Switch-on result (MODEL_SPEC §17.2).** Tyre temperature ships ON, judged on four-seed-base means
+at the unchanged floors. Every mean gate passed at the plan values; the single n=120 lantern_quay
+envelope sample (rho 0.496, floor 0.50) forced the full ladder: lantern_quay `trackTempC` 27 → 31,
+then Rungs 1–3. Shipped: `coldCoeff`/`overheatCoeff` 0.08, `overheatWearPerLap` 0.05,
+`neutralisedHeat` −15, `grainPenalty` 0.20. Means at the shipped values: SAMPLE pro rho 0.632,
+setups-on 0.624, lantern_quay 0.514 / 0.523, passing failure 0.202, rookie paceRank 0.915. Graining is
+banded at 0.00 – 0.75 / race (SAMPLE pro 0.134). Eleven scenarios/classics were re-authored,
+`hold_the_train` was dropped (no hit at SEEDS=2000), and two of the three daily GOLDEN pins moved
+(release-note item: daily challenges and shared starts made before 2.1 play out differently).
+
+**Phone pass** (local release build, `docs/DEVICE-CHECKLIST.md` §1):
+- A hard out-lap reads COLD on the tyre meter and on the tower, and costs 0.15–0.27 s at the shipped
+  coefficients (the plan's values gave 0.38–0.67 s); softs barely (0.007 s).
+- The pit panel's OUT-LAP line shows on H and M, is hidden on S at a cool track, and reads ≈ 0 under
+  an SC.
+- The `tyres_in` radio fires once per out-lap.
+- Push softs at Sol Desert: the band turns HOT, "Tyres are cooked" plays, and the CLIFF ~nL estimate
+  stays sane (the probe fix).
+- A medium after an early SC, or after rain, shows GRAINING nL and clears.
+- The SC restart reads COLD across the field.
+- The `tyre_temp` coach mark appears on the first out-lap only.
+- TalkBack reads "Tyre temperature, Cold" and ", cold tyres" on tower rows; with reduced motion the
+  band marker moves without animating.
+- 60 fps at 1× with a DRS train and COLD tags on the tower.
+- The pit sheet at 360×640 fits all four projection lines plus the OUT-LAP chips.
+
+**Calls for Veet:** the n=120 lantern_quay envelope sample drove the whole shrink (the means never
+failed) — convert it to the four-base mean and ship the plan values, or keep Rung 3?; does a 0.15–0.27 s
+hard out-lap still make the undercut feel priced?; graining clusters in the three laps after an
+SC/VSC (66% of onsets) — does that read as a feature?; `vsc_gamble` is now a defensive scenario
+(handover P3, goal P5).

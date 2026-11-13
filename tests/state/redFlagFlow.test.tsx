@@ -43,7 +43,9 @@ function startRed(playerCrashes = false) {
     // The store's raceState was initialised under the shipped tuning, which
     // seeds a per-car penalty record when penalties are on; replay re-inits
     // from this config, so the switch must match the state it is swapped under.
+    // Same for tyre temperature (2.1, Task S): the state carries per-car `thermal`.
     penalties: { enabled: c.tuning.penalties.enabled },
+    tyreTemp: { enabled: c.tuning.tyreTemp.enabled },
   })
   useRaceStore.setState({
     phase: 'racing',

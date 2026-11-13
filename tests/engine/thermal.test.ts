@@ -14,7 +14,10 @@ import { makeDeterministicTuning } from '../fixtures/tuning'
 import { makeConfig } from '../fixtures/raceHarness'
 import type { CarState, Compound, RaceConfig, RaceState } from '@engine/types'
 
-const ON = { tyreTemp: { enabled: true } }
+// The mechanism is tested at the plan values (spec §5.2) the expectations below were
+// written for; the shipped coefficients are the 2.1 switch-on's Rung 3 (MODEL_SPEC §17.2).
+const PLAN = { coldCoeff: 0.20, overheatCoeff: 0.20, overheatWearPerLap: 0.08, neutralisedHeat: -25, grainPenalty: 0.35 }
+const ON = { tyreTemp: { enabled: true, ...PLAN } }
 function cfg(circuitId = 'bengaluru', over = {}): RaceConfig {
   const c = makeConfig({}, 11, circuitId)
   // allDry: thermal pace only applies to slicks on a dry track (ruling H3).
@@ -140,6 +143,34 @@ describe('tyre temperature (spec §5.2)', () => {
     const outLap = lapCost(cOn, 'H', 70, base) - lapCost(cOn, 'S', 70, base)
     expect(outLap).toBeGreaterThan(0.3)
     expect(dOn - dOff).toBeGreaterThanOrEqual(0.8 * outLap)
+  })
+
+  // Task S (Task 5 review note): the same check on a race that ran with tyre temperature ON
+  // from the grid, so every car's temperature is the one the engine evolved, not a graft.
+  // The control is the same state under the same config with coldCoeff 0: only the cold
+  // out-lap's price differs between the two projections.
+  it('OUT-LAP COST, THERMAL ON THROUGHOUT: projectPitState charges the cold out-lap on an evolved state', () => {
+    const on = cfg()
+    const player = initRace(on).cars[0]!.driverId
+    const cOn: RaceConfig = { ...on, playerDriverId: player }
+    const cNoCold: RaceConfig = { ...cOn, tuning: makeDeterministicTuning({ tyreTemp: { enabled: true, ...PLAN, coldCoeff: 0 } }) }
+    let s: RaceState = initRace(cOn)
+    const rng = createRng(21)
+    const MAX_STEPS = 5 * 3
+    for (let i = 0; i < MAX_STEPS && s.lap < 5; i++) s = stepSector(cOn, s, rng)
+    expect(s.lap).toBe(5)
+    expect(s.cars.every(c => c.retired || c.thermal !== undefined)).toBe(true)
+    // The engine evolved these: no car is still at the formation temperature.
+    expect(s.cars.some(c => c.thermal!.temp !== initThermal(cOn.tuning).temp)).toBe(true)
+
+    const rt = (config: RaceConfig, comp: Compound) =>
+      projectPitState(config, s, comp, 99).cars.find(c => c.driverId === player)!.raceTime
+    const dCold = rt(cOn, 'H') - rt(cOn, 'S')
+    const dNoCold = rt(cNoCold, 'H') - rt(cNoCold, 'S')
+    const base = s.cars.find(c => c.driverId === player)!
+    const outLap = lapCost(cOn, 'H', 70, base) - lapCost(cOn, 'S', 70, base)
+    expect(outLap).toBeGreaterThan(0.3)
+    expect(dCold - dNoCold).toBeGreaterThanOrEqual(0.8 * outLap)
   })
 
   it('switched off, nothing exists and nothing changes', () => {

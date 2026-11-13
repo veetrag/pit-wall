@@ -343,6 +343,7 @@ export const TuningSchema = z.object({
     aiWeatherStopsPerRace: z.tuple([z.number(), z.number()]),
     slowStopsPerRace: z.tuple([z.number(), z.number()]),
     redFlagPerRace: z.tuple([z.number(), z.number()]),
+    grainingPerRace: z.tuple([z.number(), z.number()]),
     _note: z.string(),
   }).optional(),
   daily: z.object({

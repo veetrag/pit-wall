@@ -8,6 +8,7 @@ import { makeTuning } from '../fixtures/tuning'
 
 // Scope 2026-11-07 Task 12': every 2.0 feature ON, whatever tuning.json ships
 // (MODEL_SPEC §17.1 records which ship off), so this pins the full 2.0 path.
+// Scope 2026-11-13 Task S: plus 2.1 tyre temperature (MODEL_SPEC §17.2).
 const ALL_ON = makeTuning({
   trackEvolution: { wash: { DAMP: 0.35, WET: 0.80 } },
   drs: { enabled: true },
@@ -15,6 +16,7 @@ const ALL_ON = makeTuning({
   ai: { scGambleMaxDelay: 3 },
   doubleStack: { enabled: true },
   penalties: { enabled: true },
+  tyreTemp: { enabled: true },
 })
 
 const RECIPE: RaceRecipe = {
@@ -32,11 +34,12 @@ const CALLS: PlayerCall[] = [
 ]
 const allOn = (r: RaceRecipe): RaceConfig => ({ ...buildConfigFromRecipe(r), tuning: ALL_ON })
 
-describe('2.0 replay (all five features on)', () => {
+describe('2.x replay (every shipped 2.x feature on)', () => {
   it('a race with pit / pace / hold_plan calls replays byte-identically through buildConfigFromRecipe', () => {
     const a = replay(allOn(RECIPE), RECIPE.seed, CALLS).state
     const b = replay(allOn(structuredClone(RECIPE)), RECIPE.seed, CALLS).state
     expect(a.lap).toBe(a.totalLaps)
+    expect(a.cars.every(c => c.retired || c.thermal !== undefined)).toBe(true)
     expect(JSON.stringify(b)).toBe(JSON.stringify(a))
     // The features actually ran: the same race with the shipped tuning differs.
     const shipped = replay(buildConfigFromRecipe(RECIPE), RECIPE.seed, CALLS).state
