@@ -241,7 +241,7 @@
       "driverSensitivity": [0.32, 0.35, 0.33],
       "overtakingFactor": [0.45, 0.15, 0.25],
       "pitLaneTimeLoss": 24.0,
-      "trackTempC": 31,
+      "trackTempC": 27,
       "drsSectors": [0],
       "incidentRisk": 1.00,
       "rainProbability": 0.20, "weatherBias": "showery",

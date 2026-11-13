@@ -65,7 +65,7 @@ be corrected or must update this document with an argument.
 | **AI weather stops / race (showery circuits)** | — (spec 2026-10-17 §0.1: confirm 2 laps, none with ≤ 3 laps left; was ~100/race) | 5 showery circuits, n=240 per cell: pro 63.992/66.475, rookie 63.342/66.729 | **44.30 – 86.75** | **Yes** — sized [floor(0.7×min), ceil(1.3×max)] to 0.05. Counts AI stops that change tyre family |
 | **Slow pit stops / race** | — (spec 2026-10-17 §1: 4% per stop x (1 − pitCrew × 0.8), +2.0–6.0 s) | 4-circuit sample, n=240 per cell: pro 0.658/0.721, rookie 0.696/0.675 | **0.45 – 0.95** | **Yes** — same sizing rule. Decided from the second value of the gaussianPair every stop already draws: no stream shift |
 | **Red flags / race** | — (spec 2026-10-17 §4: 5% per crash, max 1, none in the last 5 laps; ≈ one every ~10–15 races) | 4-circuit sample, n=240 per cell: pro 0.067/0.054, rookie 0.037/0.063 | **0.00 – 0.10** | **Yes** — same sizing rule; gated at n=240 with a "live" assertion carrying the floor |
-| **Graining onsets / race** | — (spec 2026-10-24 §5.2, ruling H4; 2.1 shipped at Rung 3, §17.2) | 4-circuit sample, n=240 per cell: pro 0.063/0.113, rookie 0.487/0.550 | **0.00 – 0.75** | **Yes** — same sizing rule; the floor rounds to 0, so the gate also asserts the rate is live (> 0), as for red flags |
+| **Graining onsets / race** | — (spec 2026-10-24 §5.2, ruling H4; 2.1 shipped at the plan values, §17.2) | 4-circuit sample, n=240 per cell: pro 1.196/1.063, rookie 2.275/2.621 | **0.70 – 3.45** | **Yes** — same sizing rule |
 | Driver errors / race | not separately published | all 12, n=720: **5.18 / 5.24** pro, **5.08 / 5.28** rookie (field-wide, non-terminal plus terminal) | — | **No — diagnostic.** The gated consequence is the crash rate above |
 | Per-circuit \|Δpos\| ratio | **1.47× – 2.67×** | **1.3454** mean over four seed bases (1.3066–1.3769, pro, n=200 per circuit) — **below the 1.5 floor, and the circuit-sensitivity plan moved it DOWN.** Reverting only the two `lapModel.ts` lines that plan changed measures **1.5238** (1.4952–1.5523) on the same seeds: inside the band. Per-circuit, wired, sorted: grand_savane 2.591, altiplano 2.639, sol_desert 2.651, veloce 2.718, silverpark 2.744, highland 2.815, costa_verde 2.835, aurora 2.897, monsoon_bay 3.033, bengaluru 3.045, kaido 3.455, harbour_lights 3.568 | **1.5 – 2.5×** — **NOT MET, and regressed** | **Yes**, but on a *fixed pair* and for a narrower purpose than the band. `tests/engine/circuitDifferentiation.test.ts` gates harbour_lights ÷ grand_savane at **> 1.15** (measured 1.2968 ± 0.0451 pro over six n=120 seed bases) as a floor against the calendar flattening. That gate **cannot** fail on a renormalising of the sensitivities — verified by mutation, which passes at 1.44 — so the wiring itself is guarded by the fingerprint pairs in that file, not by this ratio. See §7 and §4 for the mechanism |
 | Pace-rank ↔ finish correlation (anti-lottery) | — | **0.9879** pro / **0.9152–0.9394** rookie post-incidents — it went UP, from 0.9636 / 0.9152. Chaos removed cars without decoupling results from pace, which is the reassuring result and the opposite of the lottery this gate exists to catch. **Read it narrowly.** The reference pace ranking is computed from the *global* `sectorSplit`, not from `circuit.carSensitivity`, so it is circuit-blind and disagrees with the engine's own per-circuit order on 9 of 12 circuits. An unmoved value therefore shows results are still tied to car quality **in general** — the lottery failure mode is absent — and is **not** evidence that per-circuit weighting left pace ordering untouched, which an earlier version of this row wrongly inferred. See `tests/engine/monteCarloHarness.ts` | **≥ 0.90** — final, never to be widened | **Yes** |
@@ -1364,36 +1364,47 @@ Scope `docs/superpowers/plans/2026-11-13-v2.1-scope.md` §5 (Task S); spec
 1000/4000/7000/10000 at n=240 each, at the unchanged floors, with
 `MEASURE=1 FEATURE=<label> npx vitest run tests/engine/v2Bands.test.ts -t "MEASURE 2.1"`. Each base
 runs pro SAMPLE, rookie SAMPLE, setups-on SAMPLE, lantern_quay pro and rookie, mesa_roja pro and
-rookie, and the lantern_quay clearing trial (seeds base + 13i, i < 240). The scope's gate table adds
-one single-sample gate: the lantern_quay envelope's own n=120 test (`newCircuitBands`) must also pass.
-The shrink ladder is cumulative: Rung C (circuit data) → Rungs 1–3 → OFF.
+rookie, and the lantern_quay clearing trial (seeds base + 13i, i < 240). The shrink ladder is
+cumulative: Rung C (circuit data) → Rungs 1–3 → OFF.
 
-**Outcome: tyre temperature ships ON, at Rung 3, with lantern_quay `trackTempC` 31 (Rung C).**
-No STOP limit was reached (max crash 0.1047 at lantern_quay rookie, dpos ≤ 4.38, paceRank ≥ 0.903 in
-any single cell, SAMPLE tyreDnf 0.0003–0.0004 against a 0.0003 baseline, graining ≤ 8.6/race, no NaN).
-No floor was lowered and no existing band moved.
+**Outcome: tyre temperature ships ON at the plan values** (lantern_quay `trackTempC` 27, no rung
+taken), after the conversion below. No STOP limit was reached at any stage (max crash 0.1065 in one
+lantern_quay rookie cell, dpos ≤ 4.47, paceRank ≥ 0.903 per cell, SAMPLE pro tyreDnf 0.0003 = the
+baseline, graining ≤ 9.4/race, no NaN). No floor was lowered and no existing band moved.
 
-| Stage (cumulative) | Binding gate: lantern_quay envelope rho, n=120 (`newCircuitBands`) | 4-base means: LQ pro / rookie rho (floor 0.50) | Decision |
-|---|---|---|---|
-| Plan values | rookie **0.496** (pro 0.504) | 0.521 / 0.509 | Rung C |
-| Rung C: lantern_quay `trackTempC` 27 → 31 | pro **0.490** | 0.518 / 0.534 | Rung 1 |
-| Rung 1: `coldCoeff`, `overheatCoeff` 0.20 → 0.12 | pro **0.477** | 0.514 / 0.525 | Rung 2 |
-| Rung 2: + `neutralisedHeat` −25 → −15, `grainPenalty` 0.35 → 0.20 | pro **0.499** | 0.523 / 0.531 | Rung 3 |
-| Rung 3: + coeffs → 0.08, `overheatWearPerLap` 0.08 → 0.05 | pro **0.513** (all 7 newCircuitBands tests pass) | 0.514 / 0.523 | **ON** |
+**The conversion (controller ruling, applying Veet's 2.0 Round 2 decision).** The first ladder was
+driven entirely by one gate Round 2 had not converted: the lantern_quay envelope's
+gridFinishSpearman ≥ 0.50, checked on a single n=120 sample (SE ≈ 0.035). Every four-base MEAN gate
+passed at the plan values, while that sample read 0.496 (rookie) and then moved 0.490 → 0.477 →
+0.499 → 0.513 across rungs that each made thermal *weaker* — noise, not a trend; the four-base means
+sat at 0.509–0.534 throughout. The ruling: noise-limited single-sample gates are judged as the
+four-seed-base mean at the SAME floor. `newCircuitBands` lantern_quay "stays inside the per-circuit
+envelope" now checks its rho floor on the mean over 1000/4000/7000/10000 at n=240 for pro and rookie
+(bounded loops; the file is in SIMULATION_SUITES via `*Bands.test.ts`); its other envelope metrics
+keep their n=120 sample. The ladder was then re-run from the top, and the first stage passed.
 
-**Read this before accepting the shrink (a judgement for Veet, not a fact about thermal).** Every
-four-base MEAN gate passed at the plan values: SAMPLE pro rho 0.630, setups-on 0.627, lantern_quay
-0.521 / 0.509, clearing 0.2021, rookie paceRank 0.929, dpos 3.632, mesa_roja tyreDnf ≤ 0.0017 and
-stops 3.620 vs SAMPLE + 0.6 = 3.309. The whole ladder was driven by the one gate Round 2 did not
-convert to a four-base mean: a single n=120 lantern_quay sample, SE ≈ 0.035. Its value moved
-0.496 → 0.490 → 0.477 → 0.499 → 0.513 across rungs that each made thermal *weaker*, which is noise,
-not a trend; the four-base means sat in 0.509–0.534 throughout. Rung 3 is where the draw happened to
-land above 0.50.
+| Ladder | Stage (cumulative) | lantern_quay envelope rho: n=120 single sample | 4-base mean pro / rookie (floor 0.50) | Decision |
+|---|---|---|---|---|
+| 1 (single-sample gate) | Plan values | rookie **0.496** (pro 0.504) | 0.521 / 0.509 | Rung C |
+| 1 | Rung C: lantern_quay `trackTempC` 27 → 31 | pro **0.490** | 0.518 / 0.534 | Rung 1 |
+| 1 | Rung 1: `coldCoeff`, `overheatCoeff` 0.20 → 0.12 | pro **0.477** | 0.514 / 0.525 | Rung 2 |
+| 1 | Rung 2: + `neutralisedHeat` −25 → −15, `grainPenalty` 0.35 → 0.20 | pro **0.499** | 0.523 / 0.531 | Rung 3 |
+| 1 | Rung 3: + coeffs → 0.08, `overheatWearPerLap` 0.08 → 0.05 | pro 0.513 | 0.514 / 0.523 | was ON (commit 4f9b2b3) |
+| 2 (mean gate) | **Plan values** | (not a gate) | **0.521 / 0.509** | **ON** |
 
-Shipped values (`tuning.json` `tyreTemp`): `enabled` true, `coldCoeff` 0.08, `overheatCoeff` 0.08,
-`overheatWearPerLap` 0.05, `neutralisedHeat` −15, `grainPenalty` 0.20; everything else at the plan
-values (§5.2 of the scope). `circuits.json`: lantern_quay `trackTempC` 31 (the career calendar is
-untouched, mean 32).
+The second ladder's plan-values MEASURE 2.1 lines are byte-identical to the first ladder's (a re-run
+was diffed). Every gate at the shipped plan values, four-base means: SAMPLE pro rho 0.630, setups-on
+0.627 (floor 0.60); lantern_quay rho 0.521 / 0.509 (floor 0.50); lantern_quay passing failure 0.2021
+(floor 0.20); rookie paceRank 0.929 (floor 0.90); pro dpos 3.632 ([2.5, 4.0]); mesa_roja tyreDnf
+0.0001 / 0.0017 (≤ 0.03), mesa_roja stops 3.620 vs SAMPLE + 0.6 = 3.309. The binding gate is the
+lantern_quay **rookie** rho mean, 0.509 against 0.50.
+
+Shipped values (`tuning.json` `tyreTemp`): the scope's plan values throughout — `enabled` true,
+`coldCoeff` 0.20, `overheatCoeff` 0.20, `overheatWearPerLap` 0.08, `neutralisedHeat` −25,
+`grainPenalty` 0.35, windows S 75–100, M 85–108, H 92–115. `circuits.json` unchanged (lantern_quay 27,
+career mean 32). The hard out-lap from blanket temperature (`outLapCost`) costs 0.383 s at sol_desert,
+0.425 s at bengaluru, 0.561 s at harbour_lights and 0.666 s at aurora; mediums 0.15–0.26 s, softs
+0.017 s. (Rung 3 would have been 0.15–0.27 s on hards.)
 
 **Ruling H6, and why.** Thermal pace is 0 while a SC/VSC is out: the tyres still cool
 (`neutralisedHeat`), so the restart is cold, but no car loses lap time behind the safety car. Charging
@@ -1401,50 +1412,52 @@ it would reshuffle the queue under yellow by compound alone, a churn the rho flo
 it is not what the player can see or act on.
 
 **Diagnostics at the shipped values (four-base means).** Hot sector share (tyre above its window)
-pro 0.099, rookie 0.077, mesa_roja pro 0.176, lantern_quay pro 0.026; cold share pro 0.067, rookie
-0.065, lantern_quay pro 0.074. Graining onsets per race: SAMPLE pro 0.134, rookie 0.511, setups-on
-0.154, lantern_quay 0.009, mesa_roja 0.000 — banded (§3) from the MEASURE 2.0 cells below.
+pro 0.097, rookie 0.075, mesa_roja pro 0.174, lantern_quay pro 0.010; cold share pro 0.081, rookie
+0.078, lantern_quay pro 0.170. Graining onsets per race: SAMPLE pro 1.304, rookie 2.328, setups-on
+1.359, lantern_quay 5.889 pro / 8.555 rookie (cool night track, ~1 SC per race), mesa_roja 0.000 —
+banded (§3) from the MEASURE 2.0 cells below.
 
 *Graining after a neutralisation (Task 6 review note).* `MEASURE 2.1 graining after neutralisations`
-counts onsets in the three laps after each SC/VSC ends, against car-laps exposed (SAMPLE pro, 960 races):
+counts onsets in the three laps after each SC/VSC ends, against car-laps exposed (SAMPLE pro, 960
+races). Shipped (plan values), then Rung 2 and Rung 3 for comparison:
 ```
 MEASURE thermal graining-after-neutralisation races=960 perRace=1.304 other=575/794340 (0.72/1000 car-laps) short: ends=881 grains=627 (12.07/1000 car-laps) mid: ends=136 grains=50 (6.16/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
+MEASURE rung2 graining-after-neutralisation races=960 perRace=0.180 other=36/794680 (0.05/1000 car-laps) short: ends=875 grains=117 (2.26/1000 car-laps) mid: ends=133 grains=20 (2.54/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
 MEASURE rung3 graining-after-neutralisation races=960 perRace=0.134 other=44/794660 (0.06/1000 car-laps) short: ends=873 grains=80 (1.55/1000 car-laps) mid: ends=134 grains=5 (0.63/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
 ```
-(the first line is the plan values, the second the shipped Rung 3). Graining **does** cluster after a
-neutralisation: at the plan values 54% of all onsets fell within three laps of an SC/VSC ending, at
-12.1 per 1000 car-laps against 0.72 elsewhere (~17×); at the shipped values 66% (1.55 vs 0.06 per 1000
-car-laps). It is the H4 mechanism working as designed (a cooled S/M on a still-green track), not a
-loop: no neutralisation in the sample lasted more than five laps, so "long" is empty, and the mid
-(4–5 lap) bucket is no worse than the short one. Rung 2's warmer restarts (`neutralisedHeat` −15) cut the
-post-SC rate ~5×.
+Graining **does** cluster after a neutralisation: at the shipped values 54% of all onsets fall within
+three laps of an SC/VSC ending, at 12.1 per 1000 car-laps against 0.72 elsewhere (~17×). It is the H4
+mechanism (a cooled S/M on a still-green track), not a re-triggering loop: no neutralisation in the
+sample lasted more than five laps ("long" is empty) and the 4–5-lap bucket is no worse than the
+short one. Warmer restarts (`neutralisedHeat` −15, Rung 2) would cut the post-SC rate ~5× if Veet
+finds it too frequent on the phone.
 
 `optimalGain` on the shipped tuning (`MEASURE_OPTIMAL=1`, paired, n=2000; `strategy.test.ts`):
 ```
 MEASURE optimalGain shipped=1.261 se=0.080 (smart=3.198 se=0.060)   tyreTemp off (2.0 shipped)
-MEASURE optimalGain shipped=1.579 se=0.076 (smart=3.233 se=0.061)   plan values
-MEASURE optimalGain shipped=1.438 se=0.077 (smart=3.230 se=0.060)   shipped (Rung 3)
+MEASURE optimalGain shipped=1.579 se=0.076 (smart=3.233 se=0.061)   shipped (plan values)
+MEASURE optimalGain shipped=1.438 se=0.077 (smart=3.230 se=0.060)   Rung 3 (first ladder)
 ```
 Against §9.4 (0.17 on the deterministic tuning, where no incident or 2.x feature runs): tyre
-temperature does not shrink OPTIMAL's edge on the shipped tuning, it grows it by ~0.18 positions (2.3
-SE), most likely because smart/optimal cars manage temperature (`aiThermalPaceMode`) and naive ones
-cook their softs; the spec §5.5 expectation that cold out-laps would shrink the undercut is not
+temperature does not shrink OPTIMAL's edge on the shipped tuning, it grows it by ~0.32 positions
+(~2.9 SE), most likely because smart/optimal cars manage temperature (`aiThermalPaceMode`) and naive
+ones cook their softs; the spec §5.5 expectation that cold out-laps would shrink the undercut is not
 visible in this number.
 
-Other gates at the shipped values: `MEASURE weather` pro 62.742/66.079, rookie 63.125/66.375 (band
-44.30 – 86.75); `MEASURE outlook` bucket 0 n=4999 pred 0.114 obs 0.104, bucket 1 n=3908 pred 0.183
-obs 0.184 (calibrated, |obs − pred| ≤ 0.06). The gate suites (scope S.5 step 6) pass.
+Other gates at the shipped values: `MEASURE weather` pro 62.754/65.879, rookie 63.250/66.138 (band
+44.30 – 86.75); `MEASURE outlook` bucket 0 n=5027 pred 0.113 obs 0.104, bucket 1 n=3928 pred 0.183
+obs 0.177 (calibrated, |obs − pred| ≤ 0.06). The gate suites (scope S.5 step 6) pass.
 
-`MEASURE 2.0` (band sizing, plan values then shipped):
+`MEASURE 2.0` (band sizing at the shipped plan values; then Rung 3 for the record):
 ```
 MEASURE thermal pro seedBase=1000 n=240 top=0.421 winners=8 dpos=3.658 rho=0.624 paceRank=0.964 mech=0.0717 crash=0.0600 sc=0.487 vsc=0.583 aiNeut=3.929 slow=0.567 red=0.058 trains=36.304 drsPass=0.378 stacks=6.417 pens=0.550 unsafe=0.508 tl=8.454 graining=1.196 hot=0.102 cold=0.074 tyreDnf=0.0000 stops=2.652 overtakes=35.3
 MEASURE thermal pro seedBase=7000 n=240 top=0.425 winners=6 dpos=3.577 rho=0.640 paceRank=0.964 mech=0.0669 crash=0.0585 sc=0.496 vsc=0.567 aiNeut=3.429 slow=0.754 red=0.046 trains=37.021 drsPass=0.377 stacks=6.604 pens=0.642 unsafe=0.579 tl=8.387 graining=1.063 hot=0.096 cold=0.084 tyreDnf=0.0000 stops=2.800 overtakes=35.4
 MEASURE thermal rookie seedBase=1000 n=240 top=0.408 winners=8 dpos=3.554 rho=0.637 paceRank=0.915 mech=0.0638 crash=0.0681 sc=0.529 vsc=0.521 aiNeut=4.208 slow=0.608 red=0.058 trains=38.296 drsPass=0.378 stacks=7.763 pens=0.508 unsafe=0.479 tl=7.071 graining=2.275 hot=0.077 cold=0.074 tyreDnf=0.0000 stops=2.472 overtakes=34.9
 MEASURE thermal rookie seedBase=7000 n=240 top=0.425 winners=7 dpos=3.367 rho=0.662 paceRank=0.952 mech=0.0608 crash=0.0627 sc=0.537 vsc=0.537 aiNeut=3.804 slow=0.692 red=0.063 trains=38.396 drsPass=0.365 stacks=7.763 pens=0.617 unsafe=0.613 tl=7.008 graining=2.621 hot=0.074 cold=0.083 tyreDnf=0.0004 stops=2.582 overtakes=35.4
-MEASURE final pro seedBase=1000 n=240 top=0.463 winners=8 dpos=3.658 rho=0.624 paceRank=0.964 mech=0.0765 crash=0.0612 sc=0.471 vsc=0.683 aiNeut=3.346 slow=0.700 red=0.046 trains=36.092 drsPass=0.378 stacks=6.096 pens=0.667 unsafe=0.600 tl=8.250 graining=0.063 hot=0.101 cold=0.063 tyreDnf=0.0000 stops=2.679 overtakes=35.4
-MEASURE final pro seedBase=7000 n=240 top=0.438 winners=8 dpos=3.550 rho=0.645 paceRank=0.964 mech=0.0663 crash=0.0550 sc=0.479 vsc=0.537 aiNeut=3.638 slow=0.771 red=0.054 trains=37.579 drsPass=0.377 stacks=6.475 pens=0.579 unsafe=0.558 tl=8.358 graining=0.113 hot=0.099 cold=0.070 tyreDnf=0.0000 stops=2.762 overtakes=36.0
-MEASURE final rookie seedBase=1000 n=240 top=0.412 winners=8 dpos=3.442 rho=0.657 paceRank=0.915 mech=0.0717 crash=0.0592 sc=0.504 vsc=0.592 aiNeut=3.625 slow=0.654 red=0.042 trains=38.425 drsPass=0.373 stacks=7.675 pens=0.537 unsafe=0.517 tl=6.983 graining=0.487 hot=0.077 cold=0.062 tyreDnf=0.0004 stops=2.458 overtakes=34.8
-MEASURE final rookie seedBase=7000 n=240 top=0.417 winners=6 dpos=3.360 rho=0.664 paceRank=0.915 mech=0.0619 crash=0.0625 sc=0.479 vsc=0.600 aiNeut=3.567 slow=0.592 red=0.054 trains=38.258 drsPass=0.369 stacks=7.983 pens=0.617 unsafe=0.583 tl=6.883 graining=0.550 hot=0.076 cold=0.067 tyreDnf=0.0013 stops=2.584 overtakes=36.1
+MEASURE rung3 pro seedBase=1000 n=240 top=0.463 winners=8 dpos=3.658 rho=0.624 paceRank=0.964 mech=0.0765 crash=0.0612 sc=0.471 vsc=0.683 aiNeut=3.346 slow=0.700 red=0.046 trains=36.092 drsPass=0.378 stacks=6.096 pens=0.667 unsafe=0.600 tl=8.250 graining=0.063 hot=0.101 cold=0.063 tyreDnf=0.0000 stops=2.679 overtakes=35.4
+MEASURE rung3 pro seedBase=7000 n=240 top=0.438 winners=8 dpos=3.550 rho=0.645 paceRank=0.964 mech=0.0663 crash=0.0550 sc=0.479 vsc=0.537 aiNeut=3.638 slow=0.771 red=0.054 trains=37.579 drsPass=0.377 stacks=6.475 pens=0.579 unsafe=0.558 tl=8.358 graining=0.113 hot=0.099 cold=0.070 tyreDnf=0.0000 stops=2.762 overtakes=36.0
+MEASURE rung3 rookie seedBase=1000 n=240 top=0.412 winners=8 dpos=3.442 rho=0.657 paceRank=0.915 mech=0.0717 crash=0.0592 sc=0.504 vsc=0.592 aiNeut=3.625 slow=0.654 red=0.042 trains=38.425 drsPass=0.373 stacks=7.675 pens=0.537 unsafe=0.517 tl=6.983 graining=0.487 hot=0.077 cold=0.062 tyreDnf=0.0004 stops=2.458 overtakes=34.8
+MEASURE rung3 rookie seedBase=7000 n=240 top=0.417 winners=6 dpos=3.360 rho=0.664 paceRank=0.915 mech=0.0619 crash=0.0625 sc=0.479 vsc=0.600 aiNeut=3.567 slow=0.592 red=0.054 trains=38.258 drsPass=0.369 stacks=7.983 pens=0.617 unsafe=0.583 tl=6.883 graining=0.550 hot=0.076 cold=0.067 tyreDnf=0.0013 stops=2.584 overtakes=36.1
 ```
 
 MEASURE 2.1 lines, every stage:
@@ -1494,7 +1507,7 @@ MEASURE baseline clearing-lantern_quay seedBase=10000 n=240 failure=0.246
 MEASURE baseline clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
 ```
 
-Plan values (`tyreTemp.enabled` true):
+Plan values (`tyreTemp.enabled` true) — shipped; identical in both ladders:
 ```
 MEASURE thermal sample-pro seedBase=1000 n=240 rho=0.624 dpos=3.658 paceRank=0.964 crash=0.0600 mech=0.0717 top=0.421 winners=8.00 sc=0.487 tyreDnf=0.0000 stops=2.652 graining=1.196 hot=0.102 cold=0.074
 MEASURE thermal sample-pro seedBase=4000 n=240 rho=0.634 dpos=3.619 paceRank=0.964 crash=0.0635 mech=0.0698 top=0.408 winners=7.00 sc=0.487 tyreDnf=0.0000 stops=2.672 graining=1.333 hot=0.096 cold=0.081
@@ -1539,7 +1552,7 @@ MEASURE thermal clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
 MEASURE thermal graining-after-neutralisation races=960 perRace=1.304 other=575/794340 (0.72/1000 car-laps) short: ends=881 grains=627 (12.07/1000 car-laps) mid: ends=136 grains=50 (6.16/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
 ```
 
-Rung C (lantern_quay `trackTempC` 31):
+First ladder, Rung C (lantern_quay `trackTempC` 31):
 ```
 MEASURE rungC sample-pro seedBase=1000 n=240 rho=0.624 dpos=3.658 paceRank=0.964 crash=0.0600 mech=0.0717 top=0.421 winners=8.00 sc=0.487 tyreDnf=0.0000 stops=2.652 graining=1.196 hot=0.102 cold=0.074
 MEASURE rungC sample-pro seedBase=4000 n=240 rho=0.634 dpos=3.619 paceRank=0.964 crash=0.0635 mech=0.0698 top=0.408 winners=7.00 sc=0.487 tyreDnf=0.0000 stops=2.672 graining=1.333 hot=0.096 cold=0.081
@@ -1584,7 +1597,7 @@ MEASURE rungC clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
 MEASURE rungC graining-after-neutralisation races=960 perRace=1.304 other=575/794340 (0.72/1000 car-laps) short: ends=881 grains=627 (12.07/1000 car-laps) mid: ends=136 grains=50 (6.16/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
 ```
 
-Rung 1 (`coldCoeff`/`overheatCoeff` 0.12):
+First ladder, Rung 1 (`coldCoeff`/`overheatCoeff` 0.12):
 ```
 MEASURE rung1 sample-pro seedBase=1000 n=240 rho=0.625 dpos=3.651 paceRank=0.964 crash=0.0598 mech=0.0729 top=0.438 winners=8.00 sc=0.483 tyreDnf=0.0000 stops=2.664 graining=1.488 hot=0.103 cold=0.076
 MEASURE rung1 sample-pro seedBase=4000 n=240 rho=0.641 dpos=3.566 paceRank=0.939 crash=0.0596 mech=0.0648 top=0.467 winners=8.00 sc=0.454 tyreDnf=0.0000 stops=2.663 graining=1.163 hot=0.097 cold=0.076
@@ -1629,7 +1642,7 @@ MEASURE rung1 clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
 MEASURE rung1 graining-after-neutralisation races=960 perRace=1.322 other=621/795820 (0.78/1000 car-laps) short: ends=851 grains=598 (11.87/1000 car-laps) mid: ends=138 grains=50 (6.11/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
 ```
 
-Rung 2 (+ `neutralisedHeat` −15, `grainPenalty` 0.20):
+First ladder, Rung 2 (+ `neutralisedHeat` −15, `grainPenalty` 0.20):
 ```
 MEASURE rung2 sample-pro seedBase=1000 n=240 rho=0.616 dpos=3.702 paceRank=0.964 crash=0.0587 mech=0.0760 top=0.429 winners=8.00 sc=0.475 tyreDnf=0.0000 stops=2.668 graining=0.150 hot=0.104 cold=0.064
 MEASURE rung2 sample-pro seedBase=4000 n=240 rho=0.639 dpos=3.576 paceRank=0.964 crash=0.0619 mech=0.0660 top=0.483 winners=8.00 sc=0.450 tyreDnf=0.0000 stops=2.658 graining=0.146 hot=0.099 cold=0.063
@@ -1674,7 +1687,7 @@ MEASURE rung2 clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
 MEASURE rung2 graining-after-neutralisation races=960 perRace=0.180 other=36/794680 (0.05/1000 car-laps) short: ends=875 grains=117 (2.26/1000 car-laps) mid: ends=133 grains=20 (2.54/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
 ```
 
-Rung 3, shipped (+ coefficients 0.08, `overheatWearPerLap` 0.05):
+First ladder, Rung 3 (+ coefficients 0.08, `overheatWearPerLap` 0.05):
 ```
 MEASURE rung3 sample-pro seedBase=1000 n=240 rho=0.624 dpos=3.658 paceRank=0.964 crash=0.0612 mech=0.0765 top=0.463 winners=8.00 sc=0.471 tyreDnf=0.0000 stops=2.679 graining=0.063 hot=0.101 cold=0.063
 MEASURE rung3 sample-pro seedBase=4000 n=240 rho=0.617 dpos=3.713 paceRank=0.964 crash=0.0677 mech=0.0702 top=0.442 winners=7.00 sc=0.517 tyreDnf=0.0000 stops=2.663 graining=0.208 hot=0.097 cold=0.066
@@ -1719,23 +1732,21 @@ MEASURE rung3 clearing-lantern_quay MEAN(1000/4000/7000/10000) failure=0.2021
 MEASURE rung3 graining-after-neutralisation races=960 perRace=0.134 other=44/794660 (0.06/1000 car-laps) short: ends=873 grains=80 (1.55/1000 car-laps) mid: ends=134 grains=5 (0.63/1000 car-laps) long: ends=0 grains=0 (0.00/1000 car-laps)
 ```
 
-The single-sample n=120 lantern_quay envelope (`newCircuitBands`, seedBase 1000): plan values pro
-0.5037 / rookie 0.4956; Rung C pro 0.4896; Rung 1 pro 0.4775; Rung 2 pro 0.4993; Rung 3 pro 0.5126
-(all seven tests pass).
+The single-sample n=120 lantern_quay envelope (`newCircuitBands`, seedBase 1000) in the first
+ladder: plan pro 0.5037 / rookie 0.4956; Rung C pro 0.4896; Rung 1 pro 0.4775; Rung 2 pro 0.4993;
+Rung 3 pro 0.5126.
 
-**Scenarios, classics and daily pins.** Tyre temperature changes every race, so 12 of 13 shipped
-scenarios moved (only `red_flag_restart` held) and were re-authored from `scripts/find-scenarios.ts`
+**Scenarios, classics and daily pins.** At the shipped values 11 of 13 scenarios moved
+(`safety_car_gamble` and `red_flag_restart` held) and were re-authored from `scripts/find-scenarios.ts`
 (first hit, goal = par − 1, blurbs checked against the handover state and rewritten where a fact
-changed). `hold_the_train` had no hit at SEEDS=2000 at harbour_lights or lantern_quay (gap 2.0, the
-brief's last widening) and was **dropped**. `vsc_gamble` is searched at its shipped circuit
-(bengaluru, recorded in the script); a4a2eda's "par no worse than the handover" narrowing had no hit
-at SEEDS=2000, so it is now a defensive scenario (handover P3, par P6, goal P5). The three daily
-GOLDEN pins: 2026-11-01 unchanged; 2027-02-14 and 2027-07-04 moved (release-note item). The 730-day
+changed). `hold_the_train` had no hit at SEEDS=400; its first hit at SEEDS=2000 (harbour_lights, gap
+2.0) is used. `vsc_gamble` is searched at its shipped circuit (bengaluru, now recorded in the
+script); a4a2eda's "par no worse than the handover" narrowing had no hit, and its first hit at
+SEEDS=2000 makes it a defensive scenario (handover P7, par P9, goal P8), as is `lantern_gamble`
+(handover P6, par P11, goal P10). All three daily GOLDEN pins moved (release-note item). The 730-day
 daily sweep has no last-resort day.
 
-**Options for Veet.** (a) Convert the lantern_quay envelope's rho check to the four-base mean, as
-Round 2 did for the passing gate and the SAMPLE rho, and ship the plan values (and lantern_quay
-`trackTempC` 27): every mean gate passed there, and a hard out-lap would cost 0.38–0.67 s (sol_desert to
-aurora) rather than the shipped 0.15–0.27 s (`outLapCost`, H from blanket temperature; softs 0.007). (b) Keep Rung 3 and judge the feel on the phone first. (c) The
-graining rate after a neutralisation, and OPTIMAL's larger edge, are both live consequences worth a
-feel check, not defects.
+**Options for Veet.** (a) Feel-check the ~0.4–0.65 s hard out-lap and the post-SC graining on the
+phone; Rung 2's warmer restarts are the measured lever if graining after a safety car reads as noise.
+(b) The lantern_quay rookie mean (0.509) is the thinnest margin; any later change that costs the street
+circuit rho will trip it first. (c) OPTIMAL's larger edge is a live consequence, not a defect.

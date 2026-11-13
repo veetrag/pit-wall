@@ -599,19 +599,18 @@ On the RELEASE build (`docs/DEVICE-CHECKLIST.md` §1), mid-range phone as well a
 
 ### 2.1: tyre temperature (scope 2026-11-13, Task S)
 
-**Switch-on result (MODEL_SPEC §17.2).** Tyre temperature ships ON, judged on four-seed-base means
-at the unchanged floors. Every mean gate passed at the plan values; the single n=120 lantern_quay
-envelope sample (rho 0.496, floor 0.50) forced the full ladder: lantern_quay `trackTempC` 27 → 31,
-then Rungs 1–3. Shipped: `coldCoeff`/`overheatCoeff` 0.08, `overheatWearPerLap` 0.05,
-`neutralisedHeat` −15, `grainPenalty` 0.20. Means at the shipped values: SAMPLE pro rho 0.632,
-setups-on 0.624, lantern_quay 0.514 / 0.523, passing failure 0.202, rookie paceRank 0.915. Graining is
-banded at 0.00 – 0.75 / race (SAMPLE pro 0.134). Eleven scenarios/classics were re-authored,
-`hold_the_train` was dropped (no hit at SEEDS=2000), and two of the three daily GOLDEN pins moved
-(release-note item: daily challenges and shared starts made before 2.1 play out differently).
+**Switch-on result (MODEL_SPEC §17.2).** Tyre temperature ships ON at the plan values, judged on
+four-seed-base means at the unchanged floors. A first ladder shrank it to Rung 3 because of one
+single-sample (n=120) lantern_quay envelope check; by controller ruling that check is now a
+four-base mean like the other Round 2 gates, and on the re-run ladder the plan values pass. Means:
+SAMPLE pro rho 0.630, setups-on 0.627, lantern_quay 0.521 / 0.509 (binding: rookie, floor 0.50),
+passing failure 0.202, rookie paceRank 0.929. Graining is banded at 0.70 – 3.45 / race (SAMPLE pro
+1.30). Eleven scenarios/classics were re-authored (none dropped) and all three daily GOLDEN pins
+moved (release-note item: daily challenges and shared starts made before 2.1 play out differently).
 
 **Phone pass** (local release build, `docs/DEVICE-CHECKLIST.md` §1):
-- A hard out-lap reads COLD on the tyre meter and on the tower, and costs 0.15–0.27 s at the shipped
-  coefficients (the plan's values gave 0.38–0.67 s); softs barely (0.007 s).
+- A hard out-lap reads COLD on the tyre meter and on the tower and costs about half a second
+  (0.38 s Sol Desert – 0.67 s Aurora); mediums 0.15–0.26 s, softs barely (0.02 s).
 - The pit panel's OUT-LAP line shows on H and M, is hidden on S at a cool track, and reads ≈ 0 under
   an SC.
 - The `tyres_in` radio fires once per out-lap.
@@ -625,8 +624,8 @@ banded at 0.00 – 0.75 / race (SAMPLE pro 0.134). Eleven scenarios/classics wer
 - 60 fps at 1× with a DRS train and COLD tags on the tower.
 - The pit sheet at 360×640 fits all four projection lines plus the OUT-LAP chips.
 
-**Calls for Veet:** the n=120 lantern_quay envelope sample drove the whole shrink (the means never
-failed) — convert it to the four-base mean and ship the plan values, or keep Rung 3?; does a 0.15–0.27 s
-hard out-lap still make the undercut feel priced?; graining clusters in the three laps after an
-SC/VSC (66% of onsets) — does that read as a feature?; `vsc_gamble` is now a defensive scenario
-(handover P3, goal P5).
+**Calls for Veet:** graining clusters in the three laps after an SC/VSC (54% of onsets; ~6/race at
+Lantern Quay) — feature or noise? (warmer restarts, `neutralisedHeat` −15, cut it ~5×); does a half
+second hard out-lap price the undercut right?; `vsc_gamble` and `lantern_gamble` are now defensive
+scenarios (goal behind the handover position); the lantern_quay rookie rho mean (0.509) is the
+thinnest margin left.

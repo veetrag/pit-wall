@@ -14,10 +14,7 @@ import { makeDeterministicTuning } from '../fixtures/tuning'
 import { makeConfig } from '../fixtures/raceHarness'
 import type { CarState, Compound, RaceConfig, RaceState } from '@engine/types'
 
-// The mechanism is tested at the plan values (spec §5.2) the expectations below were
-// written for; the shipped coefficients are the 2.1 switch-on's Rung 3 (MODEL_SPEC §17.2).
-const PLAN = { coldCoeff: 0.20, overheatCoeff: 0.20, overheatWearPerLap: 0.08, neutralisedHeat: -25, grainPenalty: 0.35 }
-const ON = { tyreTemp: { enabled: true, ...PLAN } }
+const ON = { tyreTemp: { enabled: true } }
 function cfg(circuitId = 'bengaluru', over = {}): RaceConfig {
   const c = makeConfig({}, 11, circuitId)
   // allDry: thermal pace only applies to slicks on a dry track (ruling H3).
@@ -153,7 +150,7 @@ describe('tyre temperature (spec §5.2)', () => {
     const on = cfg()
     const player = initRace(on).cars[0]!.driverId
     const cOn: RaceConfig = { ...on, playerDriverId: player }
-    const cNoCold: RaceConfig = { ...cOn, tuning: makeDeterministicTuning({ tyreTemp: { enabled: true, ...PLAN, coldCoeff: 0 } }) }
+    const cNoCold: RaceConfig = { ...cOn, tuning: makeDeterministicTuning({ tyreTemp: { enabled: true, coldCoeff: 0 } }) }
     let s: RaceState = initRace(cOn)
     const rng = createRng(21)
     const MAX_STEPS = 5 * 3

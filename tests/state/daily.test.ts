@@ -43,7 +43,7 @@ describe('generateDaily', () => {
   // Re-pinned 2026-11-08 for the 2.0 switch-on round 2 (DRS, double stack and
   // penalties ON; MODEL_SPEC §17.1): release-note item.
   // Re-pinned 2026-11-13 for the 2.1 tyre-temperature switch-on (MODEL_SPEC §17.2): release-note item.
-  const GOLDEN: Record<string, string> = {"2026-11-01":"aurora:370895249:17:d_mwangi:goal3","2027-02-14":"harbour_lights:2134607209:26:d_almeida:goal8","2027-07-04":"grand_savane:1381802076:27:d_almeida:goal7"}
+  const GOLDEN: Record<string, string> = {"2026-11-01":"aurora:1520877930:17:d_mwangi:goal10","2027-02-14":"harbour_lights:2134607209:26:d_almeida:goal10","2027-07-04":"grand_savane:617576493:20:d_almeida:goal9"}
   it('PINNED GOLDEN DAYS', () => {
     const got = Object.fromEntries(['2026-11-01', '2027-02-14', '2027-07-04'].map(k => [k, generateDaily(k).signature + `:goal${generateDaily(k).spec.goal.position}`]))
     // eslint-disable-next-line no-console

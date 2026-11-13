@@ -29,11 +29,12 @@ function measure(circuitIds: readonly string[], difficulty: Difficulty): Metrics
 }
 const sample = () => measure(SAMPLE, 'pro')
 
-function envelope(id: string, m: Metrics, label: string) {
+function envelope(id: string, m: Metrics, label: string, rhoFloorByMean = false) {
   const at = `${id} ${label} n=${m.races}`
   expect(m.meanAbsPosChange, at).toBeGreaterThanOrEqual(2.3)
   expect(m.meanAbsPosChange, at).toBeLessThanOrEqual(4.6)
-  expect(m.gridFinishSpearman, at).toBeGreaterThanOrEqual(0.50)
+  // rhoFloorByMean: the 0.50 floor is judged on the four-seed-base mean instead (see the caller).
+  if (!rhoFloorByMean) expect(m.gridFinishSpearman, at).toBeGreaterThanOrEqual(0.50)
   expect(m.gridFinishSpearman, at).toBeLessThanOrEqual(0.85)
   expect(m.paceRankCorrelation, at).toBeGreaterThanOrEqual(0.85)
   expect(m.distinctWinners, at).toBeGreaterThanOrEqual(3)
@@ -49,9 +50,19 @@ describe('lantern_quay (night street circuit)', () => {
     console.log(`MEASURE lantern_quay pro sc=${pro.safetyCarsPerRace} crash=${pro.crashesPerCarRace} dpos=${pro.meanAbsPosChange} rho=${pro.gridFinishSpearman} pace=${pro.paceRankCorrelation} | SAMPLE sc=${sample().safetyCarsPerRace}`)
   })
 
+  // The rho floor is judged on the mean over four seed bases at n=240 each (2.1 scope Task S,
+  // controller ruling applying the §17.1 Round 2 method): one n=120 sample has an SE of ~0.035
+  // here, and at the 2.1 switch-on it moved 0.477-0.513 between rungs while the four-base means
+  // sat at 0.509-0.534. The floor is unchanged; every other envelope metric keeps its n=120 sample.
   it('stays inside the per-circuit envelope at both difficulties', () => {
-    envelope(ID, measure([ID], 'pro'), 'pro')
-    envelope(ID, measure([ID], 'rookie'), 'rookie')
+    envelope(ID, measure([ID], 'pro'), 'pro', true)
+    envelope(ID, measure([ID], 'rookie'), 'rookie', true)
+    for (const difficulty of ['pro', 'rookie'] as const) {
+      const rhos = [1000, 4000, 7000, 10000].map(seedBase =>
+        runRaces({ races: 240, circuitIds: [ID], difficulty, seedBase }).gridFinishSpearman)
+      const mean = rhos.reduce((a, b) => a + b, 0) / rhos.length
+      expect(mean, `${ID} ${difficulty} rho per base ${rhos.map(r => r.toFixed(3)).join(' ')}`).toBeGreaterThanOrEqual(0.50)
+    }
   })
   it('IS A SAFETY-CAR CIRCUIT: >= 0.85 per race and >= 1.4x the SAMPLE rate', () => {
     const pro = measure([ID], 'pro')
