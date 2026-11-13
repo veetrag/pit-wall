@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
   initThermal, outLapThermal, thermalTarget, thermalWindow, thermalPace, thermalAfterSector,
+  thermalAtLapEnd, thermalStatus, aiThermalPaceMode,
 } from '@engine/thermal'
+import { effectiveTyreAge } from '@engine/tyres'
+import { rivalIntel } from '@engine/rivalIntel'
 import { initRace, stepSector } from '@engine/race'
 import { executeStop } from '@engine/pitStop'
 import { applyRedFlagRestart } from '@engine/redFlag'
@@ -147,5 +150,136 @@ describe('tyre temperature (spec §5.2)', () => {
     const out = executeStop(config, { safetyCar: null, lap: 4, sector: 2 }, s.cars[0]!, 'H', createRng(1))
     expect('thermal' in out.car).toBe(false)
     expect(applyRedFlagRestart(config, s.cars, 'DRY', 20).some(c => 'thermal' in c)).toBe(false)
+  })
+})
+
+describe('overheating wear, graining, AI (spec §5.2–§5.3)', () => {
+  const th = (temp: number, extra: Partial<{ coldLaps: number; grainLaps: number; heatWear: number }> = {}) =>
+    ({ temp, coldLaps: 0, grainLaps: 0, heatWear: 0, ...extra })
+
+  it('a sector 10 °C over the window adds overheatWearPerLap/3 laps of age', () => {
+    const config = cfg('sol_desert')
+    const c = car0(config, { compound: 'S', thermal: th(110) })
+    expect(thermalAfterSector(config, c, 'DRY', false).heatWear).toBeCloseTo(0.08 / 3, 12)
+  })
+
+  it('no overheating wear inside the window, or on the wrong tyre family (H3)', () => {
+    const config = cfg('sol_desert')
+    expect(thermalAfterSector(config, car0(config, { compound: 'S', thermal: th(95, { heatWear: 0.5 }) }), 'DRY', false).heatWear).toBe(0.5)
+    expect(thermalAfterSector(config, car0(config, { compound: 'S', thermal: th(110) }), 'DAMP', false).heatWear).toBe(0)
+  })
+
+  it('effectiveTyreAge adds heatWear, and is untouched without it', () => {
+    const config = cfg()
+    const driver = config.drivers[0]!
+    const c = car0(config, { tyreAge: 10, thermal: th(90, { heatWear: 1.5 }) })
+    const plain = effectiveTyreAge({ ...c, thermal: undefined }, driver, 'DRY', config)
+    expect(effectiveTyreAge(c, driver, 'DRY', config)).toBeCloseTo(plain + 1.5, 12)
+    expect(effectiveTyreAge({ ...c, thermal: th(90) }, driver, 'DRY', config)).toBe(plain)
+  })
+
+  it('PER-LAP WEAR PROBES IGNORE ACCUMULATED HEAT (rivalIntel)', () => {
+    const config = { ...cfg(), lapsOverride: 60 }
+    const s = initRace(config)
+    const rival = { ...s.cars[3]!, compound: 'H' as Compound, tyreAge: 6, paceMode: 'neutral' as const,
+      strategy: { ...s.cars[3]!.strategy, brain: 'smart' as const, plannedStops: [] } }
+    const driver = config.drivers.find(d => d.id === rival.driverId)!
+    const rate = effectiveTyreAge({ ...rival, tyreAge: 1, thermal: undefined }, driver, 'DRY', config)
+    // Same effective age now, one via heat and one via plain laps: same box window.
+    const heated: CarState = { ...rival, thermal: th(100, { heatWear: 3 }) }
+    const plain: CarState = { ...rival, tyreAge: rival.tyreAge + 3 / rate, thermal: th(100) }
+    const intel = (car: CarState) => {
+      const r = rivalIntel(config, { ...s, cars: s.cars.map(c => c.driverId === car.driverId ? car : c) }, car.driverId)
+      return r && r.status === 'window' ? [r.from, r.to] : r?.status
+    }
+    expect(intel(heated)).toEqual(intel(plain))
+    expect(Array.isArray(intel(heated))).toBe(true)
+  })
+
+  it('two cold lap ends on a green dry track start graining; it then counts down', () => {
+    const config = cfg('aurora')                    // window M [85, 108]; grain below 77
+    let c = car0(config, { compound: 'M', thermal: th(70) })
+    const a = thermalAtLapEnd(config, c, 'DRY', 0.3)
+    expect(a.grained).toBe(false)
+    c = { ...c, thermal: a.thermal }
+    const b = thermalAtLapEnd(config, c, 'DRY', 0.3)
+    expect(b.grained).toBe(true)
+    expect(b.thermal.grainLaps).toBe(4)
+    expect(thermalAtLapEnd(config, { ...c, thermal: b.thermal }, 'DRY', 0.3).thermal.grainLaps).toBe(3)
+  })
+
+  it('no graining on a rubbered track (H4), on hards, or in the wet', () => {
+    const config = cfg('aurora')
+    const cold = { thermal: th(70, { coldLaps: 1 }) }
+    expect(thermalAtLapEnd(config, car0(config, { compound: 'M', ...cold }), 'DRY', 0.9).grained).toBe(false)
+    expect(thermalAtLapEnd(config, car0(config, { compound: 'H', ...cold }), 'DRY', 0.3).grained).toBe(false)
+    expect(thermalAtLapEnd(config, car0(config, { compound: 'M', ...cold }), 'DAMP', 0.3).grained).toBe(false)
+  })
+
+  it('graining costs grainPenalty per lap while it lasts', () => {
+    const config = cfg()
+    const c = car0(config, { compound: 'M', thermal: th(95, { grainLaps: 2 }) })
+    expect(thermalPace(config, c, 'DRY')).toBeCloseTo(0.35 / 3, 12)
+  })
+
+  it('status zones', () => {
+    const config = cfg()
+    expect(thermalStatus(config, car0(config, { compound: 'H', thermal: th(80) }), 'DRY')!.zone).toBe('cold')
+    expect(thermalStatus(config, car0(config, { compound: 'H', thermal: th(100) }), 'DRY')!.zone).toBe('window')
+    expect(thermalStatus(config, car0(config, { compound: 'S', thermal: th(105) }), 'DRY')!.zone).toBe('hot')
+    expect(thermalStatus(config, { ...car0(config), thermal: undefined }, 'DRY')).toBeNull()
+  })
+
+  it('AI: a hot pusher backs off, a cold car pushes, a neutralisation changes nothing', () => {
+    const config = cfg()
+    const hot = car0(config, { compound: 'S', paceMode: 'push', thermal: th(106) })
+    expect(aiThermalPaceMode(config, hot, 'DRY', false, 'push')).toBe('neutral')
+    const cold = car0(config, { compound: 'H', thermal: th(80) })
+    expect(aiThermalPaceMode(config, cold, 'DRY', false, 'neutral')).toBe('push')
+    expect(aiThermalPaceMode(config, cold, 'DRY', true, 'neutral')).toBe('neutral')
+  })
+
+  /** Steps the lap-completing sector with car 3 set up by `patch`; returns that car and the new state. */
+  function step(config: RaceConfig, patch: (c: CarState) => CarState): { car: CarState; next: RaceState } {
+    const s0 = initRace(config)
+    const id = s0.cars[3]!.driverId
+    const s: RaceState = { ...s0, lap: 6, sector: 2, cars: s0.cars.map(c => c.driverId === id ? patch({ ...c, lap: 6 }) : { ...c, lap: 6 }) }
+    const next = stepSector(config, s, createRng(5))
+    return { car: next.cars.find(c => c.driverId === id)!, next }
+  }
+  const boundary = (config: RaceConfig, patch: (c: CarState) => CarState): CarState => step(config, patch).car
+
+  it('AI WARMS A FRESH COLD SET: an optimal car that boxes onto hards leaves the boundary on PUSH', () => {
+    const base = cfg()
+    const config: RaceConfig = { ...base, circuit: { ...base.circuit, trackTempC: undefined } }   // 32 °C
+    const after = boundary(config, c => ({
+      ...c, compound: 'M', tyreAge: 12, paceMode: 'neutral', thermal: th(95),
+      strategy: { ...c.strategy, brain: 'optimal', plannedStops: [{ lap: 7, compound: 'H' }] },
+    }))
+    expect(after.pitsDone).toBe(1)
+    expect(after.compound).toBe('H')
+    expect(after.thermal!.temp).toBe(70)
+    expect(after.paceMode).toBe('push')
+  })
+
+  it('A PENALTY-COVER PUSH IS NOT BACKED OFF BY HEAT', () => {
+    const config = cfg('sol_desert')
+    const hotPush = (pendingSec: number) => boundary(config, c => ({
+      ...c, compound: 'S', tyreAge: 0, paceMode: 'push', thermal: th(112),
+      penalty: { warnings: 0, pendingSec, servedSec: 0 },
+      strategy: { ...c.strategy, brain: 'optimal', plannedStops: [] },
+    }))
+    expect(hotPush(0).paceMode).toBe('neutral')    // hot and nothing to cover: back off
+    expect(hotPush(5).paceMode).toBe('push')       // covering a pending penalty outranks heat
+  })
+
+  it('race: lap-end graining is logged once, and the naive brain keeps its pace', () => {
+    const config = cfg('aurora')
+    const { car: after, next } = step(config, c => ({ ...c, compound: 'M', tyreAge: 2, thermal: th(60, { coldLaps: 1 }),
+      strategy: { ...c.strategy, brain: 'naive', plannedStops: [] } }))
+    expect(after.thermal!.grainLaps).toBe(4)
+    expect(after.paceMode).toBe('neutral')         // naive: no thermal pace call, even this cold
+    const grains = next.incidents.filter(e => e.kind === 'graining')
+    expect(grains).toEqual([{ lap: 6, sector: 2, kind: 'graining', driverId: after.driverId, timeLoss: null }])
   })
 })

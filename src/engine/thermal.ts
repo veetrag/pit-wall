@@ -1,4 +1,4 @@
-import type { CarState, RaceConfig, ThermalState, TuningConstants, WeatherState } from './types'
+import type { CarState, PaceMode, RaceConfig, ThermalState, TuningConstants, WeatherState } from './types'
 import { trackTemp } from './track'
 
 /**
@@ -53,9 +53,73 @@ export function thermalPace(config: RaceConfig, car: CarState, weather: WeatherS
   return (tt.coldCoeff * (d / 10) ** 2 + tt.overheatCoeff * (e / 10) ** 2 + grain) / 3
 }
 
-/** The state after one sector: temperature toward the target (overheat wear: Task 6). */
+/**
+ * The state after one sector: temperature toward the target, and overheating
+ * wear from the temperature the sector started with (spec §5.2). heatWear is
+ * extra laps of effective tyre age; effectiveTyreAge adds it.
+ */
 export function thermalAfterSector(config: RaceConfig, car: CarState, weather: WeatherState, neutralised: boolean): ThermalState {
   const th = car.thermal!
   const target = thermalTarget(config, car, weather, neutralised)
-  return { ...th, temp: th.temp + config.tuning.tyreTemp.responsePerSector * (target - th.temp) }
+  const { excess, applies } = thermalWindow(config, car, weather)
+  const wear = applies && excess > 0 ? config.tuning.tyreTemp.overheatWearPerLap * (excess / 10) / 3 : 0
+  return {
+    ...th,
+    temp: th.temp + config.tuning.tyreTemp.responsePerSector * (target - th.temp),
+    heatWear: wear === 0 ? th.heatWear : th.heatWear + wear,
+  }
+}
+
+/**
+ * Lap-boundary bookkeeping: graining onset and countdown (spec §5.2, ruling H4).
+ * A soft or medium held more than grainMargin below its window for
+ * grainOnsetLaps lap ends on a still-green dry track (grip under grainMaxGrip)
+ * grains for grainDurationLaps. A grain in progress only counts down.
+ */
+export function thermalAtLapEnd(
+  config: RaceConfig, car: CarState, weather: WeatherState, grip: number,
+): { thermal: ThermalState; grained: boolean } {
+  const th = car.thermal!
+  const tt = config.tuning.tyreTemp
+  if (th.grainLaps > 0) return { thermal: { ...th, grainLaps: th.grainLaps - 1 }, grained: false }
+  if (weather !== 'DRY' || !tt.grainCompounds.includes(car.compound)) {
+    return { thermal: th.coldLaps === 0 ? th : { ...th, coldLaps: 0 }, grained: false }
+  }
+  const [lo] = tt.windows[car.compound]
+  const coldLaps = th.temp < lo - tt.grainMargin ? th.coldLaps + 1 : 0
+  if (coldLaps >= tt.grainOnsetLaps && grip < tt.grainMaxGrip) {
+    return { thermal: { ...th, coldLaps: 0, grainLaps: tt.grainDurationLaps }, grained: true }
+  }
+  return { thermal: { ...th, coldLaps }, grained: false }
+}
+
+/**
+ * Where the tyre sits against its window, for the UI and radio. About the
+ * window, not pace: a car behind the SC still reads COLD. Null while off.
+ */
+export function thermalStatus(
+  config: RaceConfig, car: CarState, weather: WeatherState,
+): { zone: 'cold' | 'window' | 'hot'; lo: number; hi: number; temp: number; grainLaps: number } | null {
+  if (!car.thermal) return null
+  const [lo, hi] = config.tuning.tyreTemp.windows[car.compound]
+  const { deficit, excess } = thermalWindow(config, car, weather)
+  const zone: 'cold' | 'window' | 'hot' = deficit > 0 ? 'cold' : excess > 0 ? 'hot' : 'window'
+  return { zone, lo, hi, temp: car.thermal.temp, grainLaps: car.thermal.grainLaps }
+}
+
+/**
+ * The AI's thermal pace call (spec §5.3): back off a push on an overheating
+ * tyre, push to bring a cold tyre in. Smart/optimal only; the caller skips
+ * naive brains. Neutralised: no call (the field is held anyway). Pure, no draw.
+ */
+export function aiThermalPaceMode(
+  config: RaceConfig, car: CarState, weather: WeatherState, neutralised: boolean, proposed: PaceMode,
+): PaceMode {
+  if (!car.thermal || neutralised) return proposed
+  const { deficit, excess, applies } = thermalWindow(config, car, weather)
+  if (!applies) return proposed
+  const ai = config.tuning.tyreTemp.ai
+  if (proposed === 'push' && excess > ai.hotExcess) return 'neutral'
+  if (deficit > ai.coldDeficit) return 'push'
+  return proposed
 }

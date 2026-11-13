@@ -46,7 +46,10 @@ export type { RivalIntel } from './rivalIntel'
 export { PIT_CLIFF_THRESHOLD } from './strategy'
 export { handoverFromCalls, parFromHandover, prefixCalls } from './customStart'
 export { rubberLaps, rubberLapsFor, trackGrip, trackPaceDelta, trackTemp } from './track'
-export { initThermal, outLapThermal, thermalTarget, thermalWindow, thermalPace, thermalAfterSector } from './thermal'
+export {
+  initThermal, outLapThermal, thermalTarget, thermalWindow, thermalPace, thermalAfterSector,
+  thermalAtLapEnd, thermalStatus, aiThermalPaceMode,
+} from './thermal'
 export type { SectorContext } from './lapModel'
 export { greenSinceLap, drsOpenSet, drsOvertakeFactor, drsTrains, inTrainBehindHead } from './drs'
 export { initPenalty, trackLimitsChance, recordTrackLimits, unsafeReleaseChance, addPendingAtFlag, effectiveOrder, aiPenaltyCoverPace } from './penalties'

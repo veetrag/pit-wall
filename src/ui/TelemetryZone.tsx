@@ -34,7 +34,8 @@ function cliffStatus(raceState: RaceState | null, config: RaceConfig | null) {
   const spec = config.compounds[player.compound]
   const driver = config.drivers.find(d => d.id === player.driverId)
   const effAge = driver && spec ? effectiveTyreAge(player, driver, raceState.weatherState, config) : player.tyreAge
-  const wearRate = driver && spec ? effectiveTyreAge({ ...player, tyreAge: 1 }, driver, raceState.weatherState, config) : 1
+  // Per-lap rate: strip `thermal`, whose accumulated heatWear is additive (2.1).
+  const wearRate = driver && spec ? effectiveTyreAge({ ...player, tyreAge: 1, thermal: undefined }, driver, raceState.weatherState, config) : 1
   const fraction = spec ? tyreCliffFraction(spec, effAge) : 0
   const cliffIn = spec ? Math.max(0, Math.ceil((spec.cliff - effAge) / Math.max(wearRate, 0.01))) : null
   return { player, spec, effAge, wearRate, fraction, cliffIn, pastCliff: fraction >= 1.0, retired: player.retired }

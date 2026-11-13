@@ -19,7 +19,7 @@ export function tyreCliffFraction(spec: CompoundSpec, ageLaps: number): number {
 // gauge, radio warnings) must use it too, or a car can look fine on the gauge
 // while it's already well past its real cliff (e.g. wet tyres on a dry track).
 export function effectiveTyreAge(
-  car: Pick<CarState, 'tyreAge' | 'paceMode' | 'compound' | 'lapsInDirtyAir'>,
+  car: Pick<CarState, 'tyreAge' | 'paceMode' | 'compound' | 'lapsInDirtyAir' | 'thermal'>,
   driver: Pick<DriverSpec, 'facets'>,
   weatherState: WeatherState,
   ctx: TyreContext,
@@ -38,8 +38,13 @@ export function effectiveTyreAge(
   // doesn't runaway for a car stuck in traffic for the whole race.
   const cappedDirtyAirLaps = Math.min(car.lapsInDirtyAir, tuning.traffic.dirtyAirDegCapLaps)
   const dirtyAirMult = 1 + cappedDirtyAirLaps * tuning.traffic.dirtyAirDegBonus
-  return car.tyreAge * tyreManagementFactor * paceDegMultiplier * wetDegMult * dirtyAirMult
+  const base = car.tyreAge * tyreManagementFactor * paceDegMultiplier * wetDegMult * dirtyAirMult
     * circuitTraits(ctx.circuit, tuning).wear
+  // 2.1 (spec §5.2): overheating wear, added unscaled and only when non-zero, so
+  // the 1.7 expression is returned unchanged otherwise. It is cumulative: a
+  // per-lap probe at tyreAge 1 must strip `thermal` (rivalIntel, TelemetryZone).
+  const heat = car.thermal ? car.thermal.heatWear : 0
+  return heat === 0 ? base : base + heat
 }
 
 // Effectively-infinite sets — used when a RaceConfig doesn't specify
