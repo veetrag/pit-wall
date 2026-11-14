@@ -125,6 +125,18 @@ export const CIRCUIT_ORDER = [
 /** The round strip: the calendar, then circuits authored since 2.0 (spec 2026-10-24 R2). */
 export const PICKABLE_CIRCUITS: readonly string[] = [...CIRCUIT_ORDER, ...V2_CIRCUITS]
 
+/**
+ * Appends an alert, or, if one with the same replaceKey is still queued or
+ * showing, swaps it in place (new id, so the banner restarts its timer).
+ */
+export function upsertAlert(alerts: AlertMessage[], alert: AlertMessage): AlertMessage[] {
+  if (alert.replaceKey) {
+    const i = alerts.findIndex(a => a.replaceKey === alert.replaceKey)
+    if (i >= 0) return alerts.map((a, j) => (j === i ? alert : a))
+  }
+  return [...alerts, alert]
+}
+
 let alertCounter = 0
 let requestCounter = 0
 
@@ -282,9 +294,9 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
     const chargedLoss = autoStopped ? autoLoss : get().pitLaneLoss
     const stillInPit = autoStopped || (playerInPit && playerNow < pitEndTime + chargedLoss)
 
-    const nextRadio = processRadioTick(nextState, config, radioState, (msg, severity) => {
+    const nextRadio = processRadioTick(nextState, config, radioState, (msg, severity, replaceKey) => {
       const id = `alert-${++alertCounter}`
-      set(s => ({ hudAlerts: [...s.hudAlerts, { id, severity, category: 'RADIO', message: msg, icon: '📻' }] }))
+      set(s => ({ hudAlerts: upsertAlert(s.hudAlerts, { id, severity, category: 'RADIO', message: msg, icon: '📻', ...(replaceKey ? { replaceKey } : {}) }) }))
     })
 
     // Driver radio requests (spec 1.6 §2). A plan stop answers a pending box
