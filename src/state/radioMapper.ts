@@ -1,6 +1,7 @@
 import radioData from '@data/radio.json'
 import { tyreCliffFraction, effectiveTyreAge } from '@engine/tyres'
 import { neutralisationKind } from '@engine/incidents'
+import { thermalStatus } from '@engine/thermal'
 import type { RaceState, RaceConfig, Compound, IncidentKind } from '@engine/types'
 import { wingOf } from '@engine/setup'
 import { soundService } from '@audio/soundService'
@@ -20,6 +21,7 @@ export const V2_RADIO: Partial<Record<IncidentKind, string>> = {
   double_stack: 'double_stack',
   penalty_issued: 'penalty',
   unsafe_release: 'unsafe_release',
+  graining: 'graining',
 }
 
 type RadioPool = Record<string, string[]>
@@ -98,6 +100,15 @@ export interface RadioState {
    * player or team-mate identity changes.
    */
   incidentScan?: IncidentScan
+  /** 2.1: the "tyres are cooked" line has gone out this stint (reset at each pit exit). */
+  hotWarned: boolean
+  /** 2.1: this out-lap has read COLD on an earlier tick, so the turn to the window earns "tyres are in". */
+  outLapCold: boolean
+  /**
+   * 2.1: the player started graining while the field was neutralised; the
+   * line waits for green (and is dropped if the grain has cleared by then).
+   */
+  grainingDeferred: boolean
 }
 
 interface IncidentScan {
@@ -161,9 +172,10 @@ function fromCursor(all: () => Incident[], cursor: number, scannedBefore: number
  * A fresh radio state. Pass the race state when starting mid-race (scenario,
  * custom start): every count cursor is seeded past what already happened in
  * it (incidents, red flags, VSCs, slow stops, spins, overtakes), so the first
- * tick does not replay their radio lines.
+ * tick does not replay their radio lines. Pass the config too so a handover on
+ * an already-overheating tyre does not announce it as news (2.1).
  */
-export function makeRadioState(state?: RaceState): RadioState {
+export function makeRadioState(state?: RaceState, config?: RaceConfig): RadioState {
   const player = state?.cars.find(c => c.isPlayer)
   const mate = player ? state?.cars.find(c => c.teamId === player.teamId && c.driverId !== player.driverId) : undefined
   const incidents = state?.incidents ?? []
@@ -185,6 +197,9 @@ export function makeRadioState(state?: RaceState): RadioState {
     prevPlayerIncidents: player ? incidents.filter(i => i.driverId === player.driverId).length : 0,
     prevMateStacks: mate ? incidents.filter(i => i.kind === 'double_stack' && i.driverId === mate.driverId).length : 0,
     incidentScan: player ? scanIncidents(incidents, undefined, player.driverId, mate?.driverId ?? null).scan : undefined,
+    hotWarned: !!(state && config && player && thermalStatus(config, player, state.weatherState)?.zone === 'hot'),
+    outLapCold: false,
+    grainingDeferred: false,
   }
 }
 
@@ -220,7 +235,12 @@ export function processRadioTick(
     scanIncidents(state.incidents, radio.incidentScan, player.driverId, mate?.driverId ?? null)
   next.incidentScan = scan
   const allowed = config.tuning.penalties.trackLimits.warningsAllowed
+  // Graining nearly always starts behind (or as) the SC/VSC (MODEL_SPEC §17.2):
+  // "We're graining" over a neutralised field is noise, so it waits for green.
+  const neutralised = neutralisationKind(state.safetyCar) !== null
+  let grainingDeferred = radio.grainingDeferred
   for (const ev of fromCursor(() => state.incidents.filter(i => i.driverId === player.driverId), radio.prevPlayerIncidents, myBefore, newMine)) {
+    if (ev.kind === 'graining' && neutralised) { grainingDeferred = true; continue }
     const trigger = V2_RADIO[ev.kind]
     if (trigger) tryPush(trigger, 1, { sec: ev.timeLoss?.toFixed(1) ?? '', mate: mateCode }, pushAlert)
     // The warning that uses up the allowance: one more and it is a penalty.
@@ -232,6 +252,11 @@ export function processRadioTick(
     }
   }
   next.prevPlayerIncidents = scan.myCount
+  if (grainingDeferred && !neutralised) {
+    // Green again: say it once if the tyre is still graining, else let it go.
+    if (!(player.thermal && player.thermal.grainLaps > 0) || tryPush('graining', 1, {}, pushAlert)) grainingDeferred = false
+  }
+  next.grainingDeferred = grainingDeferred
   // The team-mate queued behind the player: told when it lands within a lap of the player's last stop.
   const myLastStop = player.pitsDone > 0 ? player.lap - player.tyreAge : -Infinity
   const mateNew = mate
@@ -276,6 +301,28 @@ export function processRadioTick(
     tryPush('slow_stop', 2, { loss: scan.lastSlowLoss.toFixed(1) }, pushAlert)
   }
   next.prevSlowStops = scan.mySlow
+
+  // 0d. Tyre temperature (2.1, spec §5.4): state-based, so one-shot flags.
+  // Null while tyre temperature is off -- the flags then never move.
+  const temp = thermalStatus(config, player, state.weatherState)
+  if (temp) {
+    const pitExit = player.tyreAge === 0 && radio.prevPlayerTyreAge > 0
+    let hotWarned = pitExit ? false : radio.hotWarned
+    let outLapCold = pitExit ? false : radio.outLapCold
+    // Once per stint: well past the window (more than 6 above it), not a brush with it.
+    if (!hotWarned && temp.zone === 'hot' && temp.temp - temp.hi > 6) {
+      if (tryPush('tyres_hot', 1, {}, pushAlert)) hotWarned = true
+    }
+    // Once per out-lap: the fresh set read cold, and has now come into its window.
+    const outLap = player.tyreAge === 0 && player.pitsDone > 0
+    if (!outLap) outLapCold = false
+    else if (temp.zone === 'cold') outLapCold = true
+    else if (temp.zone === 'window' && outLapCold) {
+      if (tryPush('tyres_in', 0, {}, pushAlert)) outLapCold = false
+    }
+    next.hotWarned = hotWarned
+    next.outLapCold = outLapCold
+  }
 
   // 1. Tyre cliff (high priority, fire once per stint)
   if (compound) {

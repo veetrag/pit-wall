@@ -596,3 +596,54 @@ On the RELEASE build (`docs/DEVICE-CHECKLIST.md` §1), mid-range phone as well a
 3. SC meter, steward toast, grip strip, DRS pill and BOX BUSY: TalkBack labels, reduced motion,
    haptics on and off (see the 2.0 pass above).
 4. Background the app during a double stack and return: the timer resumes correctly.
+
+### 2.1: tyre temperature (scope 2026-11-13, Task S)
+
+**Switch-on result (MODEL_SPEC §17.2).** Tyre temperature ships ON at the plan values, judged on
+four-seed-base means at the unchanged floors. A first ladder shrank it to Rung 3 because of one
+single-sample (n=120) lantern_quay envelope check; by controller ruling that check is now a
+four-base mean like the other Round 2 gates, and on the re-run ladder the plan values pass. Means:
+SAMPLE pro rho 0.630, setups-on 0.627, lantern_quay 0.521 / 0.509 (binding: rookie, floor 0.50),
+passing failure 0.202, rookie paceRank 0.929. Graining is banded at 0.70 – 3.45 / race (SAMPLE pro
+1.30). Eleven scenarios/classics were re-authored (none dropped) and all three daily GOLDEN pins
+moved (release-note item: daily challenges and shared starts made before 2.1 play out differently).
+
+**Phone pass** (local release build, `docs/DEVICE-CHECKLIST.md` §1):
+- A hard out-lap reads COLD on the tyre meter and on the tower and costs about half a second
+  (0.38 s Sol Desert – 0.67 s Aurora); mediums 0.15–0.26 s, softs barely (0.02 s).
+- The pit panel's OUT-LAP line shows on H and M, is hidden on S at a cool track, and reads ≈ 0 under
+  an SC.
+- The `tyres_in` radio fires once per out-lap.
+- Push softs at Sol Desert: the band turns HOT, "Tyres are cooked" plays, and the CLIFF ~nL estimate
+  stays sane (the probe fix).
+- A medium after an early SC, or after rain, shows GRAINING nL and clears.
+- The SC restart reads COLD across the field.
+- The `tyre_temp` coach mark appears on the first out-lap only.
+- TalkBack reads "Tyre temperature, Cold" and ", cold tyres" on tower rows; with reduced motion the
+  band marker moves without animating.
+- 60 fps at 1× with a DRS train and COLD tags on the tower.
+- The pit sheet at 360×640 fits all four projection lines plus the OUT-LAP chips.
+
+**Calls for Veet:** graining is effectively a safety-car feature — of 1,291 onsets in a 480-race sim,
+708 started on the tick the SC/VSC ended, 582 while it was still out and 1 in green running (MODEL_SPEC
+§17.2; ~1.2–2.6 onsets/race on the 4-circuit sample, ~6/race at Lantern Quay only) — feature or noise?
+(warmer restarts, `neutralisedHeat` −15, cut it ~5×); does a half
+second hard out-lap price the undercut right?; `vsc_gamble` and `lantern_gamble` are now defensive
+scenarios (goal behind the handover position); the lantern_quay rookie rho mean (0.509) is the
+thinnest margin left.
+
+### 2.1 release (scope 2026-11-13, Task R)
+
+Ships as 2.1 / versionCode 14 (2.0 is 13). Run `npx cap sync android` from the repo root, never a
+worktree. No plugin or permission was added; `tests/data/androidManifest.test.ts` passes unchanged.
+Release note: daily challenges and shared starts made before 2.1 play out differently.
+
+On the RELEASE build (`docs/DEVICE-CHECKLIST.md` §1), mid-range phone as well as the Pixel:
+1. Cold start, then continue a 2.0 season save: it loads and nothing in it changed.
+2. A full Grand Prix at 1x holds 60 fps with COLD tags, a DRS train and the SC meter showing.
+3. Tyre band, COLD tag, OUT-LAP line, GRAINING chip: TalkBack labels, reduced motion, large text,
+   haptics on and off.
+4. Red Flag Restart scenario: every car restarts at the blanket + formation temperature.
+5. A 2.0-era share code imports, shows the "plays out differently" warning, then plays.
+6. 2.0 follow-ups: the DRS-train bracket grows and shrinks as one bar at 1x and 4x; the pit panel's
+   train note matches the tower after BOX; a scenario or custom start fires no stale radio line.

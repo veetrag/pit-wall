@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { initRace, stepSector, projectPitNow, neutralisationKind } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
-import { makeTuning } from '../fixtures/tuning'
+import { makeTuning, withV2Off } from '../fixtures/tuning'
 import { makeConfig, runRace, type TuningOverrides } from '../fixtures/raceHarness'
 import type { RaceConfig, RaceState } from '@engine/types'
 
@@ -171,7 +171,7 @@ describe('safety car pace and duration', () => {
     const paceMultiplier = 1.45
 
     function firstMultipliedTickTimes(multiplier: number): Map<string, number> {
-      const config = makeConfig({
+      const config = makeConfig(withV2Off({
         ...SC_CERTAIN,
         incidents: {
           ...SC_CERTAIN.incidents,
@@ -184,7 +184,7 @@ describe('safety car pace and duration', () => {
         // Pre-1.6 weather rule (Task 1 ruling, R2 precedent): this test is about SC
         // pace, and seed 7 on bengaluru only deploys an SC under the old weather AI.
         ai: { weatherConfirmLaps: 1, weatherMinLapsLeft: 0 },
-      } as TuningOverrides, 7)
+      } as TuningOverrides) as TuningOverrides, 7)
       // Override just the multiplier, leaving every other draw identical.
       const tuned: RaceConfig = {
         ...config,
@@ -308,7 +308,7 @@ describe('safety car pit discount', () => {
     // projectPitNow takes a COMPOUND third, and reads the player from
     // config.playerDriverId -- so the config needs a real id, not '__none__'.
     const playerDriverId = DATA.drivers.drivers[10]!.id
-    const config: RaceConfig = { ...makeConfig(base, 99, 'veloce'), playerDriverId }
+    const config: RaceConfig = { ...makeConfig(withV2Off(base) as TuningOverrides, 99, 'veloce'), playerDriverId }
     const laneGreen = config.circuit.pitLaneTimeLoss   // veloce: 18.0
     expect(laneGreen).toBe(18.0)
 

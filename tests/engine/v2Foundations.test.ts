@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { loadGameData } from '@data/validators'
+import { V2_CIRCUITS } from '@data/circuitPaths'
 import { makeDeterministicTuning, v2Off } from '../fixtures/tuning'
 import type { RaceConfig } from '@engine/types'
 
@@ -35,6 +36,14 @@ describe('2.0 foundations', () => {
     expect(t.penalties.trackLimits.warningsAllowed).toBe(3)
     expect(t.penalties.unsafeRelease.stackedFactor).toBe(2.5)
     expect(t.scOutlook.bands).toEqual([0.15, 0.30])
+    // 2.1 tyre temperature: declared in Task 5, switched on at the plan values in Task S (MODEL_SPEC §17.2).
+    expect(t.tyreTemp.enabled).toBe(true)
+    expect(t.tyreTemp.coldCoeff).toBe(0.20)
+    expect(t.tyreTemp.overheatCoeff).toBe(0.20)
+    expect(t.tyreTemp.overheatWearPerLap).toBe(0.08)
+    expect(t.tyreTemp.neutralisedHeat).toBe(-25)
+    expect(t.tyreTemp.grainPenalty).toBe(0.35)
+    expect(t.tyreTemp.windows.H).toEqual([92, 115])
   })
 
   it('v2Off pins exactly the off values', () => {
@@ -61,6 +70,7 @@ describe('2.0 foundations', () => {
     const rng = createRng(424242)
     for (let i = 0; i < circuit.laps * 3; i++) state = stepSector(config, state, rng)
     expect(state.cars.some(c => 'penalty' in c)).toBe(false)
+    expect(state.cars.some(c => 'thermal' in c)).toBe(false)
     expect('boxFree' in state).toBe(false)
     expect(JSON.stringify(state, null, 2) + '\n').toBe(golden)
   }, 60_000)
@@ -74,5 +84,12 @@ describe('2.0 foundations', () => {
     // to ~1.69x (controller ruling, Task 10). Calendar mean stays within ±0.05 of 1.
     expect(Math.abs(meanRisk - 1.0)).toBeLessThanOrEqual(0.05)
     for (const c of cs) expect(c.drsSectors!.length).toBeGreaterThan(0)
+    // 2.1 track temperature: the career calendar (not the two 1.7 circuits) averages exactly 32.
+    const career = Object.keys(DATA.circuits).filter(id => !V2_CIRCUITS.includes(id))
+    expect(career).toHaveLength(12)
+    const meanTemp = career.reduce((s, id) => s + (DATA.circuits[id]!.trackTempC ?? NaN), 0) / career.length
+    expect(meanTemp).toBeCloseTo(32, 10)
+    expect(DATA.circuits['lantern_quay']!.trackTempC).toBe(27)
+    expect(DATA.circuits['mesa_roja']!.trackTempC).toBe(42)
   })
 })

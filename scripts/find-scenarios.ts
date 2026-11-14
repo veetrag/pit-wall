@@ -77,7 +77,11 @@ const BRIEFS: Brief[] = [
   },
   {
     name: 'VSC gamble — a virtual safety car with your stop in the window',
-    circuitId: 'aurora',
+    // a4a2eda re-picked the shipped scenario at bengaluru (no aurora hit to 2000 seeds)
+    // with a P3-P10 handover whose par was no worse than the handover. 2.1 (thermal
+    // on): that par condition had no bengaluru hit at SEEDS=2000, so it is dropped and
+    // vsc_gamble is a defensive scenario (first hit at SEEDS=2000: handover P7, par P9, goal P8).
+    circuitId: 'bengaluru',
     lapWindow: t => [Math.floor(t * 0.3), Math.floor(t * 0.75)],
     // Ruling (Task 12): the plan-window test read plannedStops[pitsDone], which
     // breaks after any unplanned stop and never matched. A tired, unstopped car
@@ -87,6 +91,7 @@ const BRIEFS: Brief[] = [
       if (!car) return false
       const frac = car.tyreAge / (DATA.compounds[car.compound]?.cliff ?? 1)
       return neutralisationKind(st.safetyCar) === 'vsc' && car.pitsDone === 0 && frac >= 0.5 && s.lapsRemaining >= 10
+        && s.position >= 3 && s.position <= 10
     },
   },
   {
@@ -154,6 +159,8 @@ const BRIEFS: Brief[] = [
     // widen if no hit: circuitId 'lantern_quay', then gap 2.0
     // 2.0 round 2 (DRS on): lantern_quay had no hit at SEEDS=2000 at 1.5 or 2.0;
     // re-authored from harbour_lights at gap 2.0, SEEDS=2000.
+    // 2.1 (tyre temperature on): no hit at SEEDS=400; first hit at SEEDS=2000 at
+    // harbour_lights, gap 2.0 (lantern_quay still none).
   },
   {
     name: 'Undercut duel — P2, both on the first set', pack: 'historic', circuitId: 'costa_verde',

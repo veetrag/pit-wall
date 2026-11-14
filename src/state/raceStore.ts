@@ -206,14 +206,14 @@ export const useRaceStore = create<RaceStore>((set, get) => ({
   startScenarioRace(spec) {
     const config = buildScenarioConfig(spec)
     const { state, rng } = startScenario(config, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, hudAlerts: [], radioState: makeRadioState(state), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
+    set({ phase: 'racing', config, raceState: state, rng, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, hudAlerts: [], radioState: makeRadioState(state, config), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [], recipe: null })
   },
 
   startCustomStartRace(spec) {
     if (!spec.recipe || !spec.calls) return
     const config = buildConfigFromRecipe(spec.recipe)
     const { state, rng } = handoverFromCalls(config, spec.calls, spec.startLap)
-    set({ phase: 'racing', config, raceState: state, rng, recipe: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, hudAlerts: [], radioState: makeRadioState(state), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
+    set({ phase: 'racing', config, raceState: state, rng, recipe: null, projectionResult: null, pitPanelOpen: false, playerInPit: false, playerCalls: [], stepCount: 0, pitEndTime: 0, pitLaneLoss: 0, lastStopTime: 0, lastStopSlow: 0, lastStopQueue: 0, hudAlerts: [], radioState: makeRadioState(state, config), radioRequest: null, requestTracker: makeRequestTracker(), playerTyreChanges: [] })
   },
 
   initForStartSequence() {

@@ -29,7 +29,7 @@ export type {
   Compound, PaceMode, SectorIndex, TuningConstants, CompoundSpec,
   CircuitSpec, DriverSpec, TeamSpec, PitStop, StrategyPlan, StrategyBrain,
   TyreAllocation, DifficultyProfile, WeatherState, SafetyCarState,
-  IncidentEvent, IncidentKind, NeutralisationKind, PenaltyState,
+  IncidentEvent, IncidentKind, NeutralisationKind, PenaltyState, ThermalState,
   AttackLevel, QualifyingCall, QualifyingLap, QualifyingResult,
 } from './types'
 export type { ProjectionResult } from './projection'
@@ -45,7 +45,11 @@ export { rivalIntel, intelOffset } from './rivalIntel'
 export type { RivalIntel } from './rivalIntel'
 export { PIT_CLIFF_THRESHOLD } from './strategy'
 export { handoverFromCalls, parFromHandover, prefixCalls } from './customStart'
-export { rubberLaps, rubberLapsFor, trackGrip, trackPaceDelta } from './track'
+export { rubberLaps, rubberLapsFor, trackGrip, trackPaceDelta, trackTemp } from './track'
+export {
+  initThermal, outLapThermal, thermalTarget, thermalWindow, thermalPace, thermalAfterSector,
+  thermalAtLapEnd, thermalStatus, aiThermalPaceMode, outLapCost,
+} from './thermal'
 export type { SectorContext } from './lapModel'
 export { greenSinceLap, drsOpenSet, drsOvertakeFactor, drsTrains, inTrainBehindHead } from './drs'
 export { initPenalty, trackLimitsChance, recordTrackLimits, unsafeReleaseChance, addPendingAtFlag, effectiveOrder, aiPenaltyCoverPace } from './penalties'

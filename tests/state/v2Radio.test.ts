@@ -2,7 +2,9 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { V2_RADIO, makeRadioState, processRadioTick } from '@state/radioMapper'
 import { initRace } from '@engine/race'
 import { makeConfig } from '../fixtures/raceHarness'
-import type { IncidentEvent, RaceState } from '@engine/types'
+import { makeDeterministicTuning } from '../fixtures/tuning'
+import radioPools from '@data/radio.json'
+import type { CarState, IncidentEvent, RaceConfig, RaceState, ThermalState } from '@engine/types'
 
 afterEach(() => { vi.restoreAllMocks() })
 
@@ -12,9 +14,9 @@ let t = 1e12
 function clock() { vi.spyOn(Date, 'now').mockImplementation(() => (t += 60_000)) }
 
 describe('V2_RADIO and the player-incident cursor (spec 2026-10-24)', () => {
-  it('has the double_stack row and no graining row', () => {
+  it('has the double_stack and graining rows', () => {
     expect(V2_RADIO.double_stack).toBe('double_stack')
-    expect('graining' in V2_RADIO).toBe(false)
+    expect(V2_RADIO.graining).toBe('graining')
   })
 
   it('the cursor never double-fires a radio line', () => {
@@ -132,5 +134,129 @@ describe('mid-race handover replays no earlier radio line (2.0 follow-up)', () =
     const again: string[] = []
     processRadioTick({ ...next, incidents: guarded }, config, r, m => { again.push(m) })
     expect(again.filter(l => /stack|busy/i.test(l))).toHaveLength(0)
+  })
+})
+
+describe('tyre temperature on the radio (2.1, spec §5.4)', () => {
+  it('the player graining is radioed once', () => {
+    clock()
+    const config = { ...makeConfig({}, 2), playerDriverId: 'd_voss' }
+    const s0 = initRace(config)
+    const lines: string[] = []
+    const push = (m: string) => { lines.push(m) }
+    let r = processRadioTick(s0, config, makeRadioState(), push)
+    const s1: RaceState = { ...s0, incidents: [{ lap: 3, sector: 2, kind: 'graining', driverId: 'd_voss', timeLoss: null }] }
+    r = processRadioTick(s1, config, r, push)
+    r = processRadioTick(s1, config, r, push)
+    expect(lines.filter(l => radioPools.graining.includes(l))).toHaveLength(1)
+  })
+
+  const th = (temp: number): ThermalState => ({ temp, coldLaps: 0, grainLaps: 0, heatWear: 0 })
+  function hot(on = true): { config: RaceConfig; at: (p: Partial<CarState>) => RaceState } {
+    const base = makeConfig({}, 2, 'sol_desert')
+    const config: RaceConfig = { ...base, allDry: true, playerDriverId: 'd_voss',
+      tuning: makeDeterministicTuning(on ? { tyreTemp: { enabled: true } } : {}) }
+    const s0 = initRace(config)
+    const at = (p: Partial<CarState>): RaceState =>
+      ({ ...s0, lap: 10, weatherState: 'DRY', cars: s0.cars.map(c => c.isPlayer ? { ...c, ...p } : c) })
+    return { config, at }
+  }
+
+  it('TYRES_HOT: once per stint, only well past the window, again after a stop', () => {
+    clock()
+    const { config, at } = hot()                       // soft window [75, 100]
+    const lines: string[] = []
+    const push = (m: string) => { lines.push(m) }
+    const isHot = (l: string) => radioPools.tyres_hot.includes(l)
+    let r = makeRadioState()
+    r = processRadioTick(at({ compound: 'S', tyreAge: 5, thermal: th(105) }), config, r, push)
+    expect(lines.filter(isHot), '5 over is a brush, not news').toHaveLength(0)
+    r = processRadioTick(at({ compound: 'S', tyreAge: 6, thermal: th(108) }), config, r, push)
+    r = processRadioTick(at({ compound: 'S', tyreAge: 7, thermal: th(110) }), config, r, push)
+    expect(lines.filter(isHot)).toHaveLength(1)
+    r = processRadioTick(at({ compound: 'S', tyreAge: 0, pitsDone: 1, thermal: th(70) }), config, r, push)
+    expect(r.hotWarned, 'reset at pit exit').toBe(false)
+    processRadioTick(at({ compound: 'S', tyreAge: 4, pitsDone: 1, thermal: th(110) }), config, r, push)
+    expect(lines.filter(isHot)).toHaveLength(2)
+  })
+
+  it('TYRES_IN: once per out-lap, when a set that read cold comes into its window', () => {
+    clock()
+    const { config, at } = hot()                       // hard window [92, 115]
+    const lines: string[] = []
+    const push = (m: string) => { lines.push(m) }
+    const isIn = (l: string) => radioPools.tyres_in.includes(l)
+    let r = makeRadioState()
+    r = processRadioTick(at({ compound: 'M', tyreAge: 15, thermal: th(95) }), config, r, push)
+    r = processRadioTick(at({ compound: 'H', tyreAge: 0, pitsDone: 1, thermal: th(70) }), config, r, push)
+    expect(r.outLapCold).toBe(true)
+    r = processRadioTick(at({ compound: 'H', tyreAge: 0, pitsDone: 1, thermal: th(93) }), config, r, push)
+    r = processRadioTick(at({ compound: 'H', tyreAge: 0, pitsDone: 1, thermal: th(95) }), config, r, push)
+    expect(lines.filter(isIn)).toHaveLength(1)
+    // The race start is not an out-lap, and a set that never read cold earns nothing.
+    const start: string[] = []
+    let r2 = processRadioTick(at({ compound: 'H', tyreAge: 0, pitsDone: 0, thermal: th(85) }), config, makeRadioState(), m => { start.push(m) })
+    r2 = processRadioTick(at({ compound: 'H', tyreAge: 0, pitsDone: 0, thermal: th(95) }), config, r2, m => { start.push(m) })
+    expect(start.filter(isIn)).toHaveLength(0)
+  })
+
+  it('NO TEMPERATURE LINES WHERE THERMAL PACE DOES NOT APPLY (H3): inters on a dry track are never "cooked"', () => {
+    clock()
+    const { config, at } = hot()
+    const lines: string[] = []
+    const push = (m: string) => { lines.push(m) }
+    let r = makeRadioState()
+    r = processRadioTick(at({ compound: 'I', tyreAge: 5, thermal: th(140) }), config, r, push)
+    r = processRadioTick(at({ compound: 'I', tyreAge: 6, thermal: th(145) }), config, r, push)
+    expect(lines.filter(l => radioPools.tyres_hot.includes(l))).toHaveLength(0)
+    expect(r.hotWarned).toBe(false)
+    expect(makeRadioState(at({ compound: 'I', tyreAge: 5, thermal: th(140) }), config).hotWarned).toBe(false)
+    // A slick out-lap in the damp never reads cold, so it never earns "tyres are in".
+    const damp = (p: Partial<CarState>): RaceState => ({ ...at(p), weatherState: 'DAMP' })
+    r = processRadioTick(damp({ compound: 'H', tyreAge: 0, pitsDone: 1, thermal: th(40) }), config, makeRadioState(), push)
+    expect(r.outLapCold).toBe(false)
+    processRadioTick(damp({ compound: 'H', tyreAge: 0, pitsDone: 1, thermal: th(95) }), config, r, push)
+    expect(lines.filter(l => radioPools.tyres_in.includes(l))).toHaveLength(0)
+  })
+
+  it('GRAINING UNDER A NEUTRALISATION WAITS FOR GREEN, and is dropped if it has cleared', () => {
+    clock()
+    const { config, at } = hot()
+    const isGrain = (l: string) => radioPools.graining.includes(l)
+    const ev: IncidentEvent = { lap: 9, sector: 2, kind: 'graining', driverId: 'd_voss', timeLoss: null }
+    const sc = { deployedLap: 8, lapsRemaining: 2, cause: 'crash' as const }
+    const run = (clearsBy: number) => {
+      const lines: string[] = []
+      const push = (m: string) => { lines.push(m) }
+      let r = makeRadioState()
+      r = processRadioTick({ ...at({ compound: 'M', thermal: th(60) }), safetyCar: sc }, config, r, push)
+      const grained = (laps: number) => ({ ...at({ compound: 'M', thermal: { ...th(60), grainLaps: laps } }), incidents: [ev] })
+      r = processRadioTick({ ...grained(4), safetyCar: sc }, config, r, push)
+      r = processRadioTick({ ...grained(4), safetyCar: sc }, config, r, push)
+      const behind = lines.filter(isGrain).length
+      r = processRadioTick({ ...grained(clearsBy), safetyCar: null }, config, r, push)
+      processRadioTick({ ...grained(clearsBy), safetyCar: null }, config, r, push)
+      return { behind, green: lines.filter(isGrain).length }
+    }
+    expect(run(3)).toEqual({ behind: 0, green: 1 })   // still graining at green: said once
+    expect(run(0)).toEqual({ behind: 0, green: 0 })   // cleared behind the SC: never said
+  })
+
+  it('a handover on an already-overheating tyre does not announce it; off, the flags never move', () => {
+    clock()
+    const { config, at } = hot()
+    const handover = at({ compound: 'S', tyreAge: 8, thermal: th(112) })
+    const seeded = makeRadioState(handover, config)
+    expect(seeded.hotWarned).toBe(true)
+    const lines: string[] = []
+    processRadioTick(handover, config, seeded, m => { lines.push(m) })
+    expect(lines.filter(l => radioPools.tyres_hot.includes(l))).toHaveLength(0)
+
+    const off = hot(false)
+    const s = off.at({ compound: 'S', tyreAge: 0, pitsDone: 1 })
+    expect(makeRadioState(s, off.config).hotWarned).toBe(false)
+    const r = processRadioTick(s, off.config, makeRadioState(), () => {})
+    expect(r.hotWarned).toBe(false)
+    expect(r.outLapCold).toBe(false)
   })
 })

@@ -2,6 +2,7 @@ import { initRace, stepSector } from '@engine/index'
 import { createRng } from '@engine/rng'
 import { aiSetups } from '@engine/setup'
 import { drsOpenSet, drsTrains } from '@engine/drs'
+import { thermalWindow } from '@engine/thermal'
 import { loadGameData } from '@data/validators'
 import type { RaceConfig, StrategyBrain, DifficultyProfile } from '@engine/types'
 
@@ -77,6 +78,13 @@ export type Metrics = {
   unsafeReleasesPerRace: number
   drsPassShare: number
   trackLimitWarningsPerRace: number
+  // 2.1 (scope 2026-11-13, Task S). graining: 'graining' incidents per race.
+  // Diagnostics (not banded): hotSectorShare / coldSectorShare -- share of
+  // running car-sectors (cars with `thermal`, after each stepSector) whose tyre
+  // is above / below its window where the window applies. 0 while tyreTemp is off.
+  grainingPerRace: number
+  hotSectorShare: number
+  coldSectorShare: number
   // Spec 2026-10-24 §1.6 (circuit authoring). Stops made by cars still running
   // at the flag, per such car; and tyre-failure retirements per car-race.
   meanStopsPerClassifiedCar: number
@@ -238,6 +246,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
   let weatherStops = 0
   let driverErrors = 0
   let trainLapEnds = 0, drsPasses = 0, doubleStacks = 0, penalties = 0, unsafeReleases = 0, trackLimits = 0
+  let graining = 0, hotSectors = 0, coldSectors = 0, thermalSectors = 0
   let carRaces = 0
   let classifiedStops = 0, classifiedCars = 0, tyreDnfs = 0
   const finishSumByTeam = new Map<string, number>()
@@ -258,6 +267,16 @@ export function runRaces(opts: HarnessOptions): Metrics {
       if (open) {
         for (const ev of next.overtakeEvents.slice(state.overtakeEvents.length)) if (open.has(ev.overtakerId)) drsPasses++
         if (next.sector === 0 && drsTrains(config, next).length > 0) trainLapEnds++
+      }
+      if (config.tuning.tyreTemp.enabled) {
+        for (const c of next.cars) {
+          if (c.retired || !c.thermal) continue
+          thermalSectors++
+          const w = thermalWindow(config, c, next.weatherState)
+          if (!w.applies) continue
+          if (w.excess > 0) hotSectors++
+          if (w.deficit > 0) coldSectors++
+        }
       }
       if (state.sector === 2) {
         for (const c of next.cars) {
@@ -299,6 +318,7 @@ export function runRaces(opts: HarnessOptions): Metrics {
     penalties += state.incidents.filter(i => i.kind === 'penalty_issued').length
     unsafeReleases += state.incidents.filter(i => i.kind === 'unsafe_release').length
     trackLimits += state.incidents.filter(i => i.kind === 'track_limits').length
+    graining += state.incidents.filter(i => i.kind === 'graining').length
 
     const ot = state.overtakeEvents.length
     overtakeTotal += ot
@@ -348,5 +368,8 @@ export function runRaces(opts: HarnessOptions): Metrics {
     unsafeReleasesPerRace: unsafeReleases / races,
     drsPassShare: overtakeTotal ? drsPasses / overtakeTotal : 0,
     trackLimitWarningsPerRace: trackLimits / races,
+    grainingPerRace: graining / races,
+    hotSectorShare: thermalSectors ? hotSectors / thermalSectors : 0,
+    coldSectorShare: thermalSectors ? coldSectors / thermalSectors : 0,
   }
 }

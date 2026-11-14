@@ -1,4 +1,4 @@
-import { drsOpenSet, drsTrains } from '@engine/index'
+import { drsOpenSet, drsTrains, thermalStatus } from '@engine/index'
 import type { ProjectionResult } from '@engine/projection'
 import type { RaceConfig, RaceState, SectorIndex } from '@engine/types'
 
@@ -6,6 +6,8 @@ export interface TowerV2Row {
   drs: 'open' | 'neutralised' | null
   train: { index: number; size: number; first: boolean; last: boolean } | null
   penaltySec: number
+  /** 2.1: a running car on a fresh set still below its window (always false while tyre temperature is off). */
+  coldTyres: boolean
 }
 
 /**
@@ -32,6 +34,7 @@ export function towerV2(config: RaceConfig, state: RaceState): Map<string, Tower
       drs,
       train: t ? { index: ti, size: t.carIds.length, first: pos === 0, last: pos === t.carIds.length - 1 } : null,
       penaltySec: car.penalty?.pendingSec ?? 0,
+      coldTyres: !car.retired && car.tyreAge === 0 && thermalStatus(config, car, state.weatherState)?.zone === 'cold',
     })
   }
   return out

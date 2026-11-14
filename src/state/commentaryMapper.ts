@@ -168,6 +168,7 @@ export function processCommentaryTick(
       case 'penalty_served':
       case 'unsafe_release':
       case 'double_stack':
+      case 'graining':
         break
       default: {
         const _exhaustive: never = ev.kind

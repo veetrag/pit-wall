@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRaceStore } from '@state/raceStore'
+import { thermalStatus } from '@engine/index'
 import { useClockStore, type GameSpeed } from '@state/clockStore'
 import { useCoachStore } from '@state/coachStore'
 import { useCoachingActive, useNewCoachMarkOwed } from '@hooks/useCoachingActive'
@@ -249,6 +250,7 @@ export function useNewTutorialMarks(): void {
   const racePhase = useRaceStore(s => s.phase)
   const scOwed = useNewCoachMarkOwed('safety_car')
   const windowOwed = useNewCoachMarkOwed('pit_window')
+  const tempOwed = useNewCoachMarkOwed('tyre_temp')
   const deployCount = useSafetyCarOnlyDeployCount()
   const lapsToStop = useRaceStore(s => {
     const rs = s.raceState
@@ -256,12 +258,22 @@ export function useNewTutorialMarks(): void {
     const next = p && !p.retired ? p.strategy.plannedStops[p.pitsDone] : undefined
     return rs && next ? next.lap - rs.lap : null
   })
+  // 2.1: the player's first out-lap on a fresh set that reads COLD (tyre
+  // temperature on, and only where thermal pace applies -- ruling H3: not a
+  // slick in the damp or an inter on a dry track).
+  const coldOutLap = useRaceStore(s => {
+    const rs = s.raceState
+    const p = rs?.cars.find(c => c.isPlayer)
+    if (!rs || !s.config || !p?.thermal || p.tyreAge !== 0 || p.pitsDone === 0) return false
+    return thermalStatus(s.config, p, rs.weatherState)?.zone === 'cold'
+  })
   const request = useCoachStore(s => s.request)
   useEffect(() => {
     if (racePhase !== 'racing') return
     if (scOwed && deployCount > 0) request('safety_car')
     if (windowOwed && lapsToStop !== null && lapsToStop >= 1 && lapsToStop <= 2) request('pit_window')
-  }, [racePhase, scOwed, windowOwed, deployCount, lapsToStop, request])
+    if (tempOwed && coldOutLap) request('tyre_temp')
+  }, [racePhase, scOwed, windowOwed, tempOwed, deployCount, lapsToStop, coldOutLap, request])
 }
 
 export function RaceHUD() {
@@ -374,6 +386,11 @@ export function RaceHUD() {
         id="radio_request"
         title="YOUR DRIVER IS ASKING"
         body="Answer YES or NO before the bar runs out. No answer means no."
+      />
+      <CoachMark
+        id="tyre_temp"
+        title="COLD TYRES"
+        body="Fresh tyres start cold. Hards take longer to switch on — on a cool track they may never reach the window. Watch the temperature band."
       />
     </ScreenFrame>
   )

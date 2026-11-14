@@ -3,6 +3,7 @@ import { gaussianPair, type Rng } from './rng'
 import { effectivePitLaneLoss } from './incidents'
 import { consumeTyreSet } from './tyres'
 import { unsafeReleaseChance } from './penalties'
+import { outLapThermal } from './thermal'
 
 /**
  * What one stop cost. `slow` is the part of `total` that was a slow stop (0 if
@@ -97,9 +98,12 @@ export interface StopOutcome {
 /**
  * The stopped car (spec 2026-10-24 §0.4, ruling A4). Spreads the car and only
  * overwrites keys it already has, so JSON key order never changes. 2.0 resets
- * (served penalty) are added by later tasks HERE and nowhere else.
+ * (served penalty) are added by later tasks HERE and nowhere else. 2.1: the
+ * tyre temperature resets to blanket temperature here (spec §5.2, ruling H2),
+ * so every stop -- AI, plan, PIT button and the projection -- prices the same
+ * cold out-lap.
  */
-export function fitTyres(_config: RaceConfig, car: CarState, compound: Compound, addSeconds: number): CarState {
+export function fitTyres(config: RaceConfig, car: CarState, compound: Compound, addSeconds: number): CarState {
   return {
     ...car,
     raceTime: car.raceTime + addSeconds,
@@ -108,6 +112,7 @@ export function fitTyres(_config: RaceConfig, car: CarState, compound: Compound,
     pitsDone: car.pitsDone + 1,
     tyreAllocation: consumeTyreSet(car.tyreAllocation, compound),
     compoundsUsed: [...car.compoundsUsed, compound],
+    ...(car.thermal ? { thermal: outLapThermal(config.tuning) } : {}),
   }
 }
 

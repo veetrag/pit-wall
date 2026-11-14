@@ -4,7 +4,8 @@ import { createRng } from './rng'
 import { initPenalty, recordTrackLimits, addPendingAtFlag, aiPenaltyCoverPace } from './penalties'
 import { executeStop, boxQueueEstimate, deferForBusyBox } from './pitStop'
 import { computeSectorTime, NO_CTX, type SectorContext } from './lapModel'
-import { rubberLapsFor } from './track'
+import { rubberLapsFor, trackGrip } from './track'
+import { initThermal, thermalAfterSector, thermalAtLapEnd, aiThermalPaceMode } from './thermal'
 import { wingOvertakeFactor } from './setup'
 import { drsOpenSet, drsOvertakeFactor } from './drs'
 import { openingTimeline } from './weather'
@@ -124,6 +125,8 @@ export function initRace(config: RaceConfig): RaceState {
       retiredLap: null,
       retiredCause: null,
       ...(config.tuning.penalties.enabled ? { penalty: initPenalty() } : {}),
+      // 2.1 (spec §5.2): last key, absent while off (byte identity).
+      ...(config.tuning.tyreTemp.enabled ? { thermal: initThermal(config.tuning) } : {}),
     }
   })
 
@@ -158,6 +161,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
   const ctxBase: SectorContext = rubber === undefined ? NO_CTX : { rubberLaps: rubber }
   // DRS from the PRE-tick order, once per tick (ruling D1).
   const drsOpen = drsOpenSet(config, state, sector)
+  // 2.1 graining reads the track's grip (ruling H4), once per tick. 1 (no read) while off.
+  const gripNow = config.tuning.tyreTemp.enabled ? trackGrip(state, config.tuning) : 1
   // Once per tick (spec §9.2): crashRisk (1.7) times the 2.0 circuit/weather factor.
   // Exactly traits.crashRisk when the 2.0 factor is off, so the stream is unchanged.
   const riskFactor = incidentRiskFactor(config, state.weatherState)
@@ -174,6 +179,8 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       updated = { ...updated, penalty: r.penalty }
       newIncidents.push(...r.events)
     }
+    // 2.1 tyre temperature (spec §5.2): from the pre-sector car; overwriting in place keeps key order.
+    if (updated.thermal) updated = { ...updated, thermal: thermalAfterSector(config, car, state.weatherState, state.safetyCar !== null) }
 
     // Tyre failure risk: once cliffFraction runs meaningfully past the
     // threshold, roll a per-sector chance of a puncture/mechanical failure
@@ -454,6 +461,14 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
       updated.tyreAge += 1
       updated.lap += 1
       updated.lapsInDirtyAir = inDirtyAir.has(car.driverId) ? car.lapsInDirtyAir + 1 : 0
+      if (updated.thermal && !restartNow) {
+        // 2.1 (spec §5.2): graining onset/countdown. A stop below re-blankets the set.
+        // Not on the red-flag restart: applyRedFlagRestart re-blankets every
+        // running car below, so an onset here would be a phantom incident.
+        const lapEnd = thermalAtLapEnd(config, updated, state.weatherState, gripNow)
+        updated.thermal = lapEnd.thermal
+        if (lapEnd.grained) newIncidents.push({ lap: state.lap, sector, kind: 'graining', driverId: car.driverId, timeLoss: null })
+      }
       if (redOut) {
         // Nobody boxes under a red flag: the restart's free tyre change
         // replaces this boundary's AI decisions and plan stops.
@@ -477,6 +492,13 @@ export function stepSector(config: RaceConfig, state: RaceState, rng: Rng): Race
           updated = out.car
           newIncidents.push(...out.events)
           boxFree = out.boxFree
+        }
+        // 2.1 (spec §5.3): on the car that races the next lap -- after any stop, so a
+        // fresh cold set gets the push to warm it. A penalty-cover PUSH
+        // (aiPenaltyCoverPace above) is kept: covering a pending penalty outranks tyre heat.
+        if (updated.thermal && (updated.strategy.brain ?? 'naive') !== 'naive'
+            && !(updated.paceMode === 'push' && (updated.penalty?.pendingSec ?? 0) > 0)) {
+          updated.paceMode = aiThermalPaceMode(config, updated, state.weatherState, safetyCar !== null, updated.paceMode)
         }
       } else if (config.playerStrategyOverride && !state.planHold) {
         // The player's own plan, executed exactly as the race setup screen

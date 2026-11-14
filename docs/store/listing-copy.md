@@ -120,6 +120,14 @@ and the podium pays for it turns a perceived bug into the stated premise.
 
 ---
 
+## What's new — 2.1
+
+Tyres have a temperature. Fresh slicks leave the pits cold; the pit panel prices each out-lap. Hards take longer to switch on — on cool tracks they may never reach the window. Push on a hot track and they overheat, wearing faster. Softs and mediums can grain after a safety car. The tyre meter shows COLD / IN WINDOW / HOT. DRS trains: smoother brackets, truer pit note. Scenarios and shared starts no longer replay old radio calls. Dailies and shared starts made before 2.1 may play out differently.
+
+499 / 500 characters (the dash counts as one).
+
+---
+
 ## What's new — 2.0
 
 Deeper race strategy. Rubber lays down on the track as the race runs, and rain washes it away: watch TRACK GRIP. DRS opens passing chances, and slow cars build DRS trains. A safety-car meter shows the chance and why. Both cars pitting? BOX BUSY, one waits. Stewards now punish track limits and unsafe releases: serve the time at your stop, or take it at the flag.

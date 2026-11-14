@@ -22,9 +22,9 @@ beforeEach(() => {
 })
 
 describe('per-mark coach flags (spec 1.6 §9)', () => {
-  it('knows seven marks, three of them new', () => {
-    expect(COACH_MARK_IDS).toHaveLength(7)
-    expect([...NEW_COACH_MARKS]).toEqual(['safety_car', 'pit_window', 'radio_request'])
+  it('knows eight marks, four of them new', () => {
+    expect(COACH_MARK_IDS).toHaveLength(8)
+    expect([...NEW_COACH_MARKS]).toEqual(['safety_car', 'pit_window', 'radio_request', 'tyre_temp'])
     expect(isNewCoachMark('tyre_cliff')).toBe(false)
     expect(isNewCoachMark('safety_car')).toBe(true)
   })
@@ -48,9 +48,9 @@ describe('per-mark coach flags (spec 1.6 §9)', () => {
     }
   })
 
-  it('resetCoachSeen clears; setAllCoachSeen marks all three new', () => {
+  it('resetCoachSeen clears; setAllCoachSeen marks all four new', () => {
     useSettingsStore.getState().setAllCoachSeen()
-    expect(useSettingsStore.getState().coachSeen).toEqual({ safety_car: true, pit_window: true, radio_request: true })
+    expect(useSettingsStore.getState().coachSeen).toEqual({ safety_car: true, pit_window: true, radio_request: true, tyre_temp: true })
     useSettingsStore.getState().resetCoachSeen()
     expect(useSettingsStore.getState().coachSeen).toEqual({})
   })

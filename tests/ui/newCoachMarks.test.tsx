@@ -13,7 +13,9 @@ import { useRaceStore } from '@state/raceStore'
 import { useSeasonStore } from '@state/seasonStore'
 import { useSettingsStore } from '@state/settingsStore'
 import { useCareerStore } from '@state/careerStore'
-import type { RaceState, CarState, IncidentEvent } from '@engine/types'
+import type { RaceState, CarState, IncidentEvent, Compound, WeatherState } from '@engine/types'
+import { makeConfig } from '../fixtures/raceHarness'
+import { makeDeterministicTuning } from '../fixtures/tuning'
 
 function Probe() { useNewTutorialMarks(); return null }
 
@@ -86,6 +88,36 @@ describe('the new marks are owed per mark (spec 1.6 §9)', () => {
       expect(useCoachStore.getState().active, `lap ${lap}`).toBeNull()
     }
     expect(useCoachStore.getState().done).not.toHaveProperty('pit_window')
+  })
+
+  it('TYRE_TEMP fires on the first out-lap after a stop, and only with tyre temperature on', () => {
+    const config = { ...makeConfig({}, 11, 'bengaluru'), tuning: makeDeterministicTuning({ tyreTemp: { enabled: true } }) }
+    const outLap = (thermal: boolean, pitsDone: number, tyreAge: number, compound: Compound = 'H', weatherState: WeatherState = 'DRY') => {
+      const player = {
+        driverId: 'd_voss', teamId: 'apex', isPlayer: true, position: 5, pitsDone, retired: false, tyreAge, compound,
+        strategy: { plannedStops: [] },
+        ...(thermal ? { thermal: { temp: 70, coldLaps: 0, grainLaps: 0, heatWear: 0 } } : {}),
+      } as unknown as CarState
+      act(() => {
+        useRaceStore.setState({
+          phase: 'racing', config,
+          raceState: { cars: [player], lap: 20, totalLaps: 50, sector: 0, incidents: [], safetyCar: null, weatherState } as unknown as RaceState,
+        })
+      })
+    }
+    render(<Probe />)
+    outLap(true, 0, 0)
+    expect(useCoachStore.getState().active, 'the start is not an out-lap').toBeNull()
+    outLap(false, 1, 0)
+    expect(useCoachStore.getState().active, 'tyre temperature off').toBeNull()
+    outLap(true, 1, 3)
+    expect(useCoachStore.getState().active, 'not on a used set').toBeNull()
+    outLap(true, 1, 0, 'H', 'DAMP')
+    expect(useCoachStore.getState().active, 'not a slick in the damp (ruling H3)').toBeNull()
+    outLap(true, 1, 0, 'I', 'DRY')
+    expect(useCoachStore.getState().active, 'not an inter on a dry track (ruling H3)').toBeNull()
+    outLap(true, 1, 0)
+    expect(useCoachStore.getState().active).toBe('tyre_temp')
   })
 
   it('neither fires before lights out', () => {
