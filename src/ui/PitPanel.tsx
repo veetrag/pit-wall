@@ -97,6 +97,14 @@ function ProjectionCard({ result, compoundLabel }: { result: ProjectionResult; c
         <span> · {myCode} · +{gapAhead}s · fresh {compoundLabel}</span>
       </div>
 
+      {result.driverBehindId && (
+        <div className="slant-row" style={{ ...ROW_STYLE, background: 'var(--grape)', color: 'var(--lilac)' }}>
+          <span style={{ width: 36 }}>P{result.rejoinPosition + 1}</span>
+          <span style={{ flex: 1, color: 'var(--white)' }}>{behindCode}</span>
+          <span>+{gapBehind}s</span>
+        </div>
+      )}
+
       {/* PitPanel 2.0 lines, in order: DRS note (this), SC chance, BOX BUSY, penalty. */}
       {trainSize !== null && (
         <div data-testid="rejoin-train-note" style={{
@@ -134,13 +142,6 @@ function ProjectionCard({ result, compoundLabel }: { result: ProjectionResult; c
         </div>
       )}
 
-      {result.driverBehindId && (
-        <div className="slant-row" style={{ ...ROW_STYLE, background: 'var(--grape)', color: 'var(--lilac)' }}>
-          <span style={{ width: 36 }}>P{result.rejoinPosition + 1}</span>
-          <span style={{ flex: 1, color: 'var(--white)' }}>{behindCode}</span>
-          <span>+{gapBehind}s</span>
-        </div>
-      )}
 
       {result.netEstimatePosition !== result.rejoinPosition && (
         <div style={{
