@@ -10,6 +10,11 @@ export type AlertMessage = {
   category: string
   message: string
   icon: string
+  /**
+   * Alerts sharing a key replace each other rather than queue: a newer
+   * position line supersedes a stale one (device bug, 2.1).
+   */
+  replaceKey?: string
 }
 
 /*

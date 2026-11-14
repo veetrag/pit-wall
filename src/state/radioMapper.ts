@@ -55,22 +55,34 @@ export function requestLine(request: RadioRequest, config: RaceConfig): string {
 let lastRadioMs = 0
 const RADIO_COOLDOWN_MS = 2000
 let lastPriority = 0
+let lastReplaceKey: string | undefined
+
+/** Pushes a radio line. `replaceKey` marks lines that supersede one another. */
+export type RadioPushFn = (msg: string, severity: 'info' | 'caution' | 'urgent', replaceKey?: string) => void
+
+/** Key for lines that state the player's position: a newer one replaces an older one. */
+export const POSITION_KEY = 'position'
 
 function tryPush(
   trigger: string,
   priority: 2 | 1 | 0,
   vars: Record<string, string | number>,
-  pushFn: (msg: string, severity: 'info' | 'caution' | 'urgent') => void,
+  pushFn: RadioPushFn,
+  replaceKey?: string,
 ) : boolean {
   const now = Date.now()
-  if (now - lastRadioMs < RADIO_COOLDOWN_MS && priority <= lastPriority) return false
+  // A line that replaces the last one shown (same key) bypasses the cooldown:
+  // it does not add chatter, it corrects a now-stale line.
+  const replacing = replaceKey !== undefined && replaceKey === lastReplaceKey
+  if (!replacing && now - lastRadioMs < RADIO_COOLDOWN_MS && priority <= lastPriority) return false
   const line = pick(trigger, vars)
   if (!line) return false
   lastRadioMs = now
   lastPriority = priority
+  lastReplaceKey = replaceKey
   const severity: 'info' | 'caution' | 'urgent' =
     priority === 2 ? 'urgent' : priority === 1 ? 'caution' : 'info'
-  pushFn(line, severity)
+  pushFn(line, severity, replaceKey)
   return true
 }
 
@@ -207,7 +219,7 @@ export function processRadioTick(
   state: RaceState,
   config: RaceConfig,
   radio: RadioState,
-  pushAlert: (msg: string, severity: 'info' | 'caution' | 'urgent') => void,
+  pushAlert: RadioPushFn,
 ): RadioState {
   const player = state.cars.find(c => c.isPlayer)
   if (!player) return radio
@@ -369,15 +381,22 @@ export function processRadioTick(
   }
   next.prevPlayerTyreAge = player.tyreAge
 
-  // 5. Overtakes
+  // 5. Overtakes: every event since the cursor (not only the last one), one
+  // line per tick, stating the player's position as it is now.
   const newOvertakes = state.overtakeEvents.length
   if (newOvertakes > radio.prevOvertakeCount) {
-    const latest = state.overtakeEvents[newOvertakes - 1]!
-    if (latest.overtakerId === player.driverId) {
-      tryPush('overtake_made', 1, { pos }, pushAlert)
+    let net = 0
+    let lastInvolved: 'made' | 'lost' | null = null
+    for (const ev of state.overtakeEvents.slice(radio.prevOvertakeCount)) {
+      if (ev.overtakerId === player.driverId) { net++; lastInvolved = 'made' }
+      else if (ev.overtakenId === player.driverId) { net--; lastInvolved = 'lost' }
+    }
+    const kind = net > 0 ? 'made' : net < 0 ? 'lost' : lastInvolved
+    if (kind === 'made') {
+      tryPush('overtake_made', 1, { pos }, pushAlert, POSITION_KEY)
       soundService.play('positionGain')
-    } else if (latest.overtakenId === player.driverId) {
-      tryPush('overtake_lost', 1, { pos }, pushAlert)
+    } else if (kind === 'lost') {
+      tryPush('overtake_lost', 1, { pos }, pushAlert, POSITION_KEY)
       soundService.play('positionLoss')
     }
     next.prevOvertakeCount = newOvertakes
